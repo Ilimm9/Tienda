@@ -1,0 +1,46 @@
+<main class="register-page">
+  <section class="register-panel" aria-labelledby="register-title">
+    <h1 id="register-title">Crear cuenta</h1>
+
+    <form class="register-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="nombreCompleto">Nombre completo</label>
+      <span class="field-wrap">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        <input id="nombreCompleto" class="register-input" pInputText type="text" formControlName="nombreCompleto" placeholder="Ej. Juan Pérez" autocomplete="name" />
+      </span>
+      <small class="field-error" *ngIf="form.controls.nombreCompleto.touched && form.controls.nombreCompleto.invalid">Ingresa tu nombre completo.</small>
+
+      <label for="correo">Correo electrónico</label>
+      <span class="field-wrap">
+        <i class="pi pi-envelope" aria-hidden="true"></i>
+        <input id="correo" class="register-input" pInputText type="email" formControlName="correo" placeholder="correo@empresa.com" autocomplete="email" />
+      </span>
+      <small class="field-error" *ngIf="form.controls.correo.touched && form.controls.correo.invalid">Ingresa un correo válido.</small>
+
+      <label for="telefono">Teléfono <span class="optional">(opcional)</span></label>
+      <span class="field-wrap">
+        <i class="pi pi-phone" aria-hidden="true"></i>
+        <input id="telefono" class="register-input" pInputText type="tel" formControlName="telefono" placeholder="55 1234 5678" autocomplete="tel" />
+      </span>
+
+      <label for="contrasena">Contraseña</label>
+      <span class="password-field">
+        <p-password inputId="contrasena" styleClass="password-control" inputStyleClass="register-input" formControlName="contrasena" placeholder="Mínimo 8 caracteres" [feedback]="false" [toggleMask]="true" autocomplete="new-password"></p-password>
+      </span>
+      <small class="field-error" *ngIf="form.controls.contrasena.touched && form.controls.contrasena.invalid">Usa al menos 8 caracteres.</small>
+
+      <label for="confirmarContrasena">Confirmar contraseña</label>
+      <span class="password-field">
+        <p-password inputId="confirmarContrasena" styleClass="password-control" inputStyleClass="register-input" formControlName="confirmarContrasena" placeholder="Repite tu contraseña" [feedback]="false" [toggleMask]="true" autocomplete="new-password"></p-password>
+      </span>
+      <small class="field-error" *ngIf="form.controls.confirmarContrasena.touched && form.hasError('passwordsMismatch')">Las contraseñas no coinciden.</small>
+
+      <p class="register-error" *ngIf="error" role="alert"><i class="pi pi-exclamation-circle"></i>{{ error }}</p>
+      <button pButton type="submit" label="Crear cuenta"  [loading]="loading" class="submit-button"></button>
+    </form>
+
+    <p class="login-link">¿Ya tienes una cuenta? <a routerLink="/login">Iniciar sesión</a></p>
+    <footer><a href="#">AYUDA</a><span>•</span><a href="#">TÉRMINOS</a><span>•</span><a href="#">PRIVACIDAD</a></footer>
+  </section>
+  <div class="register-image" [style.backgroundImage]="'url(' + imageUrl + ')'" aria-hidden="true"></div>
+</main>
