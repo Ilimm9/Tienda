@@ -1,0 +1,142 @@
+<main class="register-page">
+  <section class="register-panel" aria-labelledby="register-title">
+    <h1 id="register-title">Crear cuenta</h1>
+
+    <form class="register-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="nombreCompleto">Nombre completo</label>
+      <span class="field-wrap">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        <input
+          id="nombreCompleto"
+          class="register-input"
+          type="text"
+          formControlName="nombreCompleto"
+          placeholder="Ej. Juan Pérez"
+          autocomplete="name"
+        />
+      </span>
+      @if (form.controls.nombreCompleto.touched && form.controls.nombreCompleto.invalid) {
+        <small class="field-error">Ingresa tu nombre completo.</small>
+      }
+
+      <label for="correo">Correo electrónico</label>
+      <span class="field-wrap">
+        <i class="pi pi-envelope" aria-hidden="true"></i>
+        <input
+          id="correo"
+          class="register-input"
+          type="email"
+          formControlName="correo"
+          placeholder="correo@empresa.com"
+          autocomplete="email"
+        />
+      </span>
+      @if (form.controls.correo.touched && form.controls.correo.invalid) {
+        <small class="field-error">Ingresa un correo válido.</small>
+      }
+
+      <label for="telefono">Teléfono <span class="optional">(opcional)</span></label>
+      <span class="field-wrap">
+        <i class="pi pi-phone" aria-hidden="true"></i>
+        <input
+          id="telefono"
+          class="register-input"
+          type="tel"
+          formControlName="telefono"
+          placeholder="55 1234 5678"
+          autocomplete="tel"
+        />
+      </span>
+
+      <label for="contrasena">Contraseña</label>
+      <span class="password-field">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        <input
+          id="contrasena"
+          class="register-input"
+          [type]="passwordVisible() ? 'text' : 'password'"
+          formControlName="contrasena"
+          placeholder="Mínimo 8 caracteres"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          (click)="togglePassword()"
+          [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          [attr.aria-pressed]="passwordVisible()"
+        >
+          <i
+            class="pi"
+            [class.pi-eye]="!passwordVisible()"
+            [class.pi-eye-slash]="passwordVisible()"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </span>
+      @if (form.controls.contrasena.touched && form.controls.contrasena.invalid) {
+        <small class="field-error">Usa al menos 8 caracteres.</small>
+      }
+
+      <label for="confirmarContrasena">Confirmar contraseña</label>
+      <span class="password-field">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        <input
+          id="confirmarContrasena"
+          class="register-input"
+          [type]="confirmationVisible() ? 'text' : 'password'"
+          formControlName="confirmarContrasena"
+          placeholder="Repite tu contraseña"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          (click)="toggleConfirmation()"
+          [attr.aria-label]="
+            confirmationVisible() ? 'Ocultar confirmación' : 'Mostrar confirmación'
+          "
+          [attr.aria-pressed]="confirmationVisible()"
+        >
+          <i
+            class="pi"
+            [class.pi-eye]="!confirmationVisible()"
+            [class.pi-eye-slash]="confirmationVisible()"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </span>
+      @if (form.controls.confirmarContrasena.touched && form.hasError('passwordsMismatch')) {
+        <small class="field-error">Las contraseñas no coinciden.</small>
+      }
+
+      @if (error()) {
+        <p class="register-error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+        </p>
+      }
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="loading()"
+        [attr.aria-busy]="loading()"
+      >
+        @if (loading()) {
+          <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+        }
+        <span>Crear cuenta</span>
+      </button>
+    </form>
+
+    <p class="login-link">¿Ya tienes una cuenta? <a routerLink="/login">Iniciar sesión</a></p>
+    <footer>
+      <a href="#">AYUDA</a><span>•</span><a href="#">TÉRMINOS</a><span>•</span
+      ><a href="#">PRIVACIDAD</a>
+    </footer>
+  </section>
+  <div
+    class="register-image"
+    [style.backgroundImage]="'url(' + imageUrl + ')'"
+    aria-hidden="true"
+  ></div>
+</main>

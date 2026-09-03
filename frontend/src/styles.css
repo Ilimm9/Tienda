@@ -1,0 +1,34 @@
+@import 'primeicons/primeicons.css';
+
+:root {
+  --text: #060814;
+  --background: #f9fafc;
+  --primary: #0028b3;
+  --accent: #0284c7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--text);
+  background: var(--background);
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
