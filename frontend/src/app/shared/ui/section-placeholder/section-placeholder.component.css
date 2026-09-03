@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.placeholder-page {
+  width: min(100%, 1180px);
+  padding: 36px 32px;
+  margin: 0 auto;
+}
+
+header h1 {
+  margin: 5px 0 8px;
+  color: var(--text);
+  font-size: clamp(26px, 3vw, 34px);
+}
+
+header > p:last-child {
+  max-width: 680px;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.placeholder-card {
+  display: grid;
+  min-height: 300px;
+  place-items: center;
+  align-content: center;
+  padding: 32px;
+  margin-top: 34px;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+}
+
+.placeholder-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 14px;
+  font-size: 24px;
+}
+
+.placeholder-card h2 {
+  margin: 18px 0 7px;
+  font-size: 18px;
+}
+
+.placeholder-card p {
+  max-width: 430px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 599px) {
+  .placeholder-page {
+    padding: 26px 16px;
+  }
+}

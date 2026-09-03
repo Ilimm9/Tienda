@@ -1,10 +1,55 @@
 @import 'primeicons/primeicons.css';
 
 :root {
-  --text: #060814;
-  --background: #f9fafc;
-  --primary: #0028b3;
+  --text: #171b25;
+  --text-muted: #6f7785;
+  --text-subtle: #9299a6;
+  --background: #f8fafc;
+  --surface-raised: #ffffff;
+  --surface-sidebar: #f7f8fa;
+  --surface-hover: #edf1f6;
+  --border: #e0e4ea;
+  --border-strong: #cbd1da;
+  --primary: #2864e9;
+  --primary-hover: #1d4fc5;
+  --primary-soft: #edf3ff;
+  --primary-border: #cad9fb;
   --accent: #0284c7;
+  --danger: #c43d4b;
+  --danger-soft: #fff0f1;
+  --success: #00966d;
+  --success-soft: #e8f8f2;
+  --warning: #d97904;
+  --warning-soft: #fff4dd;
+  --shadow-card: 0 8px 24px rgb(20 34 60 / 5%);
+  --shadow-menu: 0 14px 38px rgb(20 34 60 / 16%);
+  --shadow-drawer: 12px 0 36px rgb(20 34 60 / 18%);
+}
+
+:root[data-theme='dark'] {
+  --text: #edf1f7;
+  --text-muted: #a8b0bd;
+  --text-subtle: #7d8796;
+  --background: #11151c;
+  --surface-raised: #191e27;
+  --surface-sidebar: #151a22;
+  --surface-hover: #242b36;
+  --border: #2b3340;
+  --border-strong: #3b4554;
+  --primary: #4f7ff0;
+  --primary-hover: #6b94f3;
+  --primary-soft: #1c2b4d;
+  --primary-border: #304a7c;
+  --accent: #38bdf8;
+  --danger: #ff808c;
+  --danger-soft: #3b2027;
+  --success: #4bd2a8;
+  --success-soft: #17352e;
+  --warning: #ffb44e;
+  --warning-soft: #3b2c19;
+  --shadow-card: 0 8px 24px rgb(0 0 0 / 18%);
+  --shadow-menu: 0 14px 38px rgb(0 0 0 / 38%);
+  --shadow-drawer: 12px 0 36px rgb(0 0 0 / 40%);
 }
 
 * {
@@ -13,6 +58,7 @@
 
 html,
 body {
+  width: 100%;
   min-height: 100%;
   margin: 0;
 }
@@ -26,9 +72,23 @@ body {
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
 }
 
 a {
   color: var(--primary);
   text-decoration: none;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

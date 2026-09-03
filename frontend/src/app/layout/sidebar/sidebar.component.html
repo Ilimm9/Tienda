@@ -1,0 +1,64 @@
+<nav class="sidebar-nav" aria-label="Navegación principal">
+  <p class="section-label">Administración</p>
+
+  <ul class="navigation-list">
+    @for (item of navigationItems; track item.label) {
+      <li>
+        @if (item.children?.length) {
+          <button
+            class="navigation-link group-button"
+            type="button"
+            [class.active]="isGroupActive(item)"
+            [attr.aria-expanded]="isGroupExpanded(item)"
+            [attr.title]="layout.sidebarCollapsed() ? item.label : null"
+            (click)="toggleGroup(item)"
+          >
+            <i [class]="item.icon" aria-hidden="true"></i>
+            <span class="navigation-label">{{ item.label }}</span>
+            <i
+              class="pi pi-chevron-down group-chevron"
+              [class.expanded]="isGroupExpanded(item)"
+              aria-hidden="true"
+            ></i>
+          </button>
+
+          @if (isGroupExpanded(item)) {
+            <ul class="subnavigation-list">
+              @for (child of item.children; track child.label) {
+                <li>
+                  <a
+                    class="navigation-link subnavigation-link"
+                    [routerLink]="child.route"
+                    routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    (click)="closeAfterNavigation()"
+                  >
+                    <i [class]="child.icon" aria-hidden="true"></i>
+                    <span class="navigation-label">{{ child.label }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        } @else {
+          <a
+            class="navigation-link"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            [attr.title]="layout.sidebarCollapsed() ? item.label : null"
+            (click)="closeAfterNavigation()"
+          >
+            <i [class]="item.icon" aria-hidden="true"></i>
+            <span class="navigation-label">{{ item.label }}</span>
+          </a>
+        }
+      </li>
+    }
+  </ul>
+</nav>
+
+<aside class="security-card" aria-label="Información de seguridad">
+  <div class="security-title"><i class="pi pi-shield" aria-hidden="true"></i> Acceso seguro</div>
+  <p>Administra la información de tu negocio desde un entorno protegido.</p>
+</aside>

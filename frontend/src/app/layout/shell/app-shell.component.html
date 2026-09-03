@@ -1,0 +1,27 @@
+<div
+  class="app-shell"
+  [class.sidebar-collapsed]="layout.sidebarCollapsed() && !layout.isMobile()"
+  [class.mobile-menu-open]="layout.mobileMenuOpen()"
+>
+  <app-topbar />
+
+  <aside class="sidebar-container">
+    <app-sidebar />
+  </aside>
+
+  @if (layout.mobileMenuOpen()) {
+    <button
+      class="sidebar-backdrop"
+      type="button"
+      aria-label="Cerrar menú"
+      (click)="layout.closeMobileMenu()"
+    ></button>
+  }
+
+  <section class="workspace">
+    <app-breadcrumbs />
+    <main class="page-content" id="main-content">
+      <router-outlet />
+    </main>
+  </section>
+</div>

@@ -28,6 +28,7 @@ describe('AuthService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
     request.flush({ usuario: { id: '1', correo: payload.correo } });
+    expect(service.currentUser()?.correo).toBe(payload.correo);
   });
 
   it('keeps register, session and logout endpoint contracts', () => {
@@ -46,12 +47,17 @@ describe('AuthService', () => {
     service.me().subscribe();
     const meRequest = http.expectOne(`${environment.apiUrl}/auth/me`);
     expect(meRequest.request.method).toBe('GET');
-    meRequest.flush({ usuario: { id: '1', correo: registration.correo } });
+    meRequest.flush({
+      autenticado: true,
+      usuario: { id: '1', correo: registration.correo },
+    });
+    expect(service.currentUser()?.correo).toBe(registration.correo);
 
     service.logout().subscribe();
     const logoutRequest = http.expectOne(`${environment.apiUrl}/auth/logout`);
     expect(logoutRequest.request.method).toBe('POST');
     expect(logoutRequest.request.body).toEqual({});
     logoutRequest.flush(null);
+    expect(service.currentUser()).toBeNull();
   });
 });

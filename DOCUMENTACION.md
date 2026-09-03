@@ -1,6 +1,6 @@
 # Documentación de Tienda
 
-Aplicación web para gestión de una tienda. Actualmente incluye registro de usuarios, inicio de sesión y una página inicial protegida.
+Aplicación web para gestión de una tienda. Incluye registro, inicio de sesión y un panel administrativo responsive con navegación protegida.
 
 ## Tecnologías
 
@@ -25,16 +25,16 @@ Se necesita Node.js 24 LTS, npm, Go 1.25 o compatible y PostgreSQL ejecutándose
 
 Configurar las credenciales de PostgreSQL en `backend/.env` . Las variables más importantes son:
 
-| Variable | Uso | Valor local |
-| --- | --- | --- |
-| `APP_PORT` | Puerto de la API | `8080` |
-| `DB_HOST` | Servidor PostgreSQL | `localhost` |
-| `DB_PORT` | Puerto PostgreSQL | `5433` |
-| `DB_USER` / `DB_PASSWORD` | Credenciales | `postgres` / `postgres` |
-| `DB_NAME` | Base de datos | `tienda` |
-| `JWT_SECRET` | Firma de sesión | Cambiar en producción |
-| `JWT_EXPIRATION` | Duración de sesión | `24h` |
-| `FRONTEND_URL` | Origen CORS | `http://localhost:4200` |
+| Variable                  | Uso                 | Valor local             |
+| ------------------------- | ------------------- | ----------------------- |
+| `APP_PORT`                | Puerto de la API    | `8080`                  |
+| `DB_HOST`                 | Servidor PostgreSQL | `localhost`             |
+| `DB_PORT`                 | Puerto PostgreSQL   | `5433`                  |
+| `DB_USER` / `DB_PASSWORD` | Credenciales        | `postgres` / `postgres` |
+| `DB_NAME`                 | Base de datos       | `tienda`                |
+| `JWT_SECRET`              | Firma de sesión     | Cambiar en producción   |
+| `JWT_EXPIRATION`          | Duración de sesión  | `24h`                   |
+| `FRONTEND_URL`            | Origen CORS         | `http://localhost:4200` |
 
 ### Backend
 
@@ -57,13 +57,19 @@ La aplicación queda disponible en `http://localhost:4200`.
 
 ## Rutas y flujo
 
-| Ruta | Función |
-| --- | --- |
-| `/login` | Inicio de sesión |
-| `/registro` | Registro de una cuenta |
-| `/inicio` | Página inicial protegida |
+| Ruta                   | Función                         |
+| ---------------------- | ------------------------------- |
+| `/login`               | Inicio de sesión                |
+| `/registro`            | Registro de una cuenta          |
+| `/inicio`              | Página inicial protegida        |
+| `/negocios`            | Página base de negocios         |
+| `/sucursales`          | Página base de sucursales       |
+| `/ventas`              | Página base de ventas           |
+| `/equipo/empleados`    | Página base de empleados        |
+| `/equipo/invitaciones` | Página base de invitaciones     |
+| `/roles-permisos`      | Página base de roles y permisos |
 
-El usuario se registra, vuelve a `/login` y, después de autenticarse, entra a `/inicio`. `authGuard` valida la sesión antes de permitir el acceso a la página inicial.
+El usuario se registra, vuelve a `/login` y, después de autenticarse, entra a `/inicio`. `authGuard` valida la sesión antes de permitir el acceso a cualquier ruta del panel. Login y registro usan el outlet raíz; las rutas protegidas se muestran en el outlet anidado del shell administrativo.
 
 ## Arquitectura
 
@@ -73,7 +79,9 @@ El proyecto está dividido en dos aplicaciones:
 Tienda/
 ├── frontend/                       # Frontend Angular 22
 │   ├── src/app/features/auth/      # Login, registro, servicio y guard
-│   ├── src/app/features/home/      # Página inicial
+│   ├── src/app/features/           # Home y áreas funcionales lazy-loaded
+│   ├── src/app/layout/             # Shell, topbar, sidebar y breadcrumbs
+│   ├── src/app/shared/ui/          # Componentes visuales reutilizables
 │   ├── src/app/app.routes.ts
 │   ├── src/app/app.config.ts
 │   ├── src/environments/           # Configuración por entorno
@@ -90,7 +98,7 @@ Tienda/
         └── config/                 # Configuración
 ```
 
-El frontend se organiza por funcionalidades y usa APIs standalone de Angular. El backend separa la entrada HTTP, la lógica de negocio, el dominio y la persistencia. El registro crea usuario y perfil dentro de una transacción; la contraseña se guarda únicamente como hash bcrypt.
+El frontend se organiza por funcionalidades y usa APIs standalone de Angular. El menú lateral es compacto o expandido en escritorio y funciona como drawer en pantallas menores de 1024 px. El tema respeta inicialmente la preferencia del sistema y conserva la selección manual. Los breadcrumbs se generan desde los metadatos de las rutas. El backend separa la entrada HTTP, la lógica de negocio, el dominio y la persistencia. El registro crea usuario y perfil dentro de una transacción; la contraseña se guarda únicamente como hash bcrypt.
 
 ## Estilos y diseño visual
 
@@ -103,8 +111,8 @@ Los estilos globales se definen en `frontend/src/styles.css`. Ahí se encuentran
 - Tipografía base `Inter`, con fuentes del sistema como fallback.
 - Import de PrimeIcons.
 
-
 ## Responsive
+
 Todas las vistas deben ser responsive y funcionar en escritorio, tablet y teléfono. Los nuevos componentes deben usar layouts fluidos con Flexbox o CSS Grid, `width: 100%`, `max-width`, media queries y controles adecuados para pantallas táctiles. Se debe evitar el scroll horizontal y adaptar tamaños, espaciados y columnas.
 
 La pantalla de registro usa dos columnas en escritorio. En pantallas menores a `700px` oculta la imagen decorativa y conserva el formulario centrado para aprovechar el espacio disponible.

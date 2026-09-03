@@ -15,8 +15,8 @@
 .login-card {
   width: min(100%, 440px);
   padding: 38px 36px 34px;
-  background: #fff;
-  border: 1px solid #e1e6ee;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(17, 28, 50, 0.09);
 }
@@ -31,7 +31,7 @@ h1 {
 
 .intro {
   margin: 0 0 30px;
-  color: #687282;
+  color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -62,21 +62,21 @@ label {
   color: var(--text);
   font: inherit;
   font-size: 14px;
-  border: 1px solid #d8dee8;
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   outline: none;
-  background: #fff;
+  background: var(--surface-raised);
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
 }
 
 .login-input::placeholder {
-  color: #9aa3b1;
+  color: var(--text-subtle);
 }
 
 .login-input:hover {
-  border-color: #aeb8c7;
+  border-color: var(--text-subtle);
 }
 
 .login-input:focus {
@@ -89,7 +89,7 @@ label {
   top: 50%;
   left: 16px;
   z-index: 1;
-  color: #7d8796;
+  color: var(--text-muted);
   font-size: 15px;
   transform: translateY(-50%);
   pointer-events: none;
@@ -126,7 +126,7 @@ label {
   width: 34px;
   height: 34px;
   padding: 0;
-  color: #7d8796;
+  color: var(--text-muted);
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -195,8 +195,8 @@ label {
 }
 
 .submit-button:enabled:hover {
-  background: #001d87;
-  border-color: #001d87;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .submit-button:enabled:focus-visible {
@@ -211,7 +211,7 @@ label {
 
 .create-account {
   margin: 26px 0 0;
-  color: #687282;
+  color: var(--text-muted);
   text-align: center;
   font-size: 13px;
 }

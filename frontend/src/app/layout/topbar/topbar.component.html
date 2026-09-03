@@ -1,0 +1,75 @@
+<header class="topbar">
+  <div class="brand">
+    <button
+      class="icon-button navigation-toggle"
+      type="button"
+      [attr.aria-label]="
+        layout.isMobile()
+          ? layout.mobileMenuOpen()
+            ? 'Cerrar menú'
+            : 'Abrir menú'
+          : layout.sidebarCollapsed()
+            ? 'Expandir menú'
+            : 'Compactar menú'
+      "
+      [attr.aria-expanded]="layout.isMobile() ? layout.mobileMenuOpen() : null"
+      (click)="layout.toggleNavigation()"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+    <span class="brand-mark"><i class="pi pi-shield" aria-hidden="true"></i></span>
+    <span class="brand-name">Portal Administrativo</span>
+  </div>
+
+  <div class="topbar-actions">
+    <button
+      class="icon-button"
+      type="button"
+      [attr.aria-label]="theme.theme() === 'light' ? 'Activar tema oscuro' : 'Activar tema claro'"
+      (click)="theme.toggle()"
+    >
+      <i [class]="theme.theme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" aria-hidden="true"></i>
+    </button>
+
+    <div class="action-menu">
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Notificaciones"
+        [attr.aria-expanded]="notificationsOpen()"
+        (click)="toggleNotifications()"
+      >
+        <i class="pi pi-bell" aria-hidden="true"></i>
+      </button>
+      @if (notificationsOpen()) {
+        <div class="dropdown notifications-dropdown">
+          <strong>Notificaciones</strong>
+          <p>No tienes notificaciones.</p>
+        </div>
+      }
+    </div>
+
+    <div class="action-menu">
+      <button
+        class="account-button"
+        type="button"
+        [attr.aria-expanded]="accountOpen()"
+        (click)="toggleAccount()"
+      >
+        <span class="account-avatar"><i class="pi pi-user" aria-hidden="true"></i></span>
+        <span class="account-label">Mi cuenta</span>
+        <i class="pi pi-chevron-down account-chevron" aria-hidden="true"></i>
+      </button>
+      @if (accountOpen()) {
+        <div class="dropdown account-dropdown">
+          <span class="dropdown-label">Sesión iniciada como</span>
+          <strong>{{ auth.currentUser()?.correo || 'Usuario' }}</strong>
+          <button type="button" (click)="logout()">
+            <i class="pi pi-sign-out" aria-hidden="true"></i>
+            Cerrar sesión
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</header>

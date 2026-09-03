@@ -4,11 +4,18 @@ export interface LoginRequest {
   recordarme: boolean;
 }
 
+export interface AuthenticatedUser {
+  id: string;
+  correo: string;
+}
+
 export interface LoginResponse {
-  usuario: {
-    id: string;
-    correo: string;
-  };
+  usuario: AuthenticatedUser;
+}
+
+export interface SessionResponse {
+  autenticado: true;
+  usuario: AuthenticatedUser;
 }
 
 export interface RegisterRequest {

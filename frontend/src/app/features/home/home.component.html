@@ -1,11 +1,33 @@
-<main class="home-page">
-  <section class="home-card">
-    <div class="welcome-icon"><i class="pi pi-check" aria-hidden="true"></i></div>
-    <p class="eyebrow">PANEL PRINCIPAL</p>
+<section class="home-page">
+  <header>
+    <p class="eyebrow">Panel principal</p>
     <h1>¡Bienvenido al sistema!</h1>
     <p class="description">
-      Tu cuenta está activa. Desde aquí podrás administrar y consultar la información de tu negocio.
+      Desde aquí podrás administrar y consultar la información de tu negocio.
     </p>
-    <button type="button" class="logout-button" (click)="logout()">Cerrar sesión</button>
-  </section>
-</main>
+  </header>
+
+  <div class="summary-grid">
+    <article>
+      <span class="summary-icon blue"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+      <div>
+        <strong>Negocios</strong>
+        <p>Gestiona la información general de tus negocios.</p>
+      </div>
+    </article>
+    <article>
+      <span class="summary-icon green"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+      <div>
+        <strong>Sucursales</strong>
+        <p>Organiza ubicaciones, equipos y operaciones.</p>
+      </div>
+    </article>
+    <article>
+      <span class="summary-icon orange"><i class="pi pi-users" aria-hidden="true"></i></span>
+      <div>
+        <strong>Equipo</strong>
+        <p>Consulta empleados, invitaciones y permisos.</p>
+      </div>
+    </article>
+  </div>
+</section>

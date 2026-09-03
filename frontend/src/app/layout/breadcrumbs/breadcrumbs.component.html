@@ -1,0 +1,14 @@
+<nav class="breadcrumbs" aria-label="Ruta de navegación">
+  <a class="home-link" routerLink="/inicio" aria-label="Ir al inicio">
+    <i class="pi pi-home" aria-hidden="true"></i>
+  </a>
+
+  @for (item of items(); track item.url; let last = $last) {
+    <i class="pi pi-chevron-right separator" aria-hidden="true"></i>
+    @if (last) {
+      <span class="current" aria-current="page">{{ item.label }}</span>
+    } @else {
+      <a [routerLink]="item.url">{{ item.label }}</a>
+    }
+  }
+</nav>
