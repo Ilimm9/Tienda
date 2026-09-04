@@ -12,6 +12,7 @@ describe('NAVIGATION_ITEMS', () => {
       '/negocios',
       '/sucursales',
       '/ventas',
+      '/productos',
       '/equipo/empleados',
       '/equipo/invitaciones',
       '/roles-permisos',

@@ -1,1 +1,76 @@
-:host { display:block; min-height:100vh; }.home-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:#f7f9fc; }.home-card { width:min(100%, 460px); padding:32px; text-align:center; background:#fff; border:1px solid #e4e8ee; border-radius:10px; box-shadow:0 8px 24px rgba(6,8,20,.08); }.brand { display:flex; justify-content:center; align-items:center; gap:7px; color:#2864e9; font-size:14px; font-weight:700; }.brand .pi { font-size:15px; }.welcome-icon { display:flex; align-items:center; justify-content:center; width:54px; height:54px; margin:28px auto 18px; color:#237a45; background:#e8f6ed; border-radius:50%; }.eyebrow { margin:0 0 8px; color:#2864e9; font-size:10px; font-weight:700; letter-spacing:1.5px; }.home-card h1 { margin:0 0 12px; color:#111a2e; font-size:26px; }.description { margin:0 auto 24px; color:#687282; font-size:13px; line-height:1.6; }.logout-button { width:100%; background:#2864e9; border-color:#2864e9; }
+:host {
+    display: block;
+    min-height: 100vh;
+}
+
+.home-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #f7f9fc;
+}
+
+.home-card {
+    width: min(100%, 460px);
+    padding: 32px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid #e4e8ee;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(6, 8, 20, .08);
+}
+
+.brand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    color: #2864e9;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.brand .pi {
+    font-size: 15px;
+}
+
+.welcome-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    margin: 28px auto 18px;
+    color: #237a45;
+    background: #e8f6ed;
+    border-radius: 50%;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #2864e9;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.home-card h1 {
+    margin: 0 0 12px;
+    color: #111a2e;
+    font-size: 26px;
+}
+
+.description {
+    margin: 0 auto 24px;
+    color: #687282;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.logout-button {
+    width: 100%;
+    background: #2864e9;
+    border-color: #2864e9;
+}

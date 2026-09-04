@@ -24,6 +24,8 @@ func main() {
 	}
 	repo := infrastructure.NewUserRepository(db)
 	handler := authhttp.NewAuthHandler(application.NewAuthService(repo), cfg)
+	productRepo := infrastructure.NewProductRepository(db)
+	productHandler := authhttp.NewProductHandler(application.NewProductService(productRepo))
 	router := gin.Default()
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", cfg.FrontendURL)
@@ -41,6 +43,11 @@ func main() {
 	auth.POST("/login", handler.Login)
 	auth.POST("/logout", handler.Logout)
 	auth.GET("/me", handler.Me)
+	router.GET("/api/v1/negocios/:negocioId/catalogo/productos", productHandler.List)
+	router.GET("/api/v1/negocios/:negocioId/catalogo/categorias", productHandler.Categories)
+	router.GET("/api/v1/negocios/:negocioId/catalogo/marcas", productHandler.Brands)
+	router.GET("/api/v1/negocios/:negocioId/sucursales", productHandler.Branches)
+	router.POST("/api/v1/negocios/:negocioId/catalogo/productos", productHandler.Create)
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)

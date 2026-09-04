@@ -1,0 +1,188 @@
+<section class="products-page">
+  <header class="products-header">
+    <div>
+      <p class="eyebrow">Vista administrador</p>
+      <h1>Productos</h1>
+      <p>Visualiza el catálogo de productos y sus existencias actuales.</p>
+    </div>
+    @if (products().length > 0) {
+      <button class="primary-button" type="button" (click)="openCreateDialog()">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Agregar nuevo producto
+      </button>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="products-state loading-state" role="status">Cargando productos...</div>
+  } @else if (error(); as message) {
+    <div class="products-state error-state" role="alert">{{ message }}</div>
+  } @else if (products().length === 0) {
+    <div class="empty-products">
+      <span class="empty-icon"><i class="pi pi-tags" aria-hidden="true"></i></span>
+      <h2>Sin productos disponibles</h2>
+      <p>Agrega tu primer producto para comenzar a administrar tu catálogo.</p>
+      <button class="primary-button" type="button" (click)="openCreateDialog()">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Agregar nuevo producto
+      </button>
+    </div>
+  } @else {
+    <div class="products-card">
+      <p-table
+        [value]="products()"
+        [loading]="false"
+        [tableStyle]="{ 'min-width': '68rem' }"
+        styleClass="products-table"
+        responsiveLayout="scroll"
+      >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Imagen</th>
+          <th>Nombre</th>
+          <th>SKU</th>
+          <th>Precio</th>
+          <th>Stock</th>
+          <th>Categoría</th>
+          <th>Estado</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-product>
+        <tr>
+          <td>
+            @if (product.imagen_url) {
+              <img class="product-image" [src]="product.imagen_url" [alt]="product.nombre" />
+            } @else {
+              <span class="product-image image-placeholder"><i class="pi pi-image" aria-hidden="true"></i></span>
+            }
+          </td>
+          <td class="product-name">{{ product.nombre }}</td>
+          <td><code>{{ product.sku || '—' }}</code></td>
+          <td>{{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td>{{ product.stock }} und.</td>
+          <td>{{ product.categoria || 'Sin categoría' }}</td>
+          <td>
+            <span class="status" [class]="product.estado.toLowerCase().replace(' ', '-')">
+              {{ product.estado }}
+            </span>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="7" class="empty-message">Sin productos disponibles.</td></tr>
+      </ng-template>
+      </p-table>
+    </div>
+  }
+</section>
+
+<p-dialog
+  header="Agregar nuevo producto"
+  [(visible)]="dialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(760px, calc(100vw - 2rem))' }"
+  (onHide)="closeCreateDialog()"
+>
+  <p class="dialog-description">Ingresa los detalles técnicos y de inventario del producto.</p>
+
+  <form class="product-form" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+    <div class="form-section">
+      <h3>Información general</h3>
+      <div class="form-grid">
+        <label class="field full-field">
+          <span>Nombre del producto <b>*</b></span>
+          <input pInputText formControlName="nombre" placeholder="Ej. Monitor Curvo 34'" />
+          @if (hasError('nombre')) { <small>El nombre es obligatorio.</small> }
+        </label>
+
+        <label class="field">
+          <span>SKU interno <b>*</b></span>
+          <input pInputText formControlName="sku_interno" placeholder="PROD-001" />
+          @if (hasError('sku_interno')) { <small>El SKU es obligatorio.</small> }
+        </label>
+
+        <label class="field">
+          <span>Categoría <b>*</b></span>
+          <p-select
+            formControlName="categoria_id"
+            [options]="categories()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Seleccionar..."
+            [style]="{ width: '100%' }"
+          />
+          @if (hasError('categoria_id')) { <small>Selecciona una categoría.</small> }
+        </label>
+
+        <label class="field">
+          <span>Marca</span>
+          <p-select
+            formControlName="marca_id"
+            [options]="brands()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Sin marca"
+            [showClear]="true"
+            [style]="{ width: '100%' }"
+          />
+        </label>
+
+        <label class="field full-field">
+          <span>Descripción</span>
+          <textarea pInputTextarea formControlName="descripcion" rows="3" placeholder="Describe las especificaciones principales del producto..."></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Presentación, inventario y precio</h3>
+      <div class="form-grid">
+        <label class="field">
+          <span>Presentación</span>
+          <input pInputText formControlName="presentacion" placeholder="Pieza, caja, botella..." />
+        </label>
+        <label class="field">
+          <span>Contenido</span>
+          <input pInputText type="number" formControlName="contenido" min="0" placeholder="600" />
+        </label>
+        <label class="field">
+          <span>Unidad de contenido</span>
+          <input pInputText formControlName="unidad_contenido" placeholder="ml, kg, lt..." />
+        </label>
+        <label class="field">
+          <span>Sucursal <b>*</b></span>
+          <p-select
+            formControlName="sucursal_id"
+            [options]="branches()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Seleccionar..."
+            [style]="{ width: '100%' }"
+          />
+          @if (hasError('sucursal_id')) { <small>Selecciona una sucursal.</small> }
+        </label>
+        <label class="field">
+          <span>Precio de venta <b>*</b></span>
+          <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" placeholder="0.00" />
+          @if (hasError('precio_venta')) { <small>Indica un precio válido.</small> }
+        </label>
+        <label class="field">
+          <span>Stock inicial <b>*</b></span>
+          <input pInputText type="number" formControlName="stock_inicial" min="0" step="1" placeholder="0" />
+          @if (hasError('stock_inicial')) { <small>Indica un stock válido.</small> }
+        </label>
+      </div>
+    </div>
+
+    @if (formError) { <div class="form-error" role="alert">{{ formError }}</div> }
+
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" [disabled]="saving()" (click)="closeCreateDialog()">Cancelar</button>
+      <button class="primary-button" type="submit" [disabled]="saving()">
+        @if (saving()) { Guardando... } @else { Guardar producto }
+      </button>
+    </div>
+  </form>
+</p-dialog>
