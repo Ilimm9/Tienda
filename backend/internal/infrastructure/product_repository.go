@@ -25,6 +25,120 @@ func (r *ProductRepository) ListBrands() ([]domain.CatalogOption, error) {
 	return options, err
 }
 
+func (r *ProductRepository) ListBrandsAdmin() ([]domain.Marca, error) {
+	v := make([]domain.Marca, 0)
+	e := r.db.Order("nombre ASC").Find(&v).Error
+	return v, e
+}
+func (r *ProductRepository) CreateBrand(i domain.CreateMarcaInput) error {
+	i.Nombre = strings.TrimSpace(i.Nombre)
+	if i.Nombre == "" {
+		return errors.New("el nombre de la marca es obligatorio")
+	}
+	return r.db.Create(&domain.Marca{Nombre: i.Nombre, Activo: true}).Error
+}
+func (r *ProductRepository) UpdateBrand(id uuid.UUID, i domain.UpdateMarcaInput) error {
+	values := map[string]interface{}{}
+	if i.Nombre != nil {
+		*i.Nombre = strings.TrimSpace(*i.Nombre)
+		values["nombre"] = *i.Nombre
+	}
+	if i.Activo != nil {
+		values["activo"] = *i.Activo
+	}
+	if len(values) == 0 {
+		return nil
+	}
+	result := r.db.Model(&domain.Marca{}).Where("id = ?", id).Updates(values)
+	if result.RowsAffected == 0 && result.Error == nil {
+		return errors.New("marca no encontrada")
+	}
+	return result.Error
+}
+
+func (r *ProductRepository) ListCategoriesAdmin() ([]domain.Categoria, error) {
+	v := make([]domain.Categoria, 0)
+	e := r.db.Order("nombre ASC").Find(&v).Error
+	return v, e
+}
+func (r *ProductRepository) CreateCategory(i domain.CreateCategoriaInput) error {
+	i.Nombre = strings.TrimSpace(i.Nombre)
+	if i.Nombre == "" {
+		return errors.New("el nombre de la categoría es obligatorio")
+	}
+	return r.db.Create(&domain.Categoria{Nombre: i.Nombre, CategoriaPadreID: i.CategoriaPadreID, Descripcion: i.Descripcion, Activo: true}).Error
+}
+func (r *ProductRepository) UpdateCategory(id uuid.UUID, i domain.UpdateCategoriaInput) error {
+	values := map[string]interface{}{}
+	if i.Nombre != nil {
+		*i.Nombre = strings.TrimSpace(*i.Nombre)
+		values["nombre"] = *i.Nombre
+	}
+	if i.CategoriaPadreID != nil {
+		values["categoria_padre_id"] = i.CategoriaPadreID
+	}
+	if i.Descripcion != nil {
+		values["descripcion"] = i.Descripcion
+	}
+	if i.Activo != nil {
+		values["activo"] = *i.Activo
+	}
+	if len(values) == 0 {
+		return nil
+	}
+	result := r.db.Model(&domain.Categoria{}).Where("id = ?", id).Updates(values)
+	if result.RowsAffected == 0 && result.Error == nil {
+		return errors.New("categoría no encontrada")
+	}
+	return result.Error
+}
+
+func (r *ProductRepository) ListProviders(businessID uuid.UUID) ([]domain.Proveedor, error) {
+	v := make([]domain.Proveedor, 0)
+	e := r.db.Where("negocio_id = ?", businessID).Order("nombre ASC").Find(&v).Error
+	return v, e
+}
+func (r *ProductRepository) CreateProvider(id uuid.UUID, i domain.CreateProveedorInput) error {
+	i.Nombre = strings.TrimSpace(i.Nombre)
+	if i.Nombre == "" {
+		return errors.New("el nombre del proveedor es obligatorio")
+	}
+	return r.db.Create(&domain.Proveedor{NegocioID: id, Nombre: i.Nombre, RazonSocial: i.RazonSocial, RFC: i.RFC, Telefono: i.Telefono, Email: i.Email, Direccion: i.Direccion, Activo: true}).Error
+}
+func (r *ProductRepository) UpdateProvider(businessID, id uuid.UUID, i domain.UpdateProveedorInput) error {
+	values := map[string]interface{}{}
+	if i.Nombre != nil {
+		*i.Nombre = strings.TrimSpace(*i.Nombre)
+		values["nombre"] = *i.Nombre
+	}
+	if i.RazonSocial != nil {
+		values["razon_social"] = i.RazonSocial
+	}
+	if i.RFC != nil {
+		values["rfc"] = i.RFC
+	}
+	if i.Telefono != nil {
+		values["telefono"] = i.Telefono
+	}
+	if i.Email != nil {
+		values["email"] = i.Email
+	}
+	if i.Direccion != nil {
+		values["direccion"] = i.Direccion
+	}
+	if i.Activo != nil {
+		values["activo"] = *i.Activo
+	}
+	if len(values) == 0 {
+		return nil
+	}
+	result := r.db.Model(&domain.Proveedor{}).Where("id = ? AND negocio_id = ?", id, businessID).Updates(values)
+	if result.RowsAffected == 0 && result.Error == nil {
+		return errors.New("proveedor no encontrado")
+	}
+	return result.Error
+}
+
 func (r *ProductRepository) ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error) {
 	var options []domain.CatalogOption
 	err := r.db.Table("sucursales").Select("id, nombre").Where("negocio_id = ? AND activo = TRUE", businessID).Order("nombre ASC").Scan(&options).Error

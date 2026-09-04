@@ -84,3 +84,132 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, gin.H{"mensaje": "Producto creado correctamente"})
 }
+
+func parseID(c *gin.Context, name string) (uuid.UUID, bool) {
+	id, err := uuid.Parse(c.Param(name))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El identificador no es válido"})
+		return uuid.Nil, false
+	}
+	return id, true
+}
+func (h *ProductHandler) ListBrandsAdmin(c *gin.Context) {
+	v, e := h.products.ListBrandsAdmin()
+	if e != nil {
+		c.JSON(500, gin.H{"mensaje": "No fue posible cargar las marcas"})
+		return
+	}
+	c.JSON(200, v)
+}
+func (h *ProductHandler) CreateBrand(c *gin.Context) {
+	var i domain.CreateMarcaInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "El nombre de la marca es obligatorio"})
+		return
+	}
+	if e := h.products.CreateBrand(i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(201)
+}
+func (h *ProductHandler) UpdateBrand(c *gin.Context) {
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	var i domain.UpdateMarcaInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "Los datos no son válidos"})
+		return
+	}
+	if e := h.products.UpdateBrand(id, i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(204)
+}
+func (h *ProductHandler) ListCategoriesAdmin(c *gin.Context) {
+	v, e := h.products.ListCategoriesAdmin()
+	if e != nil {
+		c.JSON(500, gin.H{"mensaje": "No fue posible cargar las categorías"})
+		return
+	}
+	c.JSON(200, v)
+}
+func (h *ProductHandler) CreateCategory(c *gin.Context) {
+	var i domain.CreateCategoriaInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "El nombre de la categoría es obligatorio"})
+		return
+	}
+	if e := h.products.CreateCategory(i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(201)
+}
+func (h *ProductHandler) UpdateCategory(c *gin.Context) {
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	var i domain.UpdateCategoriaInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "Los datos no son válidos"})
+		return
+	}
+	if e := h.products.UpdateCategory(id, i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(204)
+}
+func (h *ProductHandler) ListProviders(c *gin.Context) {
+	id, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	v, e := h.products.ListProviders(id)
+	if e != nil {
+		c.JSON(500, gin.H{"mensaje": "No fue posible cargar los proveedores"})
+		return
+	}
+	c.JSON(200, v)
+}
+func (h *ProductHandler) CreateProvider(c *gin.Context) {
+	id, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	var i domain.CreateProveedorInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "El nombre del proveedor es obligatorio"})
+		return
+	}
+	if e := h.products.CreateProvider(id, i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(201)
+}
+func (h *ProductHandler) UpdateProvider(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	var i domain.UpdateProveedorInput
+	if c.ShouldBindJSON(&i) != nil {
+		c.JSON(400, gin.H{"mensaje": "Los datos no son válidos"})
+		return
+	}
+	if e := h.products.UpdateProvider(businessID, id, i); e != nil {
+		c.JSON(400, gin.H{"mensaje": e.Error()})
+		return
+	}
+	c.Status(204)
+}

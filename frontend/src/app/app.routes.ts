@@ -47,10 +47,13 @@ export const routes: Routes = [
       },
       {
         path: 'productos',
+        redirectTo: 'catalogo/productos',
+        pathMatch: 'full',
+      },
+      {
+        path: 'catalogo',
         loadChildren: () =>
-          import('./features/productos/productos.routes').then(
-            (module) => module.PRODUCTOS_ROUTES,
-          ),
+          import('./features/catalogo/catalogo.routes').then((module) => module.CATALOGO_ROUTES),
       },
       {
         path: 'equipo',

@@ -10,7 +10,16 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Negocios', icon: 'pi pi-briefcase', route: '/negocios' },
   { label: 'Sucursales', icon: 'pi pi-map-marker', route: '/sucursales' },
   { label: 'Ventas', icon: 'pi pi-shopping-cart', route: '/ventas' },
-  { label: 'Productos', icon: 'pi pi-tags', route: '/productos' },
+  {
+    label: 'Catálogo',
+    icon: 'pi pi-tags',
+    children: [
+      { label: 'Productos', icon: 'pi pi-tags', route: '/catalogo/productos' },
+      { label: 'Marcas', icon: 'pi pi-bookmark', route: '/catalogo/marcas' },
+      { label: 'Categorías', icon: 'pi pi-list', route: '/catalogo/categorias' },
+      { label: 'Proveedores', icon: 'pi pi-truck', route: '/catalogo/proveedores' },
+    ],
+  },
   {
     label: 'Equipo',
     icon: 'pi pi-users',

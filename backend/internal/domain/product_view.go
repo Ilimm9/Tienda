@@ -31,3 +31,39 @@ type CreateProductInput struct {
 	PrecioVenta     float64    `json:"precio_venta"`
 	StockInicial    float64    `json:"stock_inicial"`
 }
+
+type CreateMarcaInput struct {
+	Nombre string `json:"nombre" binding:"required"`
+}
+type UpdateMarcaInput struct {
+	Nombre *string `json:"nombre"`
+	Activo *bool   `json:"activo"`
+}
+type CreateCategoriaInput struct {
+	Nombre           string     `json:"nombre" binding:"required"`
+	CategoriaPadreID *uuid.UUID `json:"categoria_padre_id"`
+	Descripcion      *string    `json:"descripcion"`
+}
+type UpdateCategoriaInput struct {
+	Nombre           *string    `json:"nombre"`
+	CategoriaPadreID *uuid.UUID `json:"categoria_padre_id"`
+	Descripcion      *string    `json:"descripcion"`
+	Activo           *bool      `json:"activo"`
+}
+type CreateProveedorInput struct {
+	Nombre      string  `json:"nombre" binding:"required"`
+	RazonSocial *string `json:"razon_social"`
+	RFC         *string `json:"rfc"`
+	Telefono    *string `json:"telefono"`
+	Email       *string `json:"email"`
+	Direccion   *string `json:"direccion"`
+}
+type UpdateProveedorInput struct {
+	Nombre      *string `json:"nombre"`
+	RazonSocial *string `json:"razon_social"`
+	RFC         *string `json:"rfc"`
+	Telefono    *string `json:"telefono"`
+	Email       *string `json:"email"`
+	Direccion   *string `json:"direccion"`
+	Activo      *bool   `json:"activo"`
+}

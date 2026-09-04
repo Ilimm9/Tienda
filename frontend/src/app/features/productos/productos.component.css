@@ -103,15 +103,6 @@ code {
     color: var(--text-muted);
 }
 
-.products-card {
-    overflow: hidden;
-    margin-top: 34px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
-}
-
 .primary-button,
 .secondary-button {
     display: inline-flex;
@@ -189,7 +180,7 @@ code {
 
 .product-form {
     display: grid;
-    gap: 1.25rem;
+    gap: 1.5rem;
 }
 
 .form-section {
@@ -211,6 +202,10 @@ code {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
+}
+
+.form-section + .form-section {
+    padding-top: .25rem;
 }
 
 .field {
@@ -269,7 +264,8 @@ code {
     display: flex;
     justify-content: flex-end;
     gap: .75rem;
-    padding-top: .25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
 }
 
 @media (max-width: 620px) {

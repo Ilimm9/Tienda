@@ -22,6 +22,11 @@ func main() {
 	if err := database.Init(db); err != nil {
 		log.Fatal(err)
 	}
+	if cfg.AppEnv == "development" {
+		if err := database.SeedDevelopment(db); err != nil {
+			log.Fatal(err)
+		}
+	}
 	repo := infrastructure.NewUserRepository(db)
 	handler := authhttp.NewAuthHandler(application.NewAuthService(repo), cfg)
 	productRepo := infrastructure.NewProductRepository(db)
@@ -48,6 +53,15 @@ func main() {
 	router.GET("/api/v1/negocios/:negocioId/catalogo/marcas", productHandler.Brands)
 	router.GET("/api/v1/negocios/:negocioId/sucursales", productHandler.Branches)
 	router.POST("/api/v1/negocios/:negocioId/catalogo/productos", productHandler.Create)
+	router.GET("/api/v1/catalogo/marcas", productHandler.ListBrandsAdmin)
+	router.POST("/api/v1/catalogo/marcas", productHandler.CreateBrand)
+	router.PATCH("/api/v1/catalogo/marcas/:id", productHandler.UpdateBrand)
+	router.GET("/api/v1/catalogo/categorias", productHandler.ListCategoriesAdmin)
+	router.POST("/api/v1/catalogo/categorias", productHandler.CreateCategory)
+	router.PATCH("/api/v1/catalogo/categorias/:id", productHandler.UpdateCategory)
+	router.GET("/api/v1/negocios/:negocioId/catalogo/proveedores", productHandler.ListProviders)
+	router.POST("/api/v1/negocios/:negocioId/catalogo/proveedores", productHandler.CreateProvider)
+	router.PATCH("/api/v1/negocios/:negocioId/catalogo/proveedores/:id", productHandler.UpdateProvider)
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)

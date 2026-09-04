@@ -35,7 +35,7 @@ export class ProductosComponent {
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
-  readonly branches = signal<CatalogOption[]>([]);
+  readonly branchReady = signal(false);
   readonly saving = signal(false);
   dialogVisible = false;
   formError: string | null = null;
@@ -45,7 +45,8 @@ export class ProductosComponent {
     sku_interno: ['', [Validators.required, Validators.maxLength(120)]],
     marca_id: [''],
     categoria_id: ['', Validators.required],
-    sucursal_id: ['', Validators.required],
+    // TODO(sucursales): restore the visible branch selector when branch management is enabled.
+    sucursal_id: [''],
     descripcion: ['', Validators.maxLength(2000)],
     contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
     unidad_contenido: ['', Validators.maxLength(30)],
@@ -74,16 +75,37 @@ export class ProductosComponent {
   }
 
   openCreateDialog(): void {
+    const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
       nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
       precio_venta: 0, stock_inicial: 0,
     });
+    this.branchReady.set(false);
     this.formError = null;
     this.dialogVisible = true;
     this.productosService.listCategories(environment.defaultBusinessId).subscribe({ next: (items) => this.categories.set(items) });
     this.productosService.listBrands(environment.defaultBusinessId).subscribe({ next: (items) => this.brands.set(items) });
-    this.productosService.listBranches(environment.defaultBusinessId).subscribe({ next: (items) => this.branches.set(items) });
+    // TODO(sucursales): replace this automatic assignment with the branch selector.
+    this.productosService.listBranches(environment.defaultBusinessId).subscribe({
+      next: (items) => {
+        const branch = items.find((item) => item.nombre === 'Tienda prueba')
+          ?? (items.length === 1 ? items[0] : null);
+        if (!branch) {
+          this.formError = 'No se encontró la tienda de prueba para registrar el inventario.';
+          return;
+        }
+        branchControl.setValue(branch.id);
+        this.branchReady.set(true);
+      },
+      error: () => {
+        this.formError = 'No fue posible cargar la tienda de prueba.';
+      },
+    });
+  }
+
+  canSubmitProduct(): boolean {
+    return !this.saving() && this.branchReady();
   }
 
   closeCreateDialog(): void {
@@ -95,7 +117,15 @@ export class ProductosComponent {
     return !!control && control.invalid && (control.dirty || control.touched);
   }
 
+  getStatusClass(status: string | null | undefined): string {
+    return status?.trim().toLowerCase().replaceAll(' ', '-') ?? 'sin-estado';
+  }
+
   saveProduct(): void {
+    if (!this.canSubmitProduct()) {
+      return;
+    }
+
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
       return;

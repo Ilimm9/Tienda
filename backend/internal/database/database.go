@@ -3,8 +3,14 @@ package database
 import (
 	"tienda/backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+)
+
+const (
+	DevelopmentBusinessID = "11111111-1111-4111-8111-111111111111"
+	developmentBranchID   = "22222222-2222-4222-8222-222222222222"
 )
 
 func Open(url string) (*gorm.DB, error) {
@@ -38,4 +44,27 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	return nil
+}
+
+// SeedDevelopment provides the minimum organization data needed to exercise the
+// catalog and inventory flows locally. It must never run in production.
+// TODO(sucursales): remove this seed when businesses and branches are created by
+// their complete onboarding flow.
+func SeedDevelopment(db *gorm.DB) error {
+	businessID := uuid.MustParse(DevelopmentBusinessID)
+	branchID := uuid.MustParse(developmentBranchID)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var business domain.Negocio
+		if err := tx.Where("id = ?", businessID).Attrs(domain.Negocio{
+			ID: businessID, Nombre: "Negocio de prueba", Estado: "activo",
+		}).FirstOrCreate(&business).Error; err != nil {
+			return err
+		}
+
+		var branch domain.Sucursal
+		return tx.Where("id = ?", branchID).Attrs(domain.Sucursal{
+			ID: branchID, NegocioID: businessID, Nombre: "Tienda prueba", Activo: true,
+		}).FirstOrCreate(&branch).Error
+	})
 }

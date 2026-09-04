@@ -28,15 +28,21 @@
       </button>
     </div>
   } @else {
-    <div class="products-card">
+    <div class="products-card data-table-card">
       <p-table
         [value]="products()"
         [loading]="false"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
         [tableStyle]="{ 'min-width': '68rem' }"
+        class="app-table app-table--products"
         styleClass="products-table"
         responsiveLayout="scroll"
       >
-      <ng-template pTemplate="header">
+      <ng-template #header>
         <tr>
           <th>Imagen</th>
           <th>Nombre</th>
@@ -47,7 +53,7 @@
           <th>Estado</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-product>
+      <ng-template #body let-product>
         <tr>
           <td>
             @if (product.imagen_url) {
@@ -62,13 +68,13 @@
           <td>{{ product.stock }} und.</td>
           <td>{{ product.categoria || 'Sin categoría' }}</td>
           <td>
-            <span class="status" [class]="product.estado.toLowerCase().replace(' ', '-')">
-              {{ product.estado }}
+            <span class="status" [class]="getStatusClass(product.estado)">
+              {{ product.estado || 'Sin estado' }}
             </span>
           </td>
         </tr>
       </ng-template>
-      <ng-template pTemplate="emptymessage">
+      <ng-template #emptymessage>
         <tr><td colspan="7" class="empty-message">Sin productos disponibles.</td></tr>
       </ng-template>
       </p-table>
@@ -78,6 +84,7 @@
 
 <p-dialog
   header="Agregar nuevo producto"
+  styleClass="product-dialog"
   [(visible)]="dialogVisible"
   [modal]="true"
   [draggable]="false"
@@ -151,18 +158,7 @@
           <span>Unidad de contenido</span>
           <input pInputText formControlName="unidad_contenido" placeholder="ml, kg, lt..." />
         </label>
-        <label class="field">
-          <span>Sucursal <b>*</b></span>
-          <p-select
-            formControlName="sucursal_id"
-            [options]="branches()"
-            optionLabel="nombre"
-            optionValue="id"
-            placeholder="Seleccionar..."
-            [style]="{ width: '100%' }"
-          />
-          @if (hasError('sucursal_id')) { <small>Selecciona una sucursal.</small> }
-        </label>
+        <!-- TODO(sucursales): restore the branch selector when the feature is enabled. -->
         <label class="field">
           <span>Precio de venta <b>*</b></span>
           <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" placeholder="0.00" />
@@ -180,7 +176,7 @@
 
     <div class="dialog-actions">
       <button class="secondary-button" type="button" [disabled]="saving()" (click)="closeCreateDialog()">Cancelar</button>
-      <button class="primary-button" type="submit" [disabled]="saving()">
+      <button class="primary-button" type="submit" [disabled]="!canSubmitProduct()">
         @if (saving()) { Guardando... } @else { Guardar producto }
       </button>
     </div>
