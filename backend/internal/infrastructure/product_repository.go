@@ -2,12 +2,16 @@ package infrastructure
 
 import (
 	"errors"
+	"net/url"
+	"regexp"
 	"strings"
 	"tienda/backend/internal/domain"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+var productBarcodePattern = regexp.MustCompile(`^\d{8,14}$`)
 
 type ProductRepository struct {
 	db *gorm.DB
@@ -151,6 +155,17 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 	if input.Nombre == "" || input.SKUInterno == "" || input.PrecioVenta < 0 || input.StockInicial < 0 {
 		return errors.New("los datos del producto no son válidos")
 	}
+	barcode := optionalString(input.CodigoBarras)
+	imageURL := optionalString(input.ImagenURL)
+	if barcode != "" && !productBarcodePattern.MatchString(barcode) {
+		return errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	}
+	if imageURL != "" {
+		parsed, err := url.Parse(imageURL)
+		if barcode == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return errors.New("la URL de imagen no es válida")
+		}
+	}
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		var branch domain.Sucursal
@@ -168,6 +183,14 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		if duplicate > 0 {
 			return errors.New("el SKU ya existe en este negocio")
 		}
+		if barcode != "" {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ?", barcode).Count(&duplicate).Error; err != nil {
+				return err
+			}
+			if duplicate > 0 {
+				return errors.New("el código de barras ya está asignado a otro producto")
+			}
+		}
 
 		product := domain.Producto{
 			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID,
@@ -176,6 +199,16 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		}
 		if err := tx.Create(&product).Error; err != nil {
 			return err
+		}
+		if barcode != "" {
+			if err := tx.Create(&domain.ProductoCodigo{ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
+		}
+		if imageURL != "" {
+			if err := tx.Create(&domain.ProductoImagen{ProductoID: product.ID, URL: imageURL, EsPrincipal: true, Orden: 0}).Error; err != nil {
+				return err
+			}
 		}
 		if err := tx.Create(&domain.ProductoCategoria{ProductoID: product.ID, CategoriaID: input.CategoriaID, EsPrincipal: true}).Error; err != nil {
 			return err
@@ -196,6 +229,13 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		}
 		return nil
 	})
+}
+
+func optionalString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
 }
 
 func NewProductRepository(db *gorm.DB) *ProductRepository {

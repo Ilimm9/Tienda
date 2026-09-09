@@ -33,4 +33,19 @@ export interface CreateProductRequest {
   presentacion: string | null;
   precio_venta: number;
   stock_inicial: number;
+  codigo_barras: string | null;
+  imagen_url: string | null;
+}
+
+export interface ProductLookup {
+  codigo_barras: string;
+  nombre: string | null;
+  descripcion: string | null;
+  marca: string | null;
+  categoria: string | null;
+  precio_sugerido: number | null;
+  contenido: number | null;
+  unidad_contenido: string | null;
+  imagen_url: string | null;
+  fuentes: string[];
 }

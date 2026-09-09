@@ -1,10 +1,26 @@
 package application
 
 import (
+	"errors"
+	"regexp"
+	"strings"
 	"tienda/backend/internal/domain"
 
 	"github.com/google/uuid"
 )
+
+var (
+	ErrInvalidBarcode    = errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	ErrProductNotFound   = errors.New("no se encontró el producto en los catálogos externos")
+	ErrLookupRateLimited = errors.New("se alcanzó el límite de consultas de los catálogos externos")
+	ErrLookupUnavailable = errors.New("los catálogos externos no están disponibles")
+)
+
+var barcodePattern = regexp.MustCompile(`^\d{8,14}$`)
+
+type ProductLookupProvider interface {
+	LookupProduct(barcode string) (domain.ProductLookup, error)
+}
 
 type ProductRepository interface {
 	ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error)
@@ -67,12 +83,21 @@ func (s *ProductService) Create(businessID uuid.UUID, input domain.CreateProduct
 	return s.products.Create(businessID, input)
 }
 
-type ProductService struct {
-	products ProductRepository
+func (s *ProductService) LookupProduct(barcode string) (domain.ProductLookup, error) {
+	barcode = strings.TrimSpace(barcode)
+	if !barcodePattern.MatchString(barcode) {
+		return domain.ProductLookup{}, ErrInvalidBarcode
+	}
+	return s.productLookup.LookupProduct(barcode)
 }
 
-func NewProductService(products ProductRepository) *ProductService {
-	return &ProductService{products: products}
+type ProductService struct {
+	products      ProductRepository
+	productLookup ProductLookupProvider
+}
+
+func NewProductService(products ProductRepository, productLookup ProductLookupProvider) *ProductService {
+	return &ProductService{products: products, productLookup: productLookup}
 }
 
 func (s *ProductService) ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error) {

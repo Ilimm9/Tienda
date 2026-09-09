@@ -15,6 +15,9 @@ type Config struct {
 	JWTExpiration       time.Duration
 	LoginHeaderImageURL string
 	FrontendURL         string
+	PrecioCheckAPIKey   string
+	PrecioCheckBaseURL  string
+	UPCItemDBBaseURL    string
 }
 
 func Load() Config {
@@ -27,6 +30,9 @@ func Load() Config {
 		JWTExpiration:       duration("JWT_EXPIRATION", 24*time.Hour),
 		LoginHeaderImageURL: get("LOGIN_HEADER_IMAGE_URL", ""),
 		FrontendURL:         get("FRONTEND_URL", "http://localhost:4200"),
+		PrecioCheckAPIKey:   get("PRECIOCHECK_API_KEY", ""),
+		PrecioCheckBaseURL:  get("PRECIOCHECK_BASE_URL", "https://preciocheck.com/api/v1"),
+		UPCItemDBBaseURL:    get("UPCITEMDB_BASE_URL", "https://api.upcitemdb.com/prod/trial"),
 	}
 }
 

@@ -183,6 +183,13 @@ code {
     gap: 1.5rem;
 }
 
+.barcode-lookup-card {
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    border-radius: .5rem;
+    background: color-mix(in srgb, var(--primary-soft) 45%, var(--surface-raised));
+}
+
 .form-section {
     display: grid;
     gap: .85rem;
@@ -250,6 +257,49 @@ code {
     font-size: .75rem;
 }
 
+.field .optional-label {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.field .lookup-warning {
+    color: var(--warning);
+}
+
+.lookup-sources {
+    color: var(--success);
+    font-size: .78rem;
+}
+
+.barcode-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .65rem;
+}
+
+.barcode-input-row .secondary-button {
+    white-space: nowrap;
+}
+
+.image-preview {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem;
+    border: 1px solid var(--border);
+    border-radius: .35rem;
+    color: var(--text-muted);
+    background: var(--surface-hover);
+}
+
+.image-preview img {
+    width: 4rem;
+    height: 4rem;
+    border-radius: .35rem;
+    object-fit: contain;
+    background: #fff;
+}
+
 .full-field {
     grid-column: 1 / -1;
 }
@@ -288,6 +338,10 @@ code {
 
     .full-field {
         grid-column: auto;
+    }
+
+    .barcode-input-row {
+        grid-template-columns: 1fr;
     }
 
     .dialog-actions {

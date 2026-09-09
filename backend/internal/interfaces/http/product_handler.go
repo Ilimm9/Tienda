@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"tienda/backend/internal/application"
 	"tienda/backend/internal/domain"
@@ -11,6 +12,30 @@ import (
 
 type ProductHandler struct {
 	products *application.ProductService
+}
+
+func (h *ProductHandler) LookupProduct(c *gin.Context) {
+	if _, err := uuid.Parse(c.Param("negocioId")); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El negocioId no es válido"})
+		return
+	}
+
+	result, err := h.products.LookupProduct(c.Param("codigoBarras"))
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+
+	switch {
+	case errors.Is(err, application.ErrInvalidBarcode):
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+	case errors.Is(err, application.ErrProductNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"mensaje": err.Error()})
+	case errors.Is(err, application.ErrLookupRateLimited):
+		c.JSON(http.StatusTooManyRequests, gin.H{"mensaje": err.Error()})
+	default:
+		c.JSON(http.StatusServiceUnavailable, gin.H{"mensaje": "No fue posible consultar los catálogos externos"})
+	}
 }
 
 func NewProductHandler(products *application.ProductService) *ProductHandler {

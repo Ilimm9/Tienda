@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, CreateProductRequest, ProductListResponse } from './product.models';
+import { CatalogOption, CreateProductRequest, ProductListResponse, ProductLookup } from './product.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
@@ -29,6 +29,12 @@ export class ProductosService {
 
   listBranches(businessId: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/sucursales`);
+  }
+
+  lookupProduct(businessId: string, barcode: string): Observable<ProductLookup> {
+    return this.http.get<ProductLookup>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/consulta-codigo/${encodeURIComponent(barcode)}`,
+    );
   }
 
   create(businessId: string, payload: CreateProductRequest): Observable<void> {

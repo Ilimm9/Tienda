@@ -30,6 +30,21 @@ type CreateProductInput struct {
 	Presentacion    *string    `json:"presentacion"`
 	PrecioVenta     float64    `json:"precio_venta"`
 	StockInicial    float64    `json:"stock_inicial"`
+	CodigoBarras    *string    `json:"codigo_barras"`
+	ImagenURL       *string    `json:"imagen_url"`
+}
+
+type ProductLookup struct {
+	CodigoBarras    string   `json:"codigo_barras"`
+	Nombre          *string  `json:"nombre"`
+	Descripcion     *string  `json:"descripcion"`
+	Marca           *string  `json:"marca"`
+	Categoria       *string  `json:"categoria"`
+	PrecioSugerido  *float64 `json:"precio_sugerido"`
+	Contenido       *float64 `json:"contenido"`
+	UnidadContenido *string  `json:"unidad_contenido"`
+	ImagenURL       *string  `json:"imagen_url"`
+	Fuentes         []string `json:"fuentes"`
 }
 
 type CreateMarcaInput struct {

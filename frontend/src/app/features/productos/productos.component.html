@@ -56,8 +56,8 @@
       <ng-template #body let-product>
         <tr>
           <td>
-            @if (product.imagen_url) {
-              <img class="product-image" [src]="product.imagen_url" [alt]="product.nombre" />
+            @if (product.imagen_url && !hasProductImageFailed(product.id)) {
+              <img class="product-image" [src]="product.imagen_url" [alt]="product.nombre" (error)="handleProductImageError(product.id)" />
             } @else {
               <span class="product-image image-placeholder"><i class="pi pi-image" aria-hidden="true"></i></span>
             }
@@ -95,8 +95,44 @@
   <p class="dialog-description">Ingresa los detalles técnicos y de inventario del producto.</p>
 
   <form class="product-form" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+    <div class="barcode-lookup-card">
+      <div class="field">
+        <span>Código de barras <small class="optional-label">(opcional)</small></span>
+        <div class="barcode-input-row">
+          <input
+            pInputText
+            formControlName="codigo_barras"
+            inputmode="numeric"
+            maxlength="14"
+            placeholder="Ej. 7501055303038"
+            (input)="onBarcodeChanged()"
+          />
+          <button class="secondary-button" type="button" [disabled]="!canLookupProduct()" (click)="lookupProduct()">
+            @if (imageLookupLoading()) { Buscando... } @else { Buscar producto }
+          </button>
+        </div>
+        @if (hasError('codigo_barras')) { <small>Usa únicamente entre 8 y 14 dígitos.</small> }
+        @if (imageLookupError(); as message) { <small>{{ message }}</small> }
+        @for (warning of catalogLookupWarnings(); track warning) {
+          <small class="lookup-warning">{{ warning }} Selecciónala manualmente si corresponde.</small>
+        }
+        @if (lookupSources().length > 0) {
+          <span class="lookup-sources">Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de guardar.</span>
+        }
+        @if (previewImageURL(); as imageURL) {
+          <div class="image-preview">
+            <img [src]="imageURL" alt="Vista previa del producto" (error)="handlePreviewImageError()" />
+            <span>Imagen encontrada para el producto.</span>
+          </div>
+        }
+      </div>
+    </div>
+
     <div class="form-section">
       <h3>Información general</h3>
+      @for (message of catalogLoadErrors(); track message) {
+        <div class="form-error" role="alert">{{ message }}</div>
+      }
       <div class="form-grid">
         <label class="field full-field">
           <span>Nombre del producto <b>*</b></span>
@@ -158,7 +194,19 @@
           <span>Unidad de contenido</span>
           <input pInputText formControlName="unidad_contenido" placeholder="ml, kg, lt..." />
         </label>
-        <!-- TODO(sucursales): restore the branch selector when the feature is enabled. -->
+        <label class="field">
+          <span>Sucursal <b>*</b></span>
+          <p-select
+            formControlName="sucursal_id"
+            [options]="branches()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Seleccionar..."
+            [style]="{ width: '100%' }"
+            (onChange)="onBranchSelected()"
+          />
+          @if (hasError('sucursal_id')) { <small>Selecciona una sucursal.</small> }
+        </label>
         <label class="field">
           <span>Precio de venta <b>*</b></span>
           <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" placeholder="0.00" />
@@ -172,6 +220,9 @@
       </div>
     </div>
 
+    @for (message of catalogLoadErrors(); track message) {
+      <div class="form-error" role="alert">{{ message }}</div>
+    }
     @if (formError) { <div class="form-error" role="alert">{{ formError }}</div> }
 
     <div class="dialog-actions">
