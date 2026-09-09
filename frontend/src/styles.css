@@ -1,5 +1,6 @@
 @import 'primeicons/primeicons.css';
 @import './styles/tables.css';
+@import './styles/uploads.css';
 
 :root {
   --text: #171b25;

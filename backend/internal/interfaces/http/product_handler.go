@@ -3,6 +3,8 @@ package http
 import (
 	"errors"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"tienda/backend/internal/application"
 	"tienda/backend/internal/domain"
 
@@ -189,6 +191,73 @@ func (h *ProductHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 	c.Status(204)
+}
+
+const maxCatalogImportSize = 5 << 20
+
+func (h *ProductHandler) BrandImportTemplate(c *gin.Context) {
+	h.catalogImportTemplate(c, "marcas")
+}
+
+func (h *ProductHandler) CategoryImportTemplate(c *gin.Context) {
+	h.catalogImportTemplate(c, "categorias")
+}
+
+func (h *ProductHandler) catalogImportTemplate(c *gin.Context, section string) {
+	content, err := application.CatalogImportTemplate(section)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible generar la plantilla"})
+		return
+	}
+	filename := "plantilla-marcas.xlsx"
+	if section == "categorias" {
+		filename = "plantilla-categorias.xlsx"
+	}
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", content)
+}
+
+func (h *ProductHandler) ImportBrands(c *gin.Context) {
+	h.importCatalog(c, "marcas")
+}
+
+func (h *ProductHandler) ImportCategories(c *gin.Context) {
+	h.importCatalog(c, "categorias")
+}
+
+func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogImportSize)
+	fileHeader, err := c.FormFile("archivo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona un archivo XLSX de hasta 5 MB"})
+		return
+	}
+	if strings.ToLower(filepath.Ext(fileHeader.Filename)) != ".xlsx" {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El archivo debe tener extensión .xlsx"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "No fue posible leer el archivo"})
+		return
+	}
+	defer file.Close()
+
+	var result domain.CatalogImportResult
+	if section == "marcas" {
+		result, err = h.products.ImportBrands(file)
+	} else {
+		result, err = h.products.ImportCategories(file)
+	}
+	if err != nil {
+		if errors.Is(err, application.ErrInvalidImportFile) {
+			c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible importar el archivo"})
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 func (h *ProductHandler) ListProviders(c *gin.Context) {
 	id, ok := parseID(c, "negocioId")

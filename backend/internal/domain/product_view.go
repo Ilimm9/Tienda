@@ -54,6 +54,33 @@ type UpdateMarcaInput struct {
 	Nombre *string `json:"nombre"`
 	Activo *bool   `json:"activo"`
 }
+
+// CatalogImportIssue identifies a row that could not be imported.
+type CatalogImportIssue struct {
+	Fila   int    `json:"fila"`
+	Motivo string `json:"motivo"`
+}
+
+// CatalogImportResult is returned after a bulk catalog import.
+type CatalogImportResult struct {
+	Procesadas int                  `json:"procesadas"`
+	Creadas    int                  `json:"creadas"`
+	Omitidas   int                  `json:"omitidas"`
+	Invalidas  int                  `json:"invalidas"`
+	Errores    []CatalogImportIssue `json:"errores"`
+}
+
+type CatalogImportBrandRow struct {
+	Fila   int
+	Nombre string
+}
+
+type CatalogImportCategoryRow struct {
+	Fila           int
+	Nombre         string
+	Descripcion    string
+	CategoriaPadre string
+}
 type CreateCategoriaInput struct {
 	Nombre           string     `json:"nombre" binding:"required"`
 	CategoriaPadreID *uuid.UUID `json:"categoria_padre_id"`

@@ -60,6 +60,46 @@ func (r *ProductRepository) UpdateBrand(id uuid.UUID, i domain.UpdateMarcaInput)
 	return result.Error
 }
 
+func (r *ProductRepository) ImportBrands(rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var current []domain.Marca
+		if err := tx.Find(&current).Error; err != nil {
+			return err
+		}
+		existing := make(map[string]struct{}, len(current))
+		for _, brand := range current {
+			existing[catalogImportKey(brand.Nombre)] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(rows))
+		brands := make([]domain.Marca, 0, len(rows))
+		for _, row := range rows {
+			key := catalogImportKey(row.Nombre)
+			if _, ok := seen[key]; ok {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La marca está repetida en el archivo"})
+				continue
+			}
+			seen[key] = struct{}{}
+			if _, ok := existing[key]; ok {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La marca ya existe"})
+				continue
+			}
+			brands = append(brands, domain.Marca{Nombre: strings.TrimSpace(row.Nombre), Activo: true})
+		}
+		if len(brands) == 0 {
+			return nil
+		}
+		if err := tx.Create(&brands).Error; err != nil {
+			return err
+		}
+		result.Creadas = len(brands)
+		return nil
+	})
+	return result, err
+}
+
 func (r *ProductRepository) ListCategoriesAdmin() ([]domain.Categoria, error) {
 	v := make([]domain.Categoria, 0)
 	e := r.db.Order("nombre ASC").Find(&v).Error
@@ -95,6 +135,101 @@ func (r *ProductRepository) UpdateCategory(id uuid.UUID, i domain.UpdateCategori
 		return errors.New("categoría no encontrada")
 	}
 	return result.Error
+}
+
+func (r *ProductRepository) ImportCategories(rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var current []domain.Categoria
+		if err := tx.Find(&current).Error; err != nil {
+			return err
+		}
+		existing := make(map[string]uuid.UUID, len(current))
+		for _, category := range current {
+			existing[catalogImportKey(category.Nombre)] = category.ID
+		}
+
+		candidates := make(map[string]domain.CatalogImportCategoryRow, len(rows))
+		for _, row := range rows {
+			key := catalogImportKey(row.Nombre)
+			if _, duplicate := candidates[key]; duplicate {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría está repetida en el archivo"})
+				continue
+			}
+			if _, exists := existing[key]; exists {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría ya existe"})
+				continue
+			}
+			candidates[key] = row
+		}
+
+		states := make(map[string]int, len(candidates))
+		ordered := make([]string, 0, len(candidates))
+		var visit func(string) bool
+		visit = func(key string) bool {
+			switch states[key] {
+			case 2:
+				return true
+			case 3:
+				return false
+			case 1:
+				return false
+			}
+			states[key] = 1
+			row := candidates[key]
+			parent := catalogImportKey(row.CategoriaPadre)
+			if parent != "" {
+				if _, exists := existing[parent]; !exists {
+					if _, included := candidates[parent]; !included || !visit(parent) {
+						states[key] = 3
+						return false
+					}
+				}
+			}
+			states[key] = 2
+			ordered = append(ordered, key)
+			return true
+		}
+		for key := range candidates {
+			visit(key)
+		}
+
+		for key, row := range candidates {
+			if states[key] != 2 {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría padre no existe o forma una jerarquía circular"})
+			}
+		}
+
+		created := make(map[string]uuid.UUID, len(ordered))
+		for _, key := range ordered {
+			row := candidates[key]
+			parentKey := catalogImportKey(row.CategoriaPadre)
+			var parentID *uuid.UUID
+			if id, exists := existing[parentKey]; parentKey != "" && exists {
+				parentID = &id
+			} else if id, exists := created[parentKey]; parentKey != "" && exists {
+				parentID = &id
+			}
+			category := domain.Categoria{ID: uuid.New(), Nombre: strings.TrimSpace(row.Nombre), CategoriaPadreID: parentID, Activo: true}
+			if description := strings.TrimSpace(row.Descripcion); description != "" {
+				category.Descripcion = &description
+			}
+			if err := tx.Create(&category).Error; err != nil {
+				return err
+			}
+			created[key] = category.ID
+			result.Creadas++
+		}
+		return nil
+	})
+	return result, err
+}
+
+func catalogImportKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func (r *ProductRepository) ListProviders(businessID uuid.UUID) ([]domain.Proveedor, error) {

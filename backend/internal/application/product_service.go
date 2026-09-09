@@ -31,9 +31,11 @@ type ProductRepository interface {
 	ListBrandsAdmin() ([]domain.Marca, error)
 	CreateBrand(domain.CreateMarcaInput) error
 	UpdateBrand(uuid.UUID, domain.UpdateMarcaInput) error
+	ImportBrands([]domain.CatalogImportBrandRow) (domain.CatalogImportResult, error)
 	ListCategoriesAdmin() ([]domain.Categoria, error)
 	CreateCategory(domain.CreateCategoriaInput) error
 	UpdateCategory(uuid.UUID, domain.UpdateCategoriaInput) error
+	ImportCategories([]domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
