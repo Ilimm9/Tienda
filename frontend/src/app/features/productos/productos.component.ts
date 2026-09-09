@@ -36,6 +36,7 @@ export class ProductosComponent {
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
+  readonly units = signal<CatalogOption[]>([]);
   readonly catalogLoadErrors = signal<string[]>([]);
   readonly branchReady = signal(false);
   readonly saving = signal(false);
@@ -63,6 +64,7 @@ export class ProductosComponent {
     descripcion: ['', Validators.maxLength(2000)],
     contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
     unidad_contenido: ['', Validators.maxLength(30)],
+    unidad_medida_id: [''],
     presentacion: ['', Validators.maxLength(100)],
     precio_venta: [0, [Validators.required, Validators.min(0)]],
     stock_inicial: [0, [Validators.required, Validators.min(0)]],
@@ -93,6 +95,7 @@ export class ProductosComponent {
       nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
       codigo_barras: '', imagen_url: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
+      unidad_medida_id: '',
       precio_venta: 0, stock_inicial: 0,
     });
     this.categories.set([]);
@@ -141,6 +144,10 @@ export class ProductosComponent {
       error: () => {
         this.formError = 'No fue posible cargar las sucursales.';
       },
+    });
+    this.productosService.listUnits().subscribe({
+      next: (items) => this.units.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
     });
   }
 
@@ -313,6 +320,7 @@ export class ProductosComponent {
       descripcion: value.descripcion || null,
       contenido: value.contenido,
       unidad_contenido: value.unidad_contenido || null,
+      unidad_medida_id: value.unidad_medida_id || null,
       presentacion: value.presentacion || null,
       codigo_barras: value.codigo_barras.trim() || null,
       imagen_url: value.imagen_url || null,

@@ -30,7 +30,7 @@ export class CatalogoComponent {
   private readonly service = inject(CatalogoService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
-  readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores';
+  readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores' | 'unidades';
   readonly items = signal<CatalogRecord[]>([]);
   readonly parents = signal<Categoria[]>([]);
   readonly loading = signal(true);
@@ -42,9 +42,9 @@ export class CatalogoComponent {
   importDialogVisible = false;
   importFile: File | null = null;
   importDropActive = false;
-  importing = false;
-  importError: string | null = null;
-  importResult: CatalogImportResult | null = null;
+  readonly importing = signal(false);
+  readonly importError = signal<string | null>(null);
+  readonly importResult = signal<CatalogImportResult | null>(null);
   readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(180)]],
     descripcion: [''],
@@ -54,6 +54,7 @@ export class CatalogoComponent {
     telefono: [''],
     email: ['', Validators.email],
     direccion: [''],
+    codigo: [''], simbolo: [''], tipo: ['PESO'], factor_a_base: [1, [Validators.min(0.000001)]], decimales: [2, [Validators.min(0), Validators.max(6)]],
   });
   constructor() {
     this.load();
@@ -63,14 +64,14 @@ export class CatalogoComponent {
       ? 'Marcas'
       : this.section === 'categorias'
         ? 'Categorías'
-        : 'Proveedores';
+        : this.section === 'proveedores' ? 'Proveedores' : 'Unidades de medida';
   }
   get description(): string {
     return this.section === 'marcas'
       ? 'Administra las marcas de tus productos.'
       : this.section === 'categorias'
         ? 'Organiza los productos por categorías.'
-        : 'Administra tus proveedores de inventario.';
+        : this.section === 'proveedores' ? 'Administra tus proveedores de inventario.' : 'Administra las unidades normalizadas del catálogo.';
   }
   load(): void {
     this.loading.set(true);
@@ -79,7 +80,7 @@ export class CatalogoComponent {
         ? this.service.marcas()
         : this.section === 'categorias'
           ? this.service.categorias()
-          : this.service.proveedores(environment.defaultBusinessId);
+          : this.section === 'proveedores' ? this.service.proveedores(environment.defaultBusinessId) : this.service.unidades();
     request.subscribe({
       next: (v) => {
         this.items.set(v);
@@ -101,8 +102,8 @@ export class CatalogoComponent {
   openImport(): void {
     this.importFile = null;
     this.importDropActive = false;
-    this.importError = null;
-    this.importResult = null;
+    this.importError.set(null);
+    this.importResult.set(null);
     this.importDialogVisible = true;
   }
   onImportFile(event: Event): void {
@@ -111,12 +112,12 @@ export class CatalogoComponent {
     input.value = '';
   }
   openFilePicker(event: MouseEvent, input: HTMLInputElement): void {
-    if (event.target === input || this.importing) return;
+    if (event.target === input || this.importing()) return;
     input.click();
   }
   onImportDragOver(event: DragEvent): void {
     event.preventDefault();
-    if (!this.importing) this.importDropActive = true;
+    if (!this.importing()) this.importDropActive = true;
   }
   onImportDragLeave(event: DragEvent): void {
     event.preventDefault();
@@ -125,30 +126,30 @@ export class CatalogoComponent {
   onImportDrop(event: DragEvent): void {
     event.preventDefault();
     this.importDropActive = false;
-    if (!this.importing) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
+    if (!this.importing()) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
   }
   private setImportFile(file: File | null): void {
     this.importFile = file;
-    this.importError = null;
-    this.importResult = null;
+    this.importError.set(null);
+    this.importResult.set(null);
   }
   templateUrl(): string {
-    return this.service.plantillaUrl(this.section as 'marcas' | 'categorias');
+    return this.service.plantillaUrl(this.section as 'marcas' | 'categorias' | 'unidades');
   }
   importCatalog(): void {
     if (!this.importFile || !this.canImport()) return;
-    this.importing = true;
-    this.importError = null;
-    this.importResult = null;
-    this.service.importar(this.section as 'marcas' | 'categorias', this.importFile).subscribe({
+    this.importing.set(true);
+    this.importError.set(null);
+    this.importResult.set(null);
+    this.service.importar(this.section as 'marcas' | 'categorias' | 'unidades', this.importFile).subscribe({
       next: (result) => {
-        this.importing = false;
-        this.importResult = result;
+        this.importing.set(false);
+        this.importResult.set(result);
         if (result.creadas > 0) this.load();
       },
       error: (error) => {
-        this.importing = false;
-        this.importError = error.error?.mensaje ?? 'No fue posible importar el archivo.';
+        this.importing.set(false);
+        this.importError.set(error.error?.mensaje ?? 'No fue posible importar el archivo.');
       },
     });
   }
@@ -163,6 +164,11 @@ export class CatalogoComponent {
       telefono: 'telefono' in item ? (item.telefono ?? '') : '',
       email: 'email' in item ? (item.email ?? '') : '',
       direccion: 'direccion' in item ? (item.direccion ?? '') : '',
+      codigo: 'codigo' in item ? item.codigo : '',
+      simbolo: 'simbolo' in item ? item.simbolo : '',
+      tipo: 'tipo' in item ? item.tipo : 'PESO',
+      factor_a_base: 'factor_a_base' in item ? item.factor_a_base : 1,
+      decimales: 'decimales' in item ? item.decimales : 2,
     });
     this.formError = null;
     this.dialogVisible = true;
@@ -175,6 +181,11 @@ export class CatalogoComponent {
     this.saving = true;
     this.formError = null;
     const v = this.form.getRawValue();
+    if (this.section === 'unidades' && (!v.codigo.trim() || !v.simbolo.trim() || !v.tipo.trim())) {
+      this.formError = 'Código, símbolo y tipo son obligatorios para la unidad.';
+      this.saving = false;
+      return;
+    }
     const payload: any = { nombre: v.nombre };
     if (this.section === 'categorias')
       Object.assign(payload, {
@@ -189,13 +200,15 @@ export class CatalogoComponent {
         email: v.email || null,
         direccion: v.direccion || null,
       });
+    if (this.section === 'unidades') Object.assign(payload, { codigo: v.codigo, simbolo: v.simbolo, tipo: v.tipo, factor_a_base: v.factor_a_base, decimales: v.decimales });
     const path =
       this.section === 'proveedores'
         ? `negocios/${environment.defaultBusinessId}/catalogo/proveedores`
         : `catalogo/${this.section}`;
+    const requestPath = this.section === 'unidades' ? 'catalogo/unidades-medida' : path;
     const request = this.editingId
-      ? this.service.actualizar(path, this.editingId, payload)
-      : this.service.crear(path, payload);
+      ? this.service.actualizar(requestPath, this.editingId, payload)
+      : this.service.crear(requestPath, payload);
     request.subscribe({
       next: () => {
         this.saving = false;
@@ -218,7 +231,10 @@ export class CatalogoComponent {
   isProvider(): boolean {
     return this.section === 'proveedores';
   }
+  isUnit(): boolean {
+    return this.section === 'unidades';
+  }
   canImport(): boolean {
-    return this.section === 'marcas' || this.section === 'categorias';
+    return this.section === 'marcas' || this.section === 'categorias' || this.section === 'unidades';
   }
 }

@@ -5,80 +5,291 @@
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
-    @if (items().length > 0) { <div class="catalog-actions">@if (canImport()) { <button class="secondary-button"
-        type="button" (click)="openImport()"><i class="pi pi-upload"></i> Carga masiva</button> }<button
-        class="primary-button" type="button" (click)="openCreate()"><i class="pi pi-plus"></i> Agregar {{ section ===
-        'proveedores' ? 'proveedor' : section === 'categorias' ? 'categoría' : 'marca' }}</button></div> }
+    @if (items().length > 0) {
+      <div class="catalog-actions">
+        @if (canImport()) {
+          <button class="secondary-button" type="button" (click)="openImport()">
+            <i class="pi pi-upload"></i> Carga masiva
+          </button>
+        }
+        <button class="primary-button" type="button" (click)="openCreate()">
+          <i class="pi pi-plus"></i> Agregar
+          {{
+            section === 'proveedores'
+              ? 'proveedor'
+              : section === 'categorias'
+                ? 'categoría'
+                : section === 'unidades'
+                  ? 'nueva unidad de medida'
+                  : 'marca'
+          }}
+        </button>
+      </div>
+    }
   </header>
-  @if (loading()) { <section class="catalog-state">Cargando {{ title.toLowerCase() }}...</section> }
-  @else if (error()) { <section class="catalog-state error-state">{{ error() }}</section> }
-  @else if (!items().length) { <section class="empty-catalog"><span class="empty-icon"><i class="pi pi-tags"></i></span>
-    <h2>Sin {{ title.toLowerCase() }} disponibles</h2>
-    <p>Aún no hay registros para mostrar.</p>
-    <div class="catalog-actions">@if (canImport()) { <button class="secondary-button" type="button"
-        (click)="openImport()"><i class="pi pi-upload"></i> Carga masiva</button> }<button class="primary-button"
-        type="button" (click)="openCreate()">Agregar nuevo {{ section === 'proveedores' ? 'proveedor' : section ===
-        'categorias' ? 'categoría' : 'marca' }}</button></div>
-  </section> }
-  @else { <section class="catalog-card data-table-card"><p-table [value]="items()" [paginator]="true" [rows]="10"
-      [rowsPerPageOptions]="[10, 25, 50]" [showCurrentPageReport]="true"
-      currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
-      [tableStyle]="{ 'min-width': isCategory() ? '42rem' : isProvider() ? '58rem' : '36rem' }" class="app-table"
-      [class.app-table--categories]="isCategory()" [class.app-table--providers]="isProvider()"
-      [class.app-table--brands]="section === 'marcas'" responsiveLayout="scroll"><ng-template #header>
-        <tr>
-          <th>Nombre</th>@if (isCategory()) {<th>Descripción</th>} @if (isProvider()) {<th>Razón social</th>
-          <th>Contacto</th>}<th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </ng-template><ng-template #body let-item>
-        <tr>
-          <td>{{ item.nombre }}</td>@if (isCategory()) {<td>{{ $any(item).descripcion || '—' }}</td>} @if (isProvider())
-          {<td>{{ $any(item).razon_social || '—' }}</td>
-          <td>{{ $any(item).email || $any(item).telefono || '—' }}</td>}<td><span class="status"
-              [class.inactive]="!item.activo">{{ item.activo ? 'Activo' : 'Inactivo' }}</span></td>
-          <td><button class="icon-button" type="button" (click)="openEdit(item)" aria-label="Editar"><i
-                class="pi pi-pencil"></i></button></td>
-        </tr>
-      </ng-template></p-table></section> }
+  @if (loading()) {
+    <section class="catalog-state">Cargando {{ title.toLowerCase() }}...</section>
+  } @else if (error()) {
+    <section class="catalog-state error-state">{{ error() }}</section>
+  } @else if (!items().length) {
+    <section class="empty-catalog">
+      <span class="empty-icon"><i class="pi pi-tags"></i></span>
+      <h2>Sin {{ title.toLowerCase() }} disponibles</h2>
+      <p>Aún no hay registros para mostrar.</p>
+      <div class="catalog-actions">
+        @if (canImport()) {
+          <button class="secondary-button" type="button" (click)="openImport()">
+            <i class="pi pi-upload"></i> Carga masiva
+          </button>
+        }
+        <button class="primary-button" type="button" (click)="openCreate()">
+          {{
+            section === 'unidades'
+              ? 'Agregar nueva unidad de medida'
+              : 'Agregar nuevo ' +
+                (section === 'proveedores'
+                  ? 'proveedor'
+                  : section === 'categorias'
+                    ? 'categoría'
+                    : 'marca')
+          }}
+        </button>
+      </div>
+    </section>
+  } @else {
+    <section class="catalog-card data-table-card">
+      <p-table
+        [value]="items()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
+        [tableStyle]="{ 'min-width': isCategory() ? '42rem' : isProvider() ? '58rem' : '36rem' }"
+        class="app-table"
+        [class.app-table--categories]="isCategory()"
+        [class.app-table--providers]="isProvider()"
+        [class.app-table--brands]="section === 'marcas'"
+        responsiveLayout="scroll"
+        ><ng-template #header>
+          <tr>
+            <th>Nombre</th>
+            @if (isUnit()) {
+              <th>Código</th>
+              <th>Símbolo</th>
+              <th>Tipo</th>
+            }
+            @if (isCategory()) {
+              <th>Descripción</th>
+            }
+            @if (isProvider()) {
+              <th>Razón social</th>
+              <th>Contacto</th>
+            }
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr> </ng-template
+        ><ng-template #body let-item>
+          <tr>
+            <td>{{ item.nombre }}</td>
+            @if (isUnit()) {
+              <td>{{ $any(item).codigo }}</td>
+              <td>{{ $any(item).simbolo }}</td>
+              <td>{{ $any(item).tipo }}</td>
+            }
+            @if (isCategory()) {
+              <td>{{ $any(item).descripcion || '—' }}</td>
+            }
+            @if (isProvider()) {
+              <td>{{ $any(item).razon_social || '—' }}</td>
+              <td>{{ $any(item).email || $any(item).telefono || '—' }}</td>
+            }
+            <td>
+              <span class="status" [class.inactive]="!item.activo">{{
+                item.activo ? 'Activo' : 'Inactivo'
+              }}</span>
+            </td>
+            <td>
+              <button
+                class="icon-button"
+                type="button"
+                (click)="openEdit(item)"
+                aria-label="Editar"
+              >
+                <i class="pi pi-pencil"></i>
+              </button>
+            </td>
+          </tr> </ng-template
+      ></p-table>
+    </section>
+  }
 </main>
-<p-dialog [(visible)]="dialogVisible" [modal]="true" [draggable]="false" [resizable]="false"
-  [header]="(editingId ? 'Editar ' : 'Agregar ') + title.slice(0, -1)" styleClass="product-dialog catalog-dialog"
-  [style]="{ width: 'min(620px, 94vw)' }">
-  <form [formGroup]="form" (ngSubmit)="save()" class="catalog-form"><label>Nombre *<input pInputText
-        formControlName="nombre" /></label>@if (hasError('nombre')) {<small>El nombre es obligatorio.</small>}@if
-    (isCategory()) {<label>Descripción<textarea pTextarea formControlName="descripcion"
-        rows="3"></textarea></label><label>Categoría padre<p-select formControlName="categoria_padre_id"
-        [options]="parents()" optionLabel="nombre" optionValue="id" placeholder="Sin categoría padre"
-        [showClear]="true"></p-select></label>}@if (isProvider()) {<div class="form-grid"><label>Razón social<input
-          pInputText formControlName="razon_social" /></label><label>RFC<input pInputText
-          formControlName="rfc" /></label><label>Teléfono<input pInputText
-          formControlName="telefono" /></label><label>Correo<input pInputText formControlName="email" /></label></div>
-    <label>Dirección<textarea pTextarea formControlName="direccion" rows="2"></textarea></label>}@if (formError) {<p
-      class="form-error">{{ formError }}</p>}<footer><button class="secondary-button" type="button"
-        (click)="dialogVisible=false" [disabled]="saving">Cancelar</button><button class="primary-button" type="submit"
-        [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button></footer>
+<p-dialog
+  [(visible)]="dialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [header]="(editingId ? 'Editar ' : 'Agregar ') + title.slice(0, -1)"
+  styleClass="product-dialog catalog-dialog"
+  [style]="{ width: 'min(620px, 94vw)' }"
+>
+  <form [formGroup]="form" (ngSubmit)="save()" class="catalog-form">
+    <label>Nombre *<input pInputText formControlName="nombre" /></label>
+    @if (hasError('nombre')) {
+      <small>El nombre es obligatorio.</small>
+    }
+    @if (isUnit()) {
+      <div class="form-grid">
+        <label>Código *<input pInputText formControlName="codigo" placeholder="g" /></label
+        ><label>Símbolo *<input pInputText formControlName="simbolo" placeholder="g" /></label
+        ><label
+          >Tipo *<p-select
+            formControlName="tipo"
+            [options]="['PESO', 'VOLUMEN', 'LONGITUD', 'AREA', 'CANTIDAD', 'EMPAQUE']"
+          ></p-select></label
+        ><label
+          >Factor a unidad base *<input
+            pInputText
+            type="number"
+            formControlName="factor_a_base"
+            min="0.000001" /></label
+        ><label
+          >Decimales *<input pInputText type="number" formControlName="decimales" min="0" max="6"
+        /></label>
+      </div>
+    }
+    @if (isCategory()) {
+      <label
+        >Descripción<textarea pTextarea formControlName="descripcion" rows="3"></textarea></label
+      ><label
+        >Categoría padre<p-select
+          formControlName="categoria_padre_id"
+          [options]="parents()"
+          optionLabel="nombre"
+          optionValue="id"
+          placeholder="Sin categoría padre"
+          [showClear]="true"
+        ></p-select
+      ></label>
+    }
+    @if (isProvider()) {
+      <div class="form-grid">
+        <label>Razón social<input pInputText formControlName="razon_social" /></label
+        ><label>RFC<input pInputText formControlName="rfc" /></label
+        ><label>Teléfono<input pInputText formControlName="telefono" /></label
+        ><label>Correo<input pInputText formControlName="email" /></label>
+      </div>
+      <label>Dirección<textarea pTextarea formControlName="direccion" rows="2"></textarea></label>
+    }
+    @if (formError) {
+      <p class="form-error">{{ formError }}</p>
+    }
+    <footer>
+      <button
+        class="secondary-button"
+        type="button"
+        (click)="dialogVisible = false"
+        [disabled]="saving"
+      >
+        Cancelar</button
+      ><button class="primary-button" type="submit" [disabled]="saving">
+        {{ saving ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </footer>
   </form>
 </p-dialog>
-<p-dialog [(visible)]="importDialogVisible" [modal]="true" [draggable]="false" [resizable]="false"
-  [header]="'Carga masiva de ' + title.toLowerCase()" styleClass="product-dialog catalog-dialog"
-  [style]="{ width: 'min(560px, 94vw)' }">
+<p-dialog
+  [(visible)]="importDialogVisible"
+  appendTo="self"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [header]="'Carga masiva de ' + title.toLowerCase()"
+  styleClass="product-dialog catalog-dialog"
+  [style]="{ width: 'min(560px, 94vw)' }"
+>
   <section class="catalog-form import-form">
-    <div class="import-intro"><span class="import-intro-icon"><i class="pi pi-file-excel"></i></span><div><strong>Prepara tu archivo</strong><p>Descarga la plantilla, complétala y súbela en formato XLSX.</p></div></div>
-    <a class="template-link" [href]="templateUrl()"><i class="pi pi-download"></i> Descargar plantilla</a>
-    <div class="file-dropzone" [class.is-dragging]="importDropActive" [class.has-file]="importFile" [class.is-disabled]="importing" role="button" tabindex="0" (click)="openFilePicker($event, importInput)" (keydown.enter)="importInput.click()" (keydown.space)="importInput.click(); $event.preventDefault()" (dragover)="onImportDragOver($event)" (dragleave)="onImportDragLeave($event)" (drop)="onImportDrop($event)">
-      <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing" />
-      <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i></span>
-      @if (importFile) { <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small> }
-      @else { <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span><small>Solo archivos XLSX, máximo 5 MB</small> }
+    <div class="import-intro">
+      <span class="import-intro-icon"><i class="pi pi-file-excel"></i></span>
+      <div>
+        <strong>Prepara tu archivo</strong>
+        <p>Descarga la plantilla, complétala y súbela en formato XLSX.</p>
+      </div>
     </div>
-    @if (importError) { <p class="form-error">{{ importError }}</p> }@if (importResult) {
-    <section class="import-result"><strong>Resultado de la importación</strong>
-      <p>{{ importResult.creadas }} creadas · {{ importResult.omitidas }} omitidas · {{ importResult.invalidas }}
-        inválidas</p>@if (importResult.errores.length) {<ul>@for (error of importResult.errores; track error.fila +
-        error.motivo) {<li>Fila {{ error.fila }}: {{ error.motivo }}</li>}</ul>}
-    </section> }<footer><button class="secondary-button" type="button" (click)="importDialogVisible=false"
-        [disabled]="importing">Cerrar</button><button class="primary-button" type="button" (click)="importCatalog()"
-        [disabled]="!importFile || importing">{{ importing ? 'Importando...' : 'Importar archivo' }}</button></footer>
+    <a class="template-link" [href]="templateUrl()"
+      ><i class="pi pi-download"></i> Descargar plantilla</a
+    >
+    <div
+      class="file-dropzone"
+      [class.is-dragging]="importDropActive"
+      [class.has-file]="importFile"
+      [class.is-disabled]="importing()"
+      role="button"
+      tabindex="0"
+      (click)="openFilePicker($event, importInput)"
+      (keydown.enter)="importInput.click()"
+      (keydown.space)="importInput.click(); $event.preventDefault()"
+      (dragover)="onImportDragOver($event)"
+      (dragleave)="onImportDragLeave($event)"
+      (drop)="onImportDrop($event)"
+    >
+      <input
+        #importInput
+        class="file-input"
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        (change)="onImportFile($event)"
+        [disabled]="importing()"
+      />
+      <span class="dropzone-icon"
+        ><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i
+      ></span>
+      @if (importFile) {
+        <strong>{{ importFile.name }}</strong
+        ><small>Archivo listo para importar</small>
+      } @else {
+        <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
+        ><small>Solo archivos XLSX, máximo 5 MB</small>
+      }
+    </div>
+    <section class="import-output" aria-live="polite" aria-atomic="false">
+      @if (importError()) {
+        <p class="form-error">{{ importError() }}</p>
+      } @else if (importResult(); as result) {
+        <section class="import-result">
+        <strong>Resultado de la importación</strong>
+        <p>
+          {{ result.creadas }} creadas · {{ result.omitidas }} omitidas ·
+          {{ result.invalidas }} inválidas
+        </p>
+        @if (result.errores.length) {
+          <ul>
+            @for (error of result.errores; track error.fila + error.motivo) {
+              <li>Fila {{ error.fila }}: {{ error.motivo }}</li>
+            }
+          </ul>
+        }
+        </section>
+      } @else {
+        <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p>
+      }
+    </section>
+    <footer>
+      <button
+        class="secondary-button"
+        type="button"
+        (click)="importDialogVisible = false"
+        [disabled]="importing()"
+      >
+        Cerrar</button
+      ><button
+        class="primary-button"
+        type="button"
+        (click)="importCatalog()"
+        [disabled]="!importFile || importing()"
+      >
+        {{ importing() ? 'Importando...' : 'Importar archivo' }}
+      </button>
+    </footer>
   </section>
 </p-dialog>

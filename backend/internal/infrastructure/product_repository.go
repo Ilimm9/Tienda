@@ -29,6 +29,119 @@ func (r *ProductRepository) ListBrands() ([]domain.CatalogOption, error) {
 	return options, err
 }
 
+func (r *ProductRepository) ListUnits() ([]domain.UnidadMedida, error) {
+	items := make([]domain.UnidadMedida, 0)
+	err := r.db.Where("activo = TRUE").Order("tipo ASC, nombre ASC").Find(&items).Error
+	return items, err
+}
+
+func (r *ProductRepository) CreateUnit(i domain.CreateUnidadMedidaInput) error {
+	i.Codigo = strings.TrimSpace(strings.ToLower(i.Codigo))
+	i.Nombre = strings.TrimSpace(i.Nombre)
+	i.Simbolo = strings.TrimSpace(i.Simbolo)
+	i.Tipo = strings.TrimSpace(strings.ToUpper(i.Tipo))
+	if i.Codigo == "" || i.Nombre == "" || i.Simbolo == "" || i.Tipo == "" || i.FactorABase <= 0 || i.Decimales < 0 || i.Decimales > 6 {
+		return errors.New("los datos de la unidad no son válidos")
+	}
+	fraccion := true
+	if i.PermiteFraccion != nil {
+		fraccion = *i.PermiteFraccion
+	}
+	return r.db.Create(&domain.UnidadMedida{Codigo: i.Codigo, Nombre: i.Nombre, Simbolo: i.Simbolo, Tipo: i.Tipo, UnidadBaseID: i.UnidadBaseID, FactorABase: i.FactorABase, PermiteFraccion: fraccion, Decimales: i.Decimales, Activo: true}).Error
+}
+
+func (r *ProductRepository) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
+	values := map[string]interface{}{}
+	if i.Codigo != nil {
+		values["codigo"] = strings.TrimSpace(strings.ToLower(*i.Codigo))
+	}
+	if i.Nombre != nil {
+		values["nombre"] = strings.TrimSpace(*i.Nombre)
+	}
+	if i.Simbolo != nil {
+		values["simbolo"] = strings.TrimSpace(*i.Simbolo)
+	}
+	if i.Tipo != nil {
+		values["tipo"] = strings.TrimSpace(strings.ToUpper(*i.Tipo))
+	}
+	if i.UnidadBaseID != nil {
+		values["unidad_base_id"] = i.UnidadBaseID
+	}
+	if i.FactorABase != nil {
+		values["factor_a_base"] = *i.FactorABase
+	}
+	if i.PermiteFraccion != nil {
+		values["permite_fraccion"] = *i.PermiteFraccion
+	}
+	if i.Decimales != nil {
+		values["decimales"] = *i.Decimales
+	}
+	if i.Activo != nil {
+		values["activo"] = *i.Activo
+	}
+	if len(values) == 0 {
+		return nil
+	}
+	result := r.db.Model(&domain.UnidadMedida{}).Where("id = ?", id).Updates(values)
+	if result.RowsAffected == 0 && result.Error == nil {
+		return errors.New("unidad no encontrada")
+	}
+	return result.Error
+}
+
+func (r *ProductRepository) ImportUnits(rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		current := make([]domain.UnidadMedida, 0)
+		if err := tx.Find(&current).Error; err != nil {
+			return err
+		}
+		existing := make(map[string]struct{}, len(current)*3)
+		for _, unit := range current {
+			existing[catalogImportKey(unit.Codigo)] = struct{}{}
+			existing[catalogImportKey(unit.Nombre)] = struct{}{}
+			existing[catalogImportKey(unit.Simbolo)] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(rows))
+		created := make([]domain.UnidadMedida, 0, len(rows))
+		for _, row := range rows {
+			key := catalogImportKey(row.Codigo)
+			if _, duplicate := seen[key]; duplicate {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La unidad está repetida en el archivo"})
+				continue
+			}
+			seen[key] = struct{}{}
+			if _, exists := existing[key]; exists || containsUnitKey(existing, row.Nombre, row.Simbolo) {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El código, nombre o símbolo de la unidad ya existe"})
+				continue
+			}
+			created = append(created, domain.UnidadMedida{Codigo: strings.ToLower(strings.TrimSpace(row.Codigo)), Nombre: strings.TrimSpace(row.Nombre), Simbolo: strings.TrimSpace(row.Simbolo), Tipo: strings.ToUpper(strings.TrimSpace(row.Tipo)), FactorABase: row.FactorABase, Decimales: row.Decimales, PermiteFraccion: true, Activo: true})
+			existing[key] = struct{}{}
+			existing[catalogImportKey(row.Nombre)] = struct{}{}
+			existing[catalogImportKey(row.Simbolo)] = struct{}{}
+		}
+		if len(created) > 0 {
+			if err := tx.Create(&created).Error; err != nil {
+				return err
+			}
+			result.Creadas = len(created)
+		}
+		return nil
+	})
+	return result, err
+}
+
+func containsUnitKey(existing map[string]struct{}, values ...string) bool {
+	for _, value := range values {
+		if _, ok := existing[catalogImportKey(value)]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *ProductRepository) ListBrandsAdmin() ([]domain.Marca, error) {
 	v := make([]domain.Marca, 0)
 	e := r.db.Order("nombre ASC").Find(&v).Error
@@ -311,6 +424,12 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
 			return errors.New("la categoría no existe o está inactiva")
 		}
+		if input.UnidadMedidaID != nil {
+			var unit domain.UnidadMedida
+			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+				return errors.New("la unidad de medida no existe o está inactiva")
+			}
+		}
 		var duplicate int64
 		if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, input.SKUInterno).Count(&duplicate).Error; err != nil {
 			return err
@@ -328,7 +447,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		}
 
 		product := domain.Producto{
-			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID,
+			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID,
 			Contenido: input.Contenido, UnidadContenido: input.UnidadContenido,
 			Presentacion: input.Presentacion, Activo: true,
 		}

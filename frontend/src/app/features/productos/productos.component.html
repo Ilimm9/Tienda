@@ -192,7 +192,15 @@
         </label>
         <label class="field">
           <span>Unidad de contenido</span>
-          <input pInputText formControlName="unidad_contenido" placeholder="ml, kg, lt..." />
+          <p-select
+            formControlName="unidad_medida_id"
+            [options]="units()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Seleccionar unidad..."
+            [showClear]="true"
+            [style]="{ width: '100%' }"
+          />
         </label>
         <label class="field">
           <span>Sucursal <b>*</b></span>

@@ -18,6 +18,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
       { label: 'Marcas', icon: 'pi pi-bookmark', route: '/catalogo/marcas' },
       { label: 'Categorías', icon: 'pi pi-list', route: '/catalogo/categorias' },
       { label: 'Proveedores', icon: 'pi pi-truck', route: '/catalogo/proveedores' },
+      { label: 'Unidades de medida', icon: 'pi pi-sliders-h', route: '/catalogo/unidades-medida' },
     ],
   },
   {

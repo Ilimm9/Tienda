@@ -27,6 +27,7 @@ type CreateProductInput struct {
 	Descripcion     *string    `json:"descripcion"`
 	Contenido       *float64   `json:"contenido"`
 	UnidadContenido *string    `json:"unidad_contenido"`
+	UnidadMedidaID  *uuid.UUID `json:"unidad_medida_id"`
 	Presentacion    *string    `json:"presentacion"`
 	PrecioVenta     float64    `json:"precio_venta"`
 	StockInicial    float64    `json:"stock_inicial"`
@@ -81,6 +82,15 @@ type CatalogImportCategoryRow struct {
 	Descripcion    string
 	CategoriaPadre string
 }
+type CatalogImportUnitRow struct {
+	Fila int
+	Codigo string
+	Nombre string
+	Simbolo string
+	Tipo string
+	FactorABase float64
+	Decimales int
+}
 type CreateCategoriaInput struct {
 	Nombre           string     `json:"nombre" binding:"required"`
 	CategoriaPadreID *uuid.UUID `json:"categoria_padre_id"`
@@ -108,4 +118,26 @@ type UpdateProveedorInput struct {
 	Email       *string `json:"email"`
 	Direccion   *string `json:"direccion"`
 	Activo      *bool   `json:"activo"`
+}
+
+type CreateUnidadMedidaInput struct {
+	Codigo          string     `json:"codigo" binding:"required"`
+	Nombre          string     `json:"nombre" binding:"required"`
+	Simbolo         string     `json:"simbolo" binding:"required"`
+	Tipo            string     `json:"tipo" binding:"required"`
+	UnidadBaseID    *uuid.UUID `json:"unidad_base_id"`
+	FactorABase     float64    `json:"factor_a_base"`
+	PermiteFraccion *bool      `json:"permite_fraccion"`
+	Decimales       int        `json:"decimales"`
+}
+type UpdateUnidadMedidaInput struct {
+	Codigo          *string    `json:"codigo"`
+	Nombre          *string    `json:"nombre"`
+	Simbolo         *string    `json:"simbolo"`
+	Tipo            *string    `json:"tipo"`
+	UnidadBaseID    *uuid.UUID `json:"unidad_base_id"`
+	FactorABase     *float64   `json:"factor_a_base"`
+	PermiteFraccion *bool      `json:"permite_fraccion"`
+	Decimales       *int       `json:"decimales"`
+	Activo          *bool      `json:"activo"`
 }

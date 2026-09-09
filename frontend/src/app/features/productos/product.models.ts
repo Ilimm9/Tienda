@@ -30,6 +30,7 @@ export interface CreateProductRequest {
   descripcion: string | null;
   contenido: number | null;
   unidad_contenido: string | null;
+  unidad_medida_id?: string | null;
   presentacion: string | null;
   precio_venta: number;
   stock_inicial: number;

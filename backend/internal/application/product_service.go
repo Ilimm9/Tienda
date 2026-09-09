@@ -36,9 +36,13 @@ type ProductRepository interface {
 	CreateCategory(domain.CreateCategoriaInput) error
 	UpdateCategory(uuid.UUID, domain.UpdateCategoriaInput) error
 	ImportCategories([]domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
+	ImportUnits([]domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
+	ListUnits() ([]domain.UnidadMedida, error)
+	CreateUnit(domain.CreateUnidadMedidaInput) error
+	UpdateUnit(uuid.UUID, domain.UpdateUnidadMedidaInput) error
 }
 
 func (s *ProductService) ListBrandsAdmin() ([]domain.Marca, error) {
@@ -67,6 +71,13 @@ func (s *ProductService) CreateProvider(id uuid.UUID, i domain.CreateProveedorIn
 }
 func (s *ProductService) UpdateProvider(businessID, id uuid.UUID, i domain.UpdateProveedorInput) error {
 	return s.products.UpdateProvider(businessID, id, i)
+}
+func (s *ProductService) ListUnits() ([]domain.UnidadMedida, error) { return s.products.ListUnits() }
+func (s *ProductService) CreateUnit(i domain.CreateUnidadMedidaInput) error {
+	return s.products.CreateUnit(i)
+}
+func (s *ProductService) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
+	return s.products.UpdateUnit(id, i)
 }
 
 func (s *ProductService) ListCategories() ([]domain.CatalogOption, error) {

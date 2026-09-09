@@ -20,7 +20,8 @@ export interface Proveedor {
   direccion?: string | null;
   activo: boolean;
 }
-export type CatalogRecord = Marca | Categoria | Proveedor;
+export interface UnidadMedida { id: string; codigo: string; nombre: string; simbolo: string; tipo: string; factor_a_base: number; permite_fraccion: boolean; decimales: number; activo: boolean; }
+export type CatalogRecord = Marca | Categoria | Proveedor | UnidadMedida;
 
 export interface CatalogImportIssue {
   fila: number;

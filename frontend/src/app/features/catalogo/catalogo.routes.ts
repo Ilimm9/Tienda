@@ -9,4 +9,5 @@ export const CATALOGO_ROUTES: Routes = [
   { path: 'marcas', data: { breadcrumb: 'Marcas', section: 'marcas' }, loadComponent: catalogo },
   { path: 'categorias', data: { breadcrumb: 'Categorías', section: 'categorias' }, loadComponent: catalogo },
   { path: 'proveedores', data: { breadcrumb: 'Proveedores', section: 'proveedores' }, loadComponent: catalogo },
+  { path: 'unidades-medida', data: { breadcrumb: 'Unidades de medida', section: 'unidades' }, loadComponent: catalogo },
 ];

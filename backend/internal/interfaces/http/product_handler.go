@@ -210,6 +210,9 @@ func (h *ProductHandler) catalogImportTemplate(c *gin.Context, section string) {
 		return
 	}
 	filename := "plantilla-marcas.xlsx"
+	if section == "unidades" {
+		filename = "plantilla-unidades-medida.xlsx"
+	}
 	if section == "categorias" {
 		filename = "plantilla-categorias.xlsx"
 	}
@@ -224,6 +227,9 @@ func (h *ProductHandler) ImportBrands(c *gin.Context) {
 func (h *ProductHandler) ImportCategories(c *gin.Context) {
 	h.importCatalog(c, "categorias")
 }
+
+func (h *ProductHandler) UnitImportTemplate(c *gin.Context) { h.catalogImportTemplate(c, "unidades") }
+func (h *ProductHandler) ImportUnits(c *gin.Context)        { h.importCatalog(c, "unidades") }
 
 func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogImportSize)
@@ -246,8 +252,10 @@ func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
 	var result domain.CatalogImportResult
 	if section == "marcas" {
 		result, err = h.products.ImportBrands(file)
-	} else {
+	} else if section == "categorias" {
 		result, err = h.products.ImportCategories(file)
+	} else {
+		result, err = h.products.ImportUnits(file)
 	}
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidImportFile) {
@@ -306,4 +314,43 @@ func (h *ProductHandler) UpdateProvider(c *gin.Context) {
 		return
 	}
 	c.Status(204)
+}
+
+func (h *ProductHandler) ListUnits(c *gin.Context) {
+	items, err := h.products.ListUnits()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las unidades de medida"})
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+func (h *ProductHandler) CreateUnit(c *gin.Context) {
+	var input domain.CreateUnidadMedidaInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los campos obligatorios de la unidad"})
+		return
+	}
+	if err := h.products.CreateUnit(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.Status(http.StatusCreated)
+}
+
+func (h *ProductHandler) UpdateUnit(c *gin.Context) {
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	var input domain.UpdateUnidadMedidaInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Los datos de la unidad no son válidos"})
+		return
+	}
+	if err := h.products.UpdateUnit(id, input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
