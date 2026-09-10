@@ -273,6 +273,40 @@ func (h *ProductHandler) ImportProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func (h *ProductHandler) PreviewProductImport(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogImportSize)
+	branchID, err := uuid.Parse(c.PostForm("sucursal_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona una sucursal válida"})
+		return
+	}
+	fileHeader, err := c.FormFile("archivo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona un archivo XLSX de hasta 5 MB"})
+		return
+	}
+	if strings.ToLower(filepath.Ext(fileHeader.Filename)) != ".xlsx" {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El archivo debe tener extensión .xlsx"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "No fue posible leer el archivo"})
+		return
+	}
+	defer file.Close()
+	preview, err := h.products.PreviewProductImport(businessID, branchID, file)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, preview)
+}
+
 func (h *ProductHandler) UnitImportTemplate(c *gin.Context) { h.catalogImportTemplate(c, "unidades") }
 func (h *ProductHandler) ImportUnits(c *gin.Context)        { h.importCatalog(c, "unidades") }
 

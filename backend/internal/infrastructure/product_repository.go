@@ -6,8 +6,10 @@ import (
 	"regexp"
 	"strings"
 	"tienda/backend/internal/domain"
+	"unicode"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 )
 
@@ -342,7 +344,12 @@ func (r *ProductRepository) ImportCategories(rows []domain.CatalogImportCategory
 }
 
 func catalogImportKey(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
+	return strings.ToLower(strings.Map(func(r rune) rune {
+		if unicode.Is(unicode.Mn, r) {
+			return -1
+		}
+		return r
+	}, norm.NFD.String(strings.TrimSpace(value))))
 }
 
 func (r *ProductRepository) ListProviders(businessID uuid.UUID) ([]domain.Proveedor, error) {
@@ -485,23 +492,23 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 	})
 }
 
-func (r *ProductRepository) ImportProducts(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) (domain.CatalogImportResult, error) {
+func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
 	var branch domain.Sucursal
 	if err := r.db.Where("id = ? AND negocio_id = ? AND activo = TRUE", branchID, businessID).First(&branch).Error; err != nil {
-		return result, errors.New("la sucursal no pertenece al negocio o está inactiva")
+		return nil, result, errors.New("la sucursal no pertenece al negocio o está inactiva")
 	}
 	var categories []domain.Categoria
 	var brands []domain.Marca
 	var units []domain.UnidadMedida
 	if err := r.db.Where("activo = TRUE").Find(&categories).Error; err != nil {
-		return result, err
+		return nil, result, err
 	}
 	if err := r.db.Where("activo = TRUE").Find(&brands).Error; err != nil {
-		return result, err
+		return nil, result, err
 	}
 	if err := r.db.Where("activo = TRUE").Find(&units).Error; err != nil {
-		return result, err
+		return nil, result, err
 	}
 	categoryIDs := make(map[string]uuid.UUID, len(categories))
 	brandIDs := make(map[string]uuid.UUID, len(brands))
@@ -515,53 +522,255 @@ func (r *ProductRepository) ImportProducts(businessID, branchID uuid.UUID, rows 
 	for _, item := range units {
 		unitIDs[catalogImportKey(item.Nombre)] = item.ID
 	}
+	var existingSKUs, existingCodes []string
+	if err := r.db.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno IS NOT NULL", businessID).Pluck("sku_interno", &existingSKUs).Error; err != nil {
+		return nil, result, err
+	}
+	if err := r.db.Model(&domain.ProductoCodigo{}).Pluck("codigo", &existingCodes).Error; err != nil {
+		return nil, result, err
+	}
+	type productIdentity struct {
+		Nombre       string
+		Presentacion string
+	}
+	var existingProducts []productIdentity
+	if err := r.db.Table("productos AS p").
+		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion").
+		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
+		Scan(&existingProducts).Error; err != nil {
+		return nil, result, err
+	}
+	seenSKUs, seenCodes := make(map[string]struct{}, len(existingSKUs)), make(map[string]struct{}, len(existingCodes))
+	seenNamePresentations := make(map[string]struct{}, len(existingProducts))
+	for _, sku := range existingSKUs {
+		seenSKUs[catalogImportKey(sku)] = struct{}{}
+	}
+	for _, code := range existingCodes {
+		seenCodes[code] = struct{}{}
+	}
+	for _, product := range existingProducts {
+		seenNamePresentations[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = struct{}{}
+	}
+	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
 
 	for _, row := range rows {
-		categoryID, categoryOK := categoryIDs[catalogImportKey(row.Categoria)]
-		if !categoryOK {
-			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría no existe o está inactiva"})
-			continue
+		hasError := false
+		hasDuplicate := false
+		addError := func(field, reason string) {
+			hasError = true
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: field, Motivo: reason})
+		}
+		skuKey := catalogImportKey(row.SKUInterno)
+		namePresentationKey := productImportNamePresentationKey(row.Nombre, row.Presentacion)
+		if _, exists := seenNamePresentations[namePresentationKey]; exists {
+			hasDuplicate = true
+			addError("Nombre y presentación", "ya existe en el negocio o está repetido en el archivo")
+		}
+		if row.SKUInterno != "" {
+			if _, exists := seenSKUs[skuKey]; exists {
+				hasDuplicate = true
+				addError("SKU interno", "ya existe en este negocio o está repetido en el archivo")
+			}
+		}
+		if row.CodigoBarras != "" {
+			if _, exists := seenCodes[row.CodigoBarras]; exists {
+				hasDuplicate = true
+				addError("Código de barras", "ya está asignado o está repetido en el archivo")
+			}
+		}
+		var categoryID *uuid.UUID
+		if row.Categoria != "" {
+			id, ok := categoryIDs[catalogImportKey(row.Categoria)]
+			if !ok {
+				addError("Categoría", "no existe o está inactiva")
+			} else {
+				categoryID = &id
+			}
 		}
 		var brandID *uuid.UUID
 		if row.Marca != "" {
 			id, ok := brandIDs[catalogImportKey(row.Marca)]
 			if !ok {
-				result.Invalidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La marca no existe o está inactiva"})
-				continue
+				addError("Marca", "no existe o está inactiva")
+			} else {
+				brandID = &id
 			}
-			brandID = &id
 		}
 		var unitID *uuid.UUID
 		if row.UnidadMedida != "" {
 			id, ok := unitIDs[catalogImportKey(row.UnidadMedida)]
 			if !ok {
-				result.Invalidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La unidad de medida no existe o está inactiva"})
-				continue
+				addError("Unidad de medida", "no existe o está inactiva")
+			} else {
+				unitID = &id
 			}
-			unitID = &id
 		}
-		input := domain.CreateProductInput{Nombre: row.Nombre, SKUInterno: row.SKUInterno, CategoriaID: categoryID, MarcaID: brandID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, StockInicial: row.StockInicial}
+		if hasError {
+			if hasDuplicate {
+				result.Omitidas++
+			} else {
+				result.Invalidas++
+			}
+			continue
+		}
+		input := domain.CreateImportedProductInput{Nombre: row.Nombre, SKUInterno: importOptionalString(row.SKUInterno), CategoriaID: categoryID, MarcaID: brandID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, StockInicial: row.StockInicial}
 		input.Descripcion = importOptionalString(row.Descripcion)
 		input.Presentacion = importOptionalString(row.Presentacion)
 		input.UnidadContenido = importOptionalString(row.UnidadContenido)
 		input.UnidadMedidaID = unitID
 		input.CodigoBarras = importOptionalString(row.CodigoBarras)
-		input.ImagenURL = importOptionalString(row.ImagenURL)
-		if err := r.Create(businessID, input); err != nil {
-			if strings.Contains(err.Error(), "SKU ya existe") || strings.Contains(err.Error(), "código de barras ya está asignado") {
+		if row.SKUInterno != "" {
+			seenSKUs[skuKey] = struct{}{}
+		}
+		if row.CodigoBarras != "" {
+			seenCodes[row.CodigoBarras] = struct{}{}
+		}
+		seenNamePresentations[namePresentationKey] = struct{}{}
+		prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input})
+	}
+	return prepared, result, nil
+}
+
+func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
+	for _, row := range rows {
+		if err := r.createImportedProduct(businessID, row.Input); err != nil {
+			if strings.Contains(err.Error(), "SKU ya existe") || strings.Contains(err.Error(), "código de barras ya está asignado") || strings.Contains(err.Error(), "nombre y presentación ya existen") {
 				result.Omitidas++
 			} else {
 				result.Invalidas++
 			}
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: err.Error()})
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: importErrorField(err.Error()), Motivo: err.Error()})
 			continue
 		}
 		result.Creadas++
 	}
 	return result, nil
+}
+
+func importErrorField(message string) string {
+	switch {
+	case strings.Contains(message, "SKU"):
+		return "SKU interno"
+	case strings.Contains(message, "nombre y presentación"):
+		return "Nombre y presentación"
+	case strings.Contains(message, "código de barras"):
+		return "Código de barras"
+	case strings.Contains(message, "categoría"):
+		return "Categoría"
+	case strings.Contains(message, "unidad de medida"):
+		return "Unidad de medida"
+	case strings.Contains(message, "sucursal"):
+		return "Sucursal"
+	default:
+		return "Producto"
+	}
+}
+
+func productImportNamePresentationKey(name, presentation string) string {
+	return catalogImportKey(name) + "\x00" + catalogImportKey(presentation)
+}
+
+func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input domain.CreateImportedProductInput) error {
+	input.Nombre = strings.TrimSpace(input.Nombre)
+	if input.Nombre == "" || input.PrecioVenta < 0 || input.StockInicial < 0 {
+		return errors.New("los datos del producto no son válidos")
+	}
+	barcode := optionalString(input.CodigoBarras)
+	imageURL := optionalString(input.ImagenURL)
+	if barcode != "" && !productBarcodePattern.MatchString(barcode) {
+		return errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	}
+	if imageURL != "" {
+		parsed, err := url.Parse(imageURL)
+		if barcode == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return errors.New("la URL de imagen no es válida")
+		}
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var branch domain.Sucursal
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
+			return errors.New("la sucursal no pertenece al negocio o está inactiva")
+		}
+		if input.CategoriaID != nil {
+			var category domain.Categoria
+			if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
+				return errors.New("la categoría no existe o está inactiva")
+			}
+		}
+		if input.UnidadMedidaID != nil {
+			var unit domain.UnidadMedida
+			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+				return errors.New("la unidad de medida no existe o está inactiva")
+			}
+		}
+		type productIdentity struct {
+			Nombre       string
+			Presentacion string
+		}
+		var existingProducts []productIdentity
+		if err := tx.Table("productos AS p").
+			Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion").
+			Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
+			Scan(&existingProducts).Error; err != nil {
+			return err
+		}
+		for _, product := range existingProducts {
+			if productImportNamePresentationKey(product.Nombre, product.Presentacion) == productImportNamePresentationKey(input.Nombre, optionalString(input.Presentacion)) {
+				return errors.New("el nombre y presentación ya existen en este negocio")
+			}
+		}
+		var duplicate int64
+		if input.SKUInterno != nil {
+			if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, *input.SKUInterno).Count(&duplicate).Error; err != nil {
+				return err
+			}
+			if duplicate > 0 {
+				return errors.New("el SKU ya existe en este negocio")
+			}
+		}
+		if barcode != "" {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ?", barcode).Count(&duplicate).Error; err != nil {
+				return err
+			}
+			if duplicate > 0 {
+				return errors.New("el código de barras ya está asignado a otro producto")
+			}
+		}
+		product := domain.Producto{Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido, Presentacion: input.Presentacion, Activo: true}
+		if err := tx.Create(&product).Error; err != nil {
+			return err
+		}
+		if barcode != "" {
+			if err := tx.Create(&domain.ProductoCodigo{ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
+		}
+		if imageURL != "" {
+			if err := tx.Create(&domain.ProductoImagen{ProductoID: product.ID, URL: imageURL, EsPrincipal: true, Orden: 0}).Error; err != nil {
+				return err
+			}
+		}
+		if input.CategoriaID != nil {
+			if err := tx.Create(&domain.ProductoCategoria{ProductoID: product.ID, CategoriaID: *input.CategoriaID, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
+		}
+		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: product.ID, SKUInterno: input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
+		if err := tx.Create(&commercial).Error; err != nil {
+			return err
+		}
+		inventory := domain.InventarioSucursal{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, StockActual: input.StockInicial, StockMinimo: 0}
+		if err := tx.Create(&inventory).Error; err != nil {
+			return err
+		}
+		if input.StockInicial > 0 {
+			if err := tx.Create(&domain.MovimientoInventario{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, Tipo: "AJUSTE_ENTRADA", Cantidad: input.StockInicial, StockAnterior: 0, StockNuevo: input.StockInicial}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func importOptionalString(value string) *string {

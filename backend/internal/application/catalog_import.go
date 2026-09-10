@@ -74,6 +74,33 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		column, _ := excelize.ColumnNumberToName(index + 1)
 		book.SetColWidth(sheet, column, column, 28)
 	}
+	if section == "productos" {
+		instructions, err := book.NewSheet("Instrucciones")
+		if err != nil {
+			return nil, err
+		}
+		instructionRows := [][]string{
+			{"Carga masiva de productos", "Completa una fila por producto. La hoja Productos debe conservar sus encabezados."},
+			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
+			{"Campos opcionales", "SKU interno, Categoría, Marca, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida y Código de barras."},
+			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
+			{"Catálogos", "Categoría, Marca y Unidad de medida solo se validan si se indican y deben existir activas."},
+			{"Código de barras", "Si se indica, debe tener de 8 a 14 dígitos y se usará para buscar una imagen automáticamente."},
+			{"Duplicados", "SKU interno y código de barras, cuando se indiquen, no pueden repetirse."},
+			{"Resultado", "Las filas inválidas se reportan con fila, campo y motivo; las válidas se crean."},
+		}
+		for rowIndex, row := range instructionRows {
+			for columnIndex, value := range row {
+				cell, _ := excelize.CoordinatesToCellName(columnIndex+1, rowIndex+1)
+				book.SetCellValue("Instrucciones", cell, value)
+			}
+		}
+		book.SetColWidth("Instrucciones", "A", "A", 24)
+		book.SetColWidth("Instrucciones", "B", "B", 95)
+		book.SetCellStyle("Instrucciones", "A1", "B1", style)
+		book.SetActiveSheet(instructions)
+		book.SetActiveSheet(0)
+	}
 	var output bytes.Buffer
 	if err := book.Write(&output); err != nil {
 		return nil, err
@@ -89,26 +116,47 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 	}
 	valid := make([]domain.ProductImportRow, 0, len(rows))
 	for index, row := range rows {
+		rowNumber := index + 2
+		hasError := false
+		addError := func(field, reason string) {
+			hasError = true
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: field, Motivo: reason})
+		}
+		if cell(row, 0) == "" {
+			addError("Nombre", "es obligatorio")
+		}
 		contenidoText := cell(row, 6)
 		var contenido *float64
 		if contenidoText != "" {
 			value, parseErr := strconv.ParseFloat(contenidoText, 64)
 			if parseErr != nil || value < 0 {
-				result.Invalidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "El contenido debe ser un número mayor o igual a cero"})
-				continue
+				addError("Contenido", "debe ser un número mayor o igual a cero")
+			} else {
+				contenido = &value
 			}
-			contenido = &value
 		}
-		precio, precioErr := strconv.ParseFloat(cell(row, 9), 64)
-		stock, stockErr := strconv.ParseFloat(cell(row, 10), 64)
+		precioText, stockText := cell(row, 9), cell(row, 10)
+		precio, precioErr := strconv.ParseFloat(precioText, 64)
+		stock, stockErr := strconv.ParseFloat(stockText, 64)
+		if precioText == "" {
+			addError("Precio de venta", "es obligatorio")
+		} else if precioErr != nil || precio < 0 {
+			addError("Precio de venta", "debe ser un número mayor o igual a cero")
+		}
+		if stockText == "" {
+			addError("Stock inicial", "es obligatorio")
+		} else if stockErr != nil || stock < 0 {
+			addError("Stock inicial", "debe ser un número mayor o igual a cero")
+		}
 		barcode := cell(row, 11)
-		if cell(row, 0) == "" || cell(row, 1) == "" || cell(row, 2) == "" || precioErr != nil || precio < 0 || stockErr != nil || stock < 0 || (barcode != "" && !barcodePattern.MatchString(barcode)) {
+		if barcode != "" && !barcodePattern.MatchString(barcode) {
+			addError("Código de barras", "debe contener entre 8 y 14 dígitos")
+		}
+		if hasError {
 			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "Nombre, SKU, categoría, precio y stock son obligatorios; el código de barras debe tener entre 8 y 14 dígitos"})
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: index + 2, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode})
 	}
 	return valid, result, nil
 }

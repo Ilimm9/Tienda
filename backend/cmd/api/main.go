@@ -50,6 +50,7 @@ func main() {
 	router.GET("/api/v1/negocios/:negocioId/sucursales", productHandler.Branches)
 	router.POST("/api/v1/negocios/:negocioId/catalogo/productos", productHandler.Create)
 	router.GET("/api/v1/negocios/:negocioId/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
+	router.POST("/api/v1/negocios/:negocioId/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
 	router.POST("/api/v1/negocios/:negocioId/catalogo/productos/importar", productHandler.ImportProducts)
 	router.GET("/api/v1/catalogo/marcas", productHandler.ListBrandsAdmin)
 	router.POST("/api/v1/catalogo/marcas", productHandler.CreateBrand)

@@ -59,6 +59,7 @@ type UpdateMarcaInput struct {
 // CatalogImportIssue identifies a row that could not be imported.
 type CatalogImportIssue struct {
 	Fila   int    `json:"fila"`
+	Campo  string `json:"campo,omitempty"`
 	Motivo string `json:"motivo"`
 }
 
@@ -70,6 +71,13 @@ type CatalogImportResult struct {
 	Invalidas    int                  `json:"invalidas"`
 	Errores      []CatalogImportIssue `json:"errores"`
 	Advertencias []CatalogImportIssue `json:"advertencias"`
+}
+
+// ProductImportPreview is the non-mutating result shown before a bulk import
+// is confirmed. Insertables have passed all local validation.
+type ProductImportPreview struct {
+	CatalogImportResult
+	Insertables int `json:"insertables"`
 }
 
 // ProductImportRow is the spreadsheet representation of a product.
@@ -88,6 +96,29 @@ type ProductImportRow struct {
 	StockInicial    float64
 	CodigoBarras    string
 	ImagenURL       string
+}
+
+type ValidatedProductImportRow struct {
+	Fila  int
+	Input CreateImportedProductInput
+}
+
+// CreateImportedProductInput permits the optional fields supported
+type CreateImportedProductInput struct {
+	Nombre          string
+	SKUInterno      *string
+	MarcaID         *uuid.UUID
+	CategoriaID     *uuid.UUID
+	SucursalID      uuid.UUID
+	Descripcion     *string
+	Contenido       *float64
+	UnidadContenido *string
+	UnidadMedidaID  *uuid.UUID
+	Presentacion    *string
+	PrecioVenta     float64
+	StockInicial    float64
+	CodigoBarras    *string
+	ImagenURL       *string
 }
 
 type CatalogImportBrandRow struct {

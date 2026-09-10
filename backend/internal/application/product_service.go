@@ -39,7 +39,8 @@ type ProductRepository interface {
 	UpdateCategory(uuid.UUID, domain.UpdateCategoriaInput) error
 	ImportCategories([]domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ImportUnits([]domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
-	ImportProducts(uuid.UUID, uuid.UUID, []domain.ProductImportRow) (domain.CatalogImportResult, error)
+	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error)
+	CreateImportedProducts(uuid.UUID, []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error)
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
@@ -49,27 +50,56 @@ type ProductRepository interface {
 }
 
 func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
-	rows, result, err := parseProductImport(file)
+	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
 	if err != nil {
 		return result, err
 	}
-	for index := range rows {
-		if rows[index].CodigoBarras == "" {
+	for index := range prepared {
+		if prepared[index].Input.CodigoBarras == nil {
 			continue
 		}
-		lookup, lookupErr := s.LookupProduct(rows[index].CodigoBarras)
+		barcode := *prepared[index].Input.CodigoBarras
+		lookup, lookupErr := s.LookupProduct(barcode)
 		if lookupErr != nil {
-			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rows[index].Fila, Motivo: "No fue posible buscar la imagen; se creará sin imagen"})
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: prepared[index].Fila, Motivo: "No fue posible buscar la imagen; se creará sin imagen"})
 			continue
 		}
 		if lookup.ImagenURL == nil || !validImportImageURL(strings.TrimSpace(*lookup.ImagenURL)) {
-			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rows[index].Fila, Motivo: "No se encontró una imagen para el código de barras"})
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: prepared[index].Fila, Motivo: "No se encontró una imagen para el código de barras"})
 			continue
 		}
-		rows[index].ImagenURL = strings.TrimSpace(*lookup.ImagenURL)
+		imageURL := strings.TrimSpace(*lookup.ImagenURL)
+		prepared[index].Input.ImagenURL = &imageURL
 	}
-	imported, err := s.products.ImportProducts(businessID, branchID, rows)
-	return mergeImportResults(result, imported), err
+	imported, err := s.products.CreateImportedProducts(businessID, prepared)
+	if err != nil {
+		return result, err
+	}
+	result.Creadas += imported.Creadas
+	result.Omitidas += imported.Omitidas
+	result.Invalidas += imported.Invalidas
+	result.Errores = append(result.Errores, imported.Errores...)
+	return result, nil
+}
+
+func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
+	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
+	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared)}, err
+}
+
+func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, file io.Reader) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error) {
+	rows, result, err := parseProductImport(file)
+	if err != nil {
+		return nil, result, err
+	}
+	prepared, validation, err := s.products.ValidateProductImport(businessID, branchID, rows)
+	if err != nil {
+		return nil, result, err
+	}
+	result.Omitidas += validation.Omitidas
+	result.Invalidas += validation.Invalidas
+	result.Errores = append(result.Errores, validation.Errores...)
+	return prepared, result, nil
 }
 
 func validImportImageURL(value string) bool {
