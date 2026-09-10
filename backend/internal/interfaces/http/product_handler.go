@@ -203,6 +203,10 @@ func (h *ProductHandler) CategoryImportTemplate(c *gin.Context) {
 	h.catalogImportTemplate(c, "categorias")
 }
 
+func (h *ProductHandler) ProductImportTemplate(c *gin.Context) {
+	h.catalogImportTemplate(c, "productos")
+}
+
 func (h *ProductHandler) catalogImportTemplate(c *gin.Context, section string) {
 	content, err := application.CatalogImportTemplate(section)
 	if err != nil {
@@ -216,6 +220,9 @@ func (h *ProductHandler) catalogImportTemplate(c *gin.Context, section string) {
 	if section == "categorias" {
 		filename = "plantilla-categorias.xlsx"
 	}
+	if section == "productos" {
+		filename = "plantilla-productos.xlsx"
+	}
 	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", content)
 }
@@ -226,6 +233,44 @@ func (h *ProductHandler) ImportBrands(c *gin.Context) {
 
 func (h *ProductHandler) ImportCategories(c *gin.Context) {
 	h.importCatalog(c, "categorias")
+}
+
+func (h *ProductHandler) ImportProducts(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogImportSize)
+	branchID, err := uuid.Parse(c.PostForm("sucursal_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona una sucursal válida"})
+		return
+	}
+	fileHeader, err := c.FormFile("archivo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona un archivo XLSX de hasta 5 MB"})
+		return
+	}
+	if strings.ToLower(filepath.Ext(fileHeader.Filename)) != ".xlsx" {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El archivo debe tener extensión .xlsx"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "No fue posible leer el archivo"})
+		return
+	}
+	defer file.Close()
+	result, err := h.products.ImportProducts(businessID, branchID, file)
+	if err != nil {
+		if errors.Is(err, application.ErrInvalidImportFile) {
+			c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *ProductHandler) UnitImportTemplate(c *gin.Context) { h.catalogImportTemplate(c, "unidades") }

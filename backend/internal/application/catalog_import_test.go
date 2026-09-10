@@ -46,6 +46,24 @@ func TestCatalogImportTemplateHasExpectedHeaders(t *testing.T) {
 	}
 }
 
+func TestParseProductImportKeepsValidRowsAndReportsInvalidOnes(t *testing.T) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras"}
+	file := workbook(t, headers, [][]string{
+		{"Refresco", "REF-001", "Bebidas", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038"},
+		{"Sin SKU", "", "Bebidas", "", "", "", "", "", "", "10", "0", ""},
+	})
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].SKUInterno != "REF-001" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
+		t.Fatalf("rows = %#v, want one parsed product", rows)
+	}
+	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 1 {
+		t.Fatalf("result = %#v, want one invalid row", result)
+	}
+}
+
 func workbook(t *testing.T, headers []string, data [][]string) []byte {
 	t.Helper()
 	book := excelize.NewFile()

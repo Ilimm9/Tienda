@@ -64,11 +64,30 @@ type CatalogImportIssue struct {
 
 // CatalogImportResult is returned after a bulk catalog import.
 type CatalogImportResult struct {
-	Procesadas int                  `json:"procesadas"`
-	Creadas    int                  `json:"creadas"`
-	Omitidas   int                  `json:"omitidas"`
-	Invalidas  int                  `json:"invalidas"`
-	Errores    []CatalogImportIssue `json:"errores"`
+	Procesadas   int                  `json:"procesadas"`
+	Creadas      int                  `json:"creadas"`
+	Omitidas     int                  `json:"omitidas"`
+	Invalidas    int                  `json:"invalidas"`
+	Errores      []CatalogImportIssue `json:"errores"`
+	Advertencias []CatalogImportIssue `json:"advertencias"`
+}
+
+// ProductImportRow is the spreadsheet representation of a product.
+type ProductImportRow struct {
+	Fila            int
+	Nombre          string
+	SKUInterno      string
+	Categoria       string
+	Marca           string
+	Descripcion     string
+	Presentacion    string
+	Contenido       *float64
+	UnidadContenido string
+	UnidadMedida    string
+	PrecioVenta     float64
+	StockInicial    float64
+	CodigoBarras    string
+	ImagenURL       string
 }
 
 type CatalogImportBrandRow struct {
@@ -83,13 +102,13 @@ type CatalogImportCategoryRow struct {
 	CategoriaPadre string
 }
 type CatalogImportUnitRow struct {
-	Fila int
-	Codigo string
-	Nombre string
-	Simbolo string
-	Tipo string
+	Fila        int
+	Codigo      string
+	Nombre      string
+	Simbolo     string
+	Tipo        string
 	FactorABase float64
-	Decimales int
+	Decimales   int
 }
 type CreateCategoriaInput struct {
 	Nombre           string     `json:"nombre" binding:"required"`

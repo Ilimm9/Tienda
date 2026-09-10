@@ -485,6 +485,93 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 	})
 }
 
+func (r *ProductRepository) ImportProducts(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
+	var branch domain.Sucursal
+	if err := r.db.Where("id = ? AND negocio_id = ? AND activo = TRUE", branchID, businessID).First(&branch).Error; err != nil {
+		return result, errors.New("la sucursal no pertenece al negocio o está inactiva")
+	}
+	var categories []domain.Categoria
+	var brands []domain.Marca
+	var units []domain.UnidadMedida
+	if err := r.db.Where("activo = TRUE").Find(&categories).Error; err != nil {
+		return result, err
+	}
+	if err := r.db.Where("activo = TRUE").Find(&brands).Error; err != nil {
+		return result, err
+	}
+	if err := r.db.Where("activo = TRUE").Find(&units).Error; err != nil {
+		return result, err
+	}
+	categoryIDs := make(map[string]uuid.UUID, len(categories))
+	brandIDs := make(map[string]uuid.UUID, len(brands))
+	unitIDs := make(map[string]uuid.UUID, len(units))
+	for _, item := range categories {
+		categoryIDs[catalogImportKey(item.Nombre)] = item.ID
+	}
+	for _, item := range brands {
+		brandIDs[catalogImportKey(item.Nombre)] = item.ID
+	}
+	for _, item := range units {
+		unitIDs[catalogImportKey(item.Nombre)] = item.ID
+	}
+
+	for _, row := range rows {
+		categoryID, categoryOK := categoryIDs[catalogImportKey(row.Categoria)]
+		if !categoryOK {
+			result.Invalidas++
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría no existe o está inactiva"})
+			continue
+		}
+		var brandID *uuid.UUID
+		if row.Marca != "" {
+			id, ok := brandIDs[catalogImportKey(row.Marca)]
+			if !ok {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La marca no existe o está inactiva"})
+				continue
+			}
+			brandID = &id
+		}
+		var unitID *uuid.UUID
+		if row.UnidadMedida != "" {
+			id, ok := unitIDs[catalogImportKey(row.UnidadMedida)]
+			if !ok {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La unidad de medida no existe o está inactiva"})
+				continue
+			}
+			unitID = &id
+		}
+		input := domain.CreateProductInput{Nombre: row.Nombre, SKUInterno: row.SKUInterno, CategoriaID: categoryID, MarcaID: brandID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, StockInicial: row.StockInicial}
+		input.Descripcion = importOptionalString(row.Descripcion)
+		input.Presentacion = importOptionalString(row.Presentacion)
+		input.UnidadContenido = importOptionalString(row.UnidadContenido)
+		input.UnidadMedidaID = unitID
+		input.CodigoBarras = importOptionalString(row.CodigoBarras)
+		input.ImagenURL = importOptionalString(row.ImagenURL)
+		if err := r.Create(businessID, input); err != nil {
+			if strings.Contains(err.Error(), "SKU ya existe") || strings.Contains(err.Error(), "código de barras ya está asignado") {
+				result.Omitidas++
+			} else {
+				result.Invalidas++
+			}
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: err.Error()})
+			continue
+		}
+		result.Creadas++
+	}
+	return result, nil
+}
+
+func importOptionalString(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
 func optionalString(value *string) string {
 	if value == nil {
 		return ""

@@ -50,3 +50,17 @@ export interface ProductLookup {
   imagen_url: string | null;
   fuentes: string[];
 }
+
+export interface ProductImportIssue {
+  fila: number;
+  motivo: string;
+}
+
+export interface ProductImportResult {
+  procesadas: number;
+  creadas: number;
+  omitidas: number;
+  invalidas: number;
+  errores: ProductImportIssue[];
+  advertencias: ProductImportIssue[];
+}

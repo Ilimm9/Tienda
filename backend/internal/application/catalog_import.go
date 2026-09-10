@@ -54,6 +54,10 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		sheet = "Unidades"
 		headers = []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}
 	}
+	if section == "productos" {
+		sheet = "Productos"
+		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras"}
+	}
 	book.SetSheetName(book.GetSheetName(0), sheet)
 	for index, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(index+1, 1)
@@ -75,6 +79,38 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		return nil, err
 	}
 	return output.Bytes(), nil
+}
+
+func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.CatalogImportResult, error) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras"}
+	rows, result, err := readImportRows(file, headers)
+	if err != nil {
+		return nil, result, err
+	}
+	valid := make([]domain.ProductImportRow, 0, len(rows))
+	for index, row := range rows {
+		contenidoText := cell(row, 6)
+		var contenido *float64
+		if contenidoText != "" {
+			value, parseErr := strconv.ParseFloat(contenidoText, 64)
+			if parseErr != nil || value < 0 {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "El contenido debe ser un número mayor o igual a cero"})
+				continue
+			}
+			contenido = &value
+		}
+		precio, precioErr := strconv.ParseFloat(cell(row, 9), 64)
+		stock, stockErr := strconv.ParseFloat(cell(row, 10), 64)
+		barcode := cell(row, 11)
+		if cell(row, 0) == "" || cell(row, 1) == "" || cell(row, 2) == "" || precioErr != nil || precio < 0 || stockErr != nil || stock < 0 || (barcode != "" && !barcodePattern.MatchString(barcode)) {
+			result.Invalidas++
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "Nombre, SKU, categoría, precio y stock son obligatorios; el código de barras debe tener entre 8 y 14 dígitos"})
+			continue
+		}
+		valid = append(valid, domain.ProductImportRow{Fila: index + 2, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode})
+	}
+	return valid, result, nil
 }
 
 func parseUnitImport(file io.Reader) ([]domain.CatalogImportUnitRow, domain.CatalogImportResult, error) {
@@ -157,7 +193,7 @@ func readImportRows(file io.Reader, headers []string) ([][]string, domain.Catalo
 			data = append(data, row)
 		}
 	}
-	return data, domain.CatalogImportResult{Procesadas: len(data), Errores: make([]domain.CatalogImportIssue, 0)}, nil
+	return data, domain.CatalogImportResult{Procesadas: len(data), Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}, nil
 }
 
 func cell(row []string, index int) string {
@@ -177,5 +213,5 @@ func isEmptyRow(row []string) bool {
 }
 
 func mergeImportResults(first, second domain.CatalogImportResult) domain.CatalogImportResult {
-	return domain.CatalogImportResult{Procesadas: first.Procesadas, Creadas: second.Creadas, Omitidas: first.Omitidas + second.Omitidas, Invalidas: first.Invalidas + second.Invalidas, Errores: append(first.Errores, second.Errores...)}
+	return domain.CatalogImportResult{Procesadas: first.Procesadas, Creadas: second.Creadas, Omitidas: first.Omitidas + second.Omitidas, Invalidas: first.Invalidas + second.Invalidas, Errores: append(first.Errores, second.Errores...), Advertencias: append(first.Advertencias, second.Advertencias...)}
 }

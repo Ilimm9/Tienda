@@ -5,12 +5,16 @@
       <h1>Productos</h1>
       <p>Visualiza el catálogo de productos y sus existencias actuales.</p>
     </div>
-    @if (products().length > 0) {
+    <div class="products-actions">
+      <button class="secondary-button" type="button" (click)="openImportDialog()">
+        <i class="pi pi-upload" aria-hidden="true"></i>
+        Carga masiva
+      </button>
       <button class="primary-button" type="button" (click)="openCreateDialog()">
         <i class="pi pi-plus" aria-hidden="true"></i>
         Agregar nuevo producto
       </button>
-    }
+    </div>
   </header>
 
   @if (loading()) {
@@ -22,10 +26,14 @@
       <span class="empty-icon"><i class="pi pi-tags" aria-hidden="true"></i></span>
       <h2>Sin productos disponibles</h2>
       <p>Agrega tu primer producto para comenzar a administrar tu catálogo.</p>
-      <button class="primary-button" type="button" (click)="openCreateDialog()">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        Agregar nuevo producto
-      </button>
+      <div class="products-actions">
+        <button class="secondary-button" type="button" (click)="openImportDialog()">
+          <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
+        </button>
+        <button class="primary-button" type="button" (click)="openCreateDialog()">
+          <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
+        </button>
+      </div>
     </div>
   } @else {
     <div class="products-card data-table-card">
@@ -42,41 +50,52 @@
         styleClass="products-table"
         responsiveLayout="scroll"
       >
-      <ng-template #header>
-        <tr>
-          <th>Imagen</th>
-          <th>Nombre</th>
-          <th>SKU</th>
-          <th>Precio</th>
-          <th>Stock</th>
-          <th>Categoría</th>
-          <th>Estado</th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-product>
-        <tr>
-          <td>
-            @if (product.imagen_url && !hasProductImageFailed(product.id)) {
-              <img class="product-image" [src]="product.imagen_url" [alt]="product.nombre" (error)="handleProductImageError(product.id)" />
-            } @else {
-              <span class="product-image image-placeholder"><i class="pi pi-image" aria-hidden="true"></i></span>
-            }
-          </td>
-          <td class="product-name">{{ product.nombre }}</td>
-          <td><code>{{ product.sku || '—' }}</code></td>
-          <td>{{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
-          <td>{{ product.stock }} und.</td>
-          <td>{{ product.categoria || 'Sin categoría' }}</td>
-          <td>
-            <span class="status" [class]="getStatusClass(product.estado)">
-              {{ product.estado || 'Sin estado' }}
-            </span>
-          </td>
-        </tr>
-      </ng-template>
-      <ng-template #emptymessage>
-        <tr><td colspan="7" class="empty-message">Sin productos disponibles.</td></tr>
-      </ng-template>
+        <ng-template #header>
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>SKU</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Categoría</th>
+            <th>Estado</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-product>
+          <tr>
+            <td>
+              @if (product.imagen_url && !hasProductImageFailed(product.id)) {
+                <img
+                  class="product-image"
+                  [src]="product.imagen_url"
+                  [alt]="product.nombre"
+                  (error)="handleProductImageError(product.id)"
+                />
+              } @else {
+                <span class="product-image image-placeholder"
+                  ><i class="pi pi-image" aria-hidden="true"></i
+                ></span>
+              }
+            </td>
+            <td class="product-name">{{ product.nombre }}</td>
+            <td>
+              <code>{{ product.sku || '—' }}</code>
+            </td>
+            <td>{{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
+            <td>{{ product.stock }} und.</td>
+            <td>{{ product.categoria || 'Sin categoría' }}</td>
+            <td>
+              <span class="status" [class]="getStatusClass(product.estado)">
+                {{ product.estado || 'Sin estado' }}
+              </span>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7" class="empty-message">Sin productos disponibles.</td>
+          </tr>
+        </ng-template>
       </p-table>
     </div>
   }
@@ -107,21 +126,43 @@
             placeholder="Ej. 7501055303038"
             (input)="onBarcodeChanged()"
           />
-          <button class="secondary-button" type="button" [disabled]="!canLookupProduct()" (click)="lookupProduct()">
-            @if (imageLookupLoading()) { Buscando... } @else { Buscar producto }
+          <button
+            class="secondary-button"
+            type="button"
+            [disabled]="!canLookupProduct()"
+            (click)="lookupProduct()"
+          >
+            @if (imageLookupLoading()) {
+              Buscando...
+            } @else {
+              Buscar producto
+            }
           </button>
         </div>
-        @if (hasError('codigo_barras')) { <small>Usa únicamente entre 8 y 14 dígitos.</small> }
-        @if (imageLookupError(); as message) { <small>{{ message }}</small> }
+        @if (hasError('codigo_barras')) {
+          <small>Usa únicamente entre 8 y 14 dígitos.</small>
+        }
+        @if (imageLookupError(); as message) {
+          <small>{{ message }}</small>
+        }
         @for (warning of catalogLookupWarnings(); track warning) {
-          <small class="lookup-warning">{{ warning }} Selecciónala manualmente si corresponde.</small>
+          <small class="lookup-warning"
+            >{{ warning }} Selecciónala manualmente si corresponde.</small
+          >
         }
         @if (lookupSources().length > 0) {
-          <span class="lookup-sources">Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de guardar.</span>
+          <span class="lookup-sources"
+            >Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de
+            guardar.</span
+          >
         }
         @if (previewImageURL(); as imageURL) {
           <div class="image-preview">
-            <img [src]="imageURL" alt="Vista previa del producto" (error)="handlePreviewImageError()" />
+            <img
+              [src]="imageURL"
+              alt="Vista previa del producto"
+              (error)="handlePreviewImageError()"
+            />
             <span>Imagen encontrada para el producto.</span>
           </div>
         }
@@ -137,13 +178,17 @@
         <label class="field full-field">
           <span>Nombre del producto <b>*</b></span>
           <input pInputText formControlName="nombre" placeholder="Ej. Monitor Curvo 34'" />
-          @if (hasError('nombre')) { <small>El nombre es obligatorio.</small> }
+          @if (hasError('nombre')) {
+            <small>El nombre es obligatorio.</small>
+          }
         </label>
 
         <label class="field">
           <span>SKU interno <b>*</b></span>
           <input pInputText formControlName="sku_interno" placeholder="PROD-001" />
-          @if (hasError('sku_interno')) { <small>El SKU es obligatorio.</small> }
+          @if (hasError('sku_interno')) {
+            <small>El SKU es obligatorio.</small>
+          }
         </label>
 
         <label class="field">
@@ -156,7 +201,9 @@
             placeholder="Seleccionar..."
             [style]="{ width: '100%' }"
           />
-          @if (hasError('categoria_id')) { <small>Selecciona una categoría.</small> }
+          @if (hasError('categoria_id')) {
+            <small>Selecciona una categoría.</small>
+          }
         </label>
 
         <label class="field">
@@ -174,7 +221,12 @@
 
         <label class="field full-field">
           <span>Descripción</span>
-          <textarea pInputTextarea formControlName="descripcion" rows="3" placeholder="Describe las especificaciones principales del producto..."></textarea>
+          <textarea
+            pInputTextarea
+            formControlName="descripcion"
+            rows="3"
+            placeholder="Describe las especificaciones principales del producto..."
+          ></textarea>
         </label>
       </div>
     </div>
@@ -213,17 +265,37 @@
             [style]="{ width: '100%' }"
             (onChange)="onBranchSelected()"
           />
-          @if (hasError('sucursal_id')) { <small>Selecciona una sucursal.</small> }
+          @if (hasError('sucursal_id')) {
+            <small>Selecciona una sucursal.</small>
+          }
         </label>
         <label class="field">
           <span>Precio de venta <b>*</b></span>
-          <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" placeholder="0.00" />
-          @if (hasError('precio_venta')) { <small>Indica un precio válido.</small> }
+          <input
+            pInputText
+            type="number"
+            formControlName="precio_venta"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+          />
+          @if (hasError('precio_venta')) {
+            <small>Indica un precio válido.</small>
+          }
         </label>
         <label class="field">
           <span>Stock inicial <b>*</b></span>
-          <input pInputText type="number" formControlName="stock_inicial" min="0" step="1" placeholder="0" />
-          @if (hasError('stock_inicial')) { <small>Indica un stock válido.</small> }
+          <input
+            pInputText
+            type="number"
+            formControlName="stock_inicial"
+            min="0"
+            step="1"
+            placeholder="0"
+          />
+          @if (hasError('stock_inicial')) {
+            <small>Indica un stock válido.</small>
+          }
         </label>
       </div>
     </div>
@@ -231,13 +303,139 @@
     @for (message of catalogLoadErrors(); track message) {
       <div class="form-error" role="alert">{{ message }}</div>
     }
-    @if (formError) { <div class="form-error" role="alert">{{ formError }}</div> }
+    @if (formError) {
+      <div class="form-error" role="alert">{{ formError }}</div>
+    }
 
     <div class="dialog-actions">
-      <button class="secondary-button" type="button" [disabled]="saving()" (click)="closeCreateDialog()">Cancelar</button>
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="saving()"
+        (click)="closeCreateDialog()"
+      >
+        Cancelar
+      </button>
       <button class="primary-button" type="submit" [disabled]="!canSubmitProduct()">
-        @if (saving()) { Guardando... } @else { Guardar producto }
+        @if (saving()) {
+          Guardando...
+        } @else {
+          Guardar producto
+        }
       </button>
     </div>
   </form>
+</p-dialog>
+
+<p-dialog
+  header="Carga masiva de productos"
+  [(visible)]="importDialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="product-dialog catalog-dialog"
+  [style]="{ width: 'min(560px, 94vw)' }"
+>
+  <section class="product-form import-form">
+    <div class="import-intro">
+      <span class="import-intro-icon"><i class="pi pi-file-excel"></i></span>
+      <div>
+        <strong>Prepara tu archivo</strong>
+        <p>Descarga la plantilla, selecciona la sucursal y sube el archivo XLSX.</p>
+      </div>
+    </div>
+    <a class="template-link" [href]="productImportTemplateUrl()"
+      ><i class="pi pi-download"></i> Descargar plantilla</a
+    >
+    <label class="field"
+      ><span>Sucursal para el inventario inicial <b>*</b></span
+      ><p-select
+        [(ngModel)]="importBranchId"
+        [options]="importBranches()"
+        optionLabel="nombre"
+        optionValue="id"
+        placeholder="Seleccionar sucursal..."
+        [style]="{ width: '100%' }"
+        [disabled]="importing()"
+    /></label>
+    <div
+      class="file-dropzone"
+      [class.is-dragging]="importDropActive"
+      [class.has-file]="importFile"
+      [class.is-disabled]="importing()"
+      role="button"
+      tabindex="0"
+      (click)="openImportFilePicker($event, importInput)"
+      (keydown.enter)="importInput.click()"
+      (dragover)="onImportDragOver($event)"
+      (dragleave)="onImportDragLeave($event)"
+      (drop)="onImportDrop($event)"
+    >
+      <input
+        #importInput
+        class="file-input"
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        (change)="onImportFile($event)"
+        [disabled]="importing()"
+      />
+      <span class="dropzone-icon"
+        ><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i
+      ></span>
+      @if (importFile) {
+        <strong>{{ importFile.name }}</strong
+        ><small>Archivo listo para importar</small>
+      } @else {
+        <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
+        ><small>Solo archivos XLSX, máximo 5 MB</small>
+      }
+    </div>
+    <section class="import-output" aria-live="polite">
+      @if (importError(); as message) {
+        <p class="form-error">{{ message }}</p>
+      } @else if (importResult(); as result) {
+        <section class="import-result">
+          <strong>Resultado de la importación</strong>
+          <p>
+            {{ result.creadas }} creadas · {{ result.omitidas }} omitidas ·
+            {{ result.invalidas }} inválidas
+          </p>
+          @if (result.errores.length) {
+            <ul>
+              @for (issue of result.errores; track issue.fila + issue.motivo) {
+                <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li>
+              }
+            </ul>
+          }
+          @if (result.advertencias.length) {
+            <p class="import-warnings-title">Advertencias</p>
+            <ul class="import-warnings">
+              @for (issue of result.advertencias; track issue.fila + issue.motivo) {
+                <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li>
+              }
+            </ul>
+          }
+        </section>
+      } @else {
+        <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p>
+      }
+    </section>
+    <div class="dialog-actions">
+      <button
+        class="secondary-button"
+        type="button"
+        (click)="importDialogVisible = false"
+        [disabled]="importing()"
+      >
+        Cerrar</button
+      ><button
+        class="primary-button"
+        type="button"
+        (click)="importProducts()"
+        [disabled]="!importFile || !importBranchId || importing()"
+      >
+        {{ importing() ? 'Importando...' : 'Importar archivo' }}
+      </button>
+    </div>
+  </section>
 </p-dialog>

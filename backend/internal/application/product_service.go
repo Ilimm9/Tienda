@@ -2,6 +2,8 @@ package application
 
 import (
 	"errors"
+	"io"
+	"net/url"
 	"regexp"
 	"strings"
 	"tienda/backend/internal/domain"
@@ -37,12 +39,42 @@ type ProductRepository interface {
 	UpdateCategory(uuid.UUID, domain.UpdateCategoriaInput) error
 	ImportCategories([]domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ImportUnits([]domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
+	ImportProducts(uuid.UUID, uuid.UUID, []domain.ProductImportRow) (domain.CatalogImportResult, error)
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
 	ListUnits() ([]domain.UnidadMedida, error)
 	CreateUnit(domain.CreateUnidadMedidaInput) error
 	UpdateUnit(uuid.UUID, domain.UpdateUnidadMedidaInput) error
+}
+
+func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
+	rows, result, err := parseProductImport(file)
+	if err != nil {
+		return result, err
+	}
+	for index := range rows {
+		if rows[index].CodigoBarras == "" {
+			continue
+		}
+		lookup, lookupErr := s.LookupProduct(rows[index].CodigoBarras)
+		if lookupErr != nil {
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rows[index].Fila, Motivo: "No fue posible buscar la imagen; se creará sin imagen"})
+			continue
+		}
+		if lookup.ImagenURL == nil || !validImportImageURL(strings.TrimSpace(*lookup.ImagenURL)) {
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rows[index].Fila, Motivo: "No se encontró una imagen para el código de barras"})
+			continue
+		}
+		rows[index].ImagenURL = strings.TrimSpace(*lookup.ImagenURL)
+	}
+	imported, err := s.products.ImportProducts(businessID, branchID, rows)
+	return mergeImportResults(result, imported), err
+}
+
+func validImportImageURL(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
 }
 
 func (s *ProductService) ListBrandsAdmin() ([]domain.Marca, error) {
