@@ -402,16 +402,28 @@
           </p>
           @if (result.errores.length) {
             <ul>
-              @for (issue of result.errores; track issue.fila + issue.motivo) {
-                <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li>
+              @for (issue of result.errores; track issue.fila + (issue.campo ?? '') + issue.motivo) {
+                <li>Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}: {{ issue.motivo }}</li>
               }
             </ul>
           }
           @if (result.advertencias.length) {
             <p class="import-warnings-title">Advertencias</p>
             <ul class="import-warnings">
-              @for (issue of result.advertencias; track issue.fila + issue.motivo) {
-                <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li>
+              @for (issue of result.advertencias; track issue.fila + (issue.campo ?? '') + issue.motivo) {
+                <li>Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}: {{ issue.motivo }}</li>
+              }
+            </ul>
+          }
+        </section>
+      } @else if (importPreview(); as preview) {
+        <section class="import-result">
+          <strong>Vista previa de importación</strong>
+          <p>{{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas · {{ preview.invalidas }} inválidas</p>
+          @if (preview.errores.length) {
+            <ul>
+              @for (issue of preview.errores; track issue.fila + (issue.campo ?? '') + issue.motivo) {
+                <li>Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}: {{ issue.motivo }}</li>
               }
             </ul>
           }
@@ -421,21 +433,13 @@
       }
     </section>
     <div class="dialog-actions">
-      <button
-        class="secondary-button"
-        type="button"
-        (click)="importDialogVisible = false"
-        [disabled]="importing()"
-      >
-        Cerrar</button
-      ><button
-        class="primary-button"
-        type="button"
-        (click)="importProducts()"
-        [disabled]="!importFile || !importBranchId || importing()"
-      >
-        {{ importing() ? 'Importando...' : 'Importar archivo' }}
-      </button>
+      @if (importPreview(); as preview) {
+        <button class="secondary-button" type="button" (click)="loadNewImport(importInput)" [disabled]="importing()">Cargar nuevo archivo</button>
+        <button class="primary-button" type="button" (click)="importExistingProducts()" [disabled]="preview.insertables === 0 || importing()">{{ importing() ? 'Importando...' : 'Importar lo existente' }}</button>
+      } @else {
+        <button class="secondary-button" type="button" (click)="importDialogVisible = false" [disabled]="importing()">Cerrar</button>
+        <button class="primary-button" type="button" (click)="validateProductImport()" [disabled]="!importFile || !importBranchId || importing()">{{ importing() ? 'Validando...' : 'Validar archivo' }}</button>
+      }
     </div>
   </section>
 </p-dialog>

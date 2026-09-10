@@ -53,6 +53,7 @@ export interface ProductLookup {
 
 export interface ProductImportIssue {
   fila: number;
+  campo?: string;
   motivo: string;
 }
 
@@ -63,4 +64,8 @@ export interface ProductImportResult {
   invalidas: number;
   errores: ProductImportIssue[];
   advertencias: ProductImportIssue[];
+}
+
+export interface ProductImportPreview extends ProductImportResult {
+  insertables: number;
 }

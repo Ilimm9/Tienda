@@ -11,6 +11,11 @@ import { environment } from '../../../environments/environment';
 import { CatalogoService } from './catalogo.service';
 import { CatalogImportResult, CatalogRecord, Categoria } from './catalogo.models';
 
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
 @Component({
   selector: 'app-catalogo',
   standalone: true,
@@ -33,6 +38,14 @@ export class CatalogoComponent {
   readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores' | 'unidades';
   readonly items = signal<CatalogRecord[]>([]);
   readonly parents = signal<Categoria[]>([]);
+  readonly unitTypeOptions: SelectOption[] = [
+    { label: 'Peso', value: 'PESO' },
+    { label: 'Volumen', value: 'VOLUMEN' },
+    { label: 'Longitud', value: 'LONGITUD' },
+    { label: 'Área', value: 'AREA' },
+    { label: 'Cantidad', value: 'CANTIDAD' },
+    { label: 'Empaque', value: 'EMPAQUE' },
+  ];
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly dialogVisible = signal(false);
@@ -72,6 +85,11 @@ export class CatalogoComponent {
       : this.section === 'categorias'
         ? 'Organiza los productos por categorías.'
         : this.section === 'proveedores' ? 'Administra tus proveedores de inventario.' : 'Administra las unidades normalizadas del catálogo.';
+  }
+  get parentCategoryOptions(): SelectOption[] {
+    return this.parents()
+      .filter((category) => category.id !== this.editingId)
+      .map((category) => ({ label: category.nombre, value: category.id }));
   }
   load(): void {
     this.loading.set(true);

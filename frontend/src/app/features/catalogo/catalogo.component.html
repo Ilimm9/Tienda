@@ -146,7 +146,11 @@
         ><label
           >Tipo *<p-select
             formControlName="tipo"
-            [options]="['PESO', 'VOLUMEN', 'LONGITUD', 'AREA', 'CANTIDAD', 'EMPAQUE']"
+            [options]="unitTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona un tipo"
+            [style]="{ width: '100%' }"
           ></p-select></label
         ><label
           >Factor a unidad base *<input
@@ -165,11 +169,12 @@
       ><label
         >Categoría padre<p-select
           formControlName="categoria_padre_id"
-          [options]="parents()"
-          optionLabel="nombre"
-          optionValue="id"
+          [options]="parentCategoryOptions"
+          optionLabel="label"
+          optionValue="value"
           placeholder="Sin categoría padre"
           [showClear]="true"
+          [style]="{ width: '100%' }"
         ></p-select
       ></label>
     }

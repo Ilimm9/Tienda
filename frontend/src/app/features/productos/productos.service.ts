@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, CreateProductRequest, ProductImportResult, ProductListResponse, ProductLookup } from './product.models';
+import { CatalogOption, CreateProductRequest, ProductImportPreview, ProductImportResult, ProductListResponse, ProductLookup } from './product.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
@@ -57,6 +57,15 @@ export class ProductosService {
     data.append('sucursal_id', branchId);
     return this.http.post<ProductImportResult>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importar`, data,
+    );
+  }
+
+  previewProductImport(businessId: string, branchId: string, file: File): Observable<ProductImportPreview> {
+    const data = new FormData();
+    data.append('archivo', file);
+    data.append('sucursal_id', branchId);
+    return this.http.post<ProductImportPreview>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/validar-importacion`, data,
     );
   }
 }

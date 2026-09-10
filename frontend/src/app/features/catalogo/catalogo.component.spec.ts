@@ -55,4 +55,27 @@ describe('CatalogoComponent', () => {
       'No fue posible comunicarse con el servidor. Intenta de nuevo.',
     );
   });
+
+  it('exposes unit types as PrimeNG select label/value options', () => {
+    expect(component.unitTypeOptions).toEqual([
+      { label: 'Peso', value: 'PESO' },
+      { label: 'Volumen', value: 'VOLUMEN' },
+      { label: 'Longitud', value: 'LONGITUD' },
+      { label: 'Área', value: 'AREA' },
+      { label: 'Cantidad', value: 'CANTIDAD' },
+      { label: 'Empaque', value: 'EMPAQUE' },
+    ]);
+  });
+
+  it('maps parent categories to select options and excludes the edited category', () => {
+    component.parents.set([
+      { id: 'categoria-1', nombre: 'Bebidas', activo: true },
+      { id: 'categoria-2', nombre: 'Refrescos', activo: true },
+    ]);
+    component.editingId = 'categoria-2';
+
+    expect(component.parentCategoryOptions).toEqual([
+      { label: 'Bebidas', value: 'categoria-1' },
+    ]);
+  });
 });

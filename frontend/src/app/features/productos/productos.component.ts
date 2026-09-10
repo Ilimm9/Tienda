@@ -8,7 +8,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, ProductImportResult, ProductLookup, ProductRow } from './product.models';
+import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow } from './product.models';
 import { ProductosService } from './productos.service';
 
 @Component({
@@ -51,6 +51,7 @@ export class ProductosComponent {
   readonly importing = signal(false);
   readonly importError = signal<string | null>(null);
   readonly importResult = signal<ProductImportResult | null>(null);
+  readonly importPreview = signal<ProductImportPreview | null>(null);
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
   private brandsLoaded = false;
@@ -165,6 +166,7 @@ export class ProductosComponent {
     this.importDropActive = false;
     this.importError.set(null);
     this.importResult.set(null);
+    this.importPreview.set(null);
     this.importBranches.set([]);
     this.importDialogVisible = true;
     this.productosService.listBranches(environment.defaultBusinessId).subscribe({
@@ -203,16 +205,47 @@ export class ProductosComponent {
     this.importFile = file;
     this.importError.set(null);
     this.importResult.set(null);
+    this.importPreview.set(null);
   }
 
-  importProducts(): void {
+  validateProductImport(): void {
     if (!this.importFile || !this.importBranchId || this.importing()) return;
     this.importing.set(true);
     this.importError.set(null);
     this.importResult.set(null);
-    this.productosService.importProducts(environment.defaultBusinessId, this.importBranchId, this.importFile).subscribe({
+    this.importPreview.set(null);
+    const file = this.importFile;
+    const branchId = this.importBranchId;
+    this.productosService.previewProductImport(environment.defaultBusinessId, branchId, file).subscribe({
+      next: (preview) => {
+        this.importPreview.set(preview);
+        this.importing.set(false);
+      },
+      error: (response) => {
+        this.importing.set(false);
+        this.importError.set(response.error?.mensaje ?? 'No fue posible validar el archivo.');
+      },
+    });
+  }
+
+  loadNewImport(input: HTMLInputElement): void {
+    if (this.importing()) return;
+    this.setImportFile(null);
+    input.click();
+  }
+
+  importExistingProducts(): void {
+    if (!this.importFile || !this.importBranchId || !this.importPreview()?.insertables || this.importing()) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.executeProductImport(this.importFile, this.importBranchId);
+  }
+
+  private executeProductImport(file: File, branchId: string): void {
+    this.productosService.importProducts(environment.defaultBusinessId, branchId, file).subscribe({
       next: (result) => {
         this.importing.set(false);
+        this.importPreview.set(null);
         this.importResult.set(result);
         if (result.creadas > 0) this.loadProducts();
       },
