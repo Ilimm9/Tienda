@@ -52,6 +52,10 @@ type Empleado struct {
 type Negocio struct {
 	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	Nombre        string    `gorm:"type:varchar(180);not null" json:"nombre"`
+	RazonSocial   *string   `gorm:"type:varchar(180)" json:"razon_social,omitempty"`
+	RFC           *string   `gorm:"type:varchar(30)" json:"rfc,omitempty"`
+	Telefono      *string   `gorm:"type:varchar(30)" json:"telefono,omitempty"`
+	Email         *string   `gorm:"type:varchar(255)" json:"email,omitempty"`
 	Estado        string    `gorm:"type:varchar(30);not null;default:'activo'" json:"estado"`
 	CreadoEn      time.Time `json:"creado_en"`
 	ActualizadoEn time.Time `json:"actualizado_en"`

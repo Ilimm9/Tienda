@@ -46,6 +46,16 @@ export const routes: Routes = [
           import('./features/ventas/ventas.routes').then((module) => module.VENTAS_ROUTES),
       },
       {
+        path: 'productos',
+        redirectTo: 'catalogo/productos',
+        pathMatch: 'full',
+      },
+      {
+        path: 'catalogo',
+        loadChildren: () =>
+          import('./features/catalogo/catalogo.routes').then((module) => module.CATALOGO_ROUTES),
+      },
+      {
         path: 'equipo',
         loadChildren: () =>
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),

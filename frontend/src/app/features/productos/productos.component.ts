@@ -1,0 +1,331 @@
+import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { TextareaModule } from 'primeng/textarea';
+
+import { environment } from '../../../environments/environment';
+import { CatalogOption, ProductLookup, ProductRow } from './product.models';
+import { ProductosService } from './productos.service';
+
+@Component({
+  selector: 'app-productos',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    DialogModule,
+    InputTextModule,
+    SelectModule,
+    TableModule,
+    TextareaModule,
+  ],
+  templateUrl: './productos.component.html',
+  styleUrl: './productos.component.css',
+})
+export class ProductosComponent {
+  private readonly productosService = inject(ProductosService);
+  private readonly formBuilder = inject(FormBuilder);
+
+  readonly products = signal<ProductRow[]>([]);
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly categories = signal<CatalogOption[]>([]);
+  readonly brands = signal<CatalogOption[]>([]);
+  readonly branches = signal<CatalogOption[]>([]);
+  readonly catalogLoadErrors = signal<string[]>([]);
+  readonly branchReady = signal(false);
+  readonly saving = signal(false);
+  readonly imageLookupLoading = signal(false);
+  readonly imageLookupError = signal<string | null>(null);
+  readonly previewImageURL = signal<string | null>(null);
+  readonly lookupSources = signal<string[]>([]);
+  readonly catalogLookupWarnings = signal<string[]>([]);
+  readonly failedProductImages = signal<ReadonlySet<string>>(new Set());
+  private lastLookup: ProductLookup | null = null;
+  private categoriesLoaded = false;
+  private brandsLoaded = false;
+  dialogVisible = false;
+  formError: string | null = null;
+
+  readonly productForm = this.formBuilder.nonNullable.group({
+    nombre: ['', [Validators.required, Validators.maxLength(255)]],
+    sku_interno: ['', [Validators.required, Validators.maxLength(120)]],
+    codigo_barras: ['', Validators.pattern(/^\d{8,14}$/)],
+    imagen_url: [''],
+    marca_id: [''],
+    categoria_id: ['', Validators.required],
+    // TODO(sucursales): restore the visible branch selector when branch management is enabled.
+    sucursal_id: ['', Validators.required],
+    descripcion: ['', Validators.maxLength(2000)],
+    contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
+    unidad_contenido: ['', Validators.maxLength(30)],
+    presentacion: ['', Validators.maxLength(100)],
+    precio_venta: [0, [Validators.required, Validators.min(0)]],
+    stock_inicial: [0, [Validators.required, Validators.min(0)]],
+  });
+
+  constructor() {
+    this.loadProducts();
+  }
+
+  loadProducts(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.productosService.listByBusiness(environment.defaultBusinessId).subscribe({
+      next: ({ items }) => {
+        this.products.set(items ?? []);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('No fue posible cargar los productos.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  openCreateDialog(): void {
+    const branchControl = this.productForm.controls.sucursal_id;
+    this.productForm.reset({
+      nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
+      codigo_barras: '', imagen_url: '',
+      descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
+      precio_venta: 0, stock_inicial: 0,
+    });
+    this.categories.set([]);
+    this.brands.set([]);
+    this.branches.set([]);
+    this.branchReady.set(false);
+    this.imageLookupLoading.set(false);
+    this.imageLookupError.set(null);
+    this.previewImageURL.set(null);
+    this.lookupSources.set([]);
+    this.catalogLookupWarnings.set([]);
+    this.catalogLoadErrors.set([]);
+    this.lastLookup = null;
+    this.categoriesLoaded = false;
+    this.brandsLoaded = false;
+    this.formError = null;
+    this.dialogVisible = true;
+    this.productosService.listCategories(environment.defaultBusinessId).subscribe({
+      next: (items) => {
+        this.categories.set(items);
+        this.categoriesLoaded = true;
+        this.applyCatalogSuggestions();
+      },
+      error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
+    });
+    this.productosService.listBrands(environment.defaultBusinessId).subscribe({
+      next: (items) => {
+        this.brands.set(items);
+        this.brandsLoaded = true;
+        this.applyCatalogSuggestions();
+      },
+      error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listBranches(environment.defaultBusinessId).subscribe({
+      next: (items) => {
+        this.branches.set(items);
+        if (items.length === 0) {
+          this.formError = 'No se encontró una sucursal activa para registrar el inventario.';
+          return;
+        }
+        if (items.length === 1) {
+          branchControl.setValue(items[0].id);
+          this.branchReady.set(true);
+        }
+      },
+      error: () => {
+        this.formError = 'No fue posible cargar las sucursales.';
+      },
+    });
+  }
+
+  onBranchSelected(): void {
+    this.branchReady.set(!!this.productForm.controls.sucursal_id.value);
+  }
+
+  private addCatalogLoadError(message: string): void {
+    this.catalogLoadErrors.update((messages) => messages.includes(message) ? messages : [...messages, message]);
+  }
+
+  canSubmitProduct(): boolean {
+    return !this.saving() && this.branchReady();
+  }
+
+  canLookupProduct(): boolean {
+    return /^\d{8,14}$/.test(this.productForm.controls.codigo_barras.value.trim())
+      && !this.imageLookupLoading();
+  }
+
+  onBarcodeChanged(): void {
+    if (this.lastLookup) {
+      const controls = this.productForm.controls;
+      if (controls.nombre.pristine) controls.nombre.setValue('');
+      if (controls.sku_interno.pristine) controls.sku_interno.setValue('');
+      if (controls.descripcion.pristine) controls.descripcion.setValue('');
+      if (controls.precio_venta.pristine) controls.precio_venta.setValue(0);
+      if (controls.contenido.pristine) controls.contenido.setValue(null);
+      if (controls.unidad_contenido.pristine) controls.unidad_contenido.setValue('');
+      if (controls.marca_id.pristine) controls.marca_id.setValue('');
+      if (controls.categoria_id.pristine) controls.categoria_id.setValue('');
+    }
+    this.productForm.controls.imagen_url.setValue('');
+    this.previewImageURL.set(null);
+    this.lookupSources.set([]);
+    this.imageLookupError.set(null);
+    this.catalogLookupWarnings.set([]);
+    this.lastLookup = null;
+  }
+
+  lookupProduct(): void {
+    if (!this.canLookupProduct()) return;
+
+    const barcode = this.productForm.controls.codigo_barras.value.trim();
+    this.imageLookupLoading.set(true);
+    this.imageLookupError.set(null);
+    this.productosService.lookupProduct(environment.defaultBusinessId, barcode).subscribe({
+      next: (product) => {
+        this.imageLookupLoading.set(false);
+        if (this.productForm.controls.codigo_barras.value.trim() !== barcode) return;
+
+        this.lastLookup = product;
+        this.lookupSources.set(product.fuentes ?? []);
+        this.applyProductSuggestions(product);
+        this.applyCatalogSuggestions();
+
+        if (!product.imagen_url) {
+          this.imageLookupError.set('El producto fue encontrado, pero no tiene una imagen disponible.');
+          this.productForm.controls.imagen_url.setValue('');
+          this.previewImageURL.set(null);
+          return;
+        }
+        this.productForm.controls.imagen_url.setValue(product.imagen_url);
+        this.previewImageURL.set(product.imagen_url);
+      },
+      error: (response) => {
+        this.imageLookupLoading.set(false);
+        if (this.productForm.controls.codigo_barras.value.trim() !== barcode) return;
+        this.imageLookupError.set(response.error?.mensaje ?? 'No fue posible buscar el producto en PrecioCheck.');
+      },
+    });
+  }
+
+  private applyProductSuggestions(product: ProductLookup): void {
+    const controls = this.productForm.controls;
+
+    if (product.nombre && (controls.nombre.pristine || !controls.nombre.value.trim())) {
+      controls.nombre.setValue(product.nombre);
+    }
+    if (product.descripcion && (controls.descripcion.pristine || !controls.descripcion.value.trim())) {
+      controls.descripcion.setValue(product.descripcion);
+    }
+    if (product.precio_sugerido !== null && controls.precio_venta.pristine) {
+      controls.precio_venta.setValue(product.precio_sugerido);
+    }
+    if (product.contenido !== null && controls.contenido.pristine) {
+      controls.contenido.setValue(product.contenido);
+    }
+    if (product.unidad_contenido && (controls.unidad_contenido.pristine || !controls.unidad_contenido.value.trim())) {
+      controls.unidad_contenido.setValue(product.unidad_contenido);
+    }
+    if (!controls.sku_interno.value.trim()) {
+      controls.sku_interno.setValue(product.codigo_barras);
+    }
+  }
+
+  private applyCatalogSuggestions(): void {
+    const product = this.lastLookup;
+    if (!product) return;
+
+    const warnings: string[] = [];
+    const brandControl = this.productForm.controls.marca_id;
+    const categoryControl = this.productForm.controls.categoria_id;
+
+    if (product.marca && this.brandsLoaded && (brandControl.pristine || !brandControl.value)) {
+      const brand = this.findCatalogMatch(this.brands(), product.marca);
+      if (brand) brandControl.setValue(brand.id);
+      else warnings.push(`La marca "${product.marca}" no existe en el catálogo local.`);
+    }
+    if (product.categoria && this.categoriesLoaded && (categoryControl.pristine || !categoryControl.value)) {
+      const category = this.findCatalogMatch(this.categories(), product.categoria);
+      if (category) categoryControl.setValue(category.id);
+      else warnings.push(`La categoría "${product.categoria}" no existe en el catálogo local.`);
+    }
+
+    this.catalogLookupWarnings.set(warnings);
+  }
+
+  private findCatalogMatch(options: CatalogOption[], suggestion: string): CatalogOption | undefined {
+    const normalizedSuggestion = this.normalizeCatalogText(suggestion);
+    return options.find((option) => this.normalizeCatalogText(option.nombre) === normalizedSuggestion);
+  }
+
+  private normalizeCatalogText(value: string): string {
+    return value.trim().toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  handlePreviewImageError(): void {
+    this.productForm.controls.imagen_url.setValue('');
+    this.previewImageURL.set(null);
+    this.imageLookupError.set('La imagen encontrada no está disponible.');
+  }
+
+  hasProductImageFailed(productId: string): boolean {
+    return this.failedProductImages().has(productId);
+  }
+
+  handleProductImageError(productId: string): void {
+    this.failedProductImages.update((current) => new Set([...current, productId]));
+  }
+
+  closeCreateDialog(): void {
+    if (!this.saving()) this.dialogVisible = false;
+  }
+
+  hasError(field: string): boolean {
+    const control = this.productForm.get(field);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  getStatusClass(status: string | null | undefined): string {
+    return status?.trim().toLowerCase().replaceAll(' ', '-') ?? 'sin-estado';
+  }
+
+  saveProduct(): void {
+    if (!this.canSubmitProduct()) {
+      return;
+    }
+
+    if (this.productForm.invalid) {
+      this.productForm.markAllAsTouched();
+      return;
+    }
+    this.saving.set(true);
+    this.formError = null;
+    const value = this.productForm.getRawValue();
+    this.productosService.create(environment.defaultBusinessId, {
+      ...value,
+      marca_id: value.marca_id || null,
+      descripcion: value.descripcion || null,
+      contenido: value.contenido,
+      unidad_contenido: value.unidad_contenido || null,
+      presentacion: value.presentacion || null,
+      codigo_barras: value.codigo_barras.trim() || null,
+      imagen_url: value.imagen_url || null,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.dialogVisible = false;
+        this.loadProducts();
+      },
+      error: (response) => {
+        this.saving.set(false);
+        this.formError = response.error?.mensaje ?? 'No fue posible guardar el producto.';
+      },
+    });
+  }
+}

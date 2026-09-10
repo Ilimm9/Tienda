@@ -1,0 +1,248 @@
+/* Shared PrimeNG table system. Use .data-table-card + .app-table on every table. */
+.data-table-card {
+  min-width: 0;
+  margin-top: 2.125rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+p-table.app-table {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+p-table.app-table .p-datatable-table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+p-table.app-table table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+p-table.app-table .p-datatable-thead > tr > th {
+  height: 3.5rem;
+  padding: 0.95rem 1.25rem;
+  color: var(--text);
+  background: var(--surface-sidebar);
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  text-align: left;
+  text-transform: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+p-table.app-table .p-datatable-tbody > tr {
+  transition: background 140ms ease;
+}
+
+p-table.app-table .p-datatable-tbody > tr:hover {
+  background: var(--surface-hover);
+}
+
+p-table.app-table .p-datatable-tbody > tr > td {
+  height: 3.75rem;
+  padding: 0.95rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.45;
+  vertical-align: middle;
+}
+
+p-table.app-table .p-datatable-tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+/* Products: image | name | sku | price | stock | category | status */
+p-table.app-table--products th:first-child,
+p-table.app-table--products td:first-child {
+  width: 5.5rem;
+  text-align: center;
+}
+
+p-table.app-table--products th:nth-child(2),
+p-table.app-table--products td:nth-child(2) {
+  min-width: 13rem;
+}
+
+p-table.app-table--products th:nth-child(3),
+p-table.app-table--products td:nth-child(3) {
+  width: 10rem;
+}
+
+p-table.app-table--products th:nth-child(4),
+p-table.app-table--products td:nth-child(4),
+p-table.app-table--products th:nth-child(5),
+p-table.app-table--products td:nth-child(5) {
+  width: 8rem;
+  white-space: nowrap;
+}
+
+p-table.app-table--products th:last-child,
+p-table.app-table--products td:last-child {
+  width: 9rem;
+  text-align: center;
+}
+
+/* Categories: name | description | status | actions */
+p-table.app-table--categories th:first-child,
+p-table.app-table--categories td:first-child {
+  width: 30%;
+  padding-left: 1.5rem;
+}
+
+p-table.app-table--categories th:nth-child(2),
+p-table.app-table--categories td:nth-child(2) {
+  width: auto;
+}
+
+p-table.app-table--categories td:nth-child(2) {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Shared status and action columns for catalog tables. */
+p-table.app-table--categories th:nth-last-child(2),
+p-table.app-table--categories td:nth-last-child(2),
+p-table.app-table--brands th:nth-last-child(2),
+p-table.app-table--brands td:nth-last-child(2),
+p-table.app-table--providers th:nth-last-child(2),
+p-table.app-table--providers td:nth-last-child(2) {
+  width: 9rem;
+  text-align: center;
+}
+
+p-table.app-table--categories th:last-child,
+p-table.app-table--categories td:last-child,
+p-table.app-table--brands th:last-child,
+p-table.app-table--brands td:last-child,
+p-table.app-table--providers th:last-child,
+p-table.app-table--providers td:last-child {
+  width: 6rem;
+  padding-right: 1.5rem;
+  text-align: center;
+}
+
+p-table.app-table--providers th:first-child,
+p-table.app-table--providers td:first-child,
+p-table.app-table--providers th:nth-child(2),
+p-table.app-table--providers td:nth-child(2) {
+  width: 25%;
+}
+
+p-table.app-table .p-paginator {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 4rem;
+  padding: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  overflow: hidden;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+p-table.app-table .p-paginator > * {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+p-table.app-table .p-paginator-current {
+  max-width: 100%;
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+p-table.app-table .p-paginator-pages {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+p-table.app-table .p-paginator button {
+  display: inline-grid;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0.35rem;
+  place-items: center;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+p-table.app-table .p-paginator button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+p-table.app-table .p-paginator button.p-highlight,
+p-table.app-table .p-paginator button.p-paginator-page-selected {
+  color: var(--primary);
+  background: var(--primary-soft);
+  font-weight: 700;
+}
+
+p-table.app-table .p-paginator button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+p-table.app-table .p-paginator .p-select {
+  display: inline-flex;
+  min-width: 4.5rem;
+  min-height: 2.35rem;
+  margin-left: 0.75rem;
+  padding: 0 0.65rem;
+  align-items: center;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.45rem;
+  background: var(--surface-raised);
+}
+
+@media (max-width: 620px) {
+  p-table.app-table .p-paginator {
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+  }
+
+  p-table.app-table .p-paginator-current {
+    flex-basis: 100%;
+    margin-right: 0;
+    text-align: center;
+  }
+
+  p-table.app-table .p-paginator .p-select {
+    margin-left: 0.35rem;
+  }
+
+  p-table.app-table .p-datatable-thead > tr > th,
+  p-table.app-table .p-datatable-tbody > tr > td {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}
