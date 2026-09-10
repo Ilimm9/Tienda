@@ -35,16 +35,7 @@ func main() {
 	productLookup := infrastructure.NewFallbackProductLookup(precioCheckClient, upcItemDBClient)
 	productHandler := authhttp.NewProductHandler(application.NewProductService(productRepo, productLookup))
 	router := gin.Default()
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", cfg.FrontendURL)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.Next()
-	})
+	router.Use(corsMiddleware(cfg.FrontendURL))
 	router.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"estado": "ok"}) })
 	auth := router.Group("/api/v1/auth")
 	auth.POST("/register", handler.Register)
@@ -81,5 +72,19 @@ func main() {
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func corsMiddleware(frontendURL string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", frontendURL)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
 	}
 }

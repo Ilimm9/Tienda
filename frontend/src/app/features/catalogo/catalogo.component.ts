@@ -35,10 +35,10 @@ export class CatalogoComponent {
   readonly parents = signal<Categoria[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
-  dialogVisible = false;
+  readonly dialogVisible = signal(false);
   editingId: string | null = null;
-  saving = false;
-  formError: string | null = null;
+  readonly saving = signal(false);
+  readonly formError = signal<string | null>(null);
   importDialogVisible = false;
   importFile: File | null = null;
   importDropActive = false;
@@ -96,8 +96,8 @@ export class CatalogoComponent {
   openCreate(): void {
     this.editingId = null;
     this.form.reset();
-    this.formError = null;
-    this.dialogVisible = true;
+    this.formError.set(null);
+    this.dialogVisible.set(true);
   }
   openImport(): void {
     this.importFile = null;
@@ -170,20 +170,20 @@ export class CatalogoComponent {
       factor_a_base: 'factor_a_base' in item ? item.factor_a_base : 1,
       decimales: 'decimales' in item ? item.decimales : 2,
     });
-    this.formError = null;
-    this.dialogVisible = true;
+    this.formError.set(null);
+    this.dialogVisible.set(true);
   }
   save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.saving = true;
-    this.formError = null;
+    this.saving.set(true);
+    this.formError.set(null);
     const v = this.form.getRawValue();
     if (this.section === 'unidades' && (!v.codigo.trim() || !v.simbolo.trim() || !v.tipo.trim())) {
-      this.formError = 'Código, símbolo y tipo son obligatorios para la unidad.';
-      this.saving = false;
+      this.formError.set('Código, símbolo y tipo son obligatorios para la unidad.');
+      this.saving.set(false);
       return;
     }
     const payload: any = { nombre: v.nombre };
@@ -211,13 +211,15 @@ export class CatalogoComponent {
       : this.service.crear(requestPath, payload);
     request.subscribe({
       next: () => {
-        this.saving = false;
-        this.dialogVisible = false;
+        this.saving.set(false);
+        this.dialogVisible.set(false);
         this.load();
       },
       error: (e) => {
-        this.saving = false;
-        this.formError = e.error?.mensaje ?? 'No fue posible guardar los cambios.';
+        this.saving.set(false);
+        this.formError.set(
+          e.error?.mensaje ?? 'No fue posible comunicarse con el servidor. Intenta de nuevo.',
+        );
       },
     });
   }

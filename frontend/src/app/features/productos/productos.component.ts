@@ -68,7 +68,6 @@ export class ProductosComponent {
     imagen_url: [''],
     marca_id: [''],
     categoria_id: ['', Validators.required],
-    // TODO(sucursales): restore the visible branch selector when branch management is enabled.
     sucursal_id: ['', Validators.required],
     descripcion: ['', Validators.maxLength(2000)],
     contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),

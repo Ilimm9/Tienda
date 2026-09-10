@@ -125,7 +125,8 @@
   }
 </main>
 <p-dialog
-  [(visible)]="dialogVisible"
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
@@ -181,19 +182,19 @@
       </div>
       <label>Dirección<textarea pTextarea formControlName="direccion" rows="2"></textarea></label>
     }
-    @if (formError) {
-      <p class="form-error">{{ formError }}</p>
+    @if (formError()) {
+      <p class="form-error" role="alert">{{ formError() }}</p>
     }
     <footer>
       <button
         class="secondary-button"
         type="button"
-        (click)="dialogVisible = false"
-        [disabled]="saving"
+        (click)="dialogVisible.set(false)"
+        [disabled]="saving()"
       >
         Cancelar</button
-      ><button class="primary-button" type="submit" [disabled]="saving">
-        {{ saving ? 'Guardando...' : 'Guardar' }}
+      ><button class="primary-button" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
       </button>
     </footer>
   </form>
