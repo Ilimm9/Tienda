@@ -66,7 +66,7 @@ p-table.app-table .p-datatable-tbody > tr:last-child > td {
   border-bottom: 0;
 }
 
-/* Products: image | name | sku | price | stock | category | status */
+/* Products: image | name | sku | price | stock | category | status | actions */
 p-table.app-table--products th:first-child,
 p-table.app-table--products td:first-child {
   width: 5.5rem;
@@ -84,7 +84,11 @@ p-table.app-table--products td:nth-child(3) {
 }
 
 p-table.app-table--products th:nth-child(4),
-p-table.app-table--products td:nth-child(4),
+p-table.app-table--products td:nth-child(4) {
+  width: 8rem;
+  white-space: nowrap;
+}
+
 p-table.app-table--products th:nth-child(5),
 p-table.app-table--products td:nth-child(5) {
   width: 8rem;
@@ -93,7 +97,7 @@ p-table.app-table--products td:nth-child(5) {
 
 p-table.app-table--products th:last-child,
 p-table.app-table--products td:last-child {
-  width: 9rem;
+  width: 7rem;
   text-align: center;
 }
 

@@ -8,7 +8,24 @@ export interface ProductRow {
   precio: number;
   stock: number;
   categoria: string | null;
+  categoria_id: string | null;
+  marca: string | null;
+  marca_id: string | null;
+  descripcion: string | null;
+  presentacion: string | null;
+  contenido: number | null;
+  unidad_contenido: string | null;
+  unidad_medida: string | null;
+  unidad_medida_id: string | null;
+  codigo_barras: string | null;
+  inventario: ProductBranchStock[];
   estado: ProductStatus;
+}
+
+export interface ProductBranchStock {
+  sucursal_id: string;
+  sucursal: string;
+  stock: number;
 }
 
 export interface ProductListResponse {
@@ -30,12 +47,15 @@ export interface CreateProductRequest {
   descripcion: string | null;
   contenido: number | null;
   unidad_contenido: string | null;
+  unidad_medida_id?: string | null;
   presentacion: string | null;
   precio_venta: number;
   stock_inicial: number;
   codigo_barras: string | null;
   imagen_url: string | null;
 }
+
+export interface UpdateProductRequest extends Omit<CreateProductRequest, 'sucursal_id' | 'stock_inicial'> {}
 
 export interface ProductLookup {
   codigo_barras: string;
@@ -48,4 +68,23 @@ export interface ProductLookup {
   unidad_contenido: string | null;
   imagen_url: string | null;
   fuentes: string[];
+}
+
+export interface ProductImportIssue {
+  fila: number;
+  campo?: string;
+  motivo: string;
+}
+
+export interface ProductImportResult {
+  procesadas: number;
+  creadas: number;
+  omitidas: number;
+  invalidas: number;
+  errores: ProductImportIssue[];
+  advertencias: ProductImportIssue[];
+}
+
+export interface ProductImportPreview extends ProductImportResult {
+  insertables: number;
 }

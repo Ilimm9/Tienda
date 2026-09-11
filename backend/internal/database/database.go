@@ -32,7 +32,7 @@ func Init(db *gorm.DB) error {
 		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &negociodomain.Empleado{},
 		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
-		&negociodomain.Sucursal{}, &domain.Marca{}, &domain.Producto{}, &domain.Categoria{},
+		&negociodomain.Sucursal{}, &domain.Marca{}, &domain.UnidadMedida{}, &domain.Producto{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.Impuesto{},
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
@@ -57,13 +57,14 @@ func Init(db *gorm.DB) error {
 	if err := db.Exec(`ALTER TABLE IF EXISTS producto_negocio ADD COLUMN IF NOT EXISTS sku_interno varchar(120)`).Error; err != nil {
 		return err
 	}
+	if err := db.Exec(`ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS unidad_medida_id uuid`).Error; err != nil {
+		return err
+	}
 	return nil
 }
 
-// SeedDevelopment provides the minimum organization data needed to exercise the
-// catalog and inventory flows locally. It must never run in production.
-// TODO(sucursales): remove this seed when businesses and branches are created by
-// their complete onboarding flow.
+// SeedDevelopment provides the minimum organization data needed to exercise the catalog and inventory flows locally.
+// remove this seed when businesses and branches are created
 func SeedDevelopment(db *gorm.DB) error {
 	businessID := uuid.MustParse(DevelopmentBusinessID)
 	branchID := uuid.MustParse(developmentBranchID)

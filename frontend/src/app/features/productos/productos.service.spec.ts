@@ -58,4 +58,59 @@ describe('ProductosService', () => {
     expect(request.request.body).toEqual(payload);
     request.flush(null);
   });
+
+  it('updates commercial product data without inventory fields', () => {
+    const payload = {
+      nombre: 'Producto actualizado',
+      sku_interno: 'PROD-001',
+      marca_id: null,
+      categoria_id: 'categoria-1',
+      descripcion: 'Descripción',
+      contenido: 600,
+      unidad_contenido: 'ml',
+      unidad_medida_id: 'unidad-ml',
+      presentacion: 'Botella',
+      precio_venta: 18.5,
+      codigo_barras: '7501055303038',
+      imagen_url: 'https://cdn.example.com/producto.jpg',
+    };
+
+    service.update('negocio-1', 'producto-1', payload).subscribe();
+
+    const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/producto-1`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual(payload);
+    request.flush(null);
+  });
+
+  it('deactivates a product within its business', () => {
+    service.deactivate('negocio-1', 'producto-1').subscribe();
+
+    const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/producto-1`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+  });
+
+  it('uploads the spreadsheet and selected branch for a product import', () => {
+    const file = new File(['spreadsheet'], 'productos.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    service.importProducts('negocio-1', 'sucursal-1', file).subscribe();
+
+    const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/importar`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body.get('sucursal_id')).toBe('sucursal-1');
+    expect(request.request.body.get('archivo')).toBe(file);
+    request.flush({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, errores: [], advertencias: [] });
+  });
+
+  it('validates the spreadsheet before importing it', () => {
+    const file = new File(['spreadsheet'], 'productos.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    service.previewProductImport('negocio-1', 'sucursal-1', file).subscribe((result) => {
+      expect(result.insertables).toBe(2);
+    });
+
+    const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/validar-importacion`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body.get('sucursal_id')).toBe('sucursal-1');
+    request.flush({ procesadas: 3, insertables: 2, creadas: 0, omitidas: 0, invalidas: 1, errores: [], advertencias: [] });
+  });
 });

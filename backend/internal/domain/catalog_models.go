@@ -27,20 +27,37 @@ type Marca struct {
 	ActualizadoEn time.Time `json:"actualizado_en"`
 }
 
+type UnidadMedida struct {
+	ID              uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	Codigo          string     `gorm:"type:varchar(30);uniqueIndex;not null" json:"codigo"`
+	Nombre          string     `gorm:"type:varchar(100);uniqueIndex;not null" json:"nombre"`
+	Simbolo         string     `gorm:"type:varchar(20);uniqueIndex;not null" json:"simbolo"`
+	Tipo            string     `gorm:"type:varchar(30);not null" json:"tipo"`
+	UnidadBaseID    *uuid.UUID `gorm:"type:uuid;index" json:"unidad_base_id,omitempty"`
+	FactorABase     float64    `gorm:"type:numeric(18,6);not null;default:1" json:"factor_a_base"`
+	PermiteFraccion bool       `gorm:"not null;default:true" json:"permite_fraccion"`
+	Decimales       int        `gorm:"not null;default:2" json:"decimales"`
+	Activo          bool       `gorm:"not null;default:true" json:"activo"`
+	CreadoEn        time.Time  `json:"creado_en"`
+	ActualizadoEn   time.Time  `json:"actualizado_en"`
+}
+
 type Producto struct {
-	ID                uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	Nombre            string     `gorm:"type:varchar(255);not null" json:"nombre"`
-	Descripcion       *string    `gorm:"type:text" json:"descripcion,omitempty"`
-	MarcaID           *uuid.UUID `gorm:"type:uuid;index" json:"marca_id,omitempty"`
-	Contenido         *float64   `json:"contenido,omitempty"`
-	UnidadContenido   *string    `gorm:"type:varchar(30)" json:"unidad_contenido,omitempty"`
-	Presentacion      *string    `gorm:"type:varchar(100)" json:"presentacion,omitempty"`
-	RequiereCaducidad bool       `gorm:"not null;default:false" json:"requiere_caducidad"`
-	EsPerecedero      bool       `gorm:"not null;default:false" json:"es_perecedero"`
-	Activo            bool       `gorm:"not null;default:true" json:"activo"`
-	CreadoEn          time.Time  `json:"creado_en"`
-	ActualizadoEn     time.Time  `json:"actualizado_en"`
-	Marca             *Marca     `gorm:"foreignKey:MarcaID" json:"-"`
+	ID                uuid.UUID     `gorm:"type:uuid;primaryKey" json:"id"`
+	Nombre            string        `gorm:"type:varchar(255);not null" json:"nombre"`
+	Descripcion       *string       `gorm:"type:text" json:"descripcion,omitempty"`
+	MarcaID           *uuid.UUID    `gorm:"type:uuid;index" json:"marca_id,omitempty"`
+	UnidadMedidaID    *uuid.UUID    `gorm:"type:uuid;index" json:"unidad_medida_id,omitempty"`
+	Contenido         *float64      `json:"contenido,omitempty"`
+	UnidadContenido   *string       `gorm:"type:varchar(30)" json:"unidad_contenido,omitempty"`
+	Presentacion      *string       `gorm:"type:varchar(100)" json:"presentacion,omitempty"`
+	RequiereCaducidad bool          `gorm:"not null;default:false" json:"requiere_caducidad"`
+	EsPerecedero      bool          `gorm:"not null;default:false" json:"es_perecedero"`
+	Activo            bool          `gorm:"not null;default:true" json:"activo"`
+	CreadoEn          time.Time     `json:"creado_en"`
+	ActualizadoEn     time.Time     `json:"actualizado_en"`
+	Marca             *Marca        `gorm:"foreignKey:MarcaID" json:"-"`
+	UnidadMedida      *UnidadMedida `gorm:"foreignKey:UnidadMedidaID" json:"-"`
 }
 
 type Categoria struct {
@@ -217,6 +234,7 @@ type MovimientoInventario struct {
 
 func (Sucursal) TableName() string             { return "sucursales" }
 func (Marca) TableName() string                { return "marcas" }
+func (UnidadMedida) TableName() string         { return "unidades_medida" }
 func (Producto) TableName() string             { return "productos" }
 func (Categoria) TableName() string            { return "categorias" }
 func (ProductoCategoria) TableName() string    { return "producto_categorias" }
@@ -234,6 +252,7 @@ func (MovimientoInventario) TableName() string { return "movimientos_inventario"
 
 func (s *Sucursal) BeforeCreate(*gorm.DB) error             { setID(&s.ID); return nil }
 func (m *Marca) BeforeCreate(*gorm.DB) error                { setID(&m.ID); return nil }
+func (u *UnidadMedida) BeforeCreate(*gorm.DB) error         { setID(&u.ID); return nil }
 func (p *Producto) BeforeCreate(*gorm.DB) error             { setID(&p.ID); return nil }
 func (c *Categoria) BeforeCreate(*gorm.DB) error            { setID(&c.ID); return nil }
 func (p *ProductoCategoria) BeforeCreate(*gorm.DB) error    { setID(&p.ID); return nil }

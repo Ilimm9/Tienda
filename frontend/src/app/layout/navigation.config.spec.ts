@@ -16,6 +16,7 @@ describe('NAVIGATION_ITEMS', () => {
       '/catalogo/marcas',
       '/catalogo/categorias',
       '/catalogo/proveedores',
+      '/catalogo/unidades-medida',
       '/equipo/empleados',
       '/equipo/invitaciones',
       '/roles-permisos',

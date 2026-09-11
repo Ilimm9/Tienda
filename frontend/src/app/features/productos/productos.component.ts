@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -8,7 +9,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, ProductLookup, ProductRow } from './product.models';
+import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow } from './product.models';
 import { ProductosService } from './productos.service';
 
 @Component({
@@ -16,6 +17,8 @@ import { ProductosService } from './productos.service';
   standalone: true,
   imports: [
     CommonModule,
+    ButtonModule,
+    FormsModule,
     ReactiveFormsModule,
     DialogModule,
     InputTextModule,
@@ -36,6 +39,7 @@ export class ProductosComponent {
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
+  readonly units = signal<CatalogOption[]>([]);
   readonly catalogLoadErrors = signal<string[]>([]);
   readonly branchReady = signal(false);
   readonly saving = signal(false);
@@ -45,11 +49,22 @@ export class ProductosComponent {
   readonly lookupSources = signal<string[]>([]);
   readonly catalogLookupWarnings = signal<string[]>([]);
   readonly failedProductImages = signal<ReadonlySet<string>>(new Set());
+  readonly importBranches = signal<CatalogOption[]>([]);
+  readonly importing = signal(false);
+  readonly importError = signal<string | null>(null);
+  readonly importResult = signal<ProductImportResult | null>(null);
+  readonly importPreview = signal<ProductImportPreview | null>(null);
+  readonly editingProduct = signal<ProductRow | null>(null);
+  readonly deletingProductId = signal<string | null>(null);
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
   private brandsLoaded = false;
   dialogVisible = false;
   formError: string | null = null;
+  importDialogVisible = false;
+  importFile: File | null = null;
+  importDropActive = false;
+  importBranchId = '';
 
   readonly productForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
@@ -58,11 +73,11 @@ export class ProductosComponent {
     imagen_url: [''],
     marca_id: [''],
     categoria_id: ['', Validators.required],
-    // TODO(sucursales): restore the visible branch selector when branch management is enabled.
     sucursal_id: ['', Validators.required],
     descripcion: ['', Validators.maxLength(2000)],
     contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
     unidad_contenido: ['', Validators.maxLength(30)],
+    unidad_medida_id: [''],
     presentacion: ['', Validators.maxLength(100)],
     precio_venta: [0, [Validators.required, Validators.min(0)]],
     stock_inicial: [0, [Validators.required, Validators.min(0)]],
@@ -93,8 +108,12 @@ export class ProductosComponent {
       nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
       codigo_barras: '', imagen_url: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
+      unidad_medida_id: '',
       precio_venta: 0, stock_inicial: 0,
     });
+    this.productForm.controls.sucursal_id.enable();
+    this.productForm.controls.stock_inicial.enable();
+    this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
     this.branches.set([]);
@@ -142,6 +161,172 @@ export class ProductosComponent {
         this.formError = 'No fue posible cargar las sucursales.';
       },
     });
+    this.productosService.listUnits().subscribe({
+      next: (items) => this.units.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
+    });
+  }
+
+  openEditDialog(product: ProductRow): void {
+    this.categories.set([]);
+    this.brands.set([]);
+    this.units.set([]);
+    this.catalogLoadErrors.set([]);
+    this.imageLookupLoading.set(false);
+    this.imageLookupError.set(null);
+    this.previewImageURL.set(product.imagen_url);
+    this.lookupSources.set([]);
+    this.catalogLookupWarnings.set([]);
+    this.lastLookup = null;
+    this.formError = null;
+    this.editingProduct.set(product);
+    this.branchReady.set(true);
+    this.productForm.reset({
+      nombre: product.nombre,
+      sku_interno: product.sku ?? '',
+      codigo_barras: product.codigo_barras ?? '',
+      imagen_url: product.imagen_url ?? '',
+      marca_id: product.marca_id ?? '',
+      categoria_id: product.categoria_id ?? '',
+      sucursal_id: '',
+      descripcion: product.descripcion ?? '',
+      contenido: product.contenido,
+      unidad_contenido: product.unidad_contenido ?? '',
+      unidad_medida_id: product.unidad_medida_id ?? '',
+      presentacion: product.presentacion ?? '',
+      precio_venta: product.precio,
+      stock_inicial: 0,
+    });
+    this.productForm.controls.sucursal_id.disable();
+    this.productForm.controls.stock_inicial.disable();
+    this.dialogVisible = true;
+    this.productosService.listCategories(environment.defaultBusinessId).subscribe({
+      next: (items) => this.categories.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
+    });
+    this.productosService.listBrands(environment.defaultBusinessId).subscribe({
+      next: (items) => this.brands.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listUnits().subscribe({
+      next: (items) => this.units.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
+    });
+  }
+
+  confirmDeactivate(product: ProductRow): void {
+    if (this.deletingProductId() || !window.confirm(`¿Deseas desactivar "${product.nombre}"? Podrás conservar su historial e inventario.`)) return;
+    this.deletingProductId.set(product.id);
+    this.productosService.deactivate(environment.defaultBusinessId, product.id).subscribe({
+      next: () => {
+        this.deletingProductId.set(null);
+        this.loadProducts();
+      },
+      error: (response) => {
+        this.deletingProductId.set(null);
+        this.error.set(response.error?.mensaje ?? 'No fue posible desactivar el producto.');
+      },
+    });
+  }
+
+  openImportDialog(): void {
+    this.importFile = null;
+    this.importBranchId = '';
+    this.importDropActive = false;
+    this.importError.set(null);
+    this.importResult.set(null);
+    this.importPreview.set(null);
+    this.importBranches.set([]);
+    this.importDialogVisible = true;
+    this.productosService.listBranches(environment.defaultBusinessId).subscribe({
+      next: (items) => this.importBranches.set(items),
+      error: () => this.importError.set('No fue posible cargar las sucursales.'),
+    });
+  }
+
+  onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.setImportFile(input.files?.[0] ?? null);
+    input.value = '';
+  }
+
+  openImportFilePicker(event: MouseEvent, input: HTMLInputElement): void {
+    if (event.target !== input && !this.importing()) input.click();
+  }
+
+  onImportDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (!this.importing()) this.importDropActive = true;
+  }
+
+  onImportDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.importDropActive = false;
+  }
+
+  onImportDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.importDropActive = false;
+    if (!this.importing()) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
+  }
+
+  private setImportFile(file: File | null): void {
+    this.importFile = file;
+    this.importError.set(null);
+    this.importResult.set(null);
+    this.importPreview.set(null);
+  }
+
+  validateProductImport(): void {
+    if (!this.importFile || !this.importBranchId || this.importing()) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.importResult.set(null);
+    this.importPreview.set(null);
+    const file = this.importFile;
+    const branchId = this.importBranchId;
+    this.productosService.previewProductImport(environment.defaultBusinessId, branchId, file).subscribe({
+      next: (preview) => {
+        this.importPreview.set(preview);
+        this.importing.set(false);
+      },
+      error: (response) => {
+        this.importing.set(false);
+        this.importError.set(response.error?.mensaje ?? 'No fue posible validar el archivo.');
+      },
+    });
+  }
+
+  loadNewImport(input: HTMLInputElement): void {
+    if (this.importing()) return;
+    this.setImportFile(null);
+    input.click();
+  }
+
+  importExistingProducts(): void {
+    if (!this.importFile || !this.importBranchId || !this.importPreview()?.insertables || this.importing()) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.executeProductImport(this.importFile, this.importBranchId);
+  }
+
+  private executeProductImport(file: File, branchId: string): void {
+    this.productosService.importProducts(environment.defaultBusinessId, branchId, file).subscribe({
+      next: (result) => {
+        this.importing.set(false);
+        this.importPreview.set(null);
+        this.importResult.set(result);
+        if (result.creadas > 0) this.loadProducts();
+      },
+      error: (response) => {
+        this.importing.set(false);
+        this.importError.set(response.error?.mensaje ?? 'No fue posible importar el archivo.');
+      },
+    });
+  }
+
+  productImportTemplateUrl(): string {
+    return this.productosService.productImportTemplateUrl(environment.defaultBusinessId);
   }
 
   onBranchSelected(): void {
@@ -153,7 +338,7 @@ export class ProductosComponent {
   }
 
   canSubmitProduct(): boolean {
-    return !this.saving() && this.branchReady();
+    return !this.saving() && (this.editingProduct() !== null || this.branchReady());
   }
 
   canLookupProduct(): boolean {
@@ -307,16 +492,35 @@ export class ProductosComponent {
     this.saving.set(true);
     this.formError = null;
     const value = this.productForm.getRawValue();
-    this.productosService.create(environment.defaultBusinessId, {
+    const payload = {
       ...value,
       marca_id: value.marca_id || null,
       descripcion: value.descripcion || null,
       contenido: value.contenido,
       unidad_contenido: value.unidad_contenido || null,
+      unidad_medida_id: value.unidad_medida_id || null,
       presentacion: value.presentacion || null,
       codigo_barras: value.codigo_barras.trim() || null,
       imagen_url: value.imagen_url || null,
-    }).subscribe({
+    };
+    const editing = this.editingProduct();
+    const request = editing
+      ? this.productosService.update(environment.defaultBusinessId, editing.id, {
+          nombre: payload.nombre,
+          sku_interno: payload.sku_interno,
+          marca_id: payload.marca_id,
+          categoria_id: payload.categoria_id,
+          descripcion: payload.descripcion,
+          contenido: payload.contenido,
+          unidad_contenido: payload.unidad_contenido,
+          unidad_medida_id: payload.unidad_medida_id,
+          presentacion: payload.presentacion,
+          precio_venta: payload.precio_venta,
+          codigo_barras: payload.codigo_barras,
+          imagen_url: payload.imagen_url,
+        })
+      : this.productosService.create(environment.defaultBusinessId, payload);
+    request.subscribe({
       next: () => {
         this.saving.set(false);
         this.dialogVisible = false;

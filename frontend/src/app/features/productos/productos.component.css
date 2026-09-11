@@ -15,6 +15,13 @@
     align-items: flex-start;
 }
 
+.products-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .65rem;
+}
+
 .products-header h1 {
     margin: 5px 0 8px;
     color: var(--text);
@@ -67,6 +74,12 @@
 
 .product-name {
     font-weight: 600;
+}
+
+.table-actions {
+    display: flex;
+    justify-content: center;
+    gap: .15rem;
 }
 
 code {
@@ -351,4 +364,5 @@ code {
     .dialog-actions button {
         width: 100%;
     }
+
 }
