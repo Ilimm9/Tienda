@@ -11,6 +11,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { AuthService } from '../auth.service';
 
 function matchingPasswords(control: AbstractControl): ValidationErrors | null {
@@ -33,6 +34,7 @@ function matchingPasswords(control: AbstractControl): ValidationErrors | null {
 export class RegisterComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);
@@ -78,7 +80,10 @@ export class RegisterComponent {
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => void this.router.navigate(['/login'], { queryParams: { registrado: '1' } }),
+        next: () => {
+          this.feedback.success('Cuenta creada', 'Ahora puedes iniciar sesión.');
+          void this.router.navigate(['/login']);
+        },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible crear la cuenta.'),
       });

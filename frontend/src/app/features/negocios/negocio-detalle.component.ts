@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { ApiErrorResponse, NegocioDetalle } from './negocio.models';
 import { NegocioService } from './negocio.service';
 
@@ -14,6 +15,7 @@ import { NegocioService } from './negocio.service';
 })
 export class NegocioDetalleComponent {
   private readonly negocioService = inject(NegocioService);
+  private readonly feedback = inject(FeedbackService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -27,21 +29,33 @@ export class NegocioDetalleComponent {
     this.load();
   }
 
-  archive(): void {
+  async archive(): Promise<void> {
     const business = this.business();
-    if (
-      !business ||
-      !window.confirm(`¿Archivar ${business.nombre_comercial}? Sus datos se conservarán.`)
-    )
-      return;
+    if (!business) return;
+
+    const confirmed = await this.feedback.confirmDanger({
+      titulo: `Archivar ${business.nombre_comercial}`,
+      descripcion:
+        'El negocio dejará de estar disponible para operar, pero sus datos se conservarán.',
+      textoConfirmar: 'Sí, archivar',
+    });
+    if (!confirmed) return;
+
     this.processing.set(true);
+    this.error.set(null);
     this.negocioService.archivar(business.id).subscribe({
       next: () => {
         this.processing.set(false);
+        this.feedback.success('Negocio archivado');
         void this.router.navigate(['/negocios']);
       },
-      error: (response: HttpErrorResponse) =>
-        this.handleError(response, 'No fue posible archivar el negocio.'),
+      error: (response: HttpErrorResponse) => {
+        this.processing.set(false);
+        this.feedback.error(
+          'No fue posible archivar el negocio',
+          this.errorMessage(response, 'Intenta nuevamente.'),
+        );
+      },
     });
   }
 
@@ -53,9 +67,15 @@ export class NegocioDetalleComponent {
       next: (restored) => {
         this.business.set(restored);
         this.processing.set(false);
+        this.feedback.success('Negocio restaurado');
       },
-      error: (response: HttpErrorResponse) =>
-        this.handleError(response, 'No fue posible restaurar el negocio.'),
+      error: (response: HttpErrorResponse) => {
+        this.processing.set(false);
+        this.feedback.error(
+          'No fue posible restaurar el negocio',
+          this.errorMessage(response, 'Intenta nuevamente.'),
+        );
+      },
     });
   }
 
@@ -74,6 +94,10 @@ export class NegocioDetalleComponent {
 
   private handleError(response: HttpErrorResponse, fallback: string): void {
     this.processing.set(false);
-    this.error.set((response.error as ApiErrorResponse | null)?.mensaje ?? fallback);
+    this.error.set(this.errorMessage(response, fallback));
+  }
+
+  private errorMessage(response: HttpErrorResponse, fallback: string): string {
+    return (response.error as ApiErrorResponse | null)?.mensaje ?? fallback;
   }
 }

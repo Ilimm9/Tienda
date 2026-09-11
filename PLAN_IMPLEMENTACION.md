@@ -27,7 +27,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 
 | ID | Capability | Estado | Dependencias | Aprobación | Notas |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Identidad, negocios, sucursales y RBAC](capabilities/01-identidad-negocio-sucursales-rbac/CAPABILITY.md) | En implementación | Autenticación actual | Fases 1 y 1.5 aprobadas el 2026-09-10 | Fase 1 verificada; fase 1.5 cerrada; fase 1.6 en revisión; producto intacto |
+| 01 | [Identidad, negocios, sucursales y RBAC](capabilities/01-identidad-negocio-sucursales-rbac/CAPABILITY.md) | En implementación | Autenticación actual | Fases 1, 1.5 y 1.6 aprobadas el 2026-09-10 | Fases 1 y 1.6 verificadas; fase 1.5 cerrada; producto intacto |
 
 ## Restricciones vigentes
 

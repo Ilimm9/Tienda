@@ -4,6 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { ApiErrorResponse, NegocioResumen } from './negocio.models';
 import { NegocioService } from './negocio.service';
 
@@ -15,6 +16,7 @@ import { NegocioService } from './negocio.service';
 })
 export class NegociosComponent {
   private readonly negocioService = inject(NegocioService);
+  private readonly feedback = inject(FeedbackService);
 
   readonly negocios = signal<NegocioResumen[]>([]);
   readonly loading = signal(true);
@@ -46,19 +48,29 @@ export class NegociosComponent {
     this.search.set(value);
   }
 
-  archive(business: NegocioResumen): void {
-    if (!window.confirm(`¿Archivar ${business.nombre_comercial}? Sus datos se conservarán.`))
-      return;
+  async archive(business: NegocioResumen): Promise<void> {
+    const confirmed = await this.feedback.confirmDanger({
+      titulo: `Archivar ${business.nombre_comercial}`,
+      descripcion:
+        'El negocio dejará de estar disponible para operar, pero sus datos se conservarán.',
+      textoConfirmar: 'Sí, archivar',
+    });
+    if (!confirmed) return;
+
     this.processingId.set(business.id);
     this.error.set(null);
     this.negocioService.archivar(business.id).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.feedback.success('Negocio archivado');
         this.load();
       },
       error: (response: HttpErrorResponse) => {
         this.processingId.set(null);
-        this.error.set(this.errorMessage(response, 'No fue posible archivar el negocio.'));
+        this.feedback.error(
+          'No fue posible archivar el negocio',
+          this.errorMessage(response, 'Intenta nuevamente.'),
+        );
       },
     });
   }
@@ -69,11 +81,15 @@ export class NegociosComponent {
     this.negocioService.restaurar(business.id).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.feedback.success('Negocio restaurado');
         this.load();
       },
       error: (response: HttpErrorResponse) => {
         this.processingId.set(null);
-        this.error.set(this.errorMessage(response, 'No fue posible restaurar el negocio.'));
+        this.feedback.error(
+          'No fue posible restaurar el negocio',
+          this.errorMessage(response, 'Intenta nuevamente.'),
+        );
       },
     });
   }

@@ -4,7 +4,7 @@
 
 `En implementación`
 
-La estructura por fases fue aprobada el 2026-09-10. Fases 1 y 1.5 fueron aprobadas explícitamente; fase 1.6 está en revisión y no puede implementarse sin aprobación independiente.
+La estructura por fases fue aprobada el 2026-09-10. Fases 1, 1.5 y 1.6 fueron aprobadas explícitamente; fases posteriores requieren aprobación independiente.
 
 ## Control
 
@@ -12,7 +12,7 @@ La estructura por fases fue aprobada el 2026-09-10. Fases 1 y 1.5 fueron aprobad
 - Fecha de creación: 2026-09-10
 - Última revisión estructural: 2026-09-10
 - Aprobación de estructura: Confirmada
-- Aprobación de implementación: Fases 1 y 1.5 aprobadas explícitamente el 2026-09-10
+- Aprobación de implementación: Fases 1, 1.5 y 1.6 aprobadas explícitamente el 2026-09-10
 - Dependencias generales: autenticación existente con JWT en cookie
 
 ## Objetivo
@@ -126,7 +126,7 @@ Reglas obligatorias:
 | ---- | ------------------------------ | ----------- | ------------------------------- |
 | 1    | Negocios                       | Verificada  | Autenticación actual            |
 | 1.5  | Organización por dominios      | Cerrada     | Negocios verificada             |
-| 1.6  | Feedback global del frontend   | En revisión | Fase 1.5 cerrada                |
+| 1.6  | Feedback global del frontend   | Verificada  | Fase 1.5 cerrada                |
 | 2    | Sucursales                     | Pendiente   | Fases 1, 1.5 y 1.6 cerradas     |
 | 3    | Contexto activo                | Pendiente   | Sucursales cerrada              |
 | 4    | RBAC                           | Pendiente   | Contexto activo cerrado         |
@@ -842,9 +842,9 @@ Fecha: 2026-09-10.
 
 ## Estado de fase
 
-`En revisión`
+`Verificada`
 
-Propuesta elaborada el 2026-09-10. No autorizada para implementación.
+Propuesta elaborada y autorizada explícitamente para implementación el 2026-09-10. Implementación y verificación técnica terminadas el 2026-09-10; falta aceptación final del usuario.
 
 ## Objetivo y alcance
 
@@ -990,8 +990,8 @@ SweetAlert2 se configurará desde el servicio mediante un `mixin` único:
 ### Autenticación
 
 - Registro correcto: navegar a login y mostrar `Cuenta creada` mediante notificación global; retirar el mensaje duplicado basado en `?registrado=1`.
-- Login correcto: mostrar `Sesión iniciada` después de navegar.
-- Logout: navegar siempre a login como hoy; notificar éxito solo cuando la API responda correctamente. Si falla, no afirmar que el cierre remoto ocurrió.
+- Login correcto: navegar sin notificación de éxito para evitar ruido en una acción habitual.
+- Logout: navegar siempre a login como hoy, sin notificación de éxito. Si falla, no afirmar que el cierre remoto ocurrió.
 - Validaciones y errores de credenciales permanecerán inline porque requieren atención en el formulario.
 
 ### Negocios
@@ -1032,9 +1032,9 @@ SweetAlert2 se configurará desde el servicio mediante un `mixin` único:
 - Cancelar archivado no ejecuta petición HTTP ni cambia navegación.
 - Confirmar archivado ejecuta una sola petición; éxito y error muestran feedback correcto.
 - Crear, editar y restaurar negocio muestran una sola notificación después de éxito.
-- Registro y login conservan validaciones inline y muestran éxito una sola vez.
+- Registro conserva validaciones inline y muestra éxito una sola vez; login conserva sus validaciones y navega sin toast de éxito.
 - Logout conserva navegación actual y no comunica éxito remoto cuando la API falla.
-- Búsqueda estática confirma ausencia de nuevos `window.alert`, `window.confirm` e imports directos de las bibliotecas fuera del servicio y raíz autorizados.
+- Búsqueda estática confirma ausencia de nuevos `window.alert`, `window.confirm` e imports directos productivos de las bibliotecas fuera del servicio y raíz autorizados.
 - Revisión visual en 390 px, 768 px y 1440 px, temas claro y oscuro.
 - Revisión con teclado cubre foco inicial, tabulación, cancelación con `Escape` y retorno del foco.
 - `npm test -- --watch=false` y `npm run build` pasan sin errores nuevos.
@@ -1043,22 +1043,43 @@ SweetAlert2 se configurará desde el servicio mediante un `mixin` único:
 ## Criterios de aceptación de fase 1.6
 
 - [x] Dependencias instaladas fueron identificadas y sus versiones registradas.
-- [ ] Estructura, contrato y reglas de uso fueron revisados por el usuario.
-- [ ] Estilo global profesional fue aprobado por el usuario.
-- [ ] Fase recibió aprobación explícita para implementación.
-- [ ] Existe un único toaster global sincronizado con el tema.
-- [ ] Notificaciones y confirmaciones pasan por `FeedbackService`.
-- [ ] Flujos actuales de autenticación y negocio fueron migrados sin cambiar contratos HTTP.
-- [ ] No quedan `window.confirm` en archivos de negocio.
-- [ ] Producto y catálogo permanecen intactos.
-- [ ] Pruebas, build, accesibilidad y revisión responsive pasan.
-- [ ] Resultados de verificación fueron registrados.
+- [x] Estructura, contrato y reglas de uso fueron revisados por el usuario.
+- [x] Estilo global profesional fue aprobado por el usuario.
+- [x] Fase recibió aprobación explícita para implementación.
+- [x] Existe un único toaster global sincronizado con el tema.
+- [x] Notificaciones y confirmaciones pasan por `FeedbackService`.
+- [x] Flujos actuales de autenticación y negocio fueron migrados sin cambiar contratos HTTP.
+- [x] No quedan `window.confirm` en archivos de negocio.
+- [x] Producto y catálogo permanecen intactos.
+- [x] Pruebas, build, accesibilidad y revisión responsive pasan.
+- [x] Resultados de verificación fueron registrados.
 - [ ] Usuario acepta resultado final.
 
-## Observaciones y decisiones pendientes de fase 1.6
+## Verificación técnica de fase 1.6
 
-- Confirmar si se aprueba el contrato y la configuración global propuestos.
-- Confirmar si login y logout deben mostrar notificación de éxito o si se prefiere reservarlas para registro y mutaciones de negocio.
+Fecha: 2026-09-10.
+
+- `npm test -- --watch=false`: correcto, 19 archivos y 40 pruebas.
+- `npm run build`: correcto.
+- Build conserva tres avisos CSS preexistentes: dos presupuestos de `negocio-shared.css` y uno de `productos.component.css`.
+- Import directo del build ESM de SweetAlert2 eliminó el aviso nuevo de CommonJS; declaración local conserva tipado mediante el paquete oficial.
+- Búsqueda estática: ningún `window.alert` o `window.confirm` permanece en `src/app`.
+- Búsqueda estática: imports productivos de Sonner y SweetAlert2 limitados a raíz y `FeedbackService`.
+- Revisión visual: confirmación a 1440 px y 390 px en tema oscuro; toast real a 768 px en tema claro.
+- Confirmación visual: foco inicial en `Cancelar`, botones apilados en móvil y sin desbordamiento horizontal.
+- Prueba visual de registro interceptó la respuesta HTTP dentro del navegador; no escribió usuarios ni datos en backend.
+- Diff revisado: ningún archivo de producto, catálogo, proveedores o inventario fue modificado.
+
+## Imprevistos resueltos de fase 1.6
+
+- jsdom no implementa `window.matchMedia`, requerido por `ngx-sonner`; se agregó stub limitado a la prueba de `AppComponent`.
+- El import principal de SweetAlert2 generaba advertencia CommonJS en Angular. Se cambió al artefacto ESM oficial y se agregó declaración TypeScript local.
+- La primera prueba visual apuntó a `/auth/registro` en vez de `/auth/register`; CORS detuvo la petición antes del backend. Se corrigió el interceptor y la verificación final se ejecutó sin persistencia.
+
+## Decisiones resueltas de fase 1.6
+
+- Contrato, configuración global e implementación aprobados explícitamente el 2026-09-10.
+- Login y logout no mostrarán notificación de éxito; registro y mutaciones de negocio sí.
 
 ---
 

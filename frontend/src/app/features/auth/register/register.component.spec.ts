@@ -2,12 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { AuthService } from '../auth.service';
 import { RegisterComponent } from './register.component';
 
 describe('RegisterComponent', () => {
   const auth = { register: vi.fn() };
   const router = { navigate: vi.fn(() => Promise.resolve(true)) };
+  const feedback = { success: vi.fn() };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -16,6 +18,7 @@ describe('RegisterComponent', () => {
       providers: [
         { provide: AuthService, useValue: auth },
         { provide: Router, useValue: router },
+        { provide: FeedbackService, useValue: feedback },
         { provide: ActivatedRoute, useValue: { snapshot: {} } },
       ],
     }).compileComponents();
@@ -47,9 +50,8 @@ describe('RegisterComponent', () => {
       telefono: '',
       contrasena: '12345678',
     });
-    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
-      queryParams: { registrado: '1' },
-    });
+    expect(feedback.success).toHaveBeenCalledWith('Cuenta creada', 'Ahora puedes iniciar sesión.');
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
     expect(component.loading()).toBe(false);
   });
 

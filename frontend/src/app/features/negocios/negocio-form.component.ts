@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
   ActualizarNegocioPayload,
   ApiErrorResponse,
@@ -22,6 +23,7 @@ import { NegocioService } from './negocio.service';
 export class NegocioFormComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly negocioService = inject(NegocioService);
+  private readonly feedback = inject(FeedbackService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -95,6 +97,7 @@ export class NegocioFormComponent {
     request.subscribe({
       next: (business: NegocioDetalle) => {
         this.saving.set(false);
+        this.feedback.success(this.editing ? 'Cambios guardados' : 'Negocio registrado');
         void this.router.navigate(['/negocios', business.id]);
       },
       error: (response: HttpErrorResponse) => {

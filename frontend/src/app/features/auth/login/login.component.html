@@ -54,11 +54,6 @@
       }
 
       <!-- El control recordarme permanece oculto, igual que en la aplicación anterior. -->
-      @if (success()) {
-        <p class="login-success" role="status">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>{{ success() }}
-        </p>
-      }
       @if (error()) {
         <p class="login-error" role="alert">
           <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}

@@ -1,3 +1,4 @@
+@import 'sweetalert2/dist/sweetalert2.min.css';
 @import 'primeicons/primeicons.css';
 @import './styles/tables.css';
 
@@ -94,6 +95,171 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+/* Feedback global: Sonner hereda el tema y SweetAlert2 usa las mismas superficies. */
+[data-sonner-toaster] {
+  --ngx-sonner-font-family: inherit;
+  --ngx-sonner-border-radius: 12px;
+  --ngx-sonner-toast-normal-background: var(--surface-raised);
+  --ngx-sonner-toast-normal-border-color: var(--border);
+  --ngx-sonner-toast-normal-color: var(--text);
+  --ngx-sonner-toast-close-button-background: var(--surface-raised);
+  --ngx-sonner-toast-close-button-color: var(--text-muted);
+  --ngx-sonner-toast-close-button-border: 1px solid var(--border);
+  --ngx-sonner-toast-success-background: var(--success-soft);
+  --ngx-sonner-toast-success-border: var(--border-strong);
+  --ngx-sonner-toast-success-color: var(--success);
+  --ngx-sonner-toast-info-background: var(--primary-soft);
+  --ngx-sonner-toast-info-border: var(--primary-border);
+  --ngx-sonner-toast-info-color: var(--primary);
+  --ngx-sonner-toast-warning-background: var(--warning-soft);
+  --ngx-sonner-toast-warning-border: var(--border-strong);
+  --ngx-sonner-toast-warning-color: var(--warning);
+  --ngx-sonner-toast-error-background: var(--danger-soft);
+  --ngx-sonner-toast-error-border: var(--border-strong);
+  --ngx-sonner-toast-error-color: var(--danger);
+  --ngx-sonner-toast-dark-success-background: var(--success-soft);
+  --ngx-sonner-toast-dark-success-border: var(--border-strong);
+  --ngx-sonner-toast-dark-success-color: var(--success);
+  --ngx-sonner-toast-dark-info-background: var(--primary-soft);
+  --ngx-sonner-toast-dark-info-border: var(--primary-border);
+  --ngx-sonner-toast-dark-info-color: var(--primary);
+  --ngx-sonner-toast-dark-warning-background: var(--warning-soft);
+  --ngx-sonner-toast-dark-warning-border: var(--border-strong);
+  --ngx-sonner-toast-dark-warning-color: var(--warning);
+  --ngx-sonner-toast-dark-error-background: var(--danger-soft);
+  --ngx-sonner-toast-dark-error-border: var(--border-strong);
+  --ngx-sonner-toast-dark-error-color: var(--danger);
+}
+
+[data-sonner-toast][data-styled='true'] {
+  min-height: 56px;
+  box-shadow: var(--shadow-menu);
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+[data-sonner-toast] [data-description] {
+  color: currentColor;
+  font-size: 0.8125rem;
+  opacity: 0.82;
+}
+
+.tienda-alerta-container.swal2-container {
+  padding: 1rem;
+  background: rgb(15 23 42 / 48%);
+  backdrop-filter: blur(2px);
+}
+
+.tienda-alerta.swal2-popup {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 1.75rem;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-menu);
+}
+
+.tienda-alerta__icono.swal2-icon {
+  margin: 0 auto 1.25rem;
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.tienda-alerta__titulo.swal2-title {
+  padding: 0;
+  color: var(--text);
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  line-height: 1.25;
+}
+
+.tienda-alerta__descripcion.swal2-html-container {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.tienda-alerta__acciones.swal2-actions {
+  width: 100%;
+  margin: 1.75rem 0 0;
+  gap: 0.75rem;
+}
+
+.tienda-alerta__confirmar,
+.tienda-alerta__cancelar {
+  min-height: 44px;
+  margin: 0;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.tienda-alerta__confirmar {
+  color: #ffffff;
+  background: #b42332;
+}
+
+.tienda-alerta__confirmar:hover {
+  background: #941f2b;
+}
+
+.tienda-alerta__cancelar {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+
+.tienda-alerta__cancelar:hover {
+  background: var(--surface-hover);
+}
+
+.tienda-alerta__confirmar:focus-visible,
+.tienda-alerta__cancelar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tienda-alerta__confirmar:disabled,
+.tienda-alerta__cancelar:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 480px) {
+  .tienda-alerta.swal2-popup {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .tienda-alerta__acciones.swal2-actions {
+    flex-direction: column;
+  }
+
+  .tienda-alerta__confirmar,
+  .tienda-alerta__cancelar {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tienda-alerta__confirmar,
+  .tienda-alerta__cancelar {
+    transition: none;
+  }
+}
+
 /* PrimeNG 22 injects dialogs at document.body, so these styles must be global. */
 .product-dialog.p-dialog {
   overflow: hidden;
@@ -149,5 +315,4 @@ a:focus-visible {
     max-height: calc(100vh - 130px);
     padding: 18px 16px;
   }
-
 }

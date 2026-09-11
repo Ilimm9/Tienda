@@ -8,28 +8,17 @@ import { LoginComponent } from './login.component';
 describe('LoginComponent', () => {
   const auth = { login: vi.fn() };
   const router = { navigate: vi.fn(() => Promise.resolve(true)) };
-  const getQueryParam = vi.fn<(name: string) => string | null>(() => null);
-  const queryParamMap = { get: getQueryParam };
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    getQueryParam.mockReturnValue(null);
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: auth },
         { provide: Router, useValue: router },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap } } },
+        { provide: ActivatedRoute, useValue: { snapshot: {} } },
       ],
     }).compileComponents();
-  });
-
-  it('shows registration success from the existing query parameter', () => {
-    getQueryParam.mockReturnValue('1');
-    const fixture = TestBed.createComponent(LoginComponent);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.success()).toBe('Cuenta creada. Ahora inicia sesión.');
   });
 
   it('validates and submits the same login payload', () => {

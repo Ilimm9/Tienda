@@ -1,1 +1,10 @@
 <router-outlet />
+<ngx-sonner-toaster
+  position="top-right"
+  [theme]="theme.theme()"
+  [richColors]="true"
+  [closeButton]="true"
+  [duration]="4000"
+  [visibleToasts]="4"
+  offset="24px"
+/>
