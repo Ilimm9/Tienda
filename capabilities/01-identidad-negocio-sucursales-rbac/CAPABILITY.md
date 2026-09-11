@@ -12,7 +12,7 @@ La estructura por fases fue aprobada el 2026-09-10. Fases 1, 1.5 y 1.6 fueron ap
 - Fecha de creación: 2026-09-10
 - Última revisión estructural: 2026-09-11
 - Aprobación de estructura: Confirmada
-- Aprobación de implementación: Fases 1, 1.5 y 1.6 aprobadas explícitamente el 2026-09-10
+- Aprobación de implementación: Fases 1, 1.5 y 1.6 aprobadas explícitamente el 2026-09-10; fase 2 aprobada explícitamente el 2026-09-11
 - Dependencias generales: autenticación existente con JWT en cookie
 
 ## Objetivo
@@ -127,7 +127,7 @@ Reglas obligatorias:
 | 1    | Negocios                       | Cerrada     | Autenticación actual            |
 | 1.5  | Organización por dominios      | Cerrada     | Negocios verificada             |
 | 1.6  | Feedback global del frontend   | Cerrada     | Fase 1.5 cerrada                |
-| 2    | Sucursales                     | En implementación | Fases 1, 1.5 y 1.6 cerradas |
+| 2    | Sucursales                     | Verificada  | Fases 1, 1.5 y 1.6 cerradas     |
 | 3    | Contexto activo                | Pendiente   | Sucursales cerrada              |
 | 4    | RBAC                           | Pendiente   | Contexto activo cerrado         |
 | 5    | Empleados                      | Pendiente   | RBAC cerrado                    |
@@ -1087,9 +1087,10 @@ Fecha: 2026-09-10.
 
 ## Estado de fase
 
-`En implementación`
+`Verificada`
 
 Especificación reconstruida el 2026-09-11 a partir de `capabilities/_template/base.MD`, referencias visuales, código vigente y decisiones del usuario. Autorizada explícitamente para implementación el 2026-09-11.
+Implementación y verificación técnica terminadas el 2026-09-11; pendiente aceptación final del usuario.
 
 ## Fuente de verdad y compatibilidad
 
@@ -1484,11 +1485,39 @@ Reglas:
 - [x] Datos futuros de empleados y suscripción excluidos.
 - [x] Especificación completa revisada por el usuario.
 - [x] Fase aprobada explícitamente para implementación.
-- [ ] Migración implementada e idempotente.
-- [ ] Backend, frontend y seguridad implementados.
-- [ ] Contrato legacy de producto preservado.
-- [ ] Pruebas y verificaciones pasan.
+- [x] Migración implementada e idempotente.
+- [x] Backend, frontend y seguridad implementados.
+- [x] Contrato legacy de producto preservado.
+- [x] Pruebas y verificaciones pasan.
 - [ ] Usuario acepta resultado final.
+
+## Verificación técnica de fase 2
+
+Fecha: 2026-09-11.
+
+- `go list ./...`: correcto, sin ciclos de imports.
+- `go test ./...`: correcto; incluye service, contratos HTTP y prueba de integración PostgreSQL de sucursales.
+- `go vet ./...`: correcto.
+- Migración ejecutada dos veces sobre esquema legacy temporal: códigos `SUC-001...` estables, direcciones legacy preservadas, direcciones no duplicadas y principal única.
+- Prueba transaccional en PostgreSQL: promoción degrada principal anterior, principal con alternativas no se archiva, restauración respeta principal existente y código solo colisiona dentro del mismo negocio.
+- Smoke HTTP autenticado sobre DB temporal: registro, login, creación de negocio, listado, alta de dos sucursales, detalle, edición, promoción, rechazo de cambio de código, archivo, restauración, búsqueda y estados `200/201/204/400/409` esperados.
+- Endpoint legacy `GET /api/v1/negocios/:negocioId/sucursales`: respondió correctamente y excluyó sucursal archivada.
+- `npm test -- --watch=false`: correcto, 24 archivos y 54 pruebas.
+- `npm run build`: correcto; conserva avisos no bloqueantes de presupuesto CSS, incluidos los nuevos estilos de sucursales.
+- Revisión visual en 1440 px claro, 768 px oscuro y 390 px claro: rutas correctas, sin scroll horizontal y sin excepciones de ejecución.
+- Diff revisado: ningún archivo de producto, catálogo, proveedores o inventario fue modificado.
+- `capabilities/_template/base.MD` fue preservado sin cambios.
+- Las dos bases PostgreSQL temporales, sus usuarios y datos de smoke fueron eliminados; la DB compartida no fue modificada.
+
+## Imprevistos resueltos de fase 2
+
+- El seed legacy habría intentado insertar una sucursal sin el nuevo código obligatorio. Se mantuvieron sus IDs y datos de desarrollo, agregando `SUC-001` y la marca principal sin tocar código de producto.
+- Para evitar que `codigo` u otros campos internos fueran ignorados silenciosamente, el handler administrativo usa decodificación JSON estricta y rechaza campos desconocidos con `400`.
+- Una revisión inicial reutilizó un servidor Angular/HMR anterior y mostró un error circular. Se repitió en servidor y Chromium aislados: las tres rutas cargaron sin errores de runtime; no era causado por fase 2.
+
+## Pendiente de cierre de fase 2
+
+- Revisión funcional y aceptación final del usuario para cambiar el estado de `Verificada` a `Cerrada`.
 
 ## Decisiones resueltas de fase 2
 
@@ -1601,6 +1630,7 @@ Estas piezas requieren capabilities propias o ampliación aprobada de alcance.
 - [x] Fase 1.5 agregada antes de sucursales.
 - [x] Organización futura por dominios documentada.
 - [x] Producto excluido de fase 1.5.
+- [x] Fase 2 detallada, aprobada, implementada y verificada.
 
 # Registro de aprobación
 
@@ -1608,3 +1638,4 @@ Estas piezas requieren capabilities propias o ampliación aprobada de alcance.
 | ---------- | ------------------------------- | ----------- |
 | 2026-09-10 | Estructura documental por fases | Aprobada    |
 | 2026-09-10 | Fase 1: Negocios                | Aprobada explícitamente |
+| 2026-09-11 | Fase 2: Sucursales              | Aprobada explícitamente; implementación verificada |

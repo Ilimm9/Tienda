@@ -105,6 +105,9 @@ func (r *SucursalRepository) Actualizar(ctx context.Context, negocioID, sucursal
 			Where("id = ? AND negocio_id = ?", sucursalID, negocioID).Take(&branch).Error; err != nil {
 			return sucursalNoEncontrada(err)
 		}
+		if !branch.Activo {
+			return application.ErrEstadoSucursal
+		}
 
 		if input.EsPrincipal.Set {
 			if input.EsPrincipal.Value == nil {
@@ -114,9 +117,6 @@ func (r *SucursalRepository) Actualizar(ctx context.Context, negocioID, sucursal
 				return application.ErrSucursalPrincipalRequerida
 			}
 			if *input.EsPrincipal.Value {
-				if !branch.Activo {
-					return application.ErrEstadoSucursal
-				}
 				var active []domain.Sucursal
 				if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 					Where("negocio_id = ? AND activo = TRUE", negocioID).Find(&active).Error; err != nil {

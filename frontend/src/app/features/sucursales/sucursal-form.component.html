@@ -11,7 +11,12 @@
         class="primary-button"
         type="submit"
         form="branch-form"
-        [disabled]="saving() || loading() || business()?.estado !== 'activo'"
+        [disabled]="
+          saving() ||
+          loading() ||
+          business()?.estado !== 'activo' ||
+          branch()?.estado === 'archivado'
+        "
       >
         <i class="pi pi-check" aria-hidden="true"></i>
         {{ saving() ? 'Guardando…' : 'Guardar sucursal' }}

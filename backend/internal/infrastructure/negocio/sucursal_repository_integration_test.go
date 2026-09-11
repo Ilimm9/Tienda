@@ -87,6 +87,12 @@ func TestPhaseTwoMigrationAndRepository(t *testing.T) {
 	if err := repository.Archivar(ctx, businessA, newID); err != nil {
 		t.Fatalf("archivar secundaria: %v", err)
 	}
+	archivedName := "No debe cambiar"
+	if err := repository.Actualizar(ctx, businessA, newID, domain.ActualizarSucursalInput{
+		Nombre: domain.Optional[string]{Set: true, Value: &archivedName},
+	}); !errors.Is(err, application.ErrEstadoSucursal) {
+		t.Fatalf("editar sucursal archivada: %v", err)
+	}
 	if err := repository.Restaurar(ctx, businessA, newID); err != nil {
 		t.Fatalf("restaurar secundaria: %v", err)
 	}

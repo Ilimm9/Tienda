@@ -82,6 +82,12 @@ func MigratePhaseTwo(db *gorm.DB) error {
 		UPDATE sucursales SET es_principal = true
 		WHERE id IN (SELECT id FROM candidatas WHERE posicion = 1)`,
 		`ALTER TABLE sucursales ALTER COLUMN codigo SET NOT NULL`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_sucursales_codigo_no_vacio') THEN
+				ALTER TABLE sucursales ADD CONSTRAINT ck_sucursales_codigo_no_vacio
+				CHECK (btrim(codigo) <> '');
+			END IF;
+		END $$`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_sucursales_negocio_codigo_ci ON sucursales (negocio_id, lower(codigo))`,
 		`CREATE INDEX IF NOT EXISTS idx_sucursales_negocio_nombre ON sucursales (negocio_id, nombre)`,
 		`CREATE INDEX IF NOT EXISTS idx_sucursales_negocio_activo ON sucursales (negocio_id, activo)`,

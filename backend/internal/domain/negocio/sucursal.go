@@ -11,7 +11,7 @@ type Sucursal struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	NegocioID     uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	Codigo        string     `gorm:"type:varchar(40);not null" json:"codigo"`
-	Nombre        string     `gorm:"type:varchar(160);not null" json:"nombre"`
+	Nombre        string     `gorm:"type:varchar(180);not null" json:"nombre"`
 	Telefono      *string    `gorm:"type:varchar(30)" json:"telefono"`
 	DireccionID   *uuid.UUID `gorm:"type:uuid;index" json:"direccion_id"`
 	EsPrincipal   bool       `gorm:"not null;default:false" json:"es_principal"`

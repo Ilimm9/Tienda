@@ -162,3 +162,17 @@ func TestSucursalServiceRechazaActualizacionVacia(t *testing.T) {
 		t.Fatal("repository no debía actualizar")
 	}
 }
+
+func TestSucursalServiceRechazaPrincipalNull(t *testing.T) {
+	repository := &sucursalRepositoryStub{
+		access: domain.ContextoNegocioSucursal{EstadoNegocio: "activo", TipoMiembro: "propietario"},
+	}
+	_, err := NewSucursalService(repository).Actualizar(
+		context.Background(), uuid.New(), uuid.New(), uuid.New(),
+		domain.ActualizarSucursalInput{EsPrincipal: domain.Optional[bool]{Set: true}},
+	)
+	var validation *ErrorValidacion
+	if !errors.As(err, &validation) || validation.Campos["es_principal"] == "" {
+		t.Fatalf("error = %#v, se esperaba validación de es_principal", err)
+	}
+}
