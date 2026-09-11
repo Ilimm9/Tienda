@@ -1,0 +1,147 @@
+@import './negocio-shared.css';
+
+.heading-actions,
+.mobile-submit {
+  display: flex;
+  gap: 10px;
+}
+
+.business-form {
+  display: grid;
+  gap: 20px;
+}
+
+.form-section {
+  padding: clamp(20px, 4vw, 34px);
+}
+
+.form-section > header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-section > header > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 10px;
+}
+
+.form-section h2,
+.form-section p {
+  margin: 0;
+}
+
+.form-section h2 {
+  font-size: 20px;
+}
+
+.form-section p {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.address-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--surface-raised);
+  font: inherit;
+  font-weight: 400;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+label small {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.street-field {
+  grid-column: span 1;
+}
+
+.slug-preview {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.slug-preview code {
+  color: var(--text);
+}
+
+.mobile-submit {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .heading-actions {
+    display: none;
+  }
+
+  .form-grid,
+  .address-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .street-field,
+  .wide-field {
+    grid-column: auto;
+  }
+
+  .mobile-submit {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}

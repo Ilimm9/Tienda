@@ -1,0 +1,139 @@
+<section class="business-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Configuración global</span>
+      <h1>Mis negocios</h1>
+      <p>Administra los negocios asociados a tu cuenta.</p>
+    </div>
+    <a class="primary-button" routerLink="/negocios/nuevo">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      Registrar negocio
+    </a>
+  </header>
+
+  <div class="business-toolbar surface-card">
+    <label class="search-field">
+      <span class="visually-hidden">Buscar por nombre o RFC</span>
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        type="search"
+        placeholder="Buscar por nombre o RFC"
+        [value]="search()"
+        (input)="updateSearch($any($event.target).value)"
+      />
+    </label>
+    <div class="status-tabs" aria-label="Filtrar por estado">
+      <button type="button" [class.active]="estado() === 'activo'" (click)="setStatus('activo')">
+        Activos
+      </button>
+      <button
+        type="button"
+        [class.active]="estado() === 'archivado'"
+        (click)="setStatus('archivado')"
+      >
+        Archivados
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando negocios…</p>
+  } @else if (filteredBusinesses().length === 0) {
+    <div class="empty-state surface-card">
+      <span class="empty-icon"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+      <h2>
+        {{
+          search()
+            ? 'Sin coincidencias'
+            : estado() === 'activo'
+              ? 'Aún no tienes negocios'
+              : 'No tienes negocios archivados'
+        }}
+      </h2>
+      <p>
+        {{
+          search()
+            ? 'Prueba con otro nombre o RFC.'
+            : estado() === 'activo'
+              ? 'Registra tu primer negocio para comenzar.'
+              : 'Los negocios archivados aparecerán aquí.'
+        }}
+      </p>
+      @if (!search() && estado() === 'activo') {
+        <a class="primary-button" routerLink="/negocios/nuevo">Registrar negocio</a>
+      }
+    </div>
+  } @else {
+    <div class="business-grid">
+      @for (business of filteredBusinesses(); track business.id) {
+        <article class="business-card surface-card">
+          <div class="business-card-top">
+            <span class="business-icon"><i class="pi pi-building" aria-hidden="true"></i></span>
+            <span
+              class="status-pill"
+              [class.active]="business.estado === 'activo'"
+              [class.archived]="business.estado === 'archivado'"
+            >
+              {{ business.estado === 'activo' ? 'Activo' : 'Archivado' }}
+            </span>
+          </div>
+          <h2>{{ business.nombre_comercial }}</h2>
+          <p class="legal-name">{{ business.rfc || 'RFC no registrado' }}</p>
+          <dl>
+            <div>
+              <dt>Mi relación</dt>
+              <dd>
+                <span class="relation-pill">{{
+                  business.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro'
+                }}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Sucursales</dt>
+              <dd>{{ business.total_sucursales }}</dd>
+            </div>
+            <div>
+              <dt>Incorporación</dt>
+              <dd>{{ business.creado_en | date: 'dd MMM yyyy' }}</dd>
+            </div>
+          </dl>
+          <div class="card-actions">
+            <a class="primary-button" [routerLink]="['/negocios', business.id]">Ver negocio</a>
+            @if (business.tipo_miembro === 'propietario') {
+              @if (business.estado === 'activo') {
+                <button
+                  class="text-button danger-text"
+                  type="button"
+                  [disabled]="processingId() === business.id"
+                  (click)="archive(business)"
+                >
+                  Archivar
+                </button>
+              } @else {
+                <button
+                  class="text-button"
+                  type="button"
+                  [disabled]="processingId() === business.id"
+                  (click)="restore(business)"
+                >
+                  Restaurar
+                </button>
+              }
+            }
+          </div>
+        </article>
+      }
+      @if (estado() === 'activo' && !search()) {
+        <a class="create-card" routerLink="/negocios/nuevo">
+          <span><i class="pi pi-plus" aria-hidden="true"></i></span>
+          <strong>Registrar nuevo negocio</strong>
+          <small>Configura una nueva entidad comercial.</small>
+        </a>
+      }
+    </div>
+  }
+</section>

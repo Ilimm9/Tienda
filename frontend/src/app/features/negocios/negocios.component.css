@@ -1,0 +1,200 @@
+@import './negocio-shared.css';
+
+.business-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px;
+  margin-bottom: 24px;
+}
+
+.search-field {
+  display: flex;
+  min-height: 44px;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+}
+
+.search-field input {
+  width: 100%;
+  color: var(--text);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.status-tabs {
+  display: flex;
+  padding: 4px;
+  background: var(--surface-hover);
+  border-radius: 9px;
+}
+
+.status-tabs button {
+  min-height: 36px;
+  padding: 0 14px;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-tabs button.active {
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: 0 1px 4px rgb(15 23 42 / 10%);
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 18px;
+}
+
+.business-card,
+.create-card {
+  min-height: 320px;
+  padding: 22px;
+}
+
+.business-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.business-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.business-icon,
+.empty-icon,
+.create-card > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 11px;
+}
+
+.business-card h2 {
+  margin: 22px 0 5px;
+  font-size: 21px;
+}
+
+.legal-name {
+  min-height: 20px;
+  margin: 0 0 22px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.business-card dl {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 22px;
+}
+
+.business-card dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.business-card dt {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.business-card dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
+.create-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text);
+  text-align: center;
+  border: 2px dashed var(--border-strong);
+  border-radius: 14px;
+}
+
+.create-card:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.create-card small {
+  max-width: 220px;
+  color: var(--text-muted);
+}
+
+.empty-state {
+  display: grid;
+  min-height: 330px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.empty-state h2,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state p {
+  color: var(--text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 700px) {
+  .business-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .status-tabs button {
+    flex: 1;
+  }
+}

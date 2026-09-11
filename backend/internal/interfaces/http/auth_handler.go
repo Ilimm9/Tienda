@@ -82,11 +82,10 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
 	}
-	token, err := jwt.Parse(value, func(token *jwt.Token) (interface{}, error) { return []byte(h.cfg.JWTSecret), nil })
-	if err != nil || !token.Valid {
+	_, claims, err := parseSession(value, h.cfg.JWTSecret)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
 	}
-	claims, _ := token.Claims.(jwt.MapClaims)
 	c.JSON(http.StatusOK, gin.H{"autenticado": true, "usuario": gin.H{"id": claims["sub"], "correo": claims["correo"]}})
 }

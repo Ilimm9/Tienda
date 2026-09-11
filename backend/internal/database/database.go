@@ -18,9 +18,14 @@ func Open(url string) (*gorm.DB, error) {
 }
 
 func Init(db *gorm.DB) error {
+	if err := migrateNegociosPhaseOne(db); err != nil {
+		return err
+	}
+
 	models := []interface{}{
 		&domain.Usuario{}, &domain.PerfilUsuario{}, &domain.Empleado{},
-		&domain.Negocio{}, &domain.Rol{}, &domain.Membresia{},
+		&domain.Direccion{}, &domain.Negocio{}, &domain.ConfiguracionNegocio{},
+		&domain.Rol{}, &domain.MembresiaNegocio{},
 		&domain.Sucursal{}, &domain.Marca{}, &domain.Producto{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.Impuesto{},
@@ -57,7 +62,9 @@ func SeedDevelopment(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		var business domain.Negocio
 		if err := tx.Where("id = ?", businessID).Attrs(domain.Negocio{
-			ID: businessID, Nombre: "Negocio de prueba", Estado: "activo",
+			ID: businessID, Slug: "negocio-prueba", NombreComercial: "Negocio de prueba",
+			Nombre: "Negocio de prueba", CodigoMoneda: "MXN",
+			ZonaHoraria: "America/Mexico_City", Estado: "activo",
 		}).FirstOrCreate(&business).Error; err != nil {
 			return err
 		}

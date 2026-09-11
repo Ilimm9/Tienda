@@ -1,0 +1,155 @@
+<section class="business-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Configuración global</span>
+      <h1>{{ editing ? 'Editar negocio' : 'Registrar nuevo negocio' }}</h1>
+      <p>Define identidad legal, contacto y ubicación principal.</p>
+    </div>
+    <div class="heading-actions">
+      <a class="secondary-button" [routerLink]="cancelLink()">Cancelar</a>
+      <button
+        class="primary-button"
+        type="submit"
+        form="business-form"
+        [disabled]="saving() || loading()"
+      >
+        <i class="pi pi-check" aria-hidden="true"></i>
+        {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Finalizar registro' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando negocio…</p>
+  } @else {
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+
+    <form id="business-form" class="business-form" [formGroup]="form" (ngSubmit)="submit()">
+      <section class="form-section surface-card">
+        <header>
+          <span><i class="pi pi-building" aria-hidden="true"></i></span>
+          <div>
+            <h2>Datos generales</h2>
+            <p>Información constitutiva y contacto principal.</p>
+          </div>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Nombre comercial *</span>
+            <input
+              formControlName="nombre_comercial"
+              autocomplete="organization"
+              placeholder="Ej. Corporativo Nova"
+            />
+            @if (hasError('nombre_comercial')) {
+              <small>Escribe entre 2 y 180 caracteres.</small>
+            }
+            @if (fieldErrors()['nombre_comercial']) {
+              <small>{{ fieldErrors()['nombre_comercial'] }}</small>
+            }
+          </label>
+          <label>
+            <span>Razón social</span>
+            <input formControlName="razon_social" placeholder="Nombre legal completo" />
+          </label>
+          <label>
+            <span>RFC</span>
+            <input formControlName="rfc" maxlength="13" placeholder="ABC123456XYZ" />
+            @if (hasError('rfc')) {
+              <small>Escribe un RFC válido de 12 o 13 caracteres.</small>
+            }
+          </label>
+          <label>
+            <span>Teléfono</span>
+            <input formControlName="telefono" autocomplete="tel" placeholder="+52 55 1234 5678" />
+          </label>
+          <label class="wide-field">
+            <span>Correo electrónico</span>
+            <input
+              type="email"
+              formControlName="correo"
+              autocomplete="email"
+              placeholder="admin@empresa.com"
+            />
+            @if (hasError('correo')) {
+              <small>Escribe un correo válido.</small>
+            }
+          </label>
+          @if (slug()) {
+            <div class="slug-preview wide-field">
+              <span>Slug generado</span><code>{{ slug() }}</code>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="form-section surface-card">
+        <header>
+          <span><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+          <div>
+            <h2>Ubicación y domicilio fiscal</h2>
+            <p>Bloque opcional. País será obligatorio al capturar dirección.</p>
+          </div>
+        </header>
+        <div class="form-grid address-grid">
+          <label
+            ><span>País *</span
+            ><select formControlName="codigo_pais">
+              <option value="MX">México</option>
+            </select></label
+          >
+          <label><span>Estado / Entidad</span><input formControlName="estado" /></label>
+          <label><span>Municipio / Delegación</span><input formControlName="municipio" /></label>
+          <label><span>Ciudad</span><input formControlName="ciudad" /></label>
+          <label><span>Colonia</span><input formControlName="colonia" /></label>
+          <label
+            ><span>Código postal</span><input formControlName="codigo_postal" inputmode="numeric"
+          /></label>
+          <label class="street-field"><span>Calle</span><input formControlName="calle" /></label>
+          <label><span>Número exterior</span><input formControlName="numero_exterior" /></label>
+          <label><span>Número interior</span><input formControlName="numero_interior" /></label>
+          <label class="wide-field"
+            ><span>Referencias</span><textarea formControlName="referencias" rows="3"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="form-section surface-card">
+        <header>
+          <span><i class="pi pi-globe" aria-hidden="true"></i></span>
+          <div>
+            <h2>Configuración regional</h2>
+            <p>Parámetros usados por operaciones y reportes.</p>
+          </div>
+        </header>
+        <div class="form-grid">
+          <label
+            ><span>Moneda base *</span
+            ><select formControlName="codigo_moneda">
+              <option value="MXN">MXN — Peso mexicano</option>
+              <option value="USD">USD — Dólar estadounidense</option>
+            </select></label
+          >
+          <label
+            ><span>Zona horaria *</span
+            ><select formControlName="zona_horaria">
+              <option value="America/Mexico_City">Centro de México</option>
+              <option value="America/Cancun">Quintana Roo</option>
+              <option value="America/Chihuahua">Chihuahua</option>
+              <option value="America/Tijuana">Baja California</option>
+            </select></label
+          >
+        </div>
+      </section>
+
+      <div class="mobile-submit">
+        <a class="secondary-button" [routerLink]="cancelLink()">Cancelar</a>
+        <button class="primary-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Guardando…' : 'Guardar negocio' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

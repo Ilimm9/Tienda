@@ -1,0 +1,202 @@
+<section class="business-page">
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando negocio…</p>
+  } @else if (error() && !business()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+    <a class="secondary-button back-button" routerLink="/negocios">Volver a negocios</a>
+  } @else if (business(); as current) {
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">Datos del negocio</span>
+        <h1>{{ current.nombre_comercial }}</h1>
+        <p>{{ current.razon_social || 'Sin razón social registrada' }}</p>
+      </div>
+      @if (current.tipo_miembro === 'propietario') {
+        <a class="primary-button" [routerLink]="['/negocios', current.id, 'editar']">
+          <i class="pi pi-pencil" aria-hidden="true"></i>
+          Editar datos
+        </a>
+      }
+    </header>
+
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="detail-layout">
+      <div class="detail-main">
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-building" aria-hidden="true"></i>
+            <h2>Información comercial</h2>
+          </header>
+          <dl class="detail-grid">
+            <div>
+              <dt>Nombre comercial</dt>
+              <dd>{{ current.nombre_comercial }}</dd>
+            </div>
+            <div>
+              <dt>Razón social</dt>
+              <dd>{{ current.razon_social || 'No registrada' }}</dd>
+            </div>
+            <div>
+              <dt>RFC</dt>
+              <dd>{{ current.rfc || 'No registrado' }}</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd>{{ current.telefono || 'No registrado' }}</dd>
+            </div>
+            <div class="wide">
+              <dt>Correo electrónico</dt>
+              <dd>{{ current.correo || 'No registrado' }}</dd>
+            </div>
+            <div class="wide">
+              <dt>Slug</dt>
+              <dd>
+                <code>{{ current.slug }}</code>
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            <h2>Dirección fiscal/principal</h2>
+          </header>
+          @if (current.direccion; as address) {
+            <dl class="detail-grid address-details">
+              <div>
+                <dt>País</dt>
+                <dd>{{ address.codigo_pais }}</dd>
+              </div>
+              <div>
+                <dt>Estado</dt>
+                <dd>{{ address.estado || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Municipio</dt>
+                <dd>{{ address.municipio || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Ciudad</dt>
+                <dd>{{ address.ciudad || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Colonia</dt>
+                <dd>{{ address.colonia || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Código postal</dt>
+                <dd>{{ address.codigo_postal || '—' }}</dd>
+              </div>
+              <div class="wide">
+                <dt>Calle y número</dt>
+                <dd>
+                  {{ address.calle || '—' }} {{ address.numero_exterior || '' }}
+                  {{ address.numero_interior ? 'Int. ' + address.numero_interior : '' }}
+                </dd>
+              </div>
+              <div class="wide">
+                <dt>Referencias</dt>
+                <dd>{{ address.referencias || '—' }}</dd>
+              </div>
+            </dl>
+          } @else {
+            <p class="empty-detail">No hay dirección registrada.</p>
+          }
+        </section>
+
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-globe" aria-hidden="true"></i>
+            <h2>Información regional</h2>
+          </header>
+          <dl class="detail-grid">
+            <div>
+              <dt>Moneda base</dt>
+              <dd>{{ current.codigo_moneda }}</dd>
+            </div>
+            <div>
+              <dt>Zona horaria</dt>
+              <dd>{{ current.zona_horaria }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        @if (!current.tiene_sucursales && current.estado === 'activo') {
+          <section class="branch-callout surface-card">
+            <span><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+            <div>
+              <h2>Crea tu sucursal principal</h2>
+              <p>Administración de sucursales estará disponible en fase 2.</p>
+            </div>
+            <button class="secondary-button" type="button" disabled>Próximamente</button>
+          </section>
+        }
+
+        @if (current.tipo_miembro === 'propietario') {
+          <section class="danger-zone surface-card">
+            <div>
+              <h2>{{ current.estado === 'activo' ? 'Archivar negocio' : 'Restaurar negocio' }}</h2>
+              <p>Los datos relacionados se conservarán.</p>
+            </div>
+            @if (current.estado === 'activo') {
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="processing()"
+                (click)="archive()"
+              >
+                Archivar negocio
+              </button>
+            } @else {
+              <button
+                class="primary-button"
+                type="button"
+                [disabled]="processing()"
+                (click)="restore()"
+              >
+                Restaurar negocio
+              </button>
+            }
+          </section>
+        }
+      </div>
+
+      <aside class="business-summary surface-card">
+        <div class="summary-title">
+          <span
+            class="status-pill"
+            [class.active]="current.estado === 'activo'"
+            [class.archived]="current.estado === 'archivado'"
+            >{{ current.estado === 'activo' ? 'Activo' : 'Archivado' }}</span
+          ><span class="relation-pill">{{
+            current.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro'
+          }}</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Fecha de registro</dt>
+            <dd>{{ current.creado_en | date: 'dd MMM yyyy' }}</dd>
+          </div>
+          <div>
+            <dt>Última modificación</dt>
+            <dd>{{ current.actualizado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </div>
+          <div>
+            <dt>Sucursales activas</dt>
+            <dd>{{ current.total_sucursales }}</dd>
+          </div>
+          <div>
+            <dt>ID del negocio</dt>
+            <dd>
+              <code>{{ current.id }}</code>
+            </dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</section>
