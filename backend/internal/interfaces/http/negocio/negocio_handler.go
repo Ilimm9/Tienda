@@ -1,11 +1,12 @@
-package http
+package negocio
 
 import (
 	"errors"
 	"net/http"
 
-	"tienda/backend/internal/application"
-	"tienda/backend/internal/domain"
+	application "tienda/backend/internal/application/negocio"
+	domain "tienda/backend/internal/domain/negocio"
+	transporthttp "tienda/backend/internal/interfaces/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ func NewNegocioHandler(negocios *application.NegocioService) *NegocioHandler {
 }
 
 func (h *NegocioHandler) Listar(c *gin.Context) {
-	usuarioID, ok := authenticatedUserID(c)
+	usuarioID, ok := transporthttp.AuthenticatedUserID(c)
 	if !ok {
 		responderErrorNegocio(c, errors.New("sesión sin usuario"))
 		return
@@ -34,7 +35,7 @@ func (h *NegocioHandler) Listar(c *gin.Context) {
 }
 
 func (h *NegocioHandler) Crear(c *gin.Context) {
-	usuarioID, ok := authenticatedUserID(c)
+	usuarioID, ok := transporthttp.AuthenticatedUserID(c)
 	if !ok {
 		responderErrorNegocio(c, errors.New("sesión sin usuario"))
 		return
@@ -109,7 +110,7 @@ func (h *NegocioHandler) Restaurar(c *gin.Context) {
 }
 
 func idsNegocio(c *gin.Context) (uuid.UUID, uuid.UUID, bool) {
-	usuarioID, ok := authenticatedUserID(c)
+	usuarioID, ok := transporthttp.AuthenticatedUserID(c)
 	if !ok {
 		responderErrorNegocio(c, errors.New("sesión sin usuario"))
 		return uuid.Nil, uuid.Nil, false

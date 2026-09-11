@@ -1,4 +1,4 @@
-package application
+package cuenta
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
-	"tienda/backend/internal/domain"
+	cuentadomain "tienda/backend/internal/domain/cuenta"
 )
 
 var ErrInvalidCredentials = errors.New("credenciales inválidas")
@@ -14,16 +14,16 @@ var ErrAccountUnavailable = errors.New("cuenta no disponible")
 var ErrEmailAlreadyExists = errors.New("el correo electrónico ya está registrado")
 
 type UserRepository interface {
-	FindByEmail(email string) (*domain.Usuario, error)
-	Save(user *domain.Usuario) error
-	CreateAccount(user *domain.Usuario, profile *domain.PerfilUsuario) error
+	FindByEmail(email string) (*cuentadomain.Usuario, error)
+	Save(user *cuentadomain.Usuario) error
+	CreateAccount(user *cuentadomain.Usuario, profile *cuentadomain.PerfilUsuario) error
 }
 
 type AuthService struct{ users UserRepository }
 
 func NewAuthService(users UserRepository) *AuthService { return &AuthService{users: users} }
 
-func (s *AuthService) Login(email, password string) (*domain.Usuario, error) {
+func (s *AuthService) Login(email, password string) (*cuentadomain.Usuario, error) {
 	user, err := s.users.FindByEmail(strings.ToLower(strings.TrimSpace(email)))
 	if err != nil {
 		return nil, ErrInvalidCredentials
@@ -71,8 +71,8 @@ func (s *AuthService) Register(fullName, email, phone, password string) error {
 		surnames = strings.Join(parts[1:], " ")
 	}
 
-	user := &domain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "activo"}
-	profile := &domain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: surnames}
+	user := &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "activo"}
+	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: surnames}
 	if phone != "" {
 		cleanPhone := strings.TrimSpace(phone)
 		profile.Telefono = &cleanPhone

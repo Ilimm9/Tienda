@@ -1,4 +1,4 @@
-package application
+package negocio
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 	"unicode"
 
-	"tienda/backend/internal/domain"
+	domain "tienda/backend/internal/domain/negocio"
 
 	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"

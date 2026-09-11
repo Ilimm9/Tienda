@@ -2,6 +2,9 @@ package database
 
 import (
 	"tienda/backend/internal/domain"
+	cuentadomain "tienda/backend/internal/domain/cuenta"
+	negociodomain "tienda/backend/internal/domain/negocio"
+	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
@@ -18,14 +21,14 @@ func Open(url string) (*gorm.DB, error) {
 }
 
 func Init(db *gorm.DB) error {
-	if err := migrateNegociosPhaseOne(db); err != nil {
+	if err := negocioinfra.MigratePhaseOne(db); err != nil {
 		return err
 	}
 
 	models := []interface{}{
-		&domain.Usuario{}, &domain.PerfilUsuario{}, &domain.Empleado{},
-		&domain.Direccion{}, &domain.Negocio{}, &domain.ConfiguracionNegocio{},
-		&domain.Rol{}, &domain.MembresiaNegocio{},
+		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &negociodomain.Empleado{},
+		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
+		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
 		&domain.Sucursal{}, &domain.Marca{}, &domain.Producto{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.Impuesto{},
@@ -60,8 +63,8 @@ func SeedDevelopment(db *gorm.DB) error {
 	branchID := uuid.MustParse(developmentBranchID)
 
 	return db.Transaction(func(tx *gorm.DB) error {
-		var business domain.Negocio
-		if err := tx.Where("id = ?", businessID).Attrs(domain.Negocio{
+		var business negociodomain.Negocio
+		if err := tx.Where("id = ?", businessID).Attrs(negociodomain.Negocio{
 			ID: businessID, Slug: "negocio-prueba", NombreComercial: "Negocio de prueba",
 			Nombre: "Negocio de prueba", CodigoMoneda: "MXN",
 			ZonaHoraria: "America/Mexico_City", Estado: "activo",

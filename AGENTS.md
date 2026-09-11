@@ -31,4 +31,10 @@ Estas reglas aplican a cualquier agente o colaborador automatizado que trabaje e
 - Usar `PLAN_IMPLEMENTACION.md` como índice y estado general.
 - Mantener especificaciones funcionales dentro de `capabilities/`.
 - Mantener código ejecutable dentro de `backend/` y `frontend/`; no duplicarlo en `capabilities/`.
+- Organizar backend por dominio dentro de cada capa. Un dominio aprobado debe usar el mismo nombre de carpeta en `domain`, `application`, `infrastructure` e `interfaces/http` cuando tenga responsabilidades en esas capas.
+- Usar nombres de dominio singulares, descriptivos y en minúsculas, por ejemplo `cuenta`, `negocio`, `catalogo` o `inventario`.
+- Mantener dirección de dependencias: `interfaces/http` depende de `application`; `infrastructure` implementa interfaces de `application`; `application` depende de `domain`; `domain` no depende de capas externas del proyecto.
+- Evitar imports entre implementaciones de dominios. Una integración entre dominios usa identificadores, contratos de aplicación o interfaces explícitas; nunca repositories o handlers de otro dominio.
+- No crear paquetes genéricos `shared`, `common`, `helpers` o `utils` como depósito. Código transversal permanece en raíz solo cuando no pertenece a dominio y tiene responsabilidad concreta.
+- No mover ni modificar archivos de otro dominio o de trabajo activo de un colaborador sin incluirlo expresamente en capability aprobada.
 - No crear carpetas `agents/`, `tools/` o `knowledge/` hasta que una capability aprobada demuestre su necesidad.

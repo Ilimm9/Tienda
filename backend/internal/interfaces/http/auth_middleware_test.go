@@ -28,7 +28,7 @@ func TestRequireAuthAceptaSesionValida(t *testing.T) {
 	router := gin.New()
 	router.Use(RequireAuth(config.Config{JWTSecret: secret}))
 	router.GET("/", func(c *gin.Context) {
-		actual, ok := authenticatedUserID(c)
+		actual, ok := AuthenticatedUserID(c)
 		if !ok || actual != userID {
 			c.Status(http.StatusInternalServerError)
 			return

@@ -20,7 +20,7 @@ func RequireAuth(cfg config.Config) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"codigo": "SESION_REQUERIDA", "mensaje": "Debes iniciar sesión.", "campos": gin.H{}})
 			return
 		}
-		userID, _, err := parseSession(value, cfg.JWTSecret)
+		userID, _, err := ParseSession(value, cfg.JWTSecret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"codigo": "SESION_INVALIDA", "mensaje": "La sesión no es válida o expiró.", "campos": gin.H{}})
 			return
@@ -30,7 +30,7 @@ func RequireAuth(cfg config.Config) gin.HandlerFunc {
 	}
 }
 
-func parseSession(value, secret string) (uuid.UUID, jwt.MapClaims, error) {
+func ParseSession(value, secret string) (uuid.UUID, jwt.MapClaims, error) {
 	token, err := jwt.Parse(value, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodHS256 {
 			return nil, errors.New("algoritmo de sesión inválido")
@@ -55,7 +55,7 @@ func parseSession(value, secret string) (uuid.UUID, jwt.MapClaims, error) {
 	return userID, claims, nil
 }
 
-func authenticatedUserID(c *gin.Context) (uuid.UUID, bool) {
+func AuthenticatedUserID(c *gin.Context) (uuid.UUID, bool) {
 	value, exists := c.Get(authenticatedUserKey)
 	if !exists {
 		return uuid.Nil, false

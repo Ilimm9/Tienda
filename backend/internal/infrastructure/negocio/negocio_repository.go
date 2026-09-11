@@ -1,12 +1,13 @@
-package infrastructure
+package negocio
 
 import (
 	"context"
 	"errors"
 	"time"
 
-	"tienda/backend/internal/application"
-	"tienda/backend/internal/domain"
+	application "tienda/backend/internal/application/negocio"
+	catalogodomain "tienda/backend/internal/domain"
+	domain "tienda/backend/internal/domain/negocio"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -52,7 +53,7 @@ func (r *NegocioRepository) ObtenerAccesible(ctx context.Context, usuarioID, neg
 	}
 
 	var total int64
-	if err := r.db.WithContext(ctx).Model(&domain.Sucursal{}).
+	if err := r.db.WithContext(ctx).Model(&catalogodomain.Sucursal{}).
 		Where("negocio_id = ? AND activo = TRUE", negocioID).Count(&total).Error; err != nil {
 		return domain.NegocioDetalle{}, err
 	}

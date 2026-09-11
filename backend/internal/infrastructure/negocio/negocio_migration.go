@@ -1,10 +1,10 @@
-package database
+package negocio
 
 import "gorm.io/gorm"
 
 // migrateNegociosPhaseOne upgrades the legacy development schema without
 // dropping data. Every statement is safe to run more than once.
-func migrateNegociosPhaseOne(db *gorm.DB) error {
+func MigratePhaseOne(db *gorm.DB) error {
 	businessStatements := []string{
 		`ALTER TABLE negocios ADD COLUMN IF NOT EXISTS slug varchar(120)`,
 		`ALTER TABLE negocios ADD COLUMN IF NOT EXISTS nombre_comercial varchar(180)`,

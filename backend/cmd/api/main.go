@@ -5,10 +5,16 @@ import (
 	"net/http"
 
 	"tienda/backend/internal/application"
+	cuentaapplication "tienda/backend/internal/application/cuenta"
+	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	"tienda/backend/internal/infrastructure"
-	authhttp "tienda/backend/internal/interfaces/http"
+	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
+	negocioinfra "tienda/backend/internal/infrastructure/negocio"
+	transporthttp "tienda/backend/internal/interfaces/http"
+	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
+	negociohttp "tienda/backend/internal/interfaces/http/negocio"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,25 +33,25 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	repo := infrastructure.NewUserRepository(db)
-	handler := authhttp.NewAuthHandler(application.NewAuthService(repo), cfg)
+	cuentaRepo := cuentainfra.NewUserRepository(db)
+	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), cfg)
 	productRepo := infrastructure.NewProductRepository(db)
 	precioCheckClient := infrastructure.NewPrecioCheckClient(cfg.PrecioCheckBaseURL, cfg.PrecioCheckAPIKey)
 	upcItemDBClient := infrastructure.NewUPCItemDBClient(cfg.UPCItemDBBaseURL)
 	productLookup := infrastructure.NewFallbackProductLookup(precioCheckClient, upcItemDBClient)
-	productHandler := authhttp.NewProductHandler(application.NewProductService(productRepo, productLookup))
-	negocioRepo := infrastructure.NewNegocioRepository(db)
-	negocioHandler := authhttp.NewNegocioHandler(application.NewNegocioService(negocioRepo))
+	productHandler := transporthttp.NewProductHandler(application.NewProductService(productRepo, productLookup))
+	negocioRepo := negocioinfra.NewNegocioRepository(db)
+	negocioHandler := negociohttp.NewNegocioHandler(negocioapplication.NewNegocioService(negocioRepo))
 	router := gin.Default()
-	router.Use(authhttp.CORSMiddleware(cfg.FrontendURL))
+	router.Use(transporthttp.CORSMiddleware(cfg.FrontendURL))
 	router.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"estado": "ok"}) })
 	auth := router.Group("/api/v1/auth")
-	auth.POST("/register", handler.Register)
-	auth.POST("/login", handler.Login)
-	auth.POST("/logout", handler.Logout)
-	auth.GET("/me", handler.Me)
+	auth.POST("/register", cuentaHandler.Register)
+	auth.POST("/login", cuentaHandler.Login)
+	auth.POST("/logout", cuentaHandler.Logout)
+	auth.GET("/me", cuentaHandler.Me)
 	negocios := router.Group("/api/v1/negocios")
-	negocios.Use(authhttp.RequireAuth(cfg))
+	negocios.Use(transporthttp.RequireAuth(cfg))
 	negocios.GET("", negocioHandler.Listar)
 	negocios.POST("", negocioHandler.Crear)
 	negocios.GET("/:negocioId", negocioHandler.Obtener)

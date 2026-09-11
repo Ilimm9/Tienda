@@ -1,4 +1,4 @@
-package application
+package negocio
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"tienda/backend/internal/domain"
+	domain "tienda/backend/internal/domain/negocio"
 
 	"github.com/google/uuid"
 )

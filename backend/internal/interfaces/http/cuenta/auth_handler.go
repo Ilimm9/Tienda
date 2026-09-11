@@ -1,11 +1,12 @@
-package http
+package cuenta
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"tienda/backend/internal/application"
+	application "tienda/backend/internal/application/cuenta"
 	"tienda/backend/internal/config"
+	transporthttp "tienda/backend/internal/interfaces/http"
 	"time"
 )
 
@@ -82,7 +83,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
 	}
-	_, claims, err := parseSession(value, h.cfg.JWTSecret)
+	_, claims, err := transporthttp.ParseSession(value, h.cfg.JWTSecret)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
