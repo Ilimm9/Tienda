@@ -1,4 +1,9 @@
-@import './negocio-shared.css';
+@import './sucursal-shared.css';
+
+.heading-actions {
+  display: flex;
+  gap: 10px;
+}
 
 .detail-layout {
   display: grid;
@@ -7,21 +12,13 @@
   align-items: start;
 }
 
-.heading-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
 .detail-main {
   display: grid;
   gap: 20px;
 }
 
 .detail-card,
-.business-summary,
-.branch-callout,
+.branch-summary,
 .danger-zone {
   padding: clamp(20px, 4vw, 30px);
 }
@@ -40,7 +37,6 @@
 }
 
 .detail-card h2,
-.branch-callout h2,
 .danger-zone h2 {
   margin: 0;
   font-size: 19px;
@@ -58,20 +54,28 @@
 }
 
 .detail-grid dt,
-.business-summary dt {
+.branch-summary dt {
   margin-bottom: 5px;
   color: var(--text-muted);
   font-size: 12px;
 }
 
 .detail-grid dd,
-.business-summary dd {
+.branch-summary dd {
   margin: 0;
   overflow-wrap: anywhere;
   font-weight: 650;
 }
 
-.business-summary {
+.address-summary {
+  padding: 14px;
+  margin: 0 0 22px;
+  color: var(--text-muted);
+  background: var(--background);
+  border-radius: 9px;
+}
+
+.branch-summary {
   position: sticky;
   top: 20px;
 }
@@ -84,49 +88,32 @@
   border-bottom: 1px solid var(--border);
 }
 
-.business-summary dl {
+.branch-summary dl {
   display: grid;
   gap: 19px;
   margin: 20px 0 0;
 }
 
-.business-summary code {
+.branch-summary code {
   font-size: 11px;
 }
 
-.branch-callout,
 .danger-zone {
   display: flex;
   align-items: center;
   gap: 16px;
+  background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
 }
 
-.branch-callout > span {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 auto;
-  place-items: center;
-  color: var(--primary);
-  background: var(--primary-soft);
-  border-radius: 50%;
-}
-
-.branch-callout div,
 .danger-zone div {
   flex: 1;
 }
 
-.branch-callout p,
 .danger-zone p,
 .empty-detail {
   margin: 5px 0 0;
   color: var(--text-muted);
-}
-
-.danger-zone {
-  background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface-raised));
-  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
 }
 
 .back-button {
@@ -138,19 +125,19 @@
     grid-template-columns: 1fr;
   }
 
-  .business-summary {
+  .branch-summary {
     position: static;
     grid-row: 1;
   }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 700px) {
   .heading-actions {
     width: 100%;
   }
 
   .heading-actions > * {
-    flex: 1 0 100%;
+    flex: 1;
   }
 
   .detail-grid {
@@ -161,13 +148,11 @@
     grid-column: auto;
   }
 
-  .branch-callout,
   .danger-zone {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .branch-callout button,
   .danger-zone button {
     width: 100%;
   }

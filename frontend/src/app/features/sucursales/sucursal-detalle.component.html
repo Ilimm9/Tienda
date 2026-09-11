@@ -1,0 +1,184 @@
+<section class="branch-page">
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando sucursal…</p>
+  } @else if (error() && !branch()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+    <a class="secondary-button back-button" [routerLink]="['/negocios', negocioId, 'sucursales']">
+      Volver a sucursales
+    </a>
+  } @else if (branch(); as current) {
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">{{ current.codigo }}</span>
+        <h1>{{ current.nombre }}</h1>
+        <p>{{ business()?.nombre_comercial }}</p>
+      </div>
+      <div class="heading-actions">
+        <a class="secondary-button" [routerLink]="['/negocios', negocioId, 'sucursales']">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          Sucursales
+        </a>
+        @if (
+          current.estado === 'activo' &&
+          business()?.estado === 'activo' &&
+          current.tipo_miembro === 'propietario'
+        ) {
+          <a class="primary-button" [routerLink]="['editar']">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            Editar
+          </a>
+        }
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="detail-layout">
+      <div class="detail-main">
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-building" aria-hidden="true"></i>
+            <h2>Identificación y contacto</h2>
+          </header>
+          <dl class="detail-grid">
+            <div>
+              <dt>Código interno</dt>
+              <dd>
+                <code>{{ current.codigo }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Nombre</dt>
+              <dd>{{ current.nombre }}</dd>
+            </div>
+            <div class="wide">
+              <dt>Teléfono</dt>
+              <dd>{{ current.telefono || 'No registrado' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            <h2>Dirección</h2>
+          </header>
+          @if (current.direccion; as address) {
+            <p class="address-summary">{{ fullAddress(current) }}</p>
+            <dl class="detail-grid">
+              <div>
+                <dt>País</dt>
+                <dd>{{ address.codigo_pais }}</dd>
+              </div>
+              <div>
+                <dt>Estado</dt>
+                <dd>{{ address.estado || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Municipio</dt>
+                <dd>{{ address.municipio || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Ciudad</dt>
+                <dd>{{ address.ciudad || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Colonia</dt>
+                <dd>{{ address.colonia || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Código postal</dt>
+                <dd>{{ address.codigo_postal || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Número exterior</dt>
+                <dd>{{ address.numero_exterior || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Número interior</dt>
+                <dd>{{ address.numero_interior || '—' }}</dd>
+              </div>
+              <div class="wide">
+                <dt>Calle</dt>
+                <dd>{{ address.calle || '—' }}</dd>
+              </div>
+              <div class="wide">
+                <dt>Referencias</dt>
+                <dd>{{ address.referencias || '—' }}</dd>
+              </div>
+            </dl>
+          } @else {
+            <p class="empty-detail">No hay dirección registrada.</p>
+          }
+        </section>
+
+        @if (current.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
+          <section class="danger-zone surface-card">
+            <div>
+              <h2>
+                {{ current.estado === 'activo' ? 'Archivar sucursal' : 'Restaurar sucursal' }}
+              </h2>
+              <p>Los datos y la dirección relacionados se conservarán.</p>
+            </div>
+            @if (current.estado === 'activo') {
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="processing()"
+                (click)="archive()"
+              >
+                Archivar sucursal
+              </button>
+            } @else {
+              <button
+                class="primary-button"
+                type="button"
+                [disabled]="processing()"
+                (click)="restore()"
+              >
+                Restaurar sucursal
+              </button>
+            }
+          </section>
+        }
+      </div>
+
+      <aside class="branch-summary surface-card">
+        <div class="summary-title">
+          <span
+            class="status-pill"
+            [class.active]="current.estado === 'activo'"
+            [class.archived]="current.estado === 'archivado'"
+          >
+            {{ current.estado === 'activo' ? 'Activa' : 'Archivada' }}
+          </span>
+          <span class="relation-pill">{{ current.es_principal ? 'Principal' : 'Secundaria' }}</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Fecha de registro</dt>
+            <dd>{{ current.creado_en | date: 'dd MMM yyyy' }}</dd>
+          </div>
+          <div>
+            <dt>Última modificación</dt>
+            <dd>{{ current.actualizado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </div>
+          @if (current.eliminado_en) {
+            <div>
+              <dt>Fecha de archivo</dt>
+              <dd>{{ current.eliminado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            </div>
+          }
+          <div>
+            <dt>ID de sucursal</dt>
+            <dd>
+              <code>{{ current.id }}</code>
+            </dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</section>

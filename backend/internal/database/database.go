@@ -24,12 +24,15 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseOne(db); err != nil {
 		return err
 	}
+	if err := negocioinfra.MigratePhaseTwo(db); err != nil {
+		return err
+	}
 
 	models := []interface{}{
 		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &negociodomain.Empleado{},
 		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
-		&domain.Sucursal{}, &domain.Marca{}, &domain.Producto{}, &domain.Categoria{},
+		&negociodomain.Sucursal{}, &domain.Marca{}, &domain.Producto{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.Impuesto{},
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
@@ -43,6 +46,9 @@ func Init(db *gorm.DB) error {
 		}
 	}
 	if err := db.AutoMigrate(models...); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePhaseTwo(db); err != nil {
 		return err
 	}
 
@@ -72,9 +78,10 @@ func SeedDevelopment(db *gorm.DB) error {
 			return err
 		}
 
-		var branch domain.Sucursal
-		return tx.Where("id = ?", branchID).Attrs(domain.Sucursal{
-			ID: branchID, NegocioID: businessID, Nombre: "Tienda prueba", Activo: true,
+		var branch negociodomain.Sucursal
+		return tx.Where("id = ?", branchID).Attrs(negociodomain.Sucursal{
+			ID: branchID, NegocioID: businessID, Codigo: "SUC-001", Nombre: "Tienda prueba",
+			EsPrincipal: true, Activo: true,
 		}).FirstOrCreate(&branch).Error
 	})
 }

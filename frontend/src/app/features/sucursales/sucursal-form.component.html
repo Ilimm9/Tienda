@@ -1,0 +1,145 @@
+<section class="branch-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">{{ editing ? 'Configuración de sucursal' : 'Nueva ubicación' }}</span>
+      <h1>{{ editing ? 'Editar sucursal' : 'Crear nueva sucursal' }}</h1>
+      <p>{{ business()?.nombre_comercial || 'Configura la ubicación operativa del negocio.' }}</p>
+    </div>
+    <div class="heading-actions">
+      <a class="secondary-button" [routerLink]="cancelLink()">Cancelar</a>
+      <button
+        class="primary-button"
+        type="submit"
+        form="branch-form"
+        [disabled]="saving() || loading() || business()?.estado !== 'activo'"
+      >
+        <i class="pi pi-check" aria-hidden="true"></i>
+        {{ saving() ? 'Guardando…' : 'Guardar sucursal' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando información…</p>
+  } @else {
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="form-layout">
+      <form id="branch-form" class="branch-form" [formGroup]="form" (ngSubmit)="submit()">
+        <section class="form-section surface-card">
+          <header>
+            <span><i class="pi pi-building" aria-hidden="true"></i></span>
+            <div>
+              <h2>Datos generales</h2>
+              <p>Identificación y contacto de la sucursal.</p>
+            </div>
+          </header>
+          <div class="form-grid">
+            <label>
+              <span>Código interno *</span>
+              <input
+                formControlName="codigo"
+                maxlength="40"
+                placeholder="Ej. SUC-001"
+                [readonly]="editing"
+              />
+              @if (editing) {
+                <small>El código no puede modificarse después del registro.</small>
+              }
+              @if (hasError('codigo')) {
+                <small>Usa entre 2 y 40 letras, números, guion o guion bajo.</small>
+              }
+              @if (fieldErrors()['codigo']) {
+                <small>{{ fieldErrors()['codigo'] }}</small>
+              }
+            </label>
+            <label>
+              <span>Nombre de sucursal *</span>
+              <input formControlName="nombre" maxlength="160" placeholder="Ej. Matriz Reforma" />
+              @if (hasError('nombre')) {
+                <small>Escribe entre 2 y 160 caracteres.</small>
+              }
+              @if (fieldErrors()['nombre']) {
+                <small>{{ fieldErrors()['nombre'] }}</small>
+              }
+            </label>
+            <label>
+              <span>Teléfono</span>
+              <input
+                formControlName="telefono"
+                maxlength="30"
+                autocomplete="tel"
+                placeholder="+52 55 1234 5678"
+              />
+            </label>
+            <label class="principal-control">
+              <input type="checkbox" formControlName="es_principal" />
+              <span
+                ><strong>Sucursal principal</strong
+                ><small>{{
+                  form.controls.es_principal.disabled
+                    ? 'Esta sucursal debe conservarse como principal.'
+                    : 'Promoverla reemplazará la principal actual.'
+                }}</small></span
+              >
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section surface-card">
+          <header>
+            <span><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+            <div>
+              <h2>Dirección</h2>
+              <p>Bloque opcional para localización física.</p>
+            </div>
+          </header>
+          <div class="form-grid address-grid">
+            <label
+              ><span>País *</span
+              ><select formControlName="codigo_pais">
+                <option value="MX">México</option>
+              </select></label
+            >
+            <label><span>Estado</span><input formControlName="estado" /></label>
+            <label><span>Municipio / Delegación</span><input formControlName="municipio" /></label>
+            <label><span>Ciudad</span><input formControlName="ciudad" /></label>
+            <label><span>Colonia</span><input formControlName="colonia" /></label>
+            <label
+              ><span>Código postal</span><input formControlName="codigo_postal" inputmode="numeric"
+            /></label>
+            <label class="street-field"><span>Calle</span><input formControlName="calle" /></label>
+            <label><span>Número exterior</span><input formControlName="numero_exterior" /></label>
+            <label><span>Número interior</span><input formControlName="numero_interior" /></label>
+            <label class="wide-field"
+              ><span>Referencias</span><textarea formControlName="referencias" rows="3"></textarea>
+            </label>
+          </div>
+        </section>
+      </form>
+
+      <aside class="preview-card surface-card">
+        <header><i class="pi pi-send" aria-hidden="true"></i> Vista previa</header>
+        <span class="preview-icon"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+        <h2>{{ form.controls.nombre.value || 'Nombre de sucursal' }}</h2>
+        <code>{{ form.controls.codigo.value.toUpperCase() || 'SUC-XXXX' }}</code>
+        <dl>
+          <div>
+            <dt>Tipo</dt>
+            <dd>{{ form.getRawValue().es_principal ? 'Principal' : 'Secundaria' }}</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{{ form.controls.telefono.value || '—' }}</dd>
+          </div>
+          <div class="wide">
+            <dt>Ubicación</dt>
+            <dd>{{ previewLocation() }}</dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</section>

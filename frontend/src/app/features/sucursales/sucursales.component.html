@@ -1,0 +1,148 @@
+<section class="branch-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Estructura operativa</span>
+      <h1>Sucursales</h1>
+      <p>
+        Administra las ubicaciones de
+        <strong>{{ business()?.nombre_comercial || 'tu negocio' }}</strong
+        >.
+      </p>
+    </div>
+    @if (business()?.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
+      <a class="primary-button" [routerLink]="['nueva']">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Nueva sucursal
+      </a>
+    }
+  </header>
+
+  <div class="branch-toolbar surface-card">
+    <form class="search-field" (ngSubmit)="search()">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <label class="visually-hidden" for="branch-search">Buscar por nombre o código</label>
+      <input
+        id="branch-search"
+        type="search"
+        name="buscar"
+        placeholder="Buscar por nombre o código"
+        [ngModel]="buscar()"
+        (ngModelChange)="updateSearch($event)"
+      />
+      @if (buscar()) {
+        <button
+          type="button"
+          class="clear-search"
+          aria-label="Limpiar búsqueda"
+          (click)="clearSearch()"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
+    </form>
+    <div class="status-tabs" aria-label="Filtrar sucursales por estado">
+      <button type="button" [class.active]="estado() === 'activo'" (click)="setStatus('activo')">
+        Activas
+      </button>
+      <button
+        type="button"
+        [class.active]="estado() === 'archivado'"
+        (click)="setStatus('archivado')"
+      >
+        Archivadas
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando sucursales…</p>
+  } @else if (sucursales().length === 0) {
+    <section class="empty-state surface-card">
+      <span><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+      <h2>
+        {{
+          buscar()
+            ? 'Sin coincidencias'
+            : estado() === 'activo'
+              ? 'Aún no hay sucursales'
+              : 'No hay sucursales archivadas'
+        }}
+      </h2>
+      <p>
+        {{
+          buscar()
+            ? 'Prueba con otro nombre o código.'
+            : estado() === 'activo'
+              ? 'Registra la primera ubicación operativa del negocio.'
+              : 'Las sucursales archivadas aparecerán aquí.'
+        }}
+      </p>
+      @if (!buscar() && estado() === 'activo' && business()?.tipo_miembro === 'propietario') {
+        <a class="primary-button" routerLink="nueva">Registrar sucursal</a>
+      }
+    </section>
+  } @else {
+    <div class="branch-grid">
+      @for (branch of sucursales(); track branch.id) {
+        <article class="branch-card surface-card">
+          <header>
+            <span class="branch-icon"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+            <div class="branch-badges">
+              <span
+                class="status-pill"
+                [class.active]="branch.estado === 'activo'"
+                [class.archived]="branch.estado === 'archivado'"
+              >
+                {{ branch.estado === 'activo' ? 'Activa' : 'Archivada' }}
+              </span>
+              <span class="relation-pill">{{
+                branch.es_principal ? 'Principal' : 'Secundaria'
+              }}</span>
+            </div>
+          </header>
+          <div class="branch-code">{{ branch.codigo }}</div>
+          <h2>{{ branch.nombre }}</h2>
+          <dl>
+            <div>
+              <dt><i class="pi pi-map" aria-hidden="true"></i> Ubicación</dt>
+              <dd>{{ branch.direccion_resumida || 'Sin dirección registrada' }}</dd>
+            </div>
+            <div>
+              <dt><i class="pi pi-phone" aria-hidden="true"></i> Teléfono</dt>
+              <dd>{{ branch.telefono || 'No registrado' }}</dd>
+            </div>
+          </dl>
+          <footer>
+            <a class="secondary-button" [routerLink]="[branch.id]">Ver detalle</a>
+            @if (branch.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
+              @if (branch.estado === 'activo') {
+                <a class="text-button" [routerLink]="[branch.id, 'editar']">Editar</a>
+                <button
+                  class="text-button danger-text"
+                  type="button"
+                  [disabled]="processingId() === branch.id"
+                  (click)="archive(branch)"
+                >
+                  Archivar
+                </button>
+              } @else {
+                <button
+                  class="text-button"
+                  type="button"
+                  [disabled]="processingId() === branch.id"
+                  (click)="restore(branch)"
+                >
+                  Restaurar
+                </button>
+              }
+            }
+          </footer>
+        </article>
+      }
+    </div>
+  }
+</section>

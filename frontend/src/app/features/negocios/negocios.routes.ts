@@ -25,6 +25,44 @@ export const NEGOCIOS_ROUTES: Routes = [
           import('./negocio-form.component').then((module) => module.NegocioFormComponent),
       },
       {
+        path: ':negocioId/sucursales',
+        data: { breadcrumb: 'Sucursales', title: 'Sucursales' },
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('../sucursales/sucursales.component').then(
+                (module) => module.SucursalesComponent,
+              ),
+          },
+          {
+            path: 'nueva',
+            data: { breadcrumb: 'Nueva', title: 'Nueva sucursal' },
+            loadComponent: () =>
+              import('../sucursales/sucursal-form.component').then(
+                (module) => module.SucursalFormComponent,
+              ),
+          },
+          {
+            path: ':sucursalId/editar',
+            data: { breadcrumb: 'Editar', title: 'Editar sucursal' },
+            loadComponent: () =>
+              import('../sucursales/sucursal-form.component').then(
+                (module) => module.SucursalFormComponent,
+              ),
+          },
+          {
+            path: ':sucursalId',
+            data: { breadcrumb: 'Detalle', title: 'Detalle de sucursal' },
+            loadComponent: () =>
+              import('../sucursales/sucursal-detalle.component').then(
+                (module) => module.SucursalDetalleComponent,
+              ),
+          },
+        ],
+      },
+      {
         path: ':negocioId',
         data: { breadcrumb: 'Detalle', title: 'Datos del negocio' },
         loadComponent: () =>
