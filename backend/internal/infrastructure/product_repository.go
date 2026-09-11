@@ -492,6 +492,109 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 	})
 }
 
+func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error {
+	input.Nombre = strings.TrimSpace(input.Nombre)
+	input.SKUInterno = strings.TrimSpace(input.SKUInterno)
+	if input.Nombre == "" || input.SKUInterno == "" || input.PrecioVenta < 0 {
+		return errors.New("los datos del producto no son válidos")
+	}
+	barcode := optionalString(input.CodigoBarras)
+	imageURL := optionalString(input.ImagenURL)
+	if barcode != "" && !productBarcodePattern.MatchString(barcode) {
+		return errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	}
+	if imageURL != "" {
+		parsed, err := url.Parse(imageURL)
+		if barcode == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return errors.New("la URL de imagen no es válida")
+		}
+	}
+
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var commercial domain.ProductoNegocio
+		if err := tx.Where("negocio_id = ? AND producto_id = ? AND activo = TRUE", businessID, productID).First(&commercial).Error; err != nil {
+			return errors.New("producto no encontrado")
+		}
+		var category domain.Categoria
+		if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
+			return errors.New("la categoría no existe o está inactiva")
+		}
+		if input.MarcaID != nil {
+			var brand domain.Marca
+			if err := tx.Where("id = ? AND activo = TRUE", input.MarcaID).First(&brand).Error; err != nil {
+				return errors.New("la marca no existe o está inactiva")
+			}
+		}
+		if input.UnidadMedidaID != nil {
+			var unit domain.UnidadMedida
+			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+				return errors.New("la unidad de medida no existe o está inactiva")
+			}
+		}
+		var duplicates int64
+		if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ? AND producto_id <> ?", businessID, input.SKUInterno, productID).Count(&duplicates).Error; err != nil {
+			return err
+		}
+		if duplicates > 0 {
+			return errors.New("el SKU ya existe en este negocio")
+		}
+		if barcode != "" {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ? AND producto_id <> ?", barcode, productID).Count(&duplicates).Error; err != nil {
+				return err
+			}
+			if duplicates > 0 {
+				return errors.New("el código de barras ya está asignado a otro producto")
+			}
+		}
+
+		productValues := map[string]interface{}{
+			"nombre": input.Nombre, "descripcion": input.Descripcion, "marca_id": input.MarcaID,
+			"unidad_medida_id": input.UnidadMedidaID, "contenido": input.Contenido,
+			"unidad_contenido": input.UnidadContenido, "presentacion": input.Presentacion,
+		}
+		if err := tx.Model(&domain.Producto{}).Where("id = ?", productID).Updates(productValues).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&domain.ProductoNegocio{}).Where("id = ?", commercial.ID).Updates(map[string]interface{}{"sku_interno": input.SKUInterno, "precio_venta": input.PrecioVenta}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&domain.ProductoCategoria{}).Where("producto_id = ? AND es_principal = TRUE", productID).Updates(map[string]interface{}{"categoria_id": input.CategoriaID}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("producto_id = ? AND es_principal = TRUE", productID).Delete(&domain.ProductoCodigo{}).Error; err != nil {
+			return err
+		}
+		if barcode != "" {
+			if err := tx.Create(&domain.ProductoCodigo{ProductoID: productID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("producto_id = ? AND es_principal = TRUE", productID).Delete(&domain.ProductoImagen{}).Error; err != nil {
+			return err
+		}
+		if imageURL != "" {
+			if err := tx.Create(&domain.ProductoImagen{ProductoID: productID, URL: imageURL, EsPrincipal: true, Orden: 0}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *ProductRepository) Deactivate(businessID, productID uuid.UUID) error {
+	result := r.db.Model(&domain.ProductoNegocio{}).
+		Where("negocio_id = ? AND producto_id = ? AND activo = TRUE", businessID, productID).
+		Update("activo", false)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("producto no encontrado")
+	}
+	return nil
+}
+
 func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
 	var branch domain.Sucursal
@@ -803,17 +906,56 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 			pn.precio_venta AS precio,
 			COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) AS stock,
 			(SELECT c.nombre FROM producto_categorias pc JOIN categorias c ON c.id = pc.categoria_id WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC, c.nombre ASC LIMIT 1) AS categoria,
+			(SELECT pc.categoria_id FROM producto_categorias pc WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC LIMIT 1) AS categoria_id,
+			m.nombre AS marca,
+			p.marca_id,
+			p.descripcion,
+			p.presentacion,
+			p.contenido,
+			p.unidad_contenido,
+			u.nombre AS unidad_medida,
+			p.unidad_medida_id,
+			(SELECT pcodigo.codigo FROM producto_codigos pcodigo WHERE pcodigo.producto_id = p.id ORDER BY pcodigo.es_principal DESC LIMIT 1) AS codigo_barras,
 			CASE
 				WHEN COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) <= 0 THEN 'Agotado'
 				WHEN COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) <= COALESCE((SELECT SUM(isu.stock_minimo) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) THEN 'Bajo stock'
 				ELSE 'En stock'
 			END AS estado`).
 		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Joins("LEFT JOIN marcas m ON m.id = p.marca_id").
+		Joins("LEFT JOIN unidades_medida u ON u.id = p.unidad_medida_id").
 		Where("p.activo = TRUE").
 		Order("p.nombre ASC")
 
 	if err := query.Scan(&products).Error; err != nil {
 		return nil, err
+	}
+	if len(products) == 0 {
+		return products, nil
+	}
+	stockByProduct := make(map[string][]domain.ProductBranchStock, len(products))
+	var branches []struct {
+		ProductoID uuid.UUID `gorm:"column:producto_id"`
+		SucursalID uuid.UUID `gorm:"column:sucursal_id"`
+		Sucursal   string    `gorm:"column:sucursal"`
+		Stock      float64   `gorm:"column:stock"`
+	}
+	if err := r.db.Table("inventario_sucursal AS i").
+		Select("pn.producto_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
+		Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Joins("JOIN sucursales s ON s.id = i.sucursal_id").
+		Order("s.nombre ASC").Scan(&branches).Error; err != nil {
+		return nil, err
+	}
+	for _, branch := range branches {
+		key := branch.ProductoID.String()
+		stockByProduct[key] = append(stockByProduct[key], domain.ProductBranchStock{SucursalID: branch.SucursalID.String(), Sucursal: branch.Sucursal, Stock: branch.Stock})
+	}
+	for index := range products {
+		products[index].Inventario = stockByProduct[products[index].ID.String()]
+		if products[index].Inventario == nil {
+			products[index].Inventario = make([]domain.ProductBranchStock, 0)
+		}
 	}
 	return products, nil
 }

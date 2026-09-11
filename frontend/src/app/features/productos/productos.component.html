@@ -45,7 +45,7 @@
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
-        [tableStyle]="{ 'min-width': '68rem' }"
+        [tableStyle]="{ 'min-width': '70rem' }"
         class="app-table app-table--products"
         styleClass="products-table"
         responsiveLayout="scroll"
@@ -59,6 +59,7 @@
             <th>Stock</th>
             <th>Categoría</th>
             <th>Estado</th>
+            <th class="actions-column">Acciones</th>
           </tr>
         </ng-template>
         <ng-template #body let-product>
@@ -89,11 +90,40 @@
                 {{ product.estado || 'Sin estado' }}
               </span>
             </td>
+            <td class="actions-column">
+              <div class="table-actions">
+                <button
+                  type="button"
+                  pButton
+                  variant="text"
+                  severity="secondary"
+                  iconOnly
+                  rounded
+                  aria-label="Editar producto"
+                  (click)="openEditDialog(product)"
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  pButton
+                  variant="text"
+                  severity="danger"
+                  iconOnly
+                  rounded
+                  [disabled]="deletingProductId() === product.id"
+                  aria-label="Eliminar producto"
+                  (click)="confirmDeactivate(product)"
+                >
+                  <i [class]="deletingProductId() === product.id ? 'pi pi-spin pi-spinner' : 'pi pi-trash'" aria-hidden="true"></i>
+                </button>
+              </div>
+            </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="7" class="empty-message">Sin productos disponibles.</td>
+            <td colspan="8" class="empty-message">Sin productos disponibles.</td>
           </tr>
         </ng-template>
       </p-table>
@@ -102,7 +132,7 @@
 </section>
 
 <p-dialog
-  header="Agregar nuevo producto"
+  [header]="editingProduct() ? 'Editar producto' : 'Agregar nuevo producto'"
   styleClass="product-dialog"
   [(visible)]="dialogVisible"
   [modal]="true"
@@ -254,21 +284,23 @@
             [style]="{ width: '100%' }"
           />
         </label>
-        <label class="field">
-          <span>Sucursal <b>*</b></span>
-          <p-select
-            formControlName="sucursal_id"
-            [options]="branches()"
-            optionLabel="nombre"
-            optionValue="id"
-            placeholder="Seleccionar..."
-            [style]="{ width: '100%' }"
-            (onChange)="onBranchSelected()"
-          />
-          @if (hasError('sucursal_id')) {
-            <small>Selecciona una sucursal.</small>
-          }
-        </label>
+        @if (!editingProduct()) {
+          <label class="field">
+            <span>Sucursal <b>*</b></span>
+            <p-select
+              formControlName="sucursal_id"
+              [options]="branches()"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar..."
+              [style]="{ width: '100%' }"
+              (onChange)="onBranchSelected()"
+            />
+            @if (hasError('sucursal_id')) {
+              <small>Selecciona una sucursal.</small>
+            }
+          </label>
+        }
         <label class="field">
           <span>Precio de venta <b>*</b></span>
           <input
@@ -283,20 +315,22 @@
             <small>Indica un precio válido.</small>
           }
         </label>
-        <label class="field">
-          <span>Stock inicial <b>*</b></span>
-          <input
-            pInputText
-            type="number"
-            formControlName="stock_inicial"
-            min="0"
-            step="1"
-            placeholder="0"
-          />
-          @if (hasError('stock_inicial')) {
-            <small>Indica un stock válido.</small>
-          }
-        </label>
+        @if (!editingProduct()) {
+          <label class="field">
+            <span>Stock inicial <b>*</b></span>
+            <input
+              pInputText
+              type="number"
+              formControlName="stock_inicial"
+              min="0"
+              step="1"
+              placeholder="0"
+            />
+            @if (hasError('stock_inicial')) {
+              <small>Indica un stock válido.</small>
+            }
+          </label>
+        }
       </div>
     </div>
 
@@ -320,7 +354,7 @@
         @if (saving()) {
           Guardando...
         } @else {
-          Guardar producto
+          {{ editingProduct() ? 'Guardar cambios' : 'Guardar producto' }}
         }
       </button>
     </div>

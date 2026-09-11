@@ -3,14 +3,31 @@ package domain
 import "github.com/google/uuid"
 
 type ProductRow struct {
-	ID        uuid.UUID `json:"id"`
-	Nombre    string    `json:"nombre"`
-	ImagenURL *string   `json:"imagen_url"`
-	SKU       *string   `json:"sku"`
-	Precio    float64   `json:"precio"`
-	Stock     float64   `json:"stock"`
-	Categoria *string   `json:"categoria"`
-	Estado    string    `json:"estado"`
+	ID              uuid.UUID            `json:"id"`
+	Nombre          string               `json:"nombre"`
+	ImagenURL       *string              `json:"imagen_url"`
+	SKU             *string              `json:"sku"`
+	Precio          float64              `json:"precio"`
+	Stock           float64              `json:"stock"`
+	Categoria       *string              `json:"categoria"`
+	CategoriaID     *uuid.UUID           `json:"categoria_id"`
+	Marca           *string              `json:"marca"`
+	MarcaID         *uuid.UUID           `json:"marca_id"`
+	Descripcion     *string              `json:"descripcion"`
+	Presentacion    *string              `json:"presentacion"`
+	Contenido       *float64             `json:"contenido"`
+	UnidadContenido *string              `json:"unidad_contenido"`
+	UnidadMedida    *string              `json:"unidad_medida"`
+	UnidadMedidaID  *uuid.UUID           `json:"unidad_medida_id"`
+	CodigoBarras    *string              `json:"codigo_barras"`
+	Inventario      []ProductBranchStock `json:"inventario" gorm:"-"`
+	Estado          string               `json:"estado"`
+}
+
+type ProductBranchStock struct {
+	SucursalID string  `json:"sucursal_id"`
+	Sucursal   string  `json:"sucursal"`
+	Stock      float64 `json:"stock"`
 }
 
 type CatalogOption struct {
@@ -31,6 +48,23 @@ type CreateProductInput struct {
 	Presentacion    *string    `json:"presentacion"`
 	PrecioVenta     float64    `json:"precio_venta"`
 	StockInicial    float64    `json:"stock_inicial"`
+	CodigoBarras    *string    `json:"codigo_barras"`
+	ImagenURL       *string    `json:"imagen_url"`
+}
+
+// UpdateProductInput intentionally excludes stock and branch assignment: inventory
+// movements are managed separately from commercial product data.
+type UpdateProductInput struct {
+	Nombre          string     `json:"nombre" binding:"required"`
+	SKUInterno      string     `json:"sku_interno" binding:"required"`
+	MarcaID         *uuid.UUID `json:"marca_id"`
+	CategoriaID     uuid.UUID  `json:"categoria_id" binding:"required"`
+	Descripcion     *string    `json:"descripcion"`
+	Contenido       *float64   `json:"contenido"`
+	UnidadContenido *string    `json:"unidad_contenido"`
+	UnidadMedidaID  *uuid.UUID `json:"unidad_medida_id"`
+	Presentacion    *string    `json:"presentacion"`
+	PrecioVenta     float64    `json:"precio_venta"`
 	CodigoBarras    *string    `json:"codigo_barras"`
 	ImagenURL       *string    `json:"imagen_url"`
 }

@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, CreateProductRequest, ProductImportPreview, ProductImportResult, ProductListResponse, ProductLookup } from './product.models';
+import { CatalogOption, CreateProductRequest, ProductImportPreview, ProductImportResult, ProductListResponse, ProductLookup, UpdateProductRequest } from './product.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
@@ -44,6 +44,19 @@ export class ProductosService {
     return this.http.post<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos`,
       payload,
+    );
+  }
+
+  update(businessId: string, productId: string, payload: UpdateProductRequest): Observable<void> {
+    return this.http.patch<void>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}`,
+      payload,
+    );
+  }
+
+  deactivate(businessId: string, productId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}`,
     );
   }
 

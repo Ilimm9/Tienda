@@ -112,6 +112,43 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"mensaje": "Producto creado correctamente"})
 }
 
+func (h *ProductHandler) Update(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	productID, ok := parseID(c, "productoId")
+	if !ok {
+		return
+	}
+	var input domain.UpdateProductInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los campos obligatorios del producto"})
+		return
+	}
+	if err := h.products.Update(businessID, productID, input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *ProductHandler) Deactivate(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	productID, ok := parseID(c, "productoId")
+	if !ok {
+		return
+	}
+	if err := h.products.Deactivate(businessID, productID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func parseID(c *gin.Context, name string) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param(name))
 	if err != nil {

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -16,6 +17,7 @@ import { ProductosService } from './productos.service';
   standalone: true,
   imports: [
     CommonModule,
+    ButtonModule,
     FormsModule,
     ReactiveFormsModule,
     DialogModule,
@@ -52,6 +54,8 @@ export class ProductosComponent {
   readonly importError = signal<string | null>(null);
   readonly importResult = signal<ProductImportResult | null>(null);
   readonly importPreview = signal<ProductImportPreview | null>(null);
+  readonly editingProduct = signal<ProductRow | null>(null);
+  readonly deletingProductId = signal<string | null>(null);
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
   private brandsLoaded = false;
@@ -107,6 +111,9 @@ export class ProductosComponent {
       unidad_medida_id: '',
       precio_venta: 0, stock_inicial: 0,
     });
+    this.productForm.controls.sucursal_id.enable();
+    this.productForm.controls.stock_inicial.enable();
+    this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
     this.branches.set([]);
@@ -157,6 +164,68 @@ export class ProductosComponent {
     this.productosService.listUnits().subscribe({
       next: (items) => this.units.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
+    });
+  }
+
+  openEditDialog(product: ProductRow): void {
+    this.categories.set([]);
+    this.brands.set([]);
+    this.units.set([]);
+    this.catalogLoadErrors.set([]);
+    this.imageLookupLoading.set(false);
+    this.imageLookupError.set(null);
+    this.previewImageURL.set(product.imagen_url);
+    this.lookupSources.set([]);
+    this.catalogLookupWarnings.set([]);
+    this.lastLookup = null;
+    this.formError = null;
+    this.editingProduct.set(product);
+    this.branchReady.set(true);
+    this.productForm.reset({
+      nombre: product.nombre,
+      sku_interno: product.sku ?? '',
+      codigo_barras: product.codigo_barras ?? '',
+      imagen_url: product.imagen_url ?? '',
+      marca_id: product.marca_id ?? '',
+      categoria_id: product.categoria_id ?? '',
+      sucursal_id: '',
+      descripcion: product.descripcion ?? '',
+      contenido: product.contenido,
+      unidad_contenido: product.unidad_contenido ?? '',
+      unidad_medida_id: product.unidad_medida_id ?? '',
+      presentacion: product.presentacion ?? '',
+      precio_venta: product.precio,
+      stock_inicial: 0,
+    });
+    this.productForm.controls.sucursal_id.disable();
+    this.productForm.controls.stock_inicial.disable();
+    this.dialogVisible = true;
+    this.productosService.listCategories(environment.defaultBusinessId).subscribe({
+      next: (items) => this.categories.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
+    });
+    this.productosService.listBrands(environment.defaultBusinessId).subscribe({
+      next: (items) => this.brands.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listUnits().subscribe({
+      next: (items) => this.units.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
+    });
+  }
+
+  confirmDeactivate(product: ProductRow): void {
+    if (this.deletingProductId() || !window.confirm(`¿Deseas desactivar "${product.nombre}"? Podrás conservar su historial e inventario.`)) return;
+    this.deletingProductId.set(product.id);
+    this.productosService.deactivate(environment.defaultBusinessId, product.id).subscribe({
+      next: () => {
+        this.deletingProductId.set(null);
+        this.loadProducts();
+      },
+      error: (response) => {
+        this.deletingProductId.set(null);
+        this.error.set(response.error?.mensaje ?? 'No fue posible desactivar el producto.');
+      },
     });
   }
 
@@ -269,7 +338,7 @@ export class ProductosComponent {
   }
 
   canSubmitProduct(): boolean {
-    return !this.saving() && this.branchReady();
+    return !this.saving() && (this.editingProduct() !== null || this.branchReady());
   }
 
   canLookupProduct(): boolean {
@@ -423,7 +492,7 @@ export class ProductosComponent {
     this.saving.set(true);
     this.formError = null;
     const value = this.productForm.getRawValue();
-    this.productosService.create(environment.defaultBusinessId, {
+    const payload = {
       ...value,
       marca_id: value.marca_id || null,
       descripcion: value.descripcion || null,
@@ -433,7 +502,25 @@ export class ProductosComponent {
       presentacion: value.presentacion || null,
       codigo_barras: value.codigo_barras.trim() || null,
       imagen_url: value.imagen_url || null,
-    }).subscribe({
+    };
+    const editing = this.editingProduct();
+    const request = editing
+      ? this.productosService.update(environment.defaultBusinessId, editing.id, {
+          nombre: payload.nombre,
+          sku_interno: payload.sku_interno,
+          marca_id: payload.marca_id,
+          categoria_id: payload.categoria_id,
+          descripcion: payload.descripcion,
+          contenido: payload.contenido,
+          unidad_contenido: payload.unidad_contenido,
+          unidad_medida_id: payload.unidad_medida_id,
+          presentacion: payload.presentacion,
+          precio_venta: payload.precio_venta,
+          codigo_barras: payload.codigo_barras,
+          imagen_url: payload.imagen_url,
+        })
+      : this.productosService.create(environment.defaultBusinessId, payload);
+    request.subscribe({
       next: () => {
         this.saving.set(false);
         this.dialogVisible = false;

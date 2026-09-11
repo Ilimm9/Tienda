@@ -76,6 +76,12 @@
     font-weight: 600;
 }
 
+.table-actions {
+    display: flex;
+    justify-content: center;
+    gap: .15rem;
+}
+
 code {
     color: var(--text-muted);
     font-size: 0.75rem;
@@ -358,4 +364,5 @@ code {
     .dialog-actions button {
         width: 100%;
     }
+
 }

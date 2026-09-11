@@ -30,6 +30,8 @@ type ProductRepository interface {
 	ListBrands() ([]domain.CatalogOption, error)
 	ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	Create(businessID uuid.UUID, input domain.CreateProductInput) error
+	Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error
+	Deactivate(businessID, productID uuid.UUID) error
 	ListBrandsAdmin() ([]domain.Marca, error)
 	CreateBrand(domain.CreateMarcaInput) error
 	UpdateBrand(uuid.UUID, domain.UpdateMarcaInput) error
@@ -156,6 +158,14 @@ func (s *ProductService) ListBranches(businessID uuid.UUID) ([]domain.CatalogOpt
 
 func (s *ProductService) Create(businessID uuid.UUID, input domain.CreateProductInput) error {
 	return s.products.Create(businessID, input)
+}
+
+func (s *ProductService) Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error {
+	return s.products.Update(businessID, productID, input)
+}
+
+func (s *ProductService) Deactivate(businessID, productID uuid.UUID) error {
+	return s.products.Deactivate(businessID, productID)
 }
 
 func (s *ProductService) LookupProduct(barcode string) (domain.ProductLookup, error) {
