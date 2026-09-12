@@ -11,6 +11,17 @@ capabilities/01-nombre-funcionalidad/CAPABILITY.md
 capabilities/02-otra-funcionalidad/CAPABILITY.md
 ```
 
+Cuando una capability crece por fases, `CAPABILITY.md` funciona como índice y conserva reglas transversales. El detalle puede dividirse sin duplicarlo:
+
+```text
+capabilities/NN-nombre/CAPABILITY.md
+capabilities/NN-nombre/fases/01-nombre.md
+capabilities/NN-nombre/fases/02-nombre.md
+capabilities/NN-nombre/SEGUIMIENTO.md
+```
+
+Para trabajar una fase se carga el índice, el archivo de esa fase y solo las fuentes que dicho archivo indique. Estados, contratos e historial deben tener una única ubicación canónica.
+
 Copiar `_template/CAPABILITY.md` al crear una nueva capability. No eliminar secciones; escribir `No aplica` cuando corresponda.
 
 ## Ciclo

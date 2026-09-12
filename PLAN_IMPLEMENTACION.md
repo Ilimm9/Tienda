@@ -27,7 +27,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 
 | ID | Capability | Estado | Dependencias | Aprobación | Notas |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Identidad, negocios, sucursales y RBAC](capabilities/01-identidad-negocio-sucursales-rbac/CAPABILITY.md) | En implementación | Autenticación actual | Fases 1, 1.5, 1.6 y 2 aprobadas | Fases 1, 1.5 y 1.6 cerradas; fase 2 verificada y pendiente de aceptación; `base.MD` preservado; producto intacto |
+| 01 | [Identidad, negocios, sucursales y RBAC](capabilities/01-identidad-negocio-sucursales-rbac/CAPABILITY.md) | En implementación | Autenticación actual | Fases 1, 1.5, 1.6, 2 y 3 aprobadas | Fases 1, 1.5 y 1.6 cerradas; fase 2 verificada y pendiente de aceptación; fase 3 en implementación por autorización explícita con excepción documentada; documentos separados por fase; `base.MD` preservado |
 | 02 | [Configuración del entorno local](capabilities/02-configuracion-entorno-local/CAPABILITY.md) | Verificada | Configuración Go y Angular CLI | Aprobada el 2026-09-11 | Implementación verificada; pendiente de aceptación final |
 
 ## Restricciones vigentes
