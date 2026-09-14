@@ -18,6 +18,14 @@ export const routes: Routes = [
       ),
   },
   {
+    // La aceptación de invitación vive fuera del shell autenticado: el invitado puede no tener cuenta.
+    path: 'invitacion/:token',
+    loadComponent: () =>
+      import('./features/invitacion/aceptar-invitacion.component').then(
+        (module) => module.AceptarInvitacionComponent,
+      ),
+  },
+  {
     path: '',
     canActivateChild: [authGuard],
     loadComponent: () =>

@@ -35,7 +35,13 @@ func MigratePhaseOne(db *gorm.DB) error {
 		`UPDATE membresias_negocio SET tipo_miembro = 'miembro' WHERE tipo_miembro IS NULL OR btrim(tipo_miembro) = ''`,
 		`UPDATE membresias_negocio SET se_unio_en = COALESCE(creado_en, now()) WHERE se_unio_en IS NULL`,
 		`ALTER TABLE membresias_negocio ALTER COLUMN tipo_miembro SET NOT NULL`,
-		`ALTER TABLE membresias_negocio ALTER COLUMN rol_id DROP NOT NULL`,
+		// Desde fase 4 la columna ya no existe: base.MD no la declara y su dato vive en roles_membresia.
+		`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'membresias_negocio' AND column_name = 'rol_id') THEN
+				ALTER TABLE membresias_negocio ALTER COLUMN rol_id DROP NOT NULL;
+			END IF;
+		END $$`,
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {

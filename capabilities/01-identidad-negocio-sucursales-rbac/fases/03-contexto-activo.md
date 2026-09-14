@@ -2,9 +2,10 @@
 
 ## Estado de fase
 
-`En implementación`
+`Cerrada`
 
 Planeación redactada el 2026-09-11 por solicitud explícita del usuario. Implementación autorizada explícitamente por el usuario el 2026-09-11.
+Cierre autorizado explícitamente por el usuario el 2026-09-12, junto con la autorización para ejecutar fases 4 a 8 sin supervisión.
 
 Excepción de dependencia aprobada por el usuario: fase 2 permanece `Verificada` y pendiente de aceptación final, pero se autoriza iniciar fase 3. No altera resultado ni estado de fase 2.
 
@@ -422,12 +423,12 @@ Ventas, equipo y roles/permisos pueden mostrar el contexto en el shell, pero su 
 - [x] Cierre de aislamiento de rutas actuales incluido expresamente.
 - [x] Organización backend y frontend propuesta.
 - [x] Pruebas y verificación planeadas.
-- [ ] Fase 2 aceptada finalmente y marcada `Cerrada`.
-- [ ] Especificación de fase 3 revisada por el usuario.
+- [x] Fase 2 aceptada finalmente y marcada `Cerrada`.
+- [x] Especificación de fase 3 revisada por el usuario.
 - [x] Fase 3 aprobada explícitamente para implementación.
-- [ ] Implementación terminada.
-- [ ] Verificaciones registradas.
-- [ ] Resultado aceptado finalmente por el usuario.
+- [x] Implementación terminada.
+- [x] Verificaciones registradas.
+- [x] Resultado aceptado finalmente por el usuario.
 
 ## Tareas de implementación propuestas
 
@@ -439,9 +440,9 @@ Ventas, equipo y roles/permisos pueden mostrar el contexto en el shell, pero su 
 - [x] Integrar selector responsive en topbar.
 - [x] Integrar dashboard y ruta general de sucursales.
 - [x] Sustituir `defaultBusinessId` en productos y proveedores.
-- [ ] Manejar cambios pendientes e invalidación por mutaciones administrativas.
-- [ ] Ejecutar pruebas backend, frontend, aislamiento y revisión visual.
-- [ ] Registrar resultados, imprevistos y pendientes en este archivo.
+- [x] Manejar cambios pendientes e invalidación por mutaciones administrativas.
+- [x] Ejecutar pruebas backend, frontend, aislamiento y revisión visual.
+- [x] Registrar resultados, imprevistos y pendientes en este archivo.
 
 ## Decisiones propuestas para aprobación
 
@@ -462,4 +463,50 @@ Ventas, equipo y roles/permisos pueden mostrar el contexto en el shell, pero su 
 - 2026-09-11: productos y proveedores usan negocio activo; operaciones de producto e importación validan sucursal activa del negocio.
 - 2026-09-11: `go test ./...`, `go vet ./...`, `npm test -- --watch=false` y `npm run build` correctos. Build conserva avisos preexistentes de presupuesto CSS y bundle.
 - 2026-09-11: selector visual refinado como panel contextual con opciones tipo card, estados activos, iconografía, teclado/Escape y vista móvil compacta. Pruebas Angular siguen correctas; topbar agrega aviso no bloqueante de presupuesto CSS.
-- Pendiente antes de verificar fase: pruebas específicas de contexto, sincronización entre pestañas, smoke HTTP/multiempresa y revisión visual.
+- 2026-09-12: cerrados los pendientes restantes de la fase, detallados abajo.
+
+## Cierre de pendientes de fase 3
+
+Fecha: 2026-09-12.
+
+### Inicialización deduplicada y recarga controlada
+
+`ContextoService` incorpora la señal `inicializado` y una petición en vuelo compartida. `asegurarInicializado()` resuelve una sola vez y el guard lo usa en lugar de `inicializar()`, por lo que una navegación deja de pedir opciones en cada ruta protegida. `recargar()` fuerza revalidación explícita.
+
+### Sincronización entre pestañas
+
+El servicio escucha `storage` sobre ambas claves y revalida contra la API antes de adoptar el cambio; nunca confía en el valor recibido del evento. El listener se retira con `DestroyRef`.
+
+### Invalidación por mutaciones administrativas
+
+Crear, editar, promover, archivar y restaurar una sucursal disparan `recargar()` del contexto, de modo que el selector y la sucursal activa dejan de mostrar una opción que ya no existe.
+
+### Contrato de cambios sin guardar
+
+Se agregó `CambiosPendientesService`: cada componente declara si tiene trabajo sin guardar y se da de baja al destruirse. El topbar consulta ese contrato antes de cambiar negocio o sucursal y usa `FeedbackService.confirmDanger` una sola vez. No se usan patrones de URL. `SucursalFormComponent` es el primer consumidor, declarando `form.dirty`.
+
+### Endurecimiento de lectura de `localStorage`
+
+El patrón de UUID pasó a ser estricto, y lectura y escritura toleran que `localStorage` lance excepción, no solo que no exista.
+
+## Verificación técnica de fase 3
+
+Fecha: 2026-09-12.
+
+- `go build ./...`, `go vet ./...` y `go test ./...`: correctos.
+- Pruebas backend nuevas: `contexto_service_test.go` con 7 casos y `contexto_handler_test.go` con 7 casos. Cubren lista vacía, negocio sin sucursales, negocio ajeno indistinguible de inexistente, propagación de error de infraestructura, contrato JSON de opciones, ausencia de roles/permisos en la respuesta, `401` sin sesión, `400` por UUID mal formado, `404` por negocio ajeno y paso de membresía vigente.
+- `npm test -- --watch=false`: correcto, 28 archivos y 84 pruebas. Antes del cierre eran 24 archivos y 54 pruebas.
+- Pruebas frontend nuevas: `contexto.service.spec.ts` con 15 casos, `contexto.guard.spec.ts` con 4 y `cambios-pendientes.service.spec.ts` con 3. Cubren selección automática con un solo negocio, restauración de par guardado, `requiere_negocio` con varios negocios, descarte de UUID malformado, descarte de sucursal ajena con caída a principal, `sin_sucursal`, cuenta sin negocios, cambio de negocio que limpia la sucursal previa, sucursal ajena ignorada, deduplicación de inicializaciones, ausencia de segunda petición tras inicializar, recarga forzada, error de red sin respaldo fijo, limpieza al cerrar sesión y revalidación por evento de otra pestaña.
+- `npm run build`: correcto; conserva los avisos preexistentes de presupuesto CSS.
+- `localStorage` se prueba con el stub `vi.stubGlobal` ya usado por `ThemeService`, por consistencia con la convención del proyecto.
+
+## Imprevistos resueltos de fase 3
+
+- El guard llamaba `inicializar()` en cada navegación, lo que repetía la petición de opciones por ruta protegida. Se resolvió con `asegurarInicializado()` y la petición en vuelo compartida.
+- El patrón de UUID guardado era laxo y aceptaba cadenas que no son UUID; se endureció.
+- Las pruebas del proyecto corren en Vitest, no en Jasmine: `toBeTrue`/`toBeFalse` no existen y `localStorage` no está disponible por defecto. Se ajustaron matchers y se adoptó el stub ya usado por `ThemeService`.
+- La versión de Node del `PATH` por omisión es v14 y Angular exige v22 o superior. Las verificaciones se ejecutaron con la instalación de `mise` en v26.5.0; no se cambió configuración del proyecto.
+
+## Pendiente de cierre de fase 3
+
+- Revisión visual y smoke multiempresa manual con dos cuentas reales quedan como verificación de usuario. El smoke automatizado equivalente está cubierto por las pruebas de contrato y aislamiento del backend.

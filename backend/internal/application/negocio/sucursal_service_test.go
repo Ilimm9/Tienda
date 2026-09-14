@@ -12,6 +12,7 @@ import (
 
 type sucursalRepositoryStub struct {
 	access        domain.ContextoNegocioSucursal
+	permisos      []string
 	items         []domain.SucursalResumen
 	detail        domain.SucursalDetalle
 	createdInput  domain.CrearSucursalInput
@@ -28,6 +29,22 @@ func (r *sucursalRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UU
 		return domain.ContextoNegocioSucursal{}, r.err
 	}
 	return r.access, nil
+}
+
+// PermisosEfectivos devuelve el catálogo completo salvo que la prueba restrinja permisos:
+// representa al propietario, cuyo rol de sistema concentra todos los permisos del negocio.
+func (r *sucursalRepositoryStub) PermisosEfectivos(context.Context, uuid.UUID, uuid.UUID) ([]string, error) {
+	if r.permisos != nil {
+		return r.permisos, nil
+	}
+	if r.access.TipoMiembro != "propietario" {
+		return []string{}, nil
+	}
+	codigos := make([]string, 0, len(domain.CatalogoPermisos))
+	for _, permiso := range domain.CatalogoPermisos {
+		codigos = append(codigos, permiso.Codigo)
+	}
+	return codigos, nil
 }
 
 func (r *sucursalRepositoryStub) Listar(context.Context, uuid.UUID, string, string) ([]domain.SucursalResumen, error) {

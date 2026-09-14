@@ -1,0 +1,99 @@
+<section class="role-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Control de acceso</span>
+      <h1>{{ editing ? 'Editar rol' : 'Nuevo rol' }}</h1>
+      <p>Elige qué acciones permite este rol dentro del negocio.</p>
+    </div>
+    <a class="secondary-button" routerLink="/roles-permisos">Volver</a>
+  </header>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando permisos…</p>
+  } @else if (rol()?.es_rol_sistema) {
+    <p class="status-message error" role="alert">
+      El rol de sistema conserva todos los permisos y no puede editarse.
+    </p>
+  } @else {
+    <form class="role-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field-row">
+        <div class="field">
+          <label for="codigo">Código</label>
+          <input
+            id="codigo"
+            type="text"
+            formControlName="codigo"
+            autocomplete="off"
+            [attr.aria-invalid]="hasError('codigo')"
+          />
+          @if (editing) {
+            <small>El código no cambia después de crear el rol.</small>
+          } @else if (hasError('codigo')) {
+            <small class="error">{{
+              fieldErrors()['codigo'] || 'Usa entre 2 y 60 caracteres.'
+            }}</small>
+          }
+        </div>
+        <div class="field">
+          <label for="nombre">Nombre</label>
+          <input
+            id="nombre"
+            type="text"
+            formControlName="nombre"
+            [attr.aria-invalid]="hasError('nombre')"
+          />
+          @if (hasError('nombre')) {
+            <small class="error">{{
+              fieldErrors()['nombre'] || 'Usa entre 2 y 120 caracteres.'
+            }}</small>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="descripcion">Descripción</label>
+        <textarea id="descripcion" rows="2" formControlName="descripcion"></textarea>
+      </div>
+
+      @if (editing) {
+        <label class="checkbox-field">
+          <input type="checkbox" formControlName="activo" />
+          <span>Rol activo</span>
+        </label>
+      }
+
+      <h2 class="section-title">Permisos</h2>
+      @for (modulo of modulos(); track modulo.codigo) {
+        <fieldset class="permission-group">
+          <legend>{{ modulo.nombre }}</legend>
+          <button type="button" class="text-button small" (click)="alternarModulo(modulo)">
+            {{ moduloCompleto(modulo) ? 'Quitar todos' : 'Seleccionar todos' }}
+          </button>
+          <div class="permission-list">
+            @for (permiso of modulo.permisos; track permiso.id) {
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  [checked]="estaSeleccionado(permiso.id)"
+                  (change)="alternarPermiso(permiso.id)"
+                />
+                <span>{{ permiso.nombre }}<code>{{ permiso.codigo }}</code></span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      }
+
+      <footer class="form-actions">
+        <a class="secondary-button" routerLink="/roles-permisos">Cancelar</a>
+        <button type="submit" class="primary-button" [disabled]="saving()">
+          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar rol' }}
+        </button>
+      </footer>
+    </form>
+  }
+</section>

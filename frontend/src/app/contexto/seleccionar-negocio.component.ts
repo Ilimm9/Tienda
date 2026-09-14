@@ -12,7 +12,7 @@ export class SeleccionarNegocioComponent {
   readonly contexto = inject(ContextoService);
   private readonly router = inject(Router);
   constructor() {
-    this.contexto.inicializar().subscribe();
+    this.contexto.asegurarInicializado().subscribe();
   }
   select(id: string): void {
     this.contexto.seleccionarNegocio(id);

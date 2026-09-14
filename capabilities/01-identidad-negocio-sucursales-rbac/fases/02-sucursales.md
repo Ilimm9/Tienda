@@ -2,10 +2,10 @@
 
 ## Estado de fase
 
-`Verificada`
+`Cerrada`
 
 Especificación reconstruida el 2026-09-11 a partir de `capabilities/_template/base.MD`, referencias visuales, código vigente y decisiones del usuario. Autorizada explícitamente para implementación el 2026-09-11.
-Implementación y verificación técnica terminadas el 2026-09-11; pendiente aceptación final del usuario.
+Implementación y verificación técnica terminadas el 2026-09-11. Cierre autorizado explícitamente por el usuario el 2026-09-12.
 
 ## Fuente de verdad y compatibilidad
 
@@ -404,7 +404,7 @@ Reglas:
 - [x] Backend, frontend y seguridad implementados.
 - [x] Contrato legacy de producto preservado.
 - [x] Pruebas y verificaciones pasan.
-- [ ] Usuario acepta resultado final.
+- [x] Usuario acepta resultado final.
 
 ## Verificación técnica de fase 2
 
@@ -430,9 +430,9 @@ Fecha: 2026-09-11.
 - Para evitar que `codigo` u otros campos internos fueran ignorados silenciosamente, el handler administrativo usa decodificación JSON estricta y rechaza campos desconocidos con `400`.
 - Una revisión inicial reutilizó un servidor Angular/HMR anterior y mostró un error circular. Se repitió en servidor y Chromium aislados: las tres rutas cargaron sin errores de runtime; no era causado por fase 2.
 
-## Pendiente de cierre de fase 2
+## Cierre de fase 2
 
-- Revisión funcional y aceptación final del usuario para cambiar el estado de `Verificada` a `Cerrada`.
+- 2026-09-12: el usuario autorizó explícitamente el cierre de la fase junto con la ejecución no supervisada de fases 4 a 8. Estado `Verificada` cambiado a `Cerrada`.
 
 ## Decisiones resueltas de fase 2
 

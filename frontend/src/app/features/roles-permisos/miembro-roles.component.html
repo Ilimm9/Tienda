@@ -1,0 +1,52 @@
+<section class="role-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Control de acceso</span>
+      <h1>Asignar roles</h1>
+      @if (miembro()) {
+        <p>
+          Define los roles de <strong>{{ miembro()?.correo }}</strong> en este negocio.
+        </p>
+      }
+    </div>
+    <a class="secondary-button" routerLink="/roles-permisos">Volver</a>
+  </header>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando roles…</p>
+  } @else if (miembro()) {
+    <div class="surface-card assign-card">
+      <div class="permission-list">
+        @for (rol of roles(); track rol.id) {
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              [checked]="estaSeleccionado(rol.id)"
+              (change)="alternar(rol.id)"
+            />
+            <span>
+              {{ rol.nombre }}
+              <code>{{ rol.codigo }}</code>
+              @if (rol.es_rol_sistema) {
+                <small>Concentra todos los permisos del negocio.</small>
+              }
+            </span>
+          </label>
+        } @empty {
+          <p class="status-message">Este negocio todavía no tiene roles activos.</p>
+        }
+      </div>
+
+      <footer class="form-actions">
+        <a class="secondary-button" routerLink="/roles-permisos">Cancelar</a>
+        <button type="button" class="primary-button" [disabled]="saving()" (click)="guardar()">
+          {{ saving() ? 'Guardando…' : 'Guardar roles' }}
+        </button>
+      </footer>
+    </div>
+  }
+</section>

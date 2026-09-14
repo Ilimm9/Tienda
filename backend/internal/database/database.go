@@ -27,11 +27,20 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseTwo(db); err != nil {
 		return err
 	}
+	if err := negocioinfra.MigratePhaseFour(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePhaseFive(db); err != nil {
+		return err
+	}
 
 	models := []interface{}{
-		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &negociodomain.Empleado{},
+		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{},
 		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
+		&negociodomain.Permiso{}, &negociodomain.PermisoRol{}, &negociodomain.RolMembresia{},
+		&negociodomain.Empleado{}, &negociodomain.InvitacionNegocio{},
+		&negociodomain.AsignacionEmpleadoSucursal{},
 		&negociodomain.Sucursal{}, &domain.Marca{}, &domain.UnidadMedida{}, &domain.Producto{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.Impuesto{},
@@ -49,6 +58,15 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := negocioinfra.MigratePhaseTwo(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePhaseFour(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePhaseFive(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePhaseSeven(db); err != nil {
 		return err
 	}
 

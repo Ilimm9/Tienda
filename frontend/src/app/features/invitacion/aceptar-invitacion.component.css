@@ -1,0 +1,38 @@
+@import '../sucursales/sucursal-shared.css';
+
+.invitation-page {
+  display: flex;
+  min-height: 70vh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.invitation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+  padding: 28px;
+}
+
+.invitation-card h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.invitation-card p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.invitation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}

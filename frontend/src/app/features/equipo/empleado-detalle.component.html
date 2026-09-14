@@ -1,0 +1,155 @@
+<section class="team-page">
+  @if (loading()) {
+    <p class="status-message" role="status">Cargando empleado…</p>
+  } @else if (error() && !empleado()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+    <a class="secondary-button back-button" routerLink="/equipo/empleados">Volver a empleados</a>
+  } @else if (empleado(); as persona) {
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">{{ persona.numero_empleado || 'Sin número' }}</span>
+        <h1>{{ persona.nombre_completo }}</h1>
+        <p>{{ persona.puesto || 'Sin puesto asignado' }}</p>
+      </div>
+      <div class="heading-actions">
+        <a class="secondary-button" routerLink="/equipo/empleados">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          Empleados
+        </a>
+        @if (puedeGestionar()) {
+          <a class="primary-button" [routerLink]="['/equipo/empleados', persona.id, 'editar']">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            Editar
+          </a>
+        }
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="detail-layout">
+      <div class="detail-main">
+        <section class="detail-card surface-card">
+          <header>
+            <i class="pi pi-id-card" aria-hidden="true"></i>
+            <h2>Identificación y contacto</h2>
+          </header>
+          <dl class="detail-grid">
+            <div>
+              <dt>Correo</dt>
+              <dd>{{ persona.correo || 'Sin correo' }}</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd>{{ persona.telefono || 'Sin teléfono' }}</dd>
+            </div>
+            <div>
+              <dt>Contratación</dt>
+              <dd>{{ persona.contratado_en ? (persona.contratado_en | date: 'longDate') : 'Sin registrar' }}</dd>
+            </div>
+            @if (persona.terminado_en) {
+              <div>
+                <dt>Terminación</dt>
+                <dd>{{ persona.terminado_en | date: 'longDate' }}</dd>
+              </div>
+            }
+            <div class="wide">
+              <dt>Cuenta</dt>
+              <dd>{{ persona.tiene_cuenta ? 'Vinculada a una membresía' : 'Todavía sin cuenta' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        @if (puedeGestionar()) {
+          <section class="detail-card surface-card">
+            <header>
+              <i class="pi pi-shield" aria-hidden="true"></i>
+              <h2>Acceso</h2>
+            </header>
+            <p class="section-hint">Sucursales asignadas y acceso al sistema.</p>
+            <div class="access-actions">
+              <a class="secondary-button" [routerLink]="['/equipo/empleados', persona.id, 'sucursales']">
+                Sucursales asignadas
+              </a>
+              @if (!persona.tiene_cuenta && puedeInvitar()) {
+                <a
+                  class="secondary-button"
+                  [routerLink]="['/equipo/invitaciones/nueva']"
+                  [queryParams]="{ empleadoId: persona.id }"
+                >
+                  Invitar
+                </a>
+              }
+            </div>
+          </section>
+
+          <section class="danger-zone surface-card">
+            <div>
+              <h2>Estado del empleado</h2>
+              <p>Cambia el estado según su situación laboral actual.</p>
+            </div>
+            <div class="state-actions">
+              @if (persona.estado !== 'activo') {
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="processing()"
+                  (click)="cambiarEstado('activo')"
+                >
+                  Marcar activo
+                </button>
+              }
+              @if (persona.estado !== 'suspendido') {
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="processing()"
+                  (click)="cambiarEstado('suspendido')"
+                >
+                  Suspender
+                </button>
+              }
+              @if (persona.estado !== 'terminado') {
+                <button
+                  type="button"
+                  class="danger-button"
+                  [disabled]="processing()"
+                  (click)="cambiarEstado('terminado')"
+                >
+                  Dar de baja
+                </button>
+              }
+            </div>
+          </section>
+        }
+      </div>
+
+      <aside class="employee-summary surface-card">
+        <div class="summary-title">
+          <span class="status-pill" [class.active]="persona.estado === 'activo'" [class.archived]="persona.estado !== 'activo'">
+            {{ persona.estado }}
+          </span>
+          <span class="relation-pill" [class.linked]="persona.tiene_cuenta">
+            {{ persona.tiene_cuenta ? 'Con cuenta' : 'Sin cuenta' }}
+          </span>
+        </div>
+        <dl>
+          <div>
+            <dt>Fecha de registro</dt>
+            <dd>{{ persona.creado_en | date: 'dd MMM yyyy' }}</dd>
+          </div>
+          <div>
+            <dt>Última modificación</dt>
+            <dd>{{ persona.actualizado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </div>
+          <div>
+            <dt>ID de empleado</dt>
+            <dd><code>{{ persona.id }}</code></dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</section>

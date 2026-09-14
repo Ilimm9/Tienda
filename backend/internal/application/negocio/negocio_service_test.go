@@ -23,6 +23,23 @@ type negocioRepositoryStub struct {
 	updateCalled  bool
 	archiveCalled bool
 	restoreCalled bool
+	permisos      []string
+}
+
+// PermisosEfectivos devuelve el catálogo completo para un propietario, que es exactamente lo que
+// concentra su rol de sistema, salvo que la prueba restrinja los permisos explícitamente.
+func (r *negocioRepositoryStub) PermisosEfectivos(context.Context, uuid.UUID, uuid.UUID) ([]string, error) {
+	if r.permisos != nil {
+		return r.permisos, nil
+	}
+	if r.detalle.TipoMiembro != "propietario" {
+		return []string{}, nil
+	}
+	codigos := make([]string, 0, len(domain.CatalogoPermisos))
+	for _, permiso := range domain.CatalogoPermisos {
+		codigos = append(codigos, permiso.Codigo)
+	}
+	return codigos, nil
 }
 
 func (r *negocioRepositoryStub) Listar(context.Context, uuid.UUID, string) ([]domain.NegocioResumen, error) {

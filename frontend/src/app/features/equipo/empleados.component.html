@@ -1,0 +1,122 @@
+<section class="team-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Equipo</span>
+      <h1>Empleados</h1>
+      <p>
+        Registra a las personas que colaboran en
+        <strong>{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong
+        >, tengan cuenta o no.
+      </p>
+    </div>
+    @if (puedeGestionar()) {
+      <a class="primary-button" [routerLink]="['nuevo']">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Nuevo empleado
+      </a>
+    }
+  </header>
+
+  <div class="team-toolbar surface-card">
+    <form class="search-field" (ngSubmit)="search()">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <label class="visually-hidden" for="employee-search">Buscar por nombre, número o correo</label>
+      <input
+        id="employee-search"
+        type="search"
+        name="buscar"
+        placeholder="Buscar por nombre, número o correo"
+        [ngModel]="buscar()"
+        (ngModelChange)="updateSearch($event)"
+      />
+      @if (buscar()) {
+        <button type="button" class="clear-search" aria-label="Limpiar búsqueda" (click)="clearSearch()">
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
+    </form>
+    <div class="status-tabs" aria-label="Filtrar empleados por estado">
+      @for (opcion of estados; track opcion.valor) {
+        <button type="button" [class.active]="estado() === opcion.valor" (click)="setEstado(opcion.valor)">
+          {{ opcion.etiqueta }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando empleados…</p>
+  } @else if (!error()) {
+    <div class="data-table-card">
+      <p-table
+        [value]="empleados()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} empleados"
+        class="app-table app-table--empleados"
+        responsiveLayout="scroll"
+      >
+        <ng-template #header>
+          <tr>
+            <th>Empleado</th>
+            <th>Puesto</th>
+            <th>Correo</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Acceso</th>
+            <th class="actions-column">Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-empleado>
+          <tr>
+            <td class="employee-name">
+              {{ empleado.nombre_completo }}
+              @if (empleado.numero_empleado) {
+                <code>{{ empleado.numero_empleado }}</code>
+              }
+            </td>
+            <td>{{ empleado.puesto || '—' }}</td>
+            <td>{{ empleado.correo || '—' }}</td>
+            <td>{{ empleado.telefono || '—' }}</td>
+            <td>
+              <span
+                class="status-pill"
+                [class.active]="empleado.estado === 'activo'"
+                [class.archived]="empleado.estado !== 'activo'"
+              >
+                {{ empleado.estado }}
+              </span>
+            </td>
+            <td>
+              <span class="account-state" [class.linked]="empleado.tiene_cuenta">
+                {{ empleado.tiene_cuenta ? 'Cuenta vinculada' : 'Sin cuenta' }}
+              </span>
+            </td>
+            <td class="actions-column">
+              <a
+                class="secondary-button table-action"
+                [routerLink]="[empleado.id]"
+                aria-label="Ver detalle del empleado"
+              >
+                <i class="pi pi-eye" aria-hidden="true"></i>
+              </a>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7" class="empty-message">
+              Aún no hay empleados registrados con este filtro.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  }
+</section>

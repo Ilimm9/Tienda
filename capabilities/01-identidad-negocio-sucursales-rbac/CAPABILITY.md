@@ -2,9 +2,9 @@
 
 ## Estado
 
-`En implementación`
+`Verificada`
 
-La estructura por fases fue aprobada el 2026-09-10. Fases 1, 1.5 y 1.6 fueron aprobadas explícitamente; fases posteriores requieren aprobación independiente.
+La estructura por fases fue aprobada el 2026-09-10. El 2026-09-12 el usuario autorizó cerrar la fase 3 y ejecutar las fases 4 a 8 sin supervisión, consultando solo decisiones importantes.
 
 ## Control
 
@@ -12,7 +12,7 @@ La estructura por fases fue aprobada el 2026-09-10. Fases 1, 1.5 y 1.6 fueron ap
 - Fecha de creación: 2026-09-10
 - Última revisión estructural: 2026-09-11
 - Aprobación de estructura: Confirmada
-- Aprobación de implementación: Fases 1, 1.5 y 1.6 aprobadas explícitamente el 2026-09-10; fase 2 aprobada explícitamente el 2026-09-11
+- Aprobación de implementación: Fases 1, 1.5 y 1.6 aprobadas explícitamente el 2026-09-10; fase 2 aprobada explícitamente el 2026-09-11; fase 3 aprobada el 2026-09-11 y cerrada el 2026-09-12; fases 4 a 8 autorizadas para ejecución no supervisada el 2026-09-12
 - Dependencias generales: autenticación existente con JWT en cookie
 
 ## Objetivo
@@ -127,13 +127,13 @@ Reglas obligatorias:
 | 1    | [Negocios](fases/01-negocios.md)                       | Cerrada     | Autenticación actual            |
 | 1.5  | [Organización por dominios](fases/01.5-organizacion-backend.md)      | Cerrada     | Negocios verificada             |
 | 1.6  | [Feedback global del frontend](fases/01.6-feedback-global-frontend.md)   | Cerrada     | Fase 1.5 cerrada                |
-| 2    | [Sucursales](fases/02-sucursales.md)                     | Verificada  | Fases 1, 1.5 y 1.6 cerradas     |
-| 3    | [Contexto activo](fases/03-contexto-activo.md)                | En implementación | Sucursales verificada; excepción aprobada |
-| 4    | [RBAC](fases/04-rbac.md)                           | Pendiente   | Contexto activo cerrado         |
-| 5    | [Empleados](fases/05-empleados.md)                      | Pendiente   | RBAC cerrado                    |
-| 6    | [Invitaciones](fases/06-invitaciones.md)                   | Pendiente   | Empleados y RBAC cerrados       |
-| 7    | [Asignaciones empleado-sucursal](fases/07-asignaciones-empleado-sucursal.md) | Pendiente   | Empleados y sucursales cerrados |
-| 8    | [Integración y endurecimiento](fases/08-integracion-endurecimiento.md)   | Pendiente   | Fases 1, 1.5, 1.6 y 2 a 7 cerradas |
+| 2    | [Sucursales](fases/02-sucursales.md)                     | Cerrada     | Fases 1, 1.5 y 1.6 cerradas     |
+| 3    | [Contexto activo](fases/03-contexto-activo.md)                | Cerrada     | Sucursales cerrada              |
+| 4    | [RBAC](fases/04-rbac.md)                           | Verificada   | Contexto activo cerrado         |
+| 5    | [Empleados](fases/05-empleados.md)                      | Verificada   | RBAC cerrado                    |
+| 6    | [Invitaciones](fases/06-invitaciones.md)                   | Verificada   | Empleados y RBAC cerrados       |
+| 7    | [Asignaciones empleado-sucursal](fases/07-asignaciones-empleado-sucursal.md) | Verificada   | Empleados y sucursales cerrados |
+| 8    | [Integración y endurecimiento](fases/08-integracion-endurecimiento.md)   | Verificada   | Fases 1, 1.5, 1.6 y 2 a 7 cerradas |
 
 ---
 

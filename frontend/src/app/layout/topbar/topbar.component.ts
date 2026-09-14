@@ -2,7 +2,9 @@ import { Component, HostListener, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../features/auth/auth.service';
+import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
 import { ContextoService } from '../../contexto/contexto.service';
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { LayoutStateService } from '../layout-state.service';
 import { ThemeService } from '../theme.service';
 
@@ -16,6 +18,8 @@ export class TopbarComponent {
   readonly contexto = inject(ContextoService);
   readonly layout = inject(LayoutStateService);
   readonly theme = inject(ThemeService);
+  private readonly feedback = inject(FeedbackService);
+  private readonly cambiosPendientes = inject(CambiosPendientesService);
   private readonly router = inject(Router);
 
   readonly accountOpen = signal(false);
@@ -49,14 +53,39 @@ export class TopbarComponent {
     this.contextOpen.update((open) => !open);
   }
 
-  cambiarNegocio(id: string): void {
+  async cambiarNegocio(id: string): Promise<void> {
+    if (id === this.contexto.negocio()?.id) {
+      this.contextOpen.set(false);
+      return;
+    }
+    if (!(await this.confirmarDescartarCambios())) return;
     this.contexto.seleccionarNegocio(id);
+    this.contextOpen.set(false);
+    const negocio = this.contexto.negocio();
+    if (negocio) this.feedback.info('Negocio activo', negocio.nombre_comercial);
+    // Se navega a inicio para no conservar vistas cargadas con el negocio anterior.
     void this.router.navigate(['/inicio']);
   }
 
-  cambiarSucursal(id: string): void {
+  async cambiarSucursal(id: string): Promise<void> {
+    if (id === this.contexto.sucursal()?.id) {
+      this.contextOpen.set(false);
+      return;
+    }
+    if (!(await this.confirmarDescartarCambios())) return;
     this.contexto.seleccionarSucursal(id);
     this.contextOpen.set(false);
+  }
+
+  /** Solicita confirmación una sola vez cuando algún componente declara trabajo sin guardar. */
+  private async confirmarDescartarCambios(): Promise<boolean> {
+    if (!this.cambiosPendientes.hayPendientes()) return true;
+    return this.feedback.confirmDanger({
+      titulo: 'Tienes cambios sin guardar',
+      descripcion: 'Si cambias de contexto se perderán los datos que capturaste.',
+      textoConfirmar: 'Sí, descartar',
+      textoCancelar: 'Seguir editando',
+    });
   }
 
   @HostListener('document:keydown.escape')

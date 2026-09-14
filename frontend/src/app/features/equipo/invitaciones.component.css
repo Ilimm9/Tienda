@@ -1,0 +1,81 @@
+@import './empleados.component.css';
+
+.invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.invite-form h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field select {
+  min-height: 42px;
+  padding: 9px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+
+.invite-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+}
+
+.invite-link code {
+  flex: 1;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.invite-form small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.status-pill.estado-pendiente {
+  color: var(--warning, #92400e);
+  background: var(--warning-soft, #fef3c7);
+}
+
+.status-pill.estado-aceptada {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.status-pill.estado-expirada,
+.status-pill.estado-cancelada {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+}

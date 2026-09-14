@@ -22,6 +22,11 @@ func NewNegocioRepository(db *gorm.DB) *NegocioRepository {
 	return &NegocioRepository{db: db}
 }
 
+// PermisosEfectivos comparte la cadena de autorización de fase 4 con el resto del dominio.
+func (r *NegocioRepository) PermisosEfectivos(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]string, error) {
+	return permisosEfectivos(ctx, r.db, usuarioID, negocioID)
+}
+
 func (r *NegocioRepository) Listar(ctx context.Context, usuarioID uuid.UUID, estado string) ([]domain.NegocioResumen, error) {
 	items := make([]domain.NegocioResumen, 0)
 	err := r.db.WithContext(ctx).Table("negocios AS n").
@@ -103,7 +108,12 @@ func (r *NegocioRepository) Crear(ctx context.Context, usuarioID uuid.UUID, slug
 			NegocioID: negocioID, UsuarioID: usuarioID, TipoMiembro: "propietario",
 			Estado: "activo", SeUnioEn: &now,
 		}
-		return tx.Create(&membresia).Error
+		if err := tx.Create(&membresia).Error; err != nil {
+			return err
+		}
+		// Sin esto, un negocio creado en caliente no tendría rol de sistema y su propietario
+		// se quedaría sin permisos hasta el siguiente arranque de la API.
+		return sembrarRolPropietarioDeNegocio(tx, negocioID, membresia.ID, usuarioID)
 	})
 	if err != nil {
 		return domain.NegocioDetalle{}, err

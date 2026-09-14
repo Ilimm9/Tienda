@@ -7,7 +7,7 @@ import { ContextoService } from './contexto.service';
 export const contextoGuard: CanActivateFn = () => {
   const contexto = inject(ContextoService);
   const router = inject(Router);
-  return contexto.inicializar().pipe(
+  return contexto.asegurarInicializado().pipe(
     map((estado) => estado === 'listo' || estado === 'sin_sucursal'
       ? true
       : router.createUrlTree([estado === 'error' ? '/negocios' : '/seleccionar-negocio'])),
