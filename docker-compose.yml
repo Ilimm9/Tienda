@@ -1,0 +1,86 @@
+name: tienda
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-tienda}
+    ports:
+      - "${DB_PUBLIC_PORT:-5433}:5432"
+    volumes:
+      # Nombre distinto de `tienda_postgres_data` a proposito: ese volumen
+      # pertenece a los `docker run` sueltos y no debe compartirse con el compose.
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-tienda}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Valor neutro a proposito: "development" sembraria datos demo y
+      # "production" marcaria la cookie de sesion como Secure (se pierde sobre HTTP).
+      APP_ENV: ${APP_ENV:-docker}
+      APP_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-tienda}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en el archivo .env}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8090}
+      LOGIN_HEADER_IMAGE_URL: ${LOGIN_HEADER_IMAGE_URL:-}
+      PRECIOCHECK_API_KEY: ${PRECIOCHECK_API_KEY:-}
+      PRECIOCHECK_BASE_URL: ${PRECIOCHECK_BASE_URL:-https://preciocheck.com/api/v1}
+      UPCITEMDB_BASE_URL: ${UPCITEMDB_BASE_URL:-https://api.upcitemdb.com/prod/trial}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    # Sin `ports:` a proposito: solo nginx lo alcanza por la red interna.
+    # Para depurar directo, descomentar:
+    # ports:
+    #   - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8090}:80"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["tools"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@tienda.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "${PGADMIN_PORT:-5052}:80"
+    volumes:
+      - pgadmin_config:/var/lib/pgadmin
+
+volumes:
+  db_data:
+  pgadmin_config:
