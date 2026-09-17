@@ -4,6 +4,9 @@ export const SUCURSALES_ROUTES: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: '/negocios',
+    loadComponent: () =>
+      import('../../contexto/ir-a-sucursales.component').then(
+        (module) => module.IrASucursalesComponent,
+      ),
   },
 ];

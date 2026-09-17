@@ -1,35 +1,58 @@
 import { Routes } from '@angular/router';
 
-const placeholder = () =>
-  import('../../shared/ui/section-placeholder/section-placeholder.component').then(
-    (module) => module.SectionPlaceholderComponent,
-  );
+import { contextoGuard } from '../../contexto/contexto.guard';
 
 export const EQUIPO_ROUTES: Routes = [
   {
     path: '',
+    canActivateChild: [contextoGuard],
     data: { breadcrumb: 'Equipo' },
     children: [
       { path: '', redirectTo: 'empleados', pathMatch: 'full' },
       {
         path: 'empleados',
-        data: {
-          breadcrumb: 'Empleados',
-          title: 'Empleados',
-          description: 'Administra las personas que colaboran en tus negocios y sucursales.',
-          icon: 'pi pi-users',
-        },
-        loadComponent: placeholder,
+        data: { breadcrumb: 'Empleados' },
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./empleados.component').then((module) => module.EmpleadosComponent),
+          },
+          {
+            path: 'nuevo',
+            data: { breadcrumb: 'Nuevo empleado' },
+            loadComponent: () =>
+              import('./empleado-form.component').then((module) => module.EmpleadoFormComponent),
+          },
+          {
+            path: ':empleadoId',
+            data: { breadcrumb: 'Detalle' },
+            loadComponent: () =>
+              import('./empleado-detalle.component').then(
+                (module) => module.EmpleadoDetalleComponent,
+              ),
+          },
+          {
+            path: ':empleadoId/sucursales',
+            data: { breadcrumb: 'Sucursales asignadas' },
+            loadComponent: () =>
+              import('./empleado-sucursales.component').then(
+                (module) => module.EmpleadoSucursalesComponent,
+              ),
+          },
+          {
+            path: ':empleadoId/editar',
+            data: { breadcrumb: 'Editar empleado' },
+            loadComponent: () =>
+              import('./empleado-form.component').then((module) => module.EmpleadoFormComponent),
+          },
+        ],
       },
       {
         path: 'invitaciones',
-        data: {
-          breadcrumb: 'Invitaciones',
-          title: 'Invitaciones',
-          description: 'Gestiona el acceso y registro de nuevos integrantes del equipo.',
-          icon: 'pi pi-send',
-        },
-        loadComponent: placeholder,
+        data: { breadcrumb: 'Invitaciones' },
+        loadComponent: () =>
+          import('./invitaciones.component').then((module) => module.InvitacionesComponent),
       },
     ],
   },

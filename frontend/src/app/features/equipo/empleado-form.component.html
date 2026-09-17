@@ -1,0 +1,102 @@
+<section class="team-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Equipo</span>
+      <h1>{{ editing ? 'Editar empleado' : 'Nuevo empleado' }}</h1>
+      <p>Un empleado puede registrarse antes de tener cuenta en la plataforma.</p>
+    </div>
+    <a class="secondary-button" routerLink="/equipo/empleados">Volver</a>
+  </header>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando empleado…</p>
+  } @else {
+    <form class="team-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="field-row">
+        <div class="field">
+          <label for="numero_empleado">Número interno</label>
+          <input id="numero_empleado" type="text" formControlName="numero_empleado" autocomplete="off" />
+          @if (fieldErrors()['numero_empleado']) {
+            <small class="error">{{ fieldErrors()['numero_empleado'] }}</small>
+          } @else {
+            <small>Opcional. Debe ser único dentro del negocio.</small>
+          }
+        </div>
+        <div class="field">
+          <label for="puesto">Puesto</label>
+          <input id="puesto" type="text" formControlName="puesto" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" type="text" formControlName="nombre" [attr.aria-invalid]="hasError('nombre')" />
+          @if (hasError('nombre')) {
+            <small class="error">{{ fieldErrors()['nombre'] || 'Usa entre 2 y 100 caracteres.' }}</small>
+          }
+        </div>
+        <div class="field">
+          <label for="segundo_nombre">Segundo nombre</label>
+          <input id="segundo_nombre" type="text" formControlName="segundo_nombre" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="primer_apellido">Primer apellido</label>
+          <input
+            id="primer_apellido"
+            type="text"
+            formControlName="primer_apellido"
+            [attr.aria-invalid]="hasError('primer_apellido')"
+          />
+          @if (hasError('primer_apellido')) {
+            <small class="error">{{
+              fieldErrors()['primer_apellido'] || 'Usa entre 2 y 100 caracteres.'
+            }}</small>
+          }
+        </div>
+        <div class="field">
+          <label for="segundo_apellido">Segundo apellido</label>
+          <input id="segundo_apellido" type="text" formControlName="segundo_apellido" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="correo">Correo</label>
+          <input id="correo" type="email" formControlName="correo" [attr.aria-invalid]="hasError('correo')" />
+          @if (fieldErrors()['correo']) {
+            <small class="error">{{ fieldErrors()['correo'] }}</small>
+          } @else {
+            <small>Se usará para invitarlo cuando corresponda.</small>
+          }
+        </div>
+        <div class="field">
+          <label for="telefono">Teléfono</label>
+          <input id="telefono" type="tel" formControlName="telefono" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="contratado_en">Fecha de contratación</label>
+        <input id="contratado_en" type="date" formControlName="contratado_en" />
+        @if (fieldErrors()['contratado_en']) {
+          <small class="error">{{ fieldErrors()['contratado_en'] }}</small>
+        }
+      </div>
+
+      <footer class="form-actions">
+        <a class="secondary-button" routerLink="/equipo/empleados">Cancelar</a>
+        <button type="submit" class="primary-button" [disabled]="saving()">
+          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar empleado' }}
+        </button>
+      </footer>
+    </form>
+  }
+</section>

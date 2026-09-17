@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { ProductosComponent } from './productos.component';
 
@@ -12,7 +14,17 @@ describe('ProductosComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ProductosComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ContextoService,
+          useValue: {
+            negocio: signal({ id: environment.defaultBusinessId }),
+            sucursal: signal(null),
+          },
+        },
+      ],
     });
     component = TestBed.createComponent(ProductosComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);

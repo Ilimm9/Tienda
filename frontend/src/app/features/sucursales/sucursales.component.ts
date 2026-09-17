@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { NegocioDetalle } from '../negocios/negocio.models';
 import { NegocioService } from '../negocios/negocio.service';
@@ -21,6 +22,7 @@ export class SucursalesComponent {
   private readonly sucursalService = inject(SucursalService);
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
+  private readonly contexto = inject(ContextoService);
   private readonly route = inject(ActivatedRoute);
 
   readonly negocioId = this.route.snapshot.paramMap.get('negocioId') ?? '';
@@ -72,6 +74,7 @@ export class SucursalesComponent {
       next: () => {
         this.processingId.set(null);
         this.feedback.success('Sucursal archivada');
+        this.contexto.recargar().subscribe();
         this.load();
       },
       error: (response: HttpErrorResponse) => {
@@ -90,6 +93,7 @@ export class SucursalesComponent {
       next: () => {
         this.processingId.set(null);
         this.feedback.success('Sucursal restaurada');
+        this.contexto.recargar().subscribe();
         this.load();
       },
       error: (response: HttpErrorResponse) => {

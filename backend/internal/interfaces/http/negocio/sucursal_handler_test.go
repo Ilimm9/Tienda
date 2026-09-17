@@ -26,6 +26,17 @@ type handlerSucursalRepositoryStub struct {
 func (r *handlerSucursalRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UUID, uuid.UUID) (domain.ContextoNegocioSucursal, error) {
 	return r.access, nil
 }
+func (r *handlerSucursalRepositoryStub) PermisosEfectivos(context.Context, uuid.UUID, uuid.UUID) ([]string, error) {
+	if r.access.TipoMiembro != "propietario" {
+		return []string{}, nil
+	}
+	codigos := make([]string, 0, len(domain.CatalogoPermisos))
+	for _, permiso := range domain.CatalogoPermisos {
+		codigos = append(codigos, permiso.Codigo)
+	}
+	return codigos, nil
+}
+
 func (*handlerSucursalRepositoryStub) Listar(context.Context, uuid.UUID, string, string) ([]domain.SucursalResumen, error) {
 	return []domain.SucursalResumen{}, nil
 }

@@ -148,6 +148,75 @@ p-table.app-table--providers td:nth-child(2) {
   width: 25%;
 }
 
+/* Empleados: empleado | puesto | correo | telefono | estado | acceso | acciones */
+p-table.app-table--empleados th:first-child,
+p-table.app-table--empleados td:first-child {
+  min-width: 12rem;
+}
+
+p-table.app-table--empleados th:nth-last-child(2),
+p-table.app-table--empleados td:nth-last-child(2) {
+  width: 10rem;
+  white-space: nowrap;
+}
+
+p-table.app-table--empleados th:last-child,
+p-table.app-table--empleados td:last-child {
+  width: 6rem;
+  text-align: center;
+}
+
+/* Invitaciones: correo | empleado | rol | estado | vence | aceptada | acciones */
+p-table.app-table--invitaciones th:first-child,
+p-table.app-table--invitaciones td:first-child {
+  min-width: 12rem;
+}
+
+p-table.app-table--invitaciones th:last-child,
+p-table.app-table--invitaciones td:last-child {
+  width: 8rem;
+  text-align: center;
+}
+
+/* Roles: nombre | descripcion | permisos | miembros | estado | acciones */
+p-table.app-table--roles th:first-child,
+p-table.app-table--roles td:first-child {
+  min-width: 11rem;
+}
+
+p-table.app-table--roles th:nth-child(2),
+p-table.app-table--roles td:nth-child(2) {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+p-table.app-table--roles th:nth-child(3),
+p-table.app-table--roles td:nth-child(3),
+p-table.app-table--roles th:nth-child(4),
+p-table.app-table--roles td:nth-child(4) {
+  width: 6rem;
+  text-align: center;
+}
+
+p-table.app-table--roles th:last-child,
+p-table.app-table--roles td:last-child {
+  width: 8rem;
+  text-align: center;
+}
+
+/* Miembros: correo | tipo | roles | estado | acciones */
+p-table.app-table--miembros th:first-child,
+p-table.app-table--miembros td:first-child {
+  min-width: 12rem;
+}
+
+p-table.app-table--miembros th:last-child,
+p-table.app-table--miembros td:last-child {
+  width: 8rem;
+  text-align: center;
+}
+
 p-table.app-table .p-paginator {
   display: flex;
   box-sizing: border-box;

@@ -11,8 +11,6 @@ type MembresiaNegocio struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	NegocioID     uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_membresia_negocio_usuario" json:"negocio_id"`
 	UsuarioID     uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_membresia_negocio_usuario" json:"usuario_id"`
-	EmpleadoID    *uuid.UUID `gorm:"type:uuid" json:"empleado_id,omitempty"`
-	RolID         *uuid.UUID `gorm:"type:uuid" json:"rol_id,omitempty"`
 	TipoMiembro   string     `gorm:"type:varchar(30);not null;default:'miembro';index" json:"tipo_miembro"`
 	Estado        string     `gorm:"type:varchar(30);not null;default:'activo';index" json:"estado"`
 	SeUnioEn      *time.Time `json:"se_unio_en,omitempty"`

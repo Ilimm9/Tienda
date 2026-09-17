@@ -31,6 +31,7 @@ type ErrorValidacion struct {
 func (e *ErrorValidacion) Error() string { return "los datos del negocio no son válidos" }
 
 type NegocioRepository interface {
+	PermisosEfectivos(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]string, error)
 	Listar(ctx context.Context, usuarioID uuid.UUID, estado string) ([]domain.NegocioResumen, error)
 	ObtenerAccesible(ctx context.Context, usuarioID, negocioID uuid.UUID) (domain.NegocioDetalle, error)
 	ExisteSlug(ctx context.Context, slug string) (bool, error)
@@ -81,12 +82,11 @@ func (s *NegocioService) Crear(ctx context.Context, usuarioID uuid.UUID, input d
 }
 
 func (s *NegocioService) Actualizar(ctx context.Context, usuarioID, negocioID uuid.UUID, input domain.ActualizarNegocioInput) (domain.NegocioDetalle, error) {
-	detalle, err := s.Obtener(ctx, usuarioID, negocioID)
-	if err != nil {
+	if _, err := s.Obtener(ctx, usuarioID, negocioID); err != nil {
 		return domain.NegocioDetalle{}, err
 	}
-	if detalle.TipoMiembro != "propietario" {
-		return domain.NegocioDetalle{}, ErrNegocioProhibido
+	if err := s.autorizar(ctx, usuarioID, negocioID, domain.PermisoNegocioEditar); err != nil {
+		return domain.NegocioDetalle{}, err
 	}
 	if !actualizacionTieneCampos(input) {
 		return domain.NegocioDetalle{}, ErrNegocioSinCambios
@@ -106,8 +106,8 @@ func (s *NegocioService) Archivar(ctx context.Context, usuarioID, negocioID uuid
 	if err != nil {
 		return err
 	}
-	if detalle.TipoMiembro != "propietario" {
-		return ErrNegocioProhibido
+	if err := s.autorizar(ctx, usuarioID, negocioID, domain.PermisoNegocioArchivar); err != nil {
+		return err
 	}
 	if detalle.Estado == "archivado" {
 		return ErrEstadoNegocio
@@ -120,8 +120,8 @@ func (s *NegocioService) Restaurar(ctx context.Context, usuarioID, negocioID uui
 	if err != nil {
 		return domain.NegocioDetalle{}, err
 	}
-	if detalle.TipoMiembro != "propietario" {
-		return domain.NegocioDetalle{}, ErrNegocioProhibido
+	if err := s.autorizar(ctx, usuarioID, negocioID, domain.PermisoNegocioArchivar); err != nil {
+		return domain.NegocioDetalle{}, err
 	}
 	if detalle.Estado == "activo" {
 		return domain.NegocioDetalle{}, ErrEstadoNegocio
@@ -363,4 +363,18 @@ func slugNegocio(value string) string {
 		slug = strings.TrimRight(slug[:110], "-")
 	}
 	return slug
+}
+
+// autorizar sustituye la regla temporal de fase 1 basada en `tipo_miembro` por permisos de fase 4.
+func (s *NegocioService) autorizar(ctx context.Context, usuarioID, negocioID uuid.UUID, permiso string) error {
+	permisos, err := s.negocios.PermisosEfectivos(ctx, usuarioID, negocioID)
+	if err != nil {
+		return err
+	}
+	for _, actual := range permisos {
+		if actual == permiso {
+			return nil
+		}
+	}
+	return ErrNegocioProhibido
 }

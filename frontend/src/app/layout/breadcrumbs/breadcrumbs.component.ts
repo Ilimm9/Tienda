@@ -40,7 +40,8 @@ export class BreadcrumbsComponent {
       const routePath = currentRoute.url.map((segment) => segment.path).join('/');
       if (routePath) currentUrl += `/${routePath}`;
 
-      const label = currentRoute.data['breadcrumb'];
+      // const label = currentRoute.data['breadcrumb'];
+      const label = currentRoute.routeConfig?.data?.['breadcrumb'];
       if (typeof label === 'string' && label) {
         breadcrumbs.push({ label, url: currentUrl || '/' });
       }

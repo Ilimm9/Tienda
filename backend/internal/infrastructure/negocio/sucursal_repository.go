@@ -23,6 +23,11 @@ func NewSucursalRepository(db *gorm.DB) *SucursalRepository {
 	return &SucursalRepository{db: db}
 }
 
+// PermisosEfectivos comparte la cadena de autorización de fase 4 con el resto del dominio.
+func (r *SucursalRepository) PermisosEfectivos(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]string, error) {
+	return permisosEfectivos(ctx, r.db, usuarioID, negocioID)
+}
+
 func (r *SucursalRepository) ObtenerContextoNegocio(ctx context.Context, usuarioID, negocioID uuid.UUID) (domain.ContextoNegocioSucursal, error) {
 	var access domain.ContextoNegocioSucursal
 	err := r.db.WithContext(ctx).Table("negocios AS n").

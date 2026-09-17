@@ -1,0 +1,98 @@
+<section class="team-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Equipo</span>
+      <h1>Sucursales asignadas</h1>
+      @if (empleado(); as persona) {
+        <p>Define dónde opera <strong>{{ persona.nombre_completo }}</strong>.</p>
+      }
+    </div>
+    <a class="secondary-button" [routerLink]="['/equipo/empleados', empleadoId]">Volver</a>
+  </header>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando asignaciones…</p>
+  } @else if (!error()) {
+    @if (puedeEditar()) {
+      <div class="surface-card assign-form">
+        <h2>Asignar una sucursal</h2>
+        @if (disponibles().length) {
+          <div class="field-row">
+            <div class="field">
+              <label for="sucursal">Sucursal</label>
+              <select id="sucursal" [(ngModel)]="sucursalSeleccionada">
+                <option value="">Selecciona…</option>
+                @for (sucursal of disponibles(); track sucursal.id) {
+                  <option [value]="sucursal.id">{{ sucursal.codigo }} — {{ sucursal.nombre }}</option>
+                }
+              </select>
+            </div>
+            <label class="checkbox-field">
+              <input type="checkbox" [(ngModel)]="comoPrincipal" />
+              <span>Marcar como principal</span>
+            </label>
+            <button
+              type="button"
+              class="primary-button"
+              [disabled]="!sucursalSeleccionada || processingId() === 'nueva'"
+              (click)="asignar()"
+            >
+              Asignar
+            </button>
+          </div>
+        } @else {
+          <p class="status-message">
+            Este empleado ya está asignado a todas las sucursales activas del negocio.
+          </p>
+        }
+      </div>
+    }
+
+    <div class="team-grid">
+      @for (asignacion of asignaciones(); track asignacion.id) {
+        <article class="team-card surface-card">
+          <header>
+            <div>
+              <h3>{{ asignacion.nombre_sucursal }}</h3>
+              <code>{{ asignacion.codigo_sucursal }}</code>
+            </div>
+            @if (asignacion.es_principal) {
+              <span class="relation-pill">Principal</span>
+            }
+          </header>
+          <dl class="team-data">
+            <div><dt>Asignada</dt><dd>{{ asignacion.asignado_en | date: 'mediumDate' }}</dd></div>
+          </dl>
+          @if (puedeEditar()) {
+            <footer>
+              @if (!asignacion.es_principal) {
+                <button
+                  type="button"
+                  class="text-button"
+                  [disabled]="processingId() === asignacion.id"
+                  (click)="marcarPrincipal(asignacion)"
+                >
+                  Hacer principal
+                </button>
+              }
+              <button
+                type="button"
+                class="text-button danger-text"
+                [disabled]="processingId() === asignacion.id"
+                (click)="retirar(asignacion)"
+              >
+                Retirar
+              </button>
+            </footer>
+          }
+        </article>
+      } @empty {
+        <p class="status-message">Este empleado todavía no tiene sucursales asignadas.</p>
+      }
+    </div>
+  }
+</section>

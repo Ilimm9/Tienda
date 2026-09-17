@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { NegocioDetalle } from '../negocios/negocio.models';
 import { NegocioService } from '../negocios/negocio.service';
@@ -20,6 +21,7 @@ export class SucursalDetalleComponent {
   private readonly sucursalService = inject(SucursalService);
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
+  private readonly contexto = inject(ContextoService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -51,6 +53,7 @@ export class SucursalDetalleComponent {
       next: () => {
         this.processing.set(false);
         this.feedback.success('Sucursal archivada');
+        this.contexto.recargar().subscribe();
         void this.router.navigate(['/negocios', this.negocioId, 'sucursales'], {
           queryParams: { estado: 'archivado' },
         });
@@ -73,6 +76,7 @@ export class SucursalDetalleComponent {
         this.processing.set(false);
         this.branch.set(branch);
         this.feedback.success('Sucursal restaurada');
+        this.contexto.recargar().subscribe();
       },
       error: (response: HttpErrorResponse) => {
         this.processing.set(false);
