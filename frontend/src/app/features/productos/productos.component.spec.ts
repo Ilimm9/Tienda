@@ -2,14 +2,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
+import { ProductRow } from './product.models';
 import { ProductosComponent } from './productos.component';
 
 describe('ProductosComponent', () => {
   let component: ProductosComponent;
   let http: HttpTestingController;
+  const router = { navigate: vi.fn().mockResolvedValue(true) };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -24,6 +27,7 @@ describe('ProductosComponent', () => {
             sucursal: signal(null),
           },
         },
+        { provide: Router, useValue: router },
       ],
     });
     component = TestBed.createComponent(ProductosComponent).componentInstance;
@@ -41,11 +45,14 @@ describe('ProductosComponent', () => {
       .flush([{ id: 'sucursal-1', nombre: 'Tienda prueba' }]);
     http.expectOne(`${environment.apiUrl}/catalogo/unidades-medida`)
       .flush([{ id: 'unidad-ml', nombre: 'Mililitro', codigo: 'ml', simbolo: 'ml' }]);
+    router.navigate.mockClear();
   });
 
   afterEach(() => http.verify());
 
   it('fills compatible fields and keeps them editable', () => {
+    expect(component.loading()).toBe(false);
+
     component.productForm.controls.codigo_barras.setValue('7501055303038');
     component.lookupProduct();
 
@@ -129,5 +136,15 @@ describe('ProductosComponent', () => {
     expect(component.importFile).toBeNull();
     expect(component.importResult()).toBeNull();
     expect(component.importPreview()).toBeNull();
+  });
+
+  it('navigates to the dedicated product pages instead of opening dialogs', () => {
+    component.navigateToCreate();
+    component.navigateToImport();
+    component.navigateToEdit({ id: 'producto-1' } as ProductRow);
+
+    expect(router.navigate).toHaveBeenNthCalledWith(1, ['/catalogo/productos/nuevo']);
+    expect(router.navigate).toHaveBeenNthCalledWith(2, ['/catalogo/productos/importar']);
+    expect(router.navigate).toHaveBeenNthCalledWith(3, ['/catalogo/productos', 'producto-1', 'editar']);
   });
 });

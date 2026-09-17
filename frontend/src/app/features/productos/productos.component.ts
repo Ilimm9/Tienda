@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -20,7 +20,6 @@ import { ProductosService } from './productos.service';
     ButtonModule,
     FormsModule,
     ReactiveFormsModule,
-    DialogModule,
     InputTextModule,
     SelectModule,
     TableModule,
@@ -33,6 +32,11 @@ export class ProductosComponent {
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private readonly router = inject(Router, { optional: true });
+
+  readonly pageMode =
+    (this.route?.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ?? 'list';
 
   readonly products = signal<ProductRow[]>([]);
   readonly loading = signal(true);
@@ -60,9 +64,7 @@ export class ProductosComponent {
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
   private brandsLoaded = false;
-  dialogVisible = false;
   formError: string | null = null;
-  importDialogVisible = false;
   importFile: File | null = null;
   importDropActive = false;
   importBranchId = '';
@@ -85,7 +87,15 @@ export class ProductosComponent {
   });
 
   constructor() {
-    this.loadProducts();
+    if (this.pageMode === 'list') {
+      this.loadProducts();
+    } else if (this.pageMode === 'create') {
+      this.openCreateDialog();
+    } else if (this.pageMode === 'import') {
+      this.openImportDialog();
+    } else {
+      this.loadProductForEdit();
+    }
   }
 
   private get negocioID(): string {
@@ -107,7 +117,44 @@ export class ProductosComponent {
     });
   }
 
+  isListPage(): boolean {
+    return this.pageMode === 'list';
+  }
+
+  isFormPage(): boolean {
+    return this.pageMode === 'create' || this.pageMode === 'edit';
+  }
+
+  isImportPage(): boolean {
+    return this.pageMode === 'import';
+  }
+
+  private loadProductForEdit(): void {
+    const productId = this.route?.snapshot.paramMap.get('productoId');
+    if (!productId) {
+      this.navigate(['/catalogo/productos']);
+      return;
+    }
+    this.loading.set(true);
+    this.productosService.listByBusiness(this.negocioID).subscribe({
+      next: ({ items }) => {
+        const product = (items ?? []).find((item) => item.id === productId);
+        this.loading.set(false);
+        if (!product) {
+          this.error.set('No fue posible encontrar el producto solicitado.');
+          return;
+        }
+        this.openEditDialog(product);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('No fue posible cargar el producto.');
+      },
+    });
+  }
+
   openCreateDialog(): void {
+    this.loading.set(false);
     const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
       nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
@@ -133,7 +180,6 @@ export class ProductosComponent {
     this.categoriesLoaded = false;
     this.brandsLoaded = false;
     this.formError = null;
-    this.dialogVisible = true;
     this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => {
         this.categories.set(items);
@@ -203,7 +249,6 @@ export class ProductosComponent {
     });
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
-    this.dialogVisible = true;
     this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => this.categories.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
@@ -233,7 +278,20 @@ export class ProductosComponent {
     });
   }
 
+  navigateToCreate(): void {
+    this.navigate(['/catalogo/productos/nuevo']);
+  }
+
+  navigateToEdit(product: ProductRow): void {
+    this.navigate(['/catalogo/productos', product.id, 'editar']);
+  }
+
+  navigateToImport(): void {
+    this.navigate(['/catalogo/productos/importar']);
+  }
+
   openImportDialog(): void {
+    this.loading.set(false);
     this.importFile = null;
     this.importBranchId = '';
     this.importDropActive = false;
@@ -241,7 +299,6 @@ export class ProductosComponent {
     this.importResult.set(null);
     this.importPreview.set(null);
     this.importBranches.set([]);
-    this.importDialogVisible = true;
     this.productosService.listBranches(this.negocioID).subscribe({
       next: (items) => {
         this.importBranches.set(items);
@@ -316,12 +373,6 @@ export class ProductosComponent {
         this.importError.set(response.error?.mensaje ?? 'No fue posible validar el archivo.');
       },
     });
-  }
-
-  loadNewImport(input: HTMLInputElement): void {
-    if (this.importing()) return;
-    this.setImportFile(null);
-    input.click();
   }
 
   importExistingProducts(): void {
@@ -489,7 +540,11 @@ export class ProductosComponent {
   }
 
   closeCreateDialog(): void {
-    if (!this.saving()) this.dialogVisible = false;
+    if (!this.saving()) this.navigate(['/catalogo/productos']);
+  }
+
+  private navigate(commands: string[]): void {
+    void this.router?.navigate(commands);
   }
 
   hasError(field: string): boolean {
@@ -544,8 +599,7 @@ export class ProductosComponent {
     request.subscribe({
       next: () => {
         this.saving.set(false);
-        this.dialogVisible = false;
-        this.loadProducts();
+        this.navigate(['/catalogo/productos']);
       },
       error: (response) => {
         this.saving.set(false);

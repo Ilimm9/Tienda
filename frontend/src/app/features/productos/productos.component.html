@@ -1,3 +1,4 @@
+@if (isListPage()) {
 <section class="products-page">
   <header class="products-header">
     <div>
@@ -5,16 +6,18 @@
       <h1>Productos</h1>
       <p>Visualiza el catálogo de productos y sus existencias actuales.</p>
     </div>
-    <div class="products-actions">
-      <button class="secondary-button" type="button" (click)="openImportDialog()">
-        <i class="pi pi-upload" aria-hidden="true"></i>
-        Carga masiva
-      </button>
-      <button class="primary-button" type="button" (click)="openCreateDialog()">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        Agregar nuevo producto
-      </button>
-    </div>
+    @if (!loading() && !error() && products().length > 0) {
+      <div class="products-actions">
+        <button class="secondary-button" type="button" (click)="navigateToImport()">
+          <i class="pi pi-upload" aria-hidden="true"></i>
+          Carga masiva
+        </button>
+        <button class="primary-button" type="button" (click)="navigateToCreate()">
+          <i class="pi pi-plus" aria-hidden="true"></i>
+          Agregar nuevo producto
+        </button>
+      </div>
+    }
   </header>
 
   @if (loading()) {
@@ -27,10 +30,10 @@
       <h2>Sin productos disponibles</h2>
       <p>Agrega tu primer producto para comenzar a administrar tu catálogo.</p>
       <div class="products-actions">
-        <button class="secondary-button" type="button" (click)="openImportDialog()">
+        <button class="secondary-button" type="button" (click)="navigateToImport()">
           <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
         </button>
-        <button class="primary-button" type="button" (click)="openCreateDialog()">
+        <button class="primary-button" type="button" (click)="navigateToCreate()">
           <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
         </button>
       </div>
@@ -100,7 +103,7 @@
                   iconOnly
                   rounded
                   aria-label="Editar producto"
-                  (click)="openEditDialog(product)"
+                  (click)="navigateToEdit(product)"
                 >
                   <i class="pi pi-pencil" aria-hidden="true"></i>
                 </button>
@@ -130,20 +133,30 @@
     </div>
   }
 </section>
+}
 
-<p-dialog
-  [header]="editingProduct() ? 'Editar producto' : 'Agregar nuevo producto'"
-  styleClass="product-dialog"
-  [(visible)]="dialogVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: 'min(760px, calc(100vw - 2rem))' }"
-  (onHide)="closeCreateDialog()"
->
-  <p class="dialog-description">Ingresa los detalles técnicos y de inventario del producto.</p>
+@if (isFormPage()) {
+<section class="product-page">
+  <header class="form-page-header">
+    <div>
+      <p class="eyebrow">Catálogo</p>
+      <h1>{{ editingProduct() ? 'Editar producto' : 'Agregar producto' }}</h1>
+      <p>Escanea el código de barras o completa los datos para registrar el producto.</p>
+    </div>
+    <div class="products-actions">
+      <button class="secondary-button" type="button" [disabled]="saving()" (click)="closeCreateDialog()">Cancelar</button>
+      <button class="primary-button" type="submit" form="product-form" [disabled]="!canSubmitProduct()">
+        {{ saving() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Guardar producto' }}
+      </button>
+    </div>
+  </header>
 
-  <form class="product-form" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+  @if (loading()) {
+    <div class="products-state loading-state" role="status">Cargando producto...</div>
+  } @else if (error(); as message) {
+    <div class="products-state error-state" role="alert">{{ message }}</div>
+  } @else {
+  <form id="product-form" class="product-form form-page-card" [formGroup]="productForm" (ngSubmit)="saveProduct()">
     <div class="barcode-lookup-card">
       <div class="field">
         <span>Código de barras <small class="optional-label">(opcional)</small></span>
@@ -261,6 +274,12 @@
       </div>
     </div>
 
+    <div class="form-section multimedia-section" aria-disabled="true">
+      <h3>Multimedia</h3>
+      <p>La carga de imágenes propias estará disponible próximamente.</p>
+      <div class="multimedia-placeholder"><i class="pi pi-image" aria-hidden="true"></i><span>Carga de imágenes no disponible</span></div>
+    </div>
+
     <div class="form-section">
       <h3>Presentación, inventario y precio</h3>
       <div class="form-grid">
@@ -341,36 +360,25 @@
       <div class="form-error" role="alert">{{ formError }}</div>
     }
 
-    <div class="dialog-actions">
-      <button
-        class="secondary-button"
-        type="button"
-        [disabled]="saving()"
-        (click)="closeCreateDialog()"
-      >
-        Cancelar
-      </button>
-      <button class="primary-button" type="submit" [disabled]="!canSubmitProduct()">
-        @if (saving()) {
-          Guardando...
-        } @else {
-          {{ editingProduct() ? 'Guardar cambios' : 'Guardar producto' }}
-        }
-      </button>
-    </div>
   </form>
-</p-dialog>
+  }
+</section>
+}
 
-<p-dialog
-  header="Carga masiva de productos"
-  [(visible)]="importDialogVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  styleClass="product-dialog catalog-dialog"
-  [style]="{ width: 'min(560px, 94vw)' }"
->
-  <section class="product-form import-form">
+@if (isImportPage()) {
+<section class="product-page">
+  <header class="form-page-header">
+    <div><p class="eyebrow">Catálogo</p><h1>Carga masiva de productos</h1><p>Importa productos desde un archivo XLSX.</p></div>
+    <div class="products-actions">
+      <button class="secondary-button" type="button" [disabled]="importing()" (click)="closeCreateDialog()">Cancelar</button>
+      @if (importPreview(); as preview) {
+        <button class="primary-button" type="button" (click)="importExistingProducts()" [disabled]="preview.insertables === 0 || importing()">{{ importing() ? 'Importando...' : 'Importar lo existente' }}</button>
+      } @else {
+        <button class="primary-button" type="button" (click)="validateProductImport()" [disabled]="!importFile || !importBranchId || importing()">{{ importing() ? 'Validando...' : 'Validar archivo' }}</button>
+      }
+    </div>
+  </header>
+  <section class="product-form import-form form-page-card">
     <div class="import-intro">
       <span class="import-intro-icon"><i class="pi pi-file-excel"></i></span>
       <div>
@@ -474,14 +482,6 @@
         <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p>
       }
     </section>
-    <div class="dialog-actions">
-      @if (importPreview(); as preview) {
-        <button class="secondary-button" type="button" (click)="loadNewImport(importInput)" [disabled]="importing()">Cargar nuevo archivo</button>
-        <button class="primary-button" type="button" (click)="importExistingProducts()" [disabled]="preview.insertables === 0 || importing()">{{ importing() ? 'Importando...' : 'Importar lo existente' }}</button>
-      } @else {
-        <button class="secondary-button" type="button" (click)="importDialogVisible = false" [disabled]="importing()">Cerrar</button>
-        <button class="primary-button" type="button" (click)="validateProductImport()" [disabled]="!importFile || !importBranchId || importing()">{{ importing() ? 'Validando...' : 'Validar archivo' }}</button>
-      }
-    </div>
   </section>
-</p-dialog>
+</section>
+}

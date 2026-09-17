@@ -8,6 +8,20 @@
     margin: 0 auto;
 }
 
+.catalog-form-page {
+    width: min(100%, 880px);
+    padding-bottom: 56px;
+}
+
+.catalog-page-card {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+    background: var(--surface-raised);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
 .catalog-header {
     display: flex;
     justify-content: space-between;
@@ -197,6 +211,10 @@
 @media (max-width: 700px) {
     .catalog-page {
         padding: 26px 18px;
+    }
+
+    .catalog-form-page {
+        padding-bottom: 40px;
     }
 
     .catalog-header {
