@@ -88,4 +88,34 @@ describe('ProductosComponent', () => {
     expect(controls.categoria_id.value).toBe('');
     expect(component.catalogLookupWarnings()).toHaveLength(2);
   });
+
+  it('replaces a dropped import file and clears its preview when removed', () => {
+    const firstFile = new File(['primero'], 'productos-inicial.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const replacementFile = new File(['segundo'], 'productos-actualizado.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    component.importPreview.set({
+      procesadas: 1,
+      creadas: 0,
+      insertables: 1,
+      omitidas: 0,
+      invalidas: 0,
+      errores: [],
+      advertencias: [],
+    });
+
+    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [firstFile] } } as unknown as DragEvent);
+    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [replacementFile] } } as unknown as DragEvent);
+
+    expect(component.importFile).toBe(replacementFile);
+    expect(component.importPreview()).toBeNull();
+
+    component.removeImportFile({ stopPropagation: vi.fn() } as unknown as MouseEvent, document.createElement('input'));
+
+    expect(component.importFile).toBeNull();
+    expect(component.importResult()).toBeNull();
+    expect(component.importPreview()).toBeNull();
+  });
 });
