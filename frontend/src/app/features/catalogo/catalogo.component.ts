@@ -140,12 +140,24 @@ export class CatalogoComponent {
   }
   onImportDragLeave(event: DragEvent): void {
     event.preventDefault();
+    if (this.isMovingWithinDropzone(event)) return;
     this.importDropActive = false;
   }
   onImportDrop(event: DragEvent): void {
     event.preventDefault();
     this.importDropActive = false;
     if (!this.importing()) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
+  }
+  removeImportFile(event: MouseEvent, input: HTMLInputElement): void {
+    event.stopPropagation();
+    if (this.importing()) return;
+    input.value = '';
+    this.setImportFile(null);
+  }
+  private isMovingWithinDropzone(event: DragEvent): boolean {
+    return event.currentTarget instanceof HTMLElement
+      && event.relatedTarget instanceof Node
+      && event.currentTarget.contains(event.relatedTarget);
   }
   private setImportFile(file: File | null): void {
     this.importFile = file;
