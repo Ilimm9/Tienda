@@ -40,6 +40,7 @@
 
 .file-dropzone {
   display: grid;
+  position: relative;
   min-height: 11.5rem;
   padding: 1.5rem;
   place-items: center;
@@ -94,6 +95,33 @@
 .has-file .dropzone-icon {
   color: var(--success);
   background: color-mix(in srgb, var(--success-soft) 75%, white);
+}
+
+.remove-file-button {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  border-radius: 50%;
+  color: var(--danger);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+
+.remove-file-button:hover,
+.remove-file-button:focus-visible {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised));
+  outline: none;
+}
+
+.remove-file-button:disabled {
+  cursor: not-allowed;
 }
 
 .file-input {

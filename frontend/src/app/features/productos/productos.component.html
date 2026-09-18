@@ -419,6 +419,14 @@
       @if (importFile) {
         <strong>{{ importFile.name }}</strong
         ><small>Archivo listo para importar</small>
+        <button
+          class="remove-file-button"
+          type="button"
+          aria-label="Quitar archivo seleccionado"
+          [disabled]="importing()"
+          (click)="removeImportFile($event, importInput)"
+          (keydown)="$event.stopPropagation()"
+        ><i class="pi pi-times" aria-hidden="true"></i></button>
       } @else {
         <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
         ><small>Solo archivos XLSX, máximo 5 MB</small>
