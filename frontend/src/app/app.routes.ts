@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './features/auth/auth.guard';
+import { contextoGuard } from './contexto/contexto.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
@@ -17,6 +18,14 @@ export const routes: Routes = [
       ),
   },
   {
+    // La aceptación de invitación vive fuera del shell autenticado: el invitado puede no tener cuenta.
+    path: 'invitacion/:token',
+    loadComponent: () =>
+      import('./features/invitacion/aceptar-invitacion.component').then(
+        (module) => module.AceptarInvitacionComponent,
+      ),
+  },
+  {
     path: '',
     canActivateChild: [authGuard],
     loadComponent: () =>
@@ -24,6 +33,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'inicio',
+        canActivate: [contextoGuard],
         data: { breadcrumb: 'Inicio' },
         loadComponent: () =>
           import('./features/home/home.component').then((module) => module.HomeComponent),
@@ -34,7 +44,15 @@ export const routes: Routes = [
           import('./features/negocios/negocios.routes').then((module) => module.NEGOCIOS_ROUTES),
       },
       {
+        path: 'seleccionar-negocio',
+        loadComponent: () =>
+          import('./contexto/seleccionar-negocio.component').then(
+            (module) => module.SeleccionarNegocioComponent,
+          ),
+      },
+      {
         path: 'sucursales',
+        canActivate: [contextoGuard],
         loadChildren: () =>
           import('./features/sucursales/sucursales.routes').then(
             (module) => module.SUCURSALES_ROUTES,

@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { ProductosComponent } from './productos.component';
 
@@ -12,7 +14,17 @@ describe('ProductosComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ProductosComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ContextoService,
+          useValue: {
+            negocio: signal({ id: environment.defaultBusinessId }),
+            sucursal: signal(null),
+          },
+        },
+      ],
     });
     component = TestBed.createComponent(ProductosComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
@@ -87,5 +99,35 @@ describe('ProductosComponent', () => {
     expect(controls.marca_id.value).toBe('');
     expect(controls.categoria_id.value).toBe('');
     expect(component.catalogLookupWarnings()).toHaveLength(2);
+  });
+
+  it('replaces a dropped import file and clears its preview when removed', () => {
+    const firstFile = new File(['primero'], 'productos-inicial.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const replacementFile = new File(['segundo'], 'productos-actualizado.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    component.importPreview.set({
+      procesadas: 1,
+      creadas: 0,
+      insertables: 1,
+      omitidas: 0,
+      invalidas: 0,
+      errores: [],
+      advertencias: [],
+    });
+
+    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [firstFile] } } as unknown as DragEvent);
+    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [replacementFile] } } as unknown as DragEvent);
+
+    expect(component.importFile).toBe(replacementFile);
+    expect(component.importPreview()).toBeNull();
+
+    component.removeImportFile({ stopPropagation: vi.fn() } as unknown as MouseEvent, document.createElement('input'));
+
+    expect(component.importFile).toBeNull();
+    expect(component.importResult()).toBeNull();
+    expect(component.importPreview()).toBeNull();
   });
 });

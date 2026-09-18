@@ -24,6 +24,7 @@ var codigoSucursalPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{1,39}$`)
 
 type SucursalRepository interface {
 	ObtenerContextoNegocio(ctx context.Context, usuarioID, negocioID uuid.UUID) (domain.ContextoNegocioSucursal, error)
+	PermisosEfectivos(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]string, error)
 	Listar(ctx context.Context, negocioID uuid.UUID, estado, buscar string) ([]domain.SucursalResumen, error)
 	Obtener(ctx context.Context, negocioID, sucursalID uuid.UUID) (domain.SucursalDetalle, error)
 	Crear(ctx context.Context, negocioID uuid.UUID, input domain.CrearSucursalInput) (uuid.UUID, error)
@@ -41,7 +42,7 @@ func NewSucursalService(sucursales SucursalRepository) *SucursalService {
 }
 
 func (s *SucursalService) Listar(ctx context.Context, usuarioID, negocioID uuid.UUID, estado, buscar string) ([]domain.SucursalResumen, error) {
-	access, err := s.acceso(ctx, usuarioID, negocioID, false)
+	access, err := s.acceso(ctx, usuarioID, negocioID, "")
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ func (s *SucursalService) Listar(ctx context.Context, usuarioID, negocioID uuid.
 }
 
 func (s *SucursalService) Obtener(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) (domain.SucursalDetalle, error) {
-	access, err := s.acceso(ctx, usuarioID, negocioID, false)
+	access, err := s.acceso(ctx, usuarioID, negocioID, "")
 	if err != nil {
 		return domain.SucursalDetalle{}, err
 	}
@@ -75,7 +76,7 @@ func (s *SucursalService) Obtener(ctx context.Context, usuarioID, negocioID, suc
 }
 
 func (s *SucursalService) Crear(ctx context.Context, usuarioID, negocioID uuid.UUID, input domain.CrearSucursalInput) (domain.SucursalDetalle, error) {
-	if _, err := s.acceso(ctx, usuarioID, negocioID, true); err != nil {
+	if _, err := s.acceso(ctx, usuarioID, negocioID, domain.PermisoSucursalCrear); err != nil {
 		return domain.SucursalDetalle{}, err
 	}
 	normalizarCrearSucursal(&input)
@@ -90,7 +91,7 @@ func (s *SucursalService) Crear(ctx context.Context, usuarioID, negocioID uuid.U
 }
 
 func (s *SucursalService) Actualizar(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID, input domain.ActualizarSucursalInput) (domain.SucursalDetalle, error) {
-	if _, err := s.acceso(ctx, usuarioID, negocioID, true); err != nil {
+	if _, err := s.acceso(ctx, usuarioID, negocioID, domain.PermisoSucursalEditar); err != nil {
 		return domain.SucursalDetalle{}, err
 	}
 	if !actualizacionSucursalTieneCampos(input) {
@@ -107,14 +108,14 @@ func (s *SucursalService) Actualizar(ctx context.Context, usuarioID, negocioID, 
 }
 
 func (s *SucursalService) Archivar(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) error {
-	if _, err := s.acceso(ctx, usuarioID, negocioID, true); err != nil {
+	if _, err := s.acceso(ctx, usuarioID, negocioID, domain.PermisoSucursalArchivar); err != nil {
 		return err
 	}
 	return s.sucursales.Archivar(ctx, negocioID, sucursalID)
 }
 
 func (s *SucursalService) Restaurar(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) (domain.SucursalDetalle, error) {
-	if _, err := s.acceso(ctx, usuarioID, negocioID, true); err != nil {
+	if _, err := s.acceso(ctx, usuarioID, negocioID, domain.PermisoSucursalArchivar); err != nil {
 		return domain.SucursalDetalle{}, err
 	}
 	if err := s.sucursales.Restaurar(ctx, negocioID, sucursalID); err != nil {
@@ -123,18 +124,31 @@ func (s *SucursalService) Restaurar(ctx context.Context, usuarioID, negocioID, s
 	return s.Obtener(ctx, usuarioID, negocioID, sucursalID)
 }
 
-func (s *SucursalService) acceso(ctx context.Context, usuarioID, negocioID uuid.UUID, escritura bool) (domain.ContextoNegocioSucursal, error) {
+// acceso exige membresía activa para leer y, para escribir, negocio activo más el permiso indicado.
+//
+// Desde fase 4 la autorización ya no depende de `tipo_miembro`: el rol de sistema del propietario
+// concentra todos los permisos, y un miembro puede recibirlos mediante roles del negocio.
+func (s *SucursalService) acceso(ctx context.Context, usuarioID, negocioID uuid.UUID, permiso string) (domain.ContextoNegocioSucursal, error) {
 	access, err := s.sucursales.ObtenerContextoNegocio(ctx, usuarioID, negocioID)
 	if err != nil {
 		return domain.ContextoNegocioSucursal{}, err
 	}
-	if escritura && access.TipoMiembro != "propietario" {
-		return domain.ContextoNegocioSucursal{}, ErrSucursalProhibida
+	if permiso == "" {
+		return access, nil
 	}
-	if escritura && access.EstadoNegocio != "activo" {
+	if access.EstadoNegocio != "activo" {
 		return domain.ContextoNegocioSucursal{}, ErrEstadoNegocio
 	}
-	return access, nil
+	permisos, err := s.sucursales.PermisosEfectivos(ctx, usuarioID, negocioID)
+	if err != nil {
+		return domain.ContextoNegocioSucursal{}, err
+	}
+	for _, actual := range permisos {
+		if actual == permiso {
+			return access, nil
+		}
+	}
+	return domain.ContextoNegocioSucursal{}, ErrSucursalProhibida
 }
 
 func normalizarCrearSucursal(input *domain.CrearSucursalInput) {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"tienda/backend/internal/application"
+	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/domain"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,7 @@ import (
 
 type ProductHandler struct {
 	products *application.ProductService
+	contexto *negocioapplication.ContextoService
 }
 
 func (h *ProductHandler) LookupProduct(c *gin.Context) {
@@ -40,8 +42,8 @@ func (h *ProductHandler) LookupProduct(c *gin.Context) {
 	}
 }
 
-func NewProductHandler(products *application.ProductService) *ProductHandler {
-	return &ProductHandler{products: products}
+func NewProductHandler(products *application.ProductService, contexto *negocioapplication.ContextoService) *ProductHandler {
+	return &ProductHandler{products: products, contexto: contexto}
 }
 
 func (h *ProductHandler) List(c *gin.Context) {
@@ -103,6 +105,9 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los campos obligatorios del producto"})
 		return
 	}
+	if !h.sucursalActiva(c, businessID, input.SucursalID) {
+		return
+	}
 
 	// validar que la sesión tenga membresía y permiso sobre este negocio.
 	if err := h.products.Create(businessID, input); err != nil {
@@ -156,6 +161,14 @@ func parseID(c *gin.Context, name string) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func (h *ProductHandler) sucursalActiva(c *gin.Context, negocioID, sucursalID uuid.UUID) bool {
+	if err := h.contexto.ValidarSucursalActiva(c.Request.Context(), negocioID, sucursalID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"mensaje": "No fue posible encontrar la sucursal solicitada"})
+		return false
+	}
+	return true
 }
 func (h *ProductHandler) ListBrandsAdmin(c *gin.Context) {
 	v, e := h.products.ListBrandsAdmin()
@@ -283,6 +296,9 @@ func (h *ProductHandler) ImportProducts(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona una sucursal válida"})
 		return
 	}
+	if !h.sucursalActiva(c, businessID, branchID) {
+		return
+	}
 	fileHeader, err := c.FormFile("archivo")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona un archivo XLSX de hasta 5 MB"})
@@ -319,6 +335,9 @@ func (h *ProductHandler) PreviewProductImport(c *gin.Context) {
 	branchID, err := uuid.Parse(c.PostForm("sucursal_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Selecciona una sucursal válida"})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, branchID) {
 		return
 	}
 	fileHeader, err := c.FormFile("archivo")

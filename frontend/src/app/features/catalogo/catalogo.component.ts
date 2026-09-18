@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { environment } from '../../../environments/environment';
+import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogoService } from './catalogo.service';
 import { CatalogImportResult, CatalogRecord, Categoria } from './catalogo.models';
 
@@ -35,6 +35,7 @@ export class CatalogoComponent {
   private readonly service = inject(CatalogoService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly contexto = inject(ContextoService);
   readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores' | 'unidades';
   readonly items = signal<CatalogRecord[]>([]);
   readonly parents = signal<Categoria[]>([]);
@@ -98,7 +99,7 @@ export class CatalogoComponent {
         ? this.service.marcas()
         : this.section === 'categorias'
           ? this.service.categorias()
-          : this.section === 'proveedores' ? this.service.proveedores(environment.defaultBusinessId) : this.service.unidades();
+          : this.section === 'proveedores' ? this.service.proveedores(this.contexto.negocio()?.id ?? '') : this.service.unidades();
     request.subscribe({
       next: (v) => {
         this.items.set(v);
@@ -139,12 +140,24 @@ export class CatalogoComponent {
   }
   onImportDragLeave(event: DragEvent): void {
     event.preventDefault();
+    if (this.isMovingWithinDropzone(event)) return;
     this.importDropActive = false;
   }
   onImportDrop(event: DragEvent): void {
     event.preventDefault();
     this.importDropActive = false;
     if (!this.importing()) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
+  }
+  removeImportFile(event: MouseEvent, input: HTMLInputElement): void {
+    event.stopPropagation();
+    if (this.importing()) return;
+    input.value = '';
+    this.setImportFile(null);
+  }
+  private isMovingWithinDropzone(event: DragEvent): boolean {
+    return event.currentTarget instanceof HTMLElement
+      && event.relatedTarget instanceof Node
+      && event.currentTarget.contains(event.relatedTarget);
   }
   private setImportFile(file: File | null): void {
     this.importFile = file;
@@ -221,7 +234,7 @@ export class CatalogoComponent {
     if (this.section === 'unidades') Object.assign(payload, { codigo: v.codigo, simbolo: v.simbolo, tipo: v.tipo, factor_a_base: v.factor_a_base, decimales: v.decimales });
     const path =
       this.section === 'proveedores'
-        ? `negocios/${environment.defaultBusinessId}/catalogo/proveedores`
+        ? `negocios/${this.contexto.negocio()?.id ?? ''}/catalogo/proveedores`
         : `catalogo/${this.section}`;
     const requestPath = this.section === 'unidades' ? 'catalogo/unidades-medida' : path;
     const request = this.editingId

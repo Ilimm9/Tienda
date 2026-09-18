@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
+import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
+import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { NegocioDetalle } from '../negocios/negocio.models';
 import { NegocioService } from '../negocios/negocio.service';
@@ -28,6 +30,8 @@ export class SucursalFormComponent {
   private readonly sucursalService = inject(SucursalService);
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
+  private readonly contexto = inject(ContextoService);
+  private readonly cambiosPendientes = inject(CambiosPendientesService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -68,6 +72,9 @@ export class SucursalFormComponent {
 
   constructor() {
     this.load();
+    // Declara trabajo sin guardar para que un cambio de contexto pida confirmación.
+    const baja = this.cambiosPendientes.registrar(() => this.form.dirty && !this.saving());
+    inject(DestroyRef).onDestroy(baja);
   }
 
   submit(): void {
@@ -109,6 +116,7 @@ export class SucursalFormComponent {
               ? 'Sucursal actualizada'
               : 'Sucursal registrada',
         );
+        this.contexto.recargar().subscribe();
         void this.router.navigate(['/negocios', this.negocioId, 'sucursales', branch.id]);
       },
       error: (response: HttpErrorResponse) => {

@@ -1,0 +1,104 @@
+@import './roles-shared.css';
+
+.role-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+.field-row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  min-height: 42px;
+  padding: 9px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+
+.field input:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.field small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.field small.error {
+  color: var(--danger, #dc2626);
+}
+
+.section-title {
+  margin: 6px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.permission-group {
+  padding: 14px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.permission-group legend {
+  padding: 0 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.permission-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+
+.checkbox-field {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkbox-field code {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.text-button.small {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}

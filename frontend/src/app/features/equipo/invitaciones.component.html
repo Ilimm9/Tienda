@@ -1,0 +1,133 @@
+<section class="team-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">Equipo</span>
+      <h1>Invitaciones</h1>
+      <p>Entrega acceso mediante un enlace con vigencia limitada.</p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="status-message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="status-message">Cargando invitaciones…</p>
+  } @else if (!error()) {
+    @if (puedeEnviar()) {
+      <div class="surface-card invite-form">
+        <h2>Invitar a un empleado</h2>
+        @if (invitables().length) {
+          <div class="field-row">
+            <div class="field">
+              <label for="empleado">Empleado</label>
+              <select id="empleado" [(ngModel)]="empleadoSeleccionado">
+                <option value="">Selecciona…</option>
+                @for (empleado of invitables(); track empleado.id) {
+                  <option [value]="empleado.id">
+                    {{ empleado.nombre_completo }} — {{ empleado.correo }}
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="rol">Rol inicial</label>
+              <select id="rol" [(ngModel)]="rolSeleccionado">
+                <option value="">Sin rol</option>
+                @for (rol of roles(); track rol.id) {
+                  <option [value]="rol.id">{{ rol.nombre }}</option>
+                }
+              </select>
+            </div>
+            <button
+              type="button"
+              class="primary-button"
+              [disabled]="!empleadoSeleccionado || processingId() === 'nueva'"
+              (click)="invitar()"
+            >
+              Generar enlace
+            </button>
+          </div>
+        } @else {
+          <p class="status-message">
+            Registra primero un empleado con correo y sin cuenta vinculada para poder invitarlo.
+          </p>
+        }
+
+        @if (enlaceGenerado(); as enlace) {
+          <div class="invite-link">
+            <code>{{ enlace }}</code>
+            <button type="button" class="text-button" (click)="copiar(enlace)">Copiar</button>
+          </div>
+          <small>Este enlace solo se muestra una vez. Compártelo por un medio seguro.</small>
+        }
+      </div>
+    }
+
+    <div class="team-toolbar surface-card">
+      <div class="status-tabs" aria-label="Filtrar invitaciones por estado">
+        @for (opcion of estados; track opcion.valor) {
+          <button type="button" [class.active]="estado() === opcion.valor" (click)="setEstado(opcion.valor)">
+            {{ opcion.etiqueta }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="data-table-card">
+      <p-table
+        [value]="invitaciones()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} invitaciones"
+        class="app-table app-table--invitaciones"
+        responsiveLayout="scroll"
+      >
+        <ng-template #header>
+          <tr>
+            <th>Correo</th>
+            <th>Empleado</th>
+            <th>Rol predeterminado</th>
+            <th>Estado</th>
+            <th>Vence</th>
+            <th>Aceptada</th>
+            <th class="actions-column">Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-invitacion>
+          <tr>
+            <td>{{ invitacion.correo }}</td>
+            <td>{{ invitacion.nombre_empleado || '—' }}</td>
+            <td>{{ nombreDeRol(invitacion.rol_predeterminado_id) }}</td>
+            <td>
+              <span class="status-pill" [class]="'estado-' + invitacion.estado">
+                {{ invitacion.estado }}
+              </span>
+            </td>
+            <td>{{ invitacion.expira_en | date: 'medium' }}</td>
+            <td>{{ invitacion.aceptado_en ? (invitacion.aceptado_en | date: 'medium') : '—' }}</td>
+            <td class="actions-column">
+              @if (puedeEnviar() && invitacion.estado === 'pendiente') {
+                <button
+                  type="button"
+                  class="text-button danger-text"
+                  [disabled]="processingId() === invitacion.id"
+                  (click)="cancelar(invitacion)"
+                >
+                  Cancelar
+                </button>
+              }
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7" class="empty-message">No hay invitaciones con este filtro.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  }
+</section>

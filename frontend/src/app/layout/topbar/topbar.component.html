@@ -22,6 +22,66 @@
   </div>
 
   <div class="topbar-actions">
+    @if (contexto.estado() === 'cargando') {
+      <span class="context-loading">Cargando contexto…</span>
+    } @else if (contexto.negocio(); as negocio) {
+      <div class="action-menu context-menu">
+        <button class="context-button" type="button" [attr.aria-expanded]="contextOpen()" (click)="toggleContext()">
+          <span class="context-icon"><i class="pi pi-building" aria-hidden="true"></i></span>
+          <span class="context-copy">
+            <strong>{{ negocio.nombre_comercial }}</strong>
+            <small>
+              @if (contexto.sucursal(); as sucursal) {
+                {{ sucursal.codigo }} · {{ sucursal.nombre }}
+              } @else {
+                Sin sucursal activa
+              }
+            </small>
+          </span>
+          <i class="pi pi-chevron-down context-chevron" aria-hidden="true"></i>
+        </button>
+
+        @if (contextOpen()) {
+          <div class="dropdown context-dropdown">
+            <header class="context-dropdown-header">
+              <span class="context-dropdown-icon"><i class="pi pi-shop" aria-hidden="true"></i></span>
+              <div><strong>Contexto de trabajo</strong><p>Elige dónde vas a operar.</p></div>
+            </header>
+
+            <section class="context-section">
+              <span class="context-section-label">Negocio</span>
+              <div class="context-options">
+                @for (item of contexto.negocios(); track item.id) {
+                  <button type="button" class="context-option" [class.active]="item.id === negocio.id" (click)="cambiarNegocio(item.id)">
+                    <span class="option-icon"><i class="pi pi-building" aria-hidden="true"></i></span>
+                    <span><strong>{{ item.nombre_comercial }}</strong><small>{{ item.sucursales.length }} sucursal(es)</small></span>
+                    @if (item.id === negocio.id) { <i class="pi pi-check-circle option-check" aria-hidden="true"></i> }
+                  </button>
+                }
+              </div>
+            </section>
+
+            <section class="context-section branch-section">
+              <span class="context-section-label">Sucursal</span>
+              <div class="context-options">
+                @for (item of negocio.sucursales; track item.id) {
+                  <button type="button" class="context-option" [class.active]="item.id === contexto.sucursal()?.id" (click)="cambiarSucursal(item.id)">
+                    <span class="option-icon branch"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+                    <span><strong>{{ item.nombre }}</strong><small>{{ item.codigo }}{{ item.es_principal ? ' · Principal' : '' }}</small></span>
+                    @if (item.id === contexto.sucursal()?.id) { <i class="pi pi-check-circle option-check" aria-hidden="true"></i> }
+                  </button>
+                } @empty {
+                  <a class="empty-branch" [href]="'/negocios/' + negocio.id + '/sucursales/nueva'">
+                    <i class="pi pi-plus-circle" aria-hidden="true"></i>
+                    Registrar primera sucursal
+                  </a>
+                }
+              </div>
+            </section>
+          </div>
+        }
+      </div>
+    }
     <button
       class="icon-button"
       type="button"

@@ -78,4 +78,26 @@ describe('CatalogoComponent', () => {
       { label: 'Bebidas', value: 'categoria-1' },
     ]);
   });
+
+  it('marks a dropped file as ready and clears it from the remove control', () => {
+    const file = new File(['contenido'], 'marcas.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const preventDefault = vi.fn();
+    component.importError.set('Error anterior');
+    component.importResult.set({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, errores: [] });
+
+    component.onImportDrop({ preventDefault, dataTransfer: { files: [file] } } as unknown as DragEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(component.importFile).toBe(file);
+    expect(component.importError()).toBeNull();
+    expect(component.importResult()).toBeNull();
+
+    const stopPropagation = vi.fn();
+    component.removeImportFile({ stopPropagation } as unknown as MouseEvent, document.createElement('input'));
+
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(component.importFile).toBeNull();
+  });
 });

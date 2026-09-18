@@ -8,7 +8,7 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
-import { environment } from '../../../environments/environment';
+import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow } from './product.models';
 import { ProductosService } from './productos.service';
 
@@ -31,6 +31,7 @@ import { ProductosService } from './productos.service';
 })
 export class ProductosComponent {
   private readonly productosService = inject(ProductosService);
+  private readonly contexto = inject(ContextoService);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly products = signal<ProductRow[]>([]);
@@ -87,10 +88,14 @@ export class ProductosComponent {
     this.loadProducts();
   }
 
+  private get negocioID(): string {
+    return this.contexto.negocio()?.id ?? '';
+  }
+
   loadProducts(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.productosService.listByBusiness(environment.defaultBusinessId).subscribe({
+    this.productosService.listByBusiness(this.negocioID).subscribe({
       next: ({ items }) => {
         this.products.set(items ?? []);
         this.loading.set(false);
@@ -129,7 +134,7 @@ export class ProductosComponent {
     this.brandsLoaded = false;
     this.formError = null;
     this.dialogVisible = true;
-    this.productosService.listCategories(environment.defaultBusinessId).subscribe({
+    this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => {
         this.categories.set(items);
         this.categoriesLoaded = true;
@@ -137,7 +142,7 @@ export class ProductosComponent {
       },
       error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
     });
-    this.productosService.listBrands(environment.defaultBusinessId).subscribe({
+    this.productosService.listBrands(this.negocioID).subscribe({
       next: (items) => {
         this.brands.set(items);
         this.brandsLoaded = true;
@@ -145,17 +150,16 @@ export class ProductosComponent {
       },
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
     });
-    this.productosService.listBranches(environment.defaultBusinessId).subscribe({
+    this.productosService.listBranches(this.negocioID).subscribe({
       next: (items) => {
         this.branches.set(items);
         if (items.length === 0) {
           this.formError = 'No se encontró una sucursal activa para registrar el inventario.';
           return;
         }
-        if (items.length === 1) {
-          branchControl.setValue(items[0].id);
-          this.branchReady.set(true);
-        }
+        const activa = this.contexto.sucursal()?.id;
+        branchControl.setValue(items.find((item) => item.id === activa)?.id ?? items[0].id);
+        this.branchReady.set(true);
       },
       error: () => {
         this.formError = 'No fue posible cargar las sucursales.';
@@ -200,11 +204,11 @@ export class ProductosComponent {
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
     this.dialogVisible = true;
-    this.productosService.listCategories(environment.defaultBusinessId).subscribe({
+    this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => this.categories.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
     });
-    this.productosService.listBrands(environment.defaultBusinessId).subscribe({
+    this.productosService.listBrands(this.negocioID).subscribe({
       next: (items) => this.brands.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
     });
@@ -217,7 +221,7 @@ export class ProductosComponent {
   confirmDeactivate(product: ProductRow): void {
     if (this.deletingProductId() || !window.confirm(`¿Deseas desactivar "${product.nombre}"? Podrás conservar su historial e inventario.`)) return;
     this.deletingProductId.set(product.id);
-    this.productosService.deactivate(environment.defaultBusinessId, product.id).subscribe({
+    this.productosService.deactivate(this.negocioID, product.id).subscribe({
       next: () => {
         this.deletingProductId.set(null);
         this.loadProducts();
@@ -238,8 +242,11 @@ export class ProductosComponent {
     this.importPreview.set(null);
     this.importBranches.set([]);
     this.importDialogVisible = true;
-    this.productosService.listBranches(environment.defaultBusinessId).subscribe({
-      next: (items) => this.importBranches.set(items),
+    this.productosService.listBranches(this.negocioID).subscribe({
+      next: (items) => {
+        this.importBranches.set(items);
+        this.importBranchId = items.find((item) => item.id === this.contexto.sucursal()?.id)?.id ?? items[0]?.id ?? '';
+      },
       error: () => this.importError.set('No fue posible cargar las sucursales.'),
     });
   }
@@ -261,6 +268,7 @@ export class ProductosComponent {
 
   onImportDragLeave(event: DragEvent): void {
     event.preventDefault();
+    if (this.isMovingWithinDropzone(event)) return;
     this.importDropActive = false;
   }
 
@@ -268,6 +276,19 @@ export class ProductosComponent {
     event.preventDefault();
     this.importDropActive = false;
     if (!this.importing()) this.setImportFile(event.dataTransfer?.files?.[0] ?? null);
+  }
+
+  removeImportFile(event: MouseEvent, input: HTMLInputElement): void {
+    event.stopPropagation();
+    if (this.importing()) return;
+    input.value = '';
+    this.setImportFile(null);
+  }
+
+  private isMovingWithinDropzone(event: DragEvent): boolean {
+    return event.currentTarget instanceof HTMLElement
+      && event.relatedTarget instanceof Node
+      && event.currentTarget.contains(event.relatedTarget);
   }
 
   private setImportFile(file: File | null): void {
@@ -285,7 +306,7 @@ export class ProductosComponent {
     this.importPreview.set(null);
     const file = this.importFile;
     const branchId = this.importBranchId;
-    this.productosService.previewProductImport(environment.defaultBusinessId, branchId, file).subscribe({
+    this.productosService.previewProductImport(this.negocioID, branchId, file).subscribe({
       next: (preview) => {
         this.importPreview.set(preview);
         this.importing.set(false);
@@ -311,7 +332,7 @@ export class ProductosComponent {
   }
 
   private executeProductImport(file: File, branchId: string): void {
-    this.productosService.importProducts(environment.defaultBusinessId, branchId, file).subscribe({
+    this.productosService.importProducts(this.negocioID, branchId, file).subscribe({
       next: (result) => {
         this.importing.set(false);
         this.importPreview.set(null);
@@ -326,7 +347,7 @@ export class ProductosComponent {
   }
 
   productImportTemplateUrl(): string {
-    return this.productosService.productImportTemplateUrl(environment.defaultBusinessId);
+    return this.productosService.productImportTemplateUrl(this.negocioID);
   }
 
   onBranchSelected(): void {
@@ -372,7 +393,7 @@ export class ProductosComponent {
     const barcode = this.productForm.controls.codigo_barras.value.trim();
     this.imageLookupLoading.set(true);
     this.imageLookupError.set(null);
-    this.productosService.lookupProduct(environment.defaultBusinessId, barcode).subscribe({
+    this.productosService.lookupProduct(this.negocioID, barcode).subscribe({
       next: (product) => {
         this.imageLookupLoading.set(false);
         if (this.productForm.controls.codigo_barras.value.trim() !== barcode) return;
@@ -505,7 +526,7 @@ export class ProductosComponent {
     };
     const editing = this.editingProduct();
     const request = editing
-      ? this.productosService.update(environment.defaultBusinessId, editing.id, {
+      ? this.productosService.update(this.negocioID, editing.id, {
           nombre: payload.nombre,
           sku_interno: payload.sku_interno,
           marca_id: payload.marca_id,
@@ -519,7 +540,7 @@ export class ProductosComponent {
           codigo_barras: payload.codigo_barras,
           imagen_url: payload.imagen_url,
         })
-      : this.productosService.create(environment.defaultBusinessId, payload);
+      : this.productosService.create(this.negocioID, payload);
     request.subscribe({
       next: () => {
         this.saving.set(false);

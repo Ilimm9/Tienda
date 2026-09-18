@@ -1,9 +1,9 @@
 <section class="home-page">
   <header>
     <p class="eyebrow">Panel principal</p>
-    <h1>¡Bienvenido al sistema!</h1>
+    <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
     <p class="description">
-      Desde aquí podrás administrar y consultar la información de tu negocio.
+      @if (contexto.sucursal(); as sucursal) { Contexto activo: {{ sucursal.codigo }} · {{ sucursal.nombre }}. } @else { Registra una sucursal para operar módulos que la requieren. }
     </p>
   </header>
 

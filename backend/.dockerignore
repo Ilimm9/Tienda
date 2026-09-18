@@ -1,0 +1,9 @@
+# El binario lee la configuracion del entorno; un .env dentro de la imagen
+# pisaria lo que define docker-compose (config.Load usa godotenv.Load).
+.env
+.env.*
+
+# No hacen falta para compilar el servidor
+*_test.go
+Dockerfile
+.dockerignore

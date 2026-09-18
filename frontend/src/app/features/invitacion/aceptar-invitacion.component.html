@@ -1,0 +1,39 @@
+<section class="invitation-page">
+  <div class="surface-card invitation-card">
+    @if (loading()) {
+      <p class="status-message">Validando invitación…</p>
+    } @else if (invitacion(); as datos) {
+      <span class="eyebrow">Invitación</span>
+      <h1>Únete a {{ datos.nombre_negocio }}</h1>
+      <p>
+        La invitación fue emitida para <strong>{{ datos.correo }}</strong
+        >. Vence el {{ datos.expira_en | date: 'longDate' }}.
+      </p>
+
+      @if (datos.requiere_cuenta) {
+        <p class="hint">
+          Todavía no existe una cuenta con ese correo. Crea tu cuenta con el mismo correo y vuelve a
+          abrir este enlace para completar la aceptación.
+        </p>
+        <div class="invitation-actions">
+          <a class="primary-button" routerLink="/registro" [queryParams]="{ correo: datos.correo, retorno: retorno }">
+            Crear cuenta
+          </a>
+          <a class="secondary-button" routerLink="/login" [queryParams]="{ retorno: retorno }">Ya tengo cuenta</a>
+        </div>
+      } @else {
+        <p class="hint">Inicia sesión con ese correo si aún no lo has hecho y confirma tu acceso.</p>
+        <div class="invitation-actions">
+          <button type="button" class="primary-button" [disabled]="processing()" (click)="aceptar()">
+            {{ processing() ? 'Aceptando…' : 'Aceptar invitación' }}
+          </button>
+          <a class="secondary-button" routerLink="/login" [queryParams]="{ retorno: retorno }">Cambiar de cuenta</a>
+        </div>
+      }
+    }
+
+    @if (error()) {
+      <p class="status-message error" role="alert">{{ error() }}</p>
+    }
+  </div>
+</section>

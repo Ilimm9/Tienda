@@ -1,0 +1,50 @@
+@import './equipo-shared.css';
+
+.team-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  margin-bottom: 24px;
+}
+
+.employee-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 650;
+}
+
+.employee-name code {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.account-state {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.account-state.linked {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.actions-column {
+  width: 6rem;
+  text-align: center;
+}
+
+.table-action {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.empty-message {
+  padding: 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
