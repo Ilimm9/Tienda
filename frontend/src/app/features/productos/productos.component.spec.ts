@@ -108,6 +108,31 @@ describe('ProductosComponent', () => {
     expect(component.catalogLookupWarnings()).toHaveLength(2);
   });
 
+  it('enables automatic SKU generation for a manual product', () => {
+    const controls = component.productForm.controls;
+    controls.sku_interno.setValue('SKU-MANUAL');
+    controls.generar_sku_interno.setValue(true);
+    component.onGenerateSKUChanged();
+
+    expect(controls.sku_interno.disabled).toBe(true);
+    expect(controls.sku_interno.value).toBe('');
+
+    controls.generar_sku_interno.setValue(false);
+    component.onGenerateSKUChanged();
+    expect(controls.sku_interno.enabled).toBe(true);
+  });
+
+  it('adds variant rows and disables simple-product commercial fields', () => {
+    const controls = component.productForm.controls;
+    controls.tiene_variantes.setValue(true);
+    component.onVariantsChanged();
+
+    expect(component.variantControls.length).toBe(1);
+    expect(controls.sku_interno.disabled).toBe(true);
+    expect(controls.precio_venta.disabled).toBe(true);
+    expect(controls.stock_inicial.disabled).toBe(true);
+  });
+
   it('replaces a dropped import file and clears its preview when removed', () => {
     const firstFile = new File(['primero'], 'productos-inicial.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -118,9 +143,13 @@ describe('ProductosComponent', () => {
     component.importPreview.set({
       procesadas: 1,
       creadas: 0,
+      skus_generados: 0,
       insertables: 1,
       omitidas: 0,
       invalidas: 0,
+      productos_base_creados: 0,
+      productos_base_reutilizados: 0,
+      variantes_creadas: 0,
       errores: [],
       advertencias: [],
     });

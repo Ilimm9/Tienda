@@ -48,13 +48,15 @@
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
-        [tableStyle]="{ 'min-width': '70rem' }"
+        [tableStyle]="{ 'min-width': '76rem' }"
+        dataKey="id"
         class="app-table app-table--products"
         styleClass="products-table"
         responsiveLayout="scroll"
       >
         <ng-template #header>
           <tr>
+            <th class="expander-column" aria-label="Variantes"></th>
             <th>Imagen</th>
             <th>Nombre</th>
             <th>SKU</th>
@@ -65,8 +67,25 @@
             <th class="actions-column">Acciones</th>
           </tr>
         </ng-template>
-        <ng-template #body let-product>
+        <ng-template #body let-product let-expanded="expanded">
           <tr>
+            <td class="expander-column">
+              @if (hasVariants(product)) {
+                <button
+                  type="button"
+                  pButton
+                  pRowToggler
+                  [pRowToggler]="product"
+                  variant="text"
+                  severity="secondary"
+                  iconOnly
+                  rounded
+                  [attr.aria-label]="expanded ? 'Ocultar variantes' : 'Mostrar variantes'"
+                >
+                  <i [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
+                </button>
+              }
+            </td>
             <td>
               @if (product.imagen_url && !hasProductImageFailed(product.id)) {
                 <img
@@ -81,12 +100,17 @@
                 ></span>
               }
             </td>
-            <td class="product-name">{{ product.nombre }}</td>
-            <td>
-              <code>{{ product.sku || '—' }}</code>
+            <td class="product-name">
+              {{ product.nombre }}
+              @if (product.variantes.length) {
+                <small>{{ product.variantes.length }} variantes</small>
+              }
             </td>
-            <td>{{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
-            <td>{{ product.stock }} und.</td>
+            <td>
+              @if (hasVariants(product)) { <span class="variant-summary">Ver variantes</span> } @else { <code>{{ product.sku || '—' }}</code> }
+            </td>
+            <td>@if (hasVariants(product)) { <span class="variant-summary">Ver variantes</span> } @else { {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }} }</td>
+            <td>{{ hasVariants(product) ? variantStockTotal(product) : product.stock }} und.</td>
             <td>{{ product.categoria || 'Sin categoría' }}</td>
             <td>
               <span class="status" [class]="getStatusClass(product.estado)">
@@ -124,9 +148,39 @@
             </td>
           </tr>
         </ng-template>
+        <ng-template #expandedrow let-product>
+          <tr class="variant-expansion-row">
+            <td colspan="9">
+              <div class="variant-expansion">
+                <table class="variant-table">
+                  <thead>
+                    <tr>
+                      <th>Atributos</th>
+                      <th>SKU</th>
+                      <th>Código de barras</th>
+                      <th>Precio</th>
+                      <th>Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (variant of product.variantes; track variant.id) {
+                      <tr>
+                        <td>{{ variantAttributes(variant) }}</td>
+                        <td><code>{{ variant.sku || '—' }}</code></td>
+                        <td><code>{{ variant.codigo_barras || '—' }}</code></td>
+                        <td>{{ variant.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
+                        <td>{{ variant.stock }} und.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="8" class="empty-message">Sin productos disponibles.</td>
+            <td colspan="9" class="empty-message">Sin productos disponibles.</td>
           </tr>
         </ng-template>
       </p-table>
@@ -181,6 +235,14 @@
               Buscar producto
             }
           </button>
+          @if (previewImageURL(); as imageURL) {
+            <img
+              class="barcode-thumbnail"
+              [src]="imageURL"
+              alt="Miniatura del producto encontrado"
+              (error)="handlePreviewImageError()"
+            />
+          }
         </div>
         @if (hasError('codigo_barras')) {
           <small>Usa únicamente entre 8 y 14 dígitos.</small>
@@ -198,16 +260,6 @@
             >Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de
             guardar.</span
           >
-        }
-        @if (previewImageURL(); as imageURL) {
-          <div class="image-preview">
-            <img
-              [src]="imageURL"
-              alt="Vista previa del producto"
-              (error)="handlePreviewImageError()"
-            />
-            <span>Imagen encontrada para el producto.</span>
-          </div>
         }
       </div>
     </div>
@@ -227,15 +279,31 @@
         </label>
 
         <label class="field">
-          <span>SKU interno <b>*</b></span>
+          <span>SKU interno @if (productForm.controls.tiene_variantes.value) { <small class="optional-label">(se define en cada variante)</small> } @else if (!editingProduct() && productForm.controls.generar_sku_interno.value) { <small class="optional-label">(se generará automáticamente)</small> } @else { <b>*</b> }</span>
           <input pInputText formControlName="sku_interno" placeholder="PROD-001" />
           @if (hasError('sku_interno')) {
-            <small>El SKU es obligatorio.</small>
+            <small>Captura un SKU o activa la generación automática.</small>
           }
         </label>
 
+        @if (!editingProduct()) {
+          <div class="field">
+            <span>Variantes</span>
+            <p-checkbox formControlName="tiene_variantes" [binary]="true" inputId="tiene-variantes" (onChange)="onVariantsChanged()" />
+            <label for="tiene-variantes">Este producto tiene sabor, color, colección u otra variante</label>
+          </div>
+        }
+
+        @if (!editingProduct() && !productForm.controls.tiene_variantes.value) {
+          <div class="field">
+            <span>Identificador automático</span>
+            <p-checkbox formControlName="generar_sku_interno" [binary]="true" inputId="generar-sku" (onChange)="onGenerateSKUChanged()" />
+            <label for="generar-sku">Generar SKU interno automáticamente</label>
+          </div>
+        }
+
         <label class="field">
-          <span>Categoría <b>*</b></span>
+          <span>Categoría <small class="optional-label">(opcional)</small></span>
           <p-select
             formControlName="categoria_id"
             [options]="categories()"
@@ -244,9 +312,6 @@
             placeholder="Seleccionar..."
             [style]="{ width: '100%' }"
           />
-          @if (hasError('categoria_id')) {
-            <small>Selecciona una categoría.</small>
-          }
         </label>
 
         <label class="field">
@@ -272,12 +337,49 @@
           ></textarea>
         </label>
       </div>
-    </div>
 
-    <div class="form-section multimedia-section" aria-disabled="true">
-      <h3>Multimedia</h3>
-      <p>La carga de imágenes propias estará disponible próximamente.</p>
-      <div class="multimedia-placeholder"><i class="pi pi-image" aria-hidden="true"></i><span>Carga de imágenes no disponible</span></div>
+      @if (!editingProduct() && productForm.controls.tiene_variantes.value) {
+        <div class="form-section" formArrayName="variantes">
+          <div class="products-actions">
+            <h3>Variantes</h3>
+            <button class="secondary-button" type="button" (click)="addVariant()">Agregar variante</button>
+          </div>
+          @for (variant of variantControls.controls; track $index; let index = $index) {
+            <section class="variant-card" [formGroupName]="index">
+              <div class="variant-card-header">
+                <span>Variante {{ index + 1 }}</span>
+                <button class="secondary-button variant-remove-button" type="button" (click)="removeVariant(index)">Quitar</button>
+              </div>
+              <div class="form-grid">
+              <label class="field full-field">
+                <span>Atributos <b>*</b></span>
+                <input pInputText formControlName="atributos" placeholder="Colección=Dinosaurios; Color=Rojo" />
+              </label>
+              <label class="field">
+                <span>SKU interno</span>
+                <input pInputText formControlName="sku_interno" placeholder="Opcional si se genera" />
+              </label>
+              <label class="field">
+                <span>Generar identificador</span>
+                <p-checkbox formControlName="generar_sku_interno" [binary]="true" [inputId]="'generar-sku-' + index" />
+              </label>
+              <label class="field">
+                <span>Precio de venta <b>*</b></span>
+                <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" />
+              </label>
+              <label class="field">
+                <span>Stock inicial <b>*</b></span>
+                <input pInputText type="number" formControlName="stock_inicial" min="0" step="1" />
+              </label>
+              <label class="field">
+                <span>Código de barras</span>
+                <input pInputText formControlName="codigo_barras" inputmode="numeric" maxlength="14" />
+              </label>
+              </div>
+            </section>
+          }
+        </div>
+      }
     </div>
 
     <div class="form-section">
@@ -351,6 +453,12 @@
           </label>
         }
       </div>
+    </div>
+
+    <div class="form-section multimedia-section" aria-disabled="true">
+      <h3>Multimedia</h3>
+      <p>La carga de imágenes propias estará disponible próximamente.</p>
+      <div class="multimedia-placeholder"><i class="pi pi-image" aria-hidden="true"></i><span>Carga de imágenes no disponible</span></div>
     </div>
 
     @for (message of catalogLoadErrors(); track message) {
@@ -447,8 +555,11 @@
         <section class="import-result">
           <strong>Resultado de la importación</strong>
           <p>
-            {{ result.creadas }} creadas · {{ result.omitidas }} omitidas ·
-            {{ result.invalidas }} inválidas
+            {{ result.productos_base_creados }} productos base nuevos ·
+            {{ result.productos_base_reutilizados }} reutilizados ·
+            {{ result.variantes_creadas }} variantes registradas ·
+            {{ result.omitidas }} omitidas · {{ result.invalidas }} inválidas ·
+            {{ result.skus_generados }} SKU generados
           </p>
           @if (result.errores.length) {
             <ul>
@@ -469,10 +580,18 @@
       } @else if (importPreview(); as preview) {
         <section class="import-result">
           <strong>Vista previa de importación</strong>
-          <p>{{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas · {{ preview.invalidas }} inválidas</p>
+          <p>{{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas · {{ preview.invalidas }} inválidas · {{ preview.skus_generados }} SKU se generarían</p>
           @if (preview.errores.length) {
             <ul>
               @for (issue of preview.errores; track issue.fila + (issue.campo ?? '') + issue.motivo) {
+                <li>Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}: {{ issue.motivo }}</li>
+              }
+            </ul>
+          }
+          @if (preview.advertencias.length) {
+            <p class="import-warnings-title">Advertencias</p>
+            <ul class="import-warnings">
+              @for (issue of preview.advertencias; track issue.fila + (issue.campo ?? '') + issue.motivo) {
                 <li>Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}: {{ issue.motivo }}</li>
               }
             </ul>

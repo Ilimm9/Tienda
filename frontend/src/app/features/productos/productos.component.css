@@ -112,6 +112,55 @@
     font-weight: 600;
 }
 
+.expander-column {
+    width: 3rem;
+    text-align: center;
+}
+
+.variant-summary {
+    color: var(--text-muted);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.variant-expansion-row > td {
+    padding: 0 !important;
+}
+
+.variant-expansion {
+    margin: 0 .75rem .75rem 3.5rem;
+    padding: .75rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text-muted));
+    border-radius: .45rem;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--text-muted));
+    overflow-x: auto;
+}
+
+.variant-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+    font-size: .82rem;
+}
+
+.variant-table th,
+.variant-table td {
+    padding: .65rem .5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.variant-table th {
+    color: var(--text-muted);
+    font-size: .72rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.variant-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
 .table-actions {
     display: flex;
     justify-content: center;
@@ -264,6 +313,31 @@ code {
     padding-top: .25rem;
 }
 
+.variant-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, var(--text-muted));
+    border-radius: .5rem;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--text-muted));
+}
+
+.variant-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    color: var(--text-muted);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.variant-remove-button {
+    flex: 0 0 auto;
+}
+
 .field {
     display: grid;
     gap: .4rem;
@@ -322,31 +396,22 @@ code {
 
 .barcode-input-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: .65rem;
+    align-items: center;
 }
 
 .barcode-input-row .secondary-button {
     white-space: nowrap;
 }
 
-.image-preview {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .65rem;
+.barcode-thumbnail {
+    width: 2.5rem;
+    height: 2.5rem;
     border: 1px solid var(--border);
     border-radius: .35rem;
-    color: var(--text-muted);
-    background: var(--surface-hover);
-}
-
-.image-preview img {
-    width: 4rem;
-    height: 4rem;
-    border-radius: .35rem;
     object-fit: contain;
-    background: #fff;
+    background: var(--surface-raised);
 }
 
 .full-field {
@@ -423,6 +488,15 @@ code {
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .variant-card-header {
+        align-items: flex-start;
+    }
+
+    .variant-expansion {
+        margin-left: .5rem;
+        margin-right: .5rem;
     }
 
     .full-field {

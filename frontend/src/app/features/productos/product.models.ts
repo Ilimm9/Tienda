@@ -20,6 +20,30 @@ export interface ProductRow {
   codigo_barras: string | null;
   inventario: ProductBranchStock[];
   estado: ProductStatus;
+  variantes: ProductVariantRow[];
+}
+
+export interface ProductVariantAttribute {
+  nombre: string;
+  valor: string;
+}
+
+export interface ProductVariantRow {
+  id: string;
+  sku: string | null;
+  precio: number;
+  stock: number;
+  codigo_barras: string | null;
+  atributos: ProductVariantAttribute[];
+}
+
+export interface CreateProductVariantRequest {
+  atributos: ProductVariantAttribute[];
+  sku_interno: string;
+  generar_sku_interno: boolean;
+  precio_venta: number;
+  stock_inicial: number;
+  codigo_barras: string | null;
 }
 
 export interface ProductBranchStock {
@@ -41,8 +65,9 @@ export interface CatalogOption {
 export interface CreateProductRequest {
   nombre: string;
   sku_interno: string;
+  generar_sku_interno: boolean;
   marca_id: string | null;
-  categoria_id: string;
+  categoria_id: string | null;
   sucursal_id: string;
   descripcion: string | null;
   contenido: number | null;
@@ -53,9 +78,12 @@ export interface CreateProductRequest {
   stock_inicial: number;
   codigo_barras: string | null;
   imagen_url: string | null;
+  variantes?: CreateProductVariantRequest[];
 }
 
-export interface UpdateProductRequest extends Omit<CreateProductRequest, 'sucursal_id' | 'stock_inicial'> {}
+export interface UpdateProductRequest extends Omit<CreateProductRequest, 'sucursal_id' | 'stock_inicial' | 'generar_sku_interno' | 'categoria_id'> {
+  categoria_id: string;
+}
 
 export interface ProductLookup {
   codigo_barras: string;
@@ -81,10 +109,23 @@ export interface ProductImportResult {
   creadas: number;
   omitidas: number;
   invalidas: number;
+  skus_generados: number;
+  productos_base_creados: number;
+  productos_base_reutilizados: number;
+  variantes_creadas: number;
   errores: ProductImportIssue[];
   advertencias: ProductImportIssue[];
 }
 
 export interface ProductImportPreview extends ProductImportResult {
   insertables: number;
+}
+
+export interface ProductImportJob {
+  id: string;
+  estado: 'pendiente' | 'procesando' | 'completada' | 'fallida';
+  etapa: string;
+  porcentaje: number;
+  mensaje_error: string | null;
+  resultado: ProductImportResult | null;
 }

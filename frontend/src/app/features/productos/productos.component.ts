@@ -1,16 +1,27 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
-import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow } from './product.models';
+import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow, ProductVariantRow } from './product.models';
 import { ProductosService } from './productos.service';
+import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
+
+type VariantFormGroup = FormGroup<{
+  atributos: FormControl<string>;
+  sku_interno: FormControl<string>;
+  generar_sku_interno: FormControl<boolean>;
+  precio_venta: FormControl<number>;
+  stock_inicial: FormControl<number>;
+  codigo_barras: FormControl<string>;
+}>;
 
 @Component({
   selector: 'app-productos',
@@ -18,6 +29,7 @@ import { ProductosService } from './productos.service';
   imports: [
     CommonModule,
     ButtonModule,
+    CheckboxModule,
     FormsModule,
     ReactiveFormsModule,
     InputTextModule,
@@ -72,10 +84,13 @@ export class ProductosComponent {
   readonly productForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
     sku_interno: ['', [Validators.required, Validators.maxLength(120)]],
+    generar_sku_interno: [false],
+    tiene_variantes: [false],
+    variantes: this.formBuilder.array<VariantFormGroup>([]),
     codigo_barras: ['', Validators.pattern(/^\d{8,14}$/)],
     imagen_url: [''],
     marca_id: [''],
-    categoria_id: ['', Validators.required],
+    categoria_id: [''],
     sucursal_id: ['', Validators.required],
     descripcion: ['', Validators.maxLength(2000)],
     contenido: this.formBuilder.control<number | null>(null, [Validators.min(0)]),
@@ -157,7 +172,7 @@ export class ProductosComponent {
     this.loading.set(false);
     const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
-      nombre: '', sku_interno: '', marca_id: '', categoria_id: '', sucursal_id: '',
+      nombre: '', sku_interno: '', generar_sku_interno: false, tiene_variantes: false, marca_id: '', categoria_id: '', sucursal_id: '',
       codigo_barras: '', imagen_url: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
       unidad_medida_id: '',
@@ -165,6 +180,10 @@ export class ProductosComponent {
     });
     this.productForm.controls.sucursal_id.enable();
     this.productForm.controls.stock_inicial.enable();
+    this.productForm.controls.sku_interno.enable();
+	this.productForm.controls.precio_venta.enable();
+	this.productForm.controls.stock_inicial.enable();
+	this.productForm.controls.variantes.clear();
     this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
@@ -234,6 +253,8 @@ export class ProductosComponent {
     this.productForm.reset({
       nombre: product.nombre,
       sku_interno: product.sku ?? '',
+      generar_sku_interno: false,
+	  tiene_variantes: false,
       codigo_barras: product.codigo_barras ?? '',
       imagen_url: product.imagen_url ?? '',
       marca_id: product.marca_id ?? '',
@@ -249,6 +270,8 @@ export class ProductosComponent {
     });
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
+	this.productForm.controls.sku_interno.enable();
+	this.productForm.controls.variantes.clear();
     this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => this.categories.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
@@ -384,16 +407,40 @@ export class ProductosComponent {
 
   private executeProductImport(file: File, branchId: string): void {
     this.productosService.importProducts(this.negocioID, branchId, file).subscribe({
-      next: (result) => {
-        this.importing.set(false);
-        this.importPreview.set(null);
-        this.importResult.set(result);
-        if (result.creadas > 0) this.loadProducts();
+      next: (job) => {
+        Swal.fire({ title: 'Importando archivo', html: '<p id="import-progress-stage">Preparando importación</p><progress id="import-progress" value="0" max="100" style="width:100%"></progress><p id="import-progress-value">0%</p>', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false });
+        this.pollProductImport(job.id);
       },
       error: (response) => {
         this.importing.set(false);
         this.importError.set(response.error?.mensaje ?? 'No fue posible importar el archivo.');
       },
+    });
+  }
+
+  private pollProductImport(importId: string): void {
+    this.productosService.productImportStatus(this.negocioID, importId).subscribe({
+      next: (job) => {
+        const stage = document.getElementById('import-progress-stage');
+        const progress = document.getElementById('import-progress') as HTMLProgressElement | null;
+        const value = document.getElementById('import-progress-value');
+        if (stage) stage.textContent = job.etapa;
+        if (progress) progress.value = job.porcentaje;
+        if (value) value.textContent = `${job.porcentaje}%`;
+        if (job.estado === 'pendiente' || job.estado === 'procesando') { window.setTimeout(() => this.pollProductImport(importId), 750); return; }
+        this.importing.set(false);
+        this.importPreview.set(null);
+        if (job.estado === 'completada' && job.resultado) {
+          this.importResult.set(job.resultado);
+          if (job.resultado.creadas > 0) this.loadProducts();
+          const partial = job.resultado.omitidas > 0 || job.resultado.invalidas > 0 || job.resultado.advertencias.length > 0;
+          Swal.fire({ icon: partial ? 'warning' : 'success', title: 'Importación terminada', text: `${job.resultado.productos_base_creados} productos base nuevos · ${job.resultado.productos_base_reutilizados} reutilizados · ${job.resultado.variantes_creadas} variantes registradas · ${job.resultado.omitidas} omitidas · ${job.resultado.invalidas} inválidas` });
+          return;
+        }
+        this.importError.set(job.mensaje_error ?? 'No fue posible importar el archivo.');
+        Swal.fire({ icon: 'error', title: 'No fue posible importar', text: job.mensaje_error ?? 'Ocurrió un error durante la importación.' });
+      },
+      error: () => { this.importing.set(false); this.importError.set('No fue posible consultar el progreso de importación.'); Swal.close(); },
     });
   }
 
@@ -403,6 +450,58 @@ export class ProductosComponent {
 
   onBranchSelected(): void {
     this.branchReady.set(!!this.productForm.controls.sucursal_id.value);
+  }
+
+  onGenerateSKUChanged(): void {
+    const controls = this.productForm.controls;
+    if (controls.generar_sku_interno.value) {
+      controls.sku_interno.setValue('');
+      controls.sku_interno.disable();
+      return;
+    }
+    controls.sku_interno.enable();
+  }
+
+  get variantControls(): FormArray<VariantFormGroup> {
+    return this.productForm.controls.variantes;
+  }
+
+  onVariantsChanged(): void {
+    const controls = this.productForm.controls;
+    if (controls.tiene_variantes.value) {
+      controls.sku_interno.disable();
+      controls.precio_venta.disable();
+      controls.stock_inicial.disable();
+      if (this.variantControls.length === 0) this.addVariant();
+      return;
+    }
+    controls.sku_interno.enable();
+    controls.precio_venta.enable();
+    controls.stock_inicial.enable();
+    this.variantControls.clear();
+  }
+
+  addVariant(): void {
+    this.variantControls.push(this.createVariantForm());
+  }
+
+  private createVariantForm(): VariantFormGroup {
+    return this.formBuilder.nonNullable.group({
+      atributos: ['', Validators.required],
+      sku_interno: ['', Validators.maxLength(120)],
+      generar_sku_interno: [true],
+      precio_venta: [0, [Validators.required, Validators.min(0)]],
+      stock_inicial: [0, [Validators.required, Validators.min(0)]],
+      codigo_barras: ['', Validators.pattern(/^\d{8,14}$/)],
+    });
+  }
+
+  removeVariant(index: number): void {
+    this.variantControls.removeAt(index);
+    if (this.variantControls.length === 0) {
+      this.productForm.controls.tiene_variantes.setValue(false);
+      this.onVariantsChanged();
+    }
   }
 
   private addCatalogLoadError(message: string): void {
@@ -535,6 +634,18 @@ export class ProductosComponent {
     return this.failedProductImages().has(productId);
   }
 
+  hasVariants(product: ProductRow): boolean {
+    return product.variantes.length > 0;
+  }
+
+  variantStockTotal(product: ProductRow): number {
+    return product.variantes.reduce((total, variant) => total + variant.stock, 0);
+  }
+
+  variantAttributes(variant: ProductVariantRow): string {
+    return variant.atributos.map((attribute) => `${attribute.nombre}: ${attribute.valor}`).join(' · ');
+  }
+
   handleProductImageError(productId: string): void {
     this.failedProductImages.update((current) => new Set([...current, productId]));
   }
@@ -571,6 +682,7 @@ export class ProductosComponent {
     const payload = {
       ...value,
       marca_id: value.marca_id || null,
+      categoria_id: value.categoria_id || null,
       descripcion: value.descripcion || null,
       contenido: value.contenido,
       unidad_contenido: value.unidad_contenido || null,
@@ -578,6 +690,14 @@ export class ProductosComponent {
       presentacion: value.presentacion || null,
       codigo_barras: value.codigo_barras.trim() || null,
       imagen_url: value.imagen_url || null,
+	  variantes: value.tiene_variantes ? value.variantes.map((variant) => ({
+		atributos: this.parseVariantAttributes(variant.atributos),
+		sku_interno: variant.sku_interno.trim(),
+		generar_sku_interno: variant.generar_sku_interno,
+		precio_venta: variant.precio_venta,
+		stock_inicial: variant.stock_inicial,
+		codigo_barras: variant.codigo_barras.trim() || null,
+	  })) : undefined,
     };
     const editing = this.editingProduct();
     const request = editing
@@ -585,7 +705,7 @@ export class ProductosComponent {
           nombre: payload.nombre,
           sku_interno: payload.sku_interno,
           marca_id: payload.marca_id,
-          categoria_id: payload.categoria_id,
+          categoria_id: payload.categoria_id as string,
           descripcion: payload.descripcion,
           contenido: payload.contenido,
           unidad_contenido: payload.unidad_contenido,
@@ -607,4 +727,11 @@ export class ProductosComponent {
       },
     });
   }
+
+  private parseVariantAttributes(value: string): { nombre: string; valor: string }[] {
+	return value.split(';').map((item) => {
+		const [nombre, ...valueParts] = item.split('=');
+		return { nombre: nombre.trim(), valor: valueParts.join('=').trim() };
+	}).filter((attribute) => attribute.nombre && attribute.valor);
+	}
 }
