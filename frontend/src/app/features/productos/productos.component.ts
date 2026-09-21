@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -51,6 +51,25 @@ export class ProductosComponent {
     (this.route?.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ?? 'list';
 
   readonly products = signal<ProductRow[]>([]);
+  readonly productSearch = signal('');
+  readonly productPageFirst = signal(0);
+  readonly productCategoryFilter = signal<string | null>(null);
+  readonly productBrandFilter = signal<string | null>(null);
+  readonly productStatusFilter = signal<string | null>(null);
+  readonly productTypeFilter = signal<'all' | 'simple' | 'variants'>('all');
+  readonly productCategoryOptions = computed(() => this.filterOptions(this.products(), 'categoria'));
+  readonly productBrandOptions = computed(() => this.filterOptions(this.products(), 'marca'));
+  readonly productStatusOptions = [
+    { id: 'En stock', nombre: 'En stock' },
+    { id: 'Bajo stock', nombre: 'Bajo stock' },
+    { id: 'Agotado', nombre: 'Agotado' },
+  ];
+  readonly productTypeOptions = [
+    { id: 'all', nombre: 'Todos' },
+    { id: 'simple', nombre: 'Productos simples' },
+    { id: 'variants', nombre: 'Con variantes' },
+  ];
+  readonly filteredProducts = computed(() => this.products().filter((product) => this.matchesProductFilters(product)));
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
@@ -644,6 +663,85 @@ export class ProductosComponent {
 
   variantAttributes(variant: ProductVariantRow): string {
     return variant.atributos.map((attribute) => `${attribute.nombre}: ${attribute.valor}`).join(' · ');
+  }
+
+  setProductSearch(value: string): void {
+    this.productSearch.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductCategoryFilter(value: string | null): void {
+    this.productCategoryFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductBrandFilter(value: string | null): void {
+    this.productBrandFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductStatusFilter(value: string | null): void {
+    this.productStatusFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductTypeFilter(value: 'all' | 'simple' | 'variants' | null): void {
+    this.productTypeFilter.set(value ?? 'all');
+    this.resetProductPagination();
+  }
+
+  clearProductFilters(): void {
+    this.productSearch.set('');
+    this.productCategoryFilter.set(null);
+    this.productBrandFilter.set(null);
+    this.productStatusFilter.set(null);
+    this.productTypeFilter.set('all');
+    this.resetProductPagination();
+  }
+
+  onProductTablePage(first: number): void {
+    this.productPageFirst.set(first);
+  }
+
+  private resetProductPagination(): void {
+    this.productPageFirst.set(0);
+  }
+
+  private filterOptions(products: ProductRow[], field: 'categoria' | 'marca'): CatalogOption[] {
+    const values = new Map<string, CatalogOption>();
+    for (const product of products) {
+      const value = product[field];
+      const id = field === 'categoria' ? product.categoria_id : product.marca_id;
+      if (value && id) values.set(id, { id, nombre: value });
+    }
+    return [...values.values()].sort((first, second) => first.nombre.localeCompare(second.nombre, 'es'));
+  }
+
+  private matchesProductFilters(product: ProductRow): boolean {
+    const query = this.normalizeProductFilter(this.productSearch());
+    const category = this.productCategoryFilter();
+    const brand = this.productBrandFilter();
+    const status = this.productStatusFilter();
+    const type = this.productTypeFilter();
+    if (category && product.categoria_id !== category) return false;
+    if (brand && product.marca_id !== brand) return false;
+    if (status && product.estado !== status) return false;
+    if (type === 'simple' && this.hasVariants(product)) return false;
+    if (type === 'variants' && !this.hasVariants(product)) return false;
+    if (!query) return true;
+    const searchable = [
+      product.nombre, product.presentacion, product.descripcion, product.marca, product.categoria,
+      product.sku, product.codigo_barras,
+      ...product.variantes.flatMap((variant) => [
+        variant.sku, variant.codigo_barras,
+        ...variant.atributos.flatMap((attribute) => [attribute.nombre, attribute.valor, `${attribute.nombre}=${attribute.valor}`]),
+      ]),
+    ];
+    return searchable.some((value) => this.normalizeProductFilter(value).includes(query));
+  }
+
+  private normalizeProductFilter(value: string | null | undefined): string {
+    return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('es');
   }
 
   handleProductImageError(productId: string): void {
