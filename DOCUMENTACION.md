@@ -16,7 +16,7 @@ Aplicación web para gestión de una tienda. Incluye registro, inicio de sesión
 - Go 1.25.
 - Gin para la API HTTP.
 - GORM y PostgreSQL para persistencia.
-- JWT en cookies para sesiones.
+- Sesiones opacas revocables en cookies `HttpOnly`, persistidas únicamente como hash.
 - bcrypt para proteger contraseñas.
 
 ## Requisitos y configuración
@@ -32,8 +32,10 @@ Configurar las credenciales de PostgreSQL en `backend/.env` . Las variables más
 | `DB_PORT`                 | Puerto PostgreSQL   | `5433`                  |
 | `DB_USER` / `DB_PASSWORD` | Credenciales        | `postgres` / `postgres` |
 | `DB_NAME`                 | Base de datos       | `tienda`                |
-| `JWT_SECRET`              | Firma de sesión     | Cambiar en producción   |
-| `JWT_EXPIRATION`          | Duración de sesión  | `24h`                   |
+| `SESSION_DURATION`        | Sesión normal       | `24h`                   |
+| `SESSION_REMEMBER_DURATION` | Sesión recordada  | `720h`                  |
+| `SESSION_REMEMBER_IDLE`   | Inactividad máxima recordada | `168h`          |
+| `SESSION_TOUCH_INTERVAL`  | Frecuencia de actividad | `5m`                 |
 | `FRONTEND_URL`            | Origen CORS         | `http://localhost:4200` |
 
 ### Backend
@@ -125,7 +127,7 @@ La pantalla de registro usa dos columnas en escritorio. En pantallas menores a `
 
 ## Consideraciones para producción
 
-- Cambiar `JWT_SECRET` por una llave segura.
+- Las sesiones son opacas y se almacenan como hash en PostgreSQL; no guardar cookies o tokens en logs.
 - Usar credenciales seguras para PostgreSQL.
 - Configurar CORS y HTTPS correctamente.
 - Revisar `APP_ENV`, `FRONTEND_URL` y SSL de PostgreSQL antes de publicar.

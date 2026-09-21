@@ -1,6 +1,7 @@
 package cuenta
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 )
@@ -11,6 +12,13 @@ func NewUserRepository(db *gorm.DB) *UserRepository { return &UserRepository{db:
 func (r *UserRepository) FindByEmail(email string) (*cuentadomain.Usuario, error) {
 	var user cuentadomain.Usuario
 	if err := r.db.Where("correo = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+func (r *UserRepository) FindByID(id uuid.UUID) (*cuentadomain.Usuario, error) {
+	var user cuentadomain.Usuario
+	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

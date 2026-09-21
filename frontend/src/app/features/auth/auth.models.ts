@@ -27,4 +27,20 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   mensaje: string;
+  desafio_id: string;
+  correo_enmascarado: string;
+  reenviar_en_segundos: number;
+}
+
+export interface VerifyEmailRequest {
+  desafio_id: string;
+  codigo: string;
+}
+
+export interface VerifyEmailResponse extends LoginResponse {
+  mensaje: string;
+}
+
+export interface ResendVerificationRequest {
+  desafio_id: string;
 }

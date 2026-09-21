@@ -13,11 +13,11 @@ func TestCORSMiddlewareAllowsPatchPreflight(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(transporthttp.CORSMiddleware("http://localhost:4200"))
-	router.OPTIONS("/api/v1/catalogo/marcas/123", func(c *gin.Context) {
+	router.OPTIONS("/api/v1/negocios/negocio-1/catalogo/marcas/123", func(c *gin.Context) {
 		t.Fatal("the preflight request must be aborted before reaching the route")
 	})
 
-	request := httptest.NewRequest(http.MethodOptions, "/api/v1/catalogo/marcas/123", nil)
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/negocios/negocio-1/catalogo/marcas/123", nil)
 	request.Header.Set("Origin", "http://localhost:4200")
 	request.Header.Set("Access-Control-Request-Method", http.MethodPatch)
 	response := httptest.NewRecorder()
@@ -33,7 +33,7 @@ func TestCORSMiddlewareAllowsPatchPreflight(t *testing.T) {
 	if got := response.Header().Get("Access-Control-Allow-Credentials"); got != "true" {
 		t.Errorf("Access-Control-Allow-Credentials = %q", got)
 	}
-	if got := response.Header().Get("Access-Control-Allow-Methods"); got != "GET, POST, PATCH, DELETE, OPTIONS" {
+	if got := response.Header().Get("Access-Control-Allow-Methods"); got != "GET, POST, PUT, PATCH, DELETE, OPTIONS" {
 		t.Errorf("Access-Control-Allow-Methods = %q", got)
 	}
 }

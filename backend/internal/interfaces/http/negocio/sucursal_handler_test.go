@@ -6,15 +6,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
+	cuentaapplication "tienda/backend/internal/application/cuenta"
 	application "tienda/backend/internal/application/negocio"
-	"tienda/backend/internal/config"
 	domain "tienda/backend/internal/domain/negocio"
 	transporthttp "tienda/backend/internal/interfaces/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -144,21 +142,15 @@ func TestSucursalHandlerNoAceptaCodigoEnActualizacion(t *testing.T) {
 func testSucursalRouter(t *testing.T, repository application.SucursalRepository) (*gin.Engine, *http.Cookie) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	secret := "phase-two-test-secret"
 	userID := uuid.New()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userID.String(), "exp": time.Now().Add(time.Hour).Unix(),
-	})
-	signed, err := token.SignedString([]byte(secret))
-	if err != nil {
-		t.Fatal(err)
-	}
 	handler := NewSucursalHandler(application.NewSucursalService(repository))
 	router := gin.New()
 	group := router.Group("/api/v1/negocios")
-	group.Use(transporthttp.RequireAuth(config.Config{JWTSecret: secret}))
+	group.Use(transporthttp.RequireAuth(transporthttp.SessionAuthenticatorFunc(func(string) (cuentaapplication.AuthenticatedSession, error) {
+		return cuentaapplication.AuthenticatedSession{UserID: userID}, nil
+	}), "tienda_session"))
 	group.POST("/:negocioId/administracion/sucursales", handler.Crear)
 	group.PATCH("/:negocioId/administracion/sucursales/:sucursalId", handler.Actualizar)
 	group.DELETE("/:negocioId/administracion/sucursales/:sucursalId", handler.Archivar)
-	return router, &http.Cookie{Name: "tienda_session", Value: signed}
+	return router, &http.Cookie{Name: "tienda_session", Value: "opaque-test-token"}
 }

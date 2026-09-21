@@ -13,6 +13,7 @@ describe('RegisterComponent', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [RegisterComponent],
       providers: [
@@ -32,7 +33,12 @@ describe('RegisterComponent', () => {
   });
 
   it('maps the form to the existing API contract', () => {
-    auth.register.mockReturnValue(of({ mensaje: 'Cuenta creada correctamente' }));
+    auth.register.mockReturnValue(of({
+      mensaje: 'Código enviado',
+      desafio_id: 'challenge-1',
+      correo_enmascarado: 'j***@ejemplo.com',
+      reenviar_en_segundos: 60,
+    }));
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
     component.form.setValue({
       nombreCompleto: 'Juan Pérez',
@@ -50,8 +56,14 @@ describe('RegisterComponent', () => {
       telefono: '',
       contrasena: '12345678',
     });
-    expect(feedback.success).toHaveBeenCalledWith('Cuenta creada', 'Ahora puedes iniciar sesión.');
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(feedback.success).toHaveBeenCalledWith(
+      'Código enviado',
+      'Revisa tu correo para activar la cuenta.',
+    );
+    expect(sessionStorage.getItem('tienda.verification.challenge')).toBe('challenge-1');
+    expect(router.navigate).toHaveBeenCalledWith(['/verificar-correo'], {
+      queryParams: { desafio: 'challenge-1' },
+    });
     expect(component.loading()).toBe(false);
   });
 
@@ -75,5 +87,29 @@ describe('RegisterComponent', () => {
     expect(component.passwordVisible()).toBe(true);
     expect(component.confirmationVisible()).toBe(true);
     expect(component.error()).toBe('el correo electrónico ya está registrado');
+  });
+
+  it('preserves a recoverable challenge when email delivery fails', () => {
+    auth.register.mockReturnValue(
+      throwError(() => ({
+        status: 503,
+        error: { mensaje: 'No fue posible enviar', desafio_id: 'challenge-retry' },
+      })),
+    );
+    const component = TestBed.createComponent(RegisterComponent).componentInstance;
+    component.form.setValue({
+      nombreCompleto: 'Juan Pérez',
+      correo: 'juan@ejemplo.com',
+      telefono: '',
+      contrasena: '12345678',
+      confirmarContrasena: '12345678',
+    });
+
+    component.submit();
+
+    expect(sessionStorage.getItem('tienda.verification.challenge')).toBe('challenge-retry');
+    expect(router.navigate).toHaveBeenCalledWith(['/verificar-correo'], {
+      queryParams: { desafio: 'challenge-retry', envio: 'pendiente' },
+    });
   });
 });

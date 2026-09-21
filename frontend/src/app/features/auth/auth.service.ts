@@ -9,7 +9,10 @@ import {
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
+  ResendVerificationRequest,
   SessionResponse,
+  VerifyEmailRequest,
+  VerifyEmailResponse,
 } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
@@ -26,6 +29,16 @@ export class AuthService {
 
   register(payload: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.url}/register`, payload);
+  }
+
+  verifyEmail(payload: VerifyEmailRequest): Observable<VerifyEmailResponse> {
+    return this.http
+      .post<VerifyEmailResponse>(`${this.url}/verificar-correo`, payload)
+      .pipe(tap(({ usuario }) => this.currentUser.set(usuario)));
+  }
+
+  resendVerification(payload: ResendVerificationRequest): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(`${this.url}/reenviar-verificacion`, payload);
   }
 
   me(): Observable<SessionResponse> {
