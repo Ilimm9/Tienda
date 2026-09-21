@@ -31,7 +31,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 02 | [Configuración del entorno local](capabilities/02-configuracion-entorno-local/CAPABILITY.md) | Verificada | Configuración Go y Angular CLI | Aprobada el 2026-09-11 | Implementación verificada; pendiente de aceptación final |
 | 03 | [Carga de archivos unificada](capabilities/03-carga-archivos-unificada/CAPABILITY.md) | En implementación | Carga masiva existente de productos y catálogo | Aprobada explícitamente por el usuario el 2026-09-14 | Estado visual inmediato, eliminación y arrastrar/soltar |
 | 04 | [Tailwind y sistema visual](capabilities/04-tailwind-sistema-visual/CAPABILITY.md) | En revisión | Tema, layout y estilos actuales del frontend | Pendiente | Integración incremental; piloto en shell e inicio |
-| 05 | [Preparación segura para producción en AWS Lightsail](capabilities/05-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1 y 2 aprobadas el 2026-09-20 | Fases 1 y 2 implementadas y verificadas automáticamente; base legacy `5433`, revisión final, fases 3–7 y despliegue pendientes |
+| 05 | [Preparación segura para producción en AWS Lightsail](capabilities/05-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1, 2 y 3 aprobadas el 2026-09-20 | Fases 1, 2 y 3 implementadas y verificadas; fase 3 usa Mailpit local y no SES; base legacy `5433`, fases 4–7 y despliegue pendientes |
 
 ## Restricciones vigentes
 

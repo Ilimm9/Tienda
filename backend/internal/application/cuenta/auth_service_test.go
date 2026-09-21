@@ -1,7 +1,6 @@
 package cuenta
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -31,24 +30,6 @@ func (r *userRepositoryStub) CreateAccount(user *cuentadomain.Usuario, profile *
 	r.createdUser = user
 	r.createdProfile = profile
 	return nil
-}
-
-func TestAuthServiceRegisterConservaContrato(t *testing.T) {
-	repository := &userRepositoryStub{findErr: errors.New("no encontrado")}
-	service := NewAuthService(repository)
-
-	if err := service.Register("Ada Lovelace", " ADA@EXAMPLE.COM ", "+52 55 1234", "contrasena-segura"); err != nil {
-		t.Fatalf("Register() error = %v", err)
-	}
-	if repository.createdUser == nil || repository.createdUser.Correo != "ada@example.com" {
-		t.Fatalf("usuario creado = %#v", repository.createdUser)
-	}
-	if repository.createdUser.CorreoVerificadoEn == nil {
-		t.Fatal("durante la transición previa a OTP el registro debe conservar el acceso existente")
-	}
-	if repository.createdProfile == nil || repository.createdProfile.Nombres != "Ada" || repository.createdProfile.Apellidos != "Lovelace" {
-		t.Fatalf("perfil creado = %#v", repository.createdProfile)
-	}
 }
 
 func TestAuthServiceLoginConservaContrato(t *testing.T) {

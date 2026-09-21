@@ -40,6 +40,7 @@ func main() {
 	}
 	cuentaRepo := cuentainfra.NewUserRepository(db)
 	sessionRepo := cuentainfra.NewSessionRepository(db)
+	verificationRepo := cuentainfra.NewVerificationRepository(db)
 	sessionService := cuentaapplication.NewSessionService(sessionRepo, cuentaapplication.SessionConfig{
 		Duration:              cfg.SessionDuration,
 		RememberDuration:      cfg.RememberDuration,
@@ -55,7 +56,12 @@ func main() {
 			}
 		}
 	}()
-	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, cfg)
+	verificationMailer := cuentainfra.NewDevelopmentSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.SMTPTimeout)
+	verificationService := cuentaapplication.NewVerificationService(cuentaRepo, verificationRepo, verificationMailer, cuentaapplication.VerificationConfig{
+		HMACSecret: cfg.OTPHMACSecret, TTL: cfg.OTPTTL, MaxAttempts: cfg.OTPMaxAttempts,
+		ResendWait: cfg.OTPResendWait, HourlySendMax: cfg.OTPHourlySendMax,
+	})
+	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, verificationService, cfg)
 	productRepo := infrastructure.NewProductRepository(db)
 	precioCheckClient := infrastructure.NewPrecioCheckClient(cfg.PrecioCheckBaseURL, cfg.PrecioCheckAPIKey)
 	upcItemDBClient := infrastructure.NewUPCItemDBClient(cfg.UPCItemDBBaseURL)
@@ -79,12 +85,17 @@ func main() {
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
 	router := gin.Default()
+	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
+		log.Fatal(err)
+	}
 	router.Use(transporthttp.CORSMiddleware(cfg.FrontendURL))
 	router.Use(transporthttp.RequireTrustedOrigin(cfg.FrontendURL))
 	router.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"estado": "ok"}) })
 	auth := router.Group("/api/v1/auth")
 	auth.POST("/register", cuentaHandler.Register)
 	auth.POST("/login", cuentaHandler.Login)
+	auth.POST("/verificar-correo", cuentaHandler.VerifyEmail)
+	auth.POST("/reenviar-verificacion", cuentaHandler.ResendVerification)
 	authProtected := auth.Group("")
 	authProtected.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
 	authProtected.POST("/logout", cuentaHandler.Logout)

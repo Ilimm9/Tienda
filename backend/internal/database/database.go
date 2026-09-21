@@ -40,7 +40,7 @@ func Init(db *gorm.DB) error {
 	}
 
 	models := []interface{}{
-		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &cuentadomain.SesionUsuario{},
+		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &cuentadomain.SesionUsuario{}, &cuentadomain.DesafioAutenticacion{},
 		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
 		&negociodomain.Permiso{}, &negociodomain.PermisoRol{}, &negociodomain.RolMembresia{},

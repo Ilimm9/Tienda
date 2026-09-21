@@ -56,7 +56,7 @@ func TestLoginUsesOpaqueProductionCookiesWithStrictAttributes(t *testing.T) {
 		RememberIdleDuration: 7 * 24 * time.Hour, ActivityTouchInterval: 5 * time.Minute,
 	})
 	cfg := config.Config{AppEnv: "production", SessionDuration: 24 * time.Hour}
-	handler := NewAuthHandler(application.NewAuthService(&authUserRepositoryStub{user: user}), sessionService, cfg)
+	handler := NewAuthHandler(application.NewAuthService(&authUserRepositoryStub{user: user}), sessionService, nil, cfg)
 	router := gin.New()
 	router.POST("/login", handler.Login)
 	request := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(`{"correo":"user@example.com","contrasena":"correct-password"}`))

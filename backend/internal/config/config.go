@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -18,6 +20,15 @@ type Config struct {
 	SessionTouchInterval time.Duration
 	SessionRetention     time.Duration
 	SessionCleanup       time.Duration
+	OTPHMACSecret        string
+	OTPTTL               time.Duration
+	OTPMaxAttempts       int
+	OTPResendWait        time.Duration
+	OTPHourlySendMax     int
+	SMTPHost             string
+	SMTPPort             int
+	SMTPFrom             string
+	SMTPTimeout          time.Duration
 	LoginHeaderImageURL  string
 	FrontendURL          string
 	PrecioCheckAPIKey    string
@@ -27,6 +38,7 @@ type Config struct {
 
 func Load() (Config, error) {
 	_ = godotenv.Load()
+	appEnv := get("APP_ENV", "development")
 	sessionDuration, err := requiredDuration("SESSION_DURATION", 24*time.Hour)
 	if err != nil {
 		return Config{}, err
@@ -54,8 +66,36 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	otpTTL, err := requiredDuration("OTP_TTL", 10*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	otpResendWait, err := requiredDuration("OTP_RESEND_WAIT", time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	smtpTimeout, err := requiredDuration("SMTP_TIMEOUT", 5*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+	otpMaxAttempts, err := requiredPositiveInt("OTP_MAX_ATTEMPTS", 5)
+	if err != nil {
+		return Config{}, err
+	}
+	otpHourlySendMax, err := requiredPositiveInt("OTP_HOURLY_SEND_MAX", 5)
+	if err != nil {
+		return Config{}, err
+	}
+	smtpPort, err := requiredPositiveInt("SMTP_PORT", 1025)
+	if err != nil || smtpPort > 65535 {
+		return Config{}, fmt.Errorf("SMTP_PORT debe ser un puerto válido")
+	}
+	otpSecret := get("OTP_HMAC_SECRET", "development-only-change-otp-secret")
+	if appEnv == "production" && (len(otpSecret) < 32 || otpSecret == "development-only-change-otp-secret") {
+		return Config{}, fmt.Errorf("OTP_HMAC_SECRET debe configurarse en producción con al menos 32 caracteres")
+	}
 	return Config{
-		AppEnv:               get("APP_ENV", "development"),
+		AppEnv:               appEnv,
 		AppPort:              get("APP_PORT", "8080"),
 		DatabaseURL:          databaseURL(),
 		SessionDuration:      sessionDuration,
@@ -64,12 +104,29 @@ func Load() (Config, error) {
 		SessionTouchInterval: touchInterval,
 		SessionRetention:     retention,
 		SessionCleanup:       cleanup,
+		OTPHMACSecret:        otpSecret,
+		OTPTTL:               otpTTL,
+		OTPMaxAttempts:       otpMaxAttempts,
+		OTPResendWait:        otpResendWait,
+		OTPHourlySendMax:     otpHourlySendMax,
+		SMTPHost:             get("SMTP_HOST", "localhost"),
+		SMTPPort:             smtpPort,
+		SMTPFrom:             get("SMTP_FROM", "no-reply@tienda.local"),
+		SMTPTimeout:          smtpTimeout,
 		LoginHeaderImageURL:  get("LOGIN_HEADER_IMAGE_URL", ""),
 		FrontendURL:          get("FRONTEND_URL", "http://localhost:4200"),
 		PrecioCheckAPIKey:    get("PRECIOCHECK_API_KEY", ""),
 		PrecioCheckBaseURL:   get("PRECIOCHECK_BASE_URL", "https://preciocheck.com/api/v1"),
 		UPCItemDBBaseURL:     get("UPCITEMDB_BASE_URL", "https://api.upcitemdb.com/prod/trial"),
 	}, nil
+}
+
+func requiredPositiveInt(key string, fallback int) (int, error) {
+	value, err := strconv.Atoi(strings.TrimSpace(get(key, strconv.Itoa(fallback))))
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("%s debe ser un entero positivo válido", key)
+	}
+	return value, nil
 }
 
 func (c Config) SessionCookieName() string {

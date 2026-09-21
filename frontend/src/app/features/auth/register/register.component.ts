@@ -80,12 +80,24 @@ export class RegisterComponent {
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => {
-          this.feedback.success('Cuenta creada', 'Ahora puedes iniciar sesión.');
-          void this.router.navigate(['/login']);
+        next: (response) => {
+          sessionStorage.setItem('tienda.verification.challenge', response.desafio_id);
+          this.feedback.success('Código enviado', 'Revisa tu correo para activar la cuenta.');
+          void this.router.navigate(['/verificar-correo'], {
+            queryParams: { desafio: response.desafio_id },
+          });
         },
-        error: (response: HttpErrorResponse) =>
-          this.error.set(response.error?.mensaje || 'No fue posible crear la cuenta.'),
+        error: (response: HttpErrorResponse) => {
+          const challengeID = response.error?.desafio_id;
+          if (response.status === 503 && challengeID) {
+            sessionStorage.setItem('tienda.verification.challenge', challengeID);
+            void this.router.navigate(['/verificar-correo'], {
+              queryParams: { desafio: challengeID, envio: 'pendiente' },
+            });
+            return;
+          }
+          this.error.set(response.error?.mensaje || 'No fue posible crear la cuenta.');
+        },
       });
   }
 }

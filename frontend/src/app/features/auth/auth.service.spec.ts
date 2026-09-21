@@ -31,7 +31,7 @@ describe('AuthService', () => {
     expect(service.currentUser()?.correo).toBe(payload.correo);
   });
 
-  it('keeps register, session and logout endpoint contracts', () => {
+  it('keeps registration, verification, session and logout endpoint contracts', () => {
     const registration = {
       nombre_completo: 'Juan Pérez',
       correo: 'juan@ejemplo.com',
@@ -42,7 +42,31 @@ describe('AuthService', () => {
     service.register(registration).subscribe();
     const registerRequest = http.expectOne(`${environment.apiUrl}/auth/register`);
     expect(registerRequest.request.body).toEqual(registration);
-    registerRequest.flush({ mensaje: 'Cuenta creada correctamente' });
+    registerRequest.flush({
+      mensaje: 'Código enviado',
+      desafio_id: 'challenge-1',
+      correo_enmascarado: 'j***@ejemplo.com',
+      reenviar_en_segundos: 60,
+    });
+
+    service.verifyEmail({ desafio_id: 'challenge-1', codigo: '123456' }).subscribe();
+    const verifyRequest = http.expectOne(`${environment.apiUrl}/auth/verificar-correo`);
+    expect(verifyRequest.request.body).toEqual({ desafio_id: 'challenge-1', codigo: '123456' });
+    verifyRequest.flush({
+      mensaje: 'Correo verificado',
+      usuario: { id: '1', correo: registration.correo },
+    });
+    expect(service.currentUser()?.correo).toBe(registration.correo);
+
+    service.resendVerification({ desafio_id: 'challenge-1' }).subscribe();
+    const resendRequest = http.expectOne(`${environment.apiUrl}/auth/reenviar-verificacion`);
+    expect(resendRequest.request.body).toEqual({ desafio_id: 'challenge-1' });
+    resendRequest.flush({
+      mensaje: 'Código reenviado',
+      desafio_id: 'challenge-2',
+      correo_enmascarado: 'j***@ejemplo.com',
+      reenviar_en_segundos: 60,
+    });
 
     service.me().subscribe();
     const meRequest = http.expectOne(`${environment.apiUrl}/auth/me`);

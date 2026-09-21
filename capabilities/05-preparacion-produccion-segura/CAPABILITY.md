@@ -2,11 +2,11 @@
 
 ## Estado
 
-En implementación (fases 1 y 2).
+En implementación. Fases 1, 2 y 3 implementadas y verificadas; fases 4 a 7 pendientes.
 
 ## Aprobación
 
-Las fases 1 y 2 de [PLAN_APLICACION.md](PLAN_APLICACION.md) fueron aprobadas explícitamente por el usuario el 2026-09-20 mediante la instrucción: “puedes comenzar con la fase 1 y fase 2”. Las fases 3 a 7, la infraestructura y el despliegue continúan pendientes de aprobación.
+Las fases 1 y 2 de [PLAN_APLICACION.md](PLAN_APLICACION.md) fueron aprobadas explícitamente por el usuario el 2026-09-20 mediante la instrucción: “puedes comenzar con la fase 1 y fase 2”. La fase 3 fue aprobada explícitamente el 2026-09-20 mediante la instrucción: “implemente la fase 3”. Las fases 4 a 7, la infraestructura y el despliegue continúan pendientes de aprobación.
 
 ## Plan inmediato de aplicación
 
@@ -349,8 +349,9 @@ El despliegue público se autoriza únicamente cuando:
 - 2026-09-19: el usuario confirmó Angular y API bajo el mismo origen, catálogos por negocio y documentación del plan de aplicación; la implementación continúa pendiente de aprobación.
 - 2026-09-20: el usuario aprobó explícitamente implementar las fases 1 y 2; no autorizó las fases posteriores ni el despliegue.
 - 2026-09-20: se implementaron y verificaron mediante pruebas automatizadas las fases 1 y 2. La base legacy del puerto `5433` permanece bloqueada por datos ambiguos y debe reconstruirse o migrarse explícitamente.
+- 2026-09-20: el usuario aprobó explícitamente la fase 3. SES permanece en la fase 4 y no forma parte de esta autorización.
 
-## Registro de implementación de las fases 1 y 2
+## Registro de implementación de las fases 1, 2 y 3
 
 ### Fase 1 — autorización y aislamiento
 
@@ -373,7 +374,20 @@ El despliegue público se autoriza únicamente cuando:
 - [x] Logout revoca la fila antes de borrar cookies; dos sesiones del mismo usuario permanecen independientes.
 - [x] Angular usa `XSRF-TOKEN`/`X-XSRF-TOKEN`; el backend valida token ligado a sesión y origen exacto en métodos con efecto.
 - [x] Las duraciones inválidas impiden arrancar y una tarea periódica depura sesiones inactivas después de la retención configurada.
-- [x] Las cuentas activas anteriores a OTP reciben una marca de verificación una sola vez. Hasta aprobar la fase 3, el registro conserva su contrato anterior y crea la cuenta verificada; la fase 3 cambiará el alta a pendiente y activación por OTP.
+- [x] Las cuentas activas anteriores a OTP reciben una marca de verificación una sola vez; los registros web nuevos quedan pendientes y sólo se activan al verificar el correo.
+
+### Fase 3 — registro pendiente y OTP
+
+- [x] El registro crea o reutiliza controladamente una cuenta `pendiente_verificacion`, responde `202 Accepted` y no crea sesión.
+- [x] Se persiste un desafío opaco con propósito, HMAC-SHA-256 del OTP, intentos, IP, vigencia, envío y consumo; el código en claro sólo existe al generarlo y enviarlo.
+- [x] El OTP usa 6 dígitos criptográficos, 10 minutos de vigencia, 5 intentos, un solo uso, espera de 60 segundos y máximo de 5 envíos por hora por usuario e IP.
+- [x] La verificación activa la cuenta dentro de una transacción, consume el desafío una sola vez, invalida los restantes y crea una sesión opaca con cookies de fase 2.
+- [x] Registro y reenvío evitan confirmar si una cuenta activa existe; solicitar un código no degrada cuentas verificadas.
+- [x] Repetir un registro pendiente reemplaza contraseña y perfil junto con el nuevo desafío en una sola transacción, evitando conservar credenciales de un prerregistro ajeno.
+- [x] La IP usada para límites y sesiones respeta el proxy inverso sólo desde rangos privados confiables, en lugar de contabilizar todo Docker como un único cliente.
+- [x] Angular incorpora la pantalla accesible `/verificar-correo`, conserva sólo el identificador no secreto en `sessionStorage`, permite pegar el código y aplica contador de reenvío informativo.
+- [x] Desarrollo usa un adaptador SMTP acotado por timeout y Mailpit enlazado sólo a `127.0.0.1`; el adaptador Amazon SES continúa reservado para la fase 4.
+- [x] Producción rechaza al arrancar el secreto OTP local o uno menor de 32 caracteres.
 
 ### Verificaciones ejecutadas el 2026-09-20
 
@@ -382,7 +396,11 @@ El despliegue público se autoriza únicamente cuando:
 | `go test ./...` con caché temporal | Correcta en todos los paquetes. |
 | `go vet ./...` con caché temporal | Correcta en todos los paquetes. |
 | Integración `TestSecurityPhaseCatalogTenancyMigrationAndIsolation` contra `tienda_security_test` | Correcta; migración idempotente, nombres iguales entre negocios, actualización cruzada rechazada y revocación inmediata comprobada. |
-| `npm test -- --watch=false` con Node 24 en contenedor | 32 archivos y 108 pruebas correctas. |
+| `npm test -- --watch=false` con Node 24 en contenedor | 33 archivos y 112 pruebas correctas, incluidas registro, verificación, reenvío y recuperación ante fallo de entrega. |
+| Pruebas unitarias OTP | Correctas: cuenta pendiente, HMAC, intento fallido, expiración, agotamiento, un solo uso, reenvío, límite horario y anti-enumeración. |
+| Integración PostgreSQL `tienda_security_test` | Correcta; además de fases previas, dos verificaciones concurrentes producen exactamente una activación. |
+| `npm run build` con Node 24 en contenedor | Correcta; conserva advertencias previas de presupuesto de bundle/CSS. |
+| `docker compose config --quiet` | Correcta con el servicio Mailpit local y variables OTP/SMTP. |
 | `docker compose build frontend` | Correcta; conserva advertencias previas de presupuesto de bundle/CSS, sin error de compilación. |
 | `docker compose build backend` | Correcta; el primer intento tuvo un fallo transitorio de DNS y el reintento construyó el binario e imagen. |
 | `git diff --check` | Correcta. |
@@ -390,8 +408,9 @@ El despliegue público se autoriza únicamente cuando:
 ### Pendientes conocidos
 
 - La base local legacy del puerto `5433` no ha sido migrada: la protección detuvo el proceso para no asignar catálogos al negocio equivocado.
-- La verificación real por OTP y Amazon SES pertenece a las fases 3 y 4 y no fue iniciada.
+- La verificación real por OTP está implementada con correo local; Amazon SES, DKIM/SPF/DMARC, rebotes y quejas pertenecen a la fase 4 y no fueron iniciados.
 - Cambio/recuperación de contraseña todavía no existe como flujo; `SessionService.RevokeAll` quedó disponible para conectarlo cuando se apruebe esa fase.
+- La auditoría durable de eventos OTP y los límites generales de registro/login pertenecen a las fases 6 y 7; esta fase sólo incorpora los límites específicos de emisión y validación del OTP.
 - Las advertencias de presupuesto del frontend no bloquean estas fases, pero deben atenderse antes de la puerta final de producción.
 - No se desplegó ni se modificó infraestructura externa.
 

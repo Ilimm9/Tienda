@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -103,5 +105,43 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 	}
 	if _, err := sessions.Authenticate(secondSession.Token); err != nil {
 		t.Fatalf("revocar una sesión afectó una sesión independiente: %v", err)
+	}
+
+	pending := cuentadomain.Usuario{ID: uuid.New(), Correo: "otp-concurrente@example.com", HashContrasena: "no-usada-en-prueba", Estado: "pendiente_verificacion"}
+	if err := db.Create(&pending).Error; err != nil {
+		t.Fatal(err)
+	}
+	challenge := cuentadomain.DesafioAutenticacion{
+		ID: uuid.New(), UsuarioID: pending.ID, Proposito: cuentadomain.PropositoVerificacionCorreo,
+		HashOTP: strings.Repeat("a", 64), DireccionIP: "127.0.0.1", UltimoEnvioEn: time.Now().UTC(), ExpiraEn: time.Now().UTC().Add(10 * time.Minute),
+	}
+	verificationRepository := cuentainfra.NewVerificationRepository(db)
+	if err := verificationRepository.IssueChallenge(&challenge); err != nil {
+		t.Fatal(err)
+	}
+	var successes atomic.Int32
+	var wait sync.WaitGroup
+	start := make(chan struct{})
+	for range 2 {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			<-start
+			if verificationRepository.ActivateUserWithChallenge(challenge.ID, pending.ID, time.Now().UTC(), 5) == nil {
+				successes.Add(1)
+			}
+		}()
+	}
+	close(start)
+	wait.Wait()
+	if successes.Load() != 1 {
+		t.Fatalf("verificaciones concurrentes exitosas=%d, se esperaba una", successes.Load())
+	}
+	var activated cuentadomain.Usuario
+	if err := db.First(&activated, "id = ?", pending.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if activated.Estado != "activo" || activated.CorreoVerificadoEn == nil {
+		t.Fatalf("usuario no activado: %#v", activated)
 	}
 }

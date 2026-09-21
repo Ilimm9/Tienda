@@ -2,7 +2,7 @@
 
 ## Estado
 
-Fases 1 y 2 implementadas y verificadas mediante pruebas automatizadas. La migración de la base local legacy del puerto `5433` está detenida de forma segura hasta resolver o eliminar sus catálogos sin propietario. Fases 3 a 7 pendientes de aprobación explícita.
+Fases 1, 2 y 3 implementadas y verificadas mediante pruebas automatizadas. La migración de la base local legacy del puerto `5433` está detenida de forma segura hasta resolver o eliminar sus catálogos sin propietario. Fases 4 a 7 pendientes de aprobación explícita.
 
 ## Relación con la capability
 
@@ -16,7 +16,7 @@ Este documento desarrolla únicamente los cambios de aplicación de la [Capabili
 - No se implementaron access token y refresh token en esta etapa. Su reevaluación quedó condicionada a la aparición de un cliente móvil, una API externa o una arquitectura distribuida.
 - Marcas, categorías y unidades de medida pertenecen a un negocio; no son catálogos globales compartidos.
 - Amazon Simple Email Service (SES) será el proveedor de correo para OTP de verificación y, posteriormente, recuperación e invitaciones.
-- Las fases 1 y 2 fueron autorizadas explícitamente el 2026-09-20. Las fases 3 a 7 no están autorizadas.
+- Las fases 1, 2 y 3 fueron autorizadas explícitamente el 2026-09-20. Las fases 4 a 7 no están autorizadas.
 
 ## Por qué no se implementó access token + refresh token
 
@@ -41,7 +41,7 @@ Fase 1: rutas, permisos y catálogo por negocio — implementada
     ↓
 Fase 2: sesiones opacas y CSRF — implementada
     ↓
-Fase 3: registro pendiente y OTP — pendiente
+Fase 3: registro pendiente y OTP — implementada y verificada
     ↓
 Fase 4: integración con Amazon SES
     ↓
@@ -157,11 +157,13 @@ La sesión web dejó de usar JWT:
 - La integración confirmó que una sesión revocada no puede reutilizarse y que otra sesión del mismo usuario permanece vigente.
 - `go test ./...`, `go vet ./...`, las 108 pruebas Angular y la construcción de ambas imágenes Docker terminaron correctamente.
 
-### Compatibilidad temporal con la fase 3
+### Compatibilidad con la fase 3
 
-Las cuentas activas anteriores recibieron una marca de verificación mediante una migración ejecutada una sola vez. Mientras la fase 3 no esté aprobada, el registro conserva el comportamiento anterior y crea la cuenta verificada. La fase 3 cambiará el alta a `pendiente_verificacion` y activará la cuenta únicamente después de validar el OTP.
+Las cuentas activas anteriores recibieron una marca de verificación mediante una migración ejecutada una sola vez. Desde la implementación de la fase 3, todo registro web nuevo queda en `pendiente_verificacion` y sólo pasa a `activo` al validar correctamente el OTP.
 
 ## Fase 3 — registro pendiente y OTP de correo
+
+**Estado: implementada y verificada el 2026-09-20.** El envío local usa Mailpit mediante un adaptador SMTP explícito; Amazon SES permanece fuera de alcance hasta la fase 4.
 
 ### Objetivo
 
@@ -468,3 +470,4 @@ La fase 1 es la más riesgosa porque combina autorización y migración multiemp
 - 2026-09-19: SES y OTP se implementarán después de cerrar rutas, RBAC y sesiones.
 - 2026-09-19: el usuario solicitó conservar este plan dentro de la capability; esto no constituye aprobación de implementación.
 - 2026-09-20: el usuario aprobó explícitamente la implementación de las fases 1 y 2. El resto del plan permanece sin autorización.
+- 2026-09-20: el usuario aprobó explícitamente la fase 3; quedó implementada con proveedor SMTP local Mailpit, sin configurar ni integrar SES.

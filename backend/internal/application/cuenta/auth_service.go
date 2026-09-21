@@ -11,12 +11,10 @@ import (
 
 var ErrInvalidCredentials = errors.New("credenciales inválidas")
 var ErrAccountUnavailable = errors.New("cuenta no disponible")
-var ErrEmailAlreadyExists = errors.New("el correo electrónico ya está registrado")
 
 type UserRepository interface {
 	FindByEmail(email string) (*cuentadomain.Usuario, error)
 	Save(user *cuentadomain.Usuario) error
-	CreateAccount(user *cuentadomain.Usuario, profile *cuentadomain.PerfilUsuario) error
 }
 
 type AuthService struct{ users UserRepository }
@@ -48,44 +46,4 @@ func (s *AuthService) Login(email, password string) (*cuentadomain.Usuario, erro
 		return nil, err
 	}
 	return user, nil
-}
-
-func (s *AuthService) Register(fullName, email, phone, password string) error {
-	email = strings.ToLower(strings.TrimSpace(email))
-	if _, err := s.users.FindByEmail(email); err == nil {
-		return ErrEmailAlreadyExists
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	parts := strings.Fields(strings.TrimSpace(fullName))
-	if len(parts) == 0 {
-		return errors.New("el nombre completo es obligatorio")
-	}
-	names := parts[0]
-	surnames := ""
-	if len(parts) > 1 {
-		surnames = strings.Join(parts[1:], " ")
-	}
-
-	// Compatibilidad temporal hasta que la fase 3 active OTP: el registro conserva
-	// su contrato actual y crea la cuenta verificada. Esa fase cambiará este estado
-	// a pendiente y será la única que lo active después de validar el código.
-	now := time.Now()
-	user := &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "activo", CorreoVerificadoEn: &now}
-	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: surnames}
-	if phone != "" {
-		cleanPhone := strings.TrimSpace(phone)
-		profile.Telefono = &cleanPhone
-	}
-	if err := s.users.CreateAccount(user, profile); err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
-			return ErrEmailAlreadyExists
-		}
-		return err
-	}
-	return nil
 }
