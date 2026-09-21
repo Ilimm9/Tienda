@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -8,32 +9,74 @@ import (
 )
 
 type Config struct {
-	AppEnv              string
-	AppPort             string
-	DatabaseURL         string
-	JWTSecret           string
-	JWTExpiration       time.Duration
-	LoginHeaderImageURL string
-	FrontendURL         string
-	PrecioCheckAPIKey   string
-	PrecioCheckBaseURL  string
-	UPCItemDBBaseURL    string
+	AppEnv               string
+	AppPort              string
+	DatabaseURL          string
+	SessionDuration      time.Duration
+	RememberDuration     time.Duration
+	RememberIdle         time.Duration
+	SessionTouchInterval time.Duration
+	SessionRetention     time.Duration
+	SessionCleanup       time.Duration
+	LoginHeaderImageURL  string
+	FrontendURL          string
+	PrecioCheckAPIKey    string
+	PrecioCheckBaseURL   string
+	UPCItemDBBaseURL     string
 }
 
-func Load() Config {
+func Load() (Config, error) {
 	_ = godotenv.Load()
-	return Config{
-		AppEnv:              get("APP_ENV", "development"),
-		AppPort:             get("APP_PORT", "8080"),
-		DatabaseURL:         databaseURL(),
-		JWTSecret:           get("JWT_SECRET", "change-this-secret-in-development"),
-		JWTExpiration:       duration("JWT_EXPIRATION", 24*time.Hour),
-		LoginHeaderImageURL: get("LOGIN_HEADER_IMAGE_URL", ""),
-		FrontendURL:         get("FRONTEND_URL", "http://localhost:4200"),
-		PrecioCheckAPIKey:   get("PRECIOCHECK_API_KEY", ""),
-		PrecioCheckBaseURL:  get("PRECIOCHECK_BASE_URL", "https://preciocheck.com/api/v1"),
-		UPCItemDBBaseURL:    get("UPCITEMDB_BASE_URL", "https://api.upcitemdb.com/prod/trial"),
+	sessionDuration, err := requiredDuration("SESSION_DURATION", 24*time.Hour)
+	if err != nil {
+		return Config{}, err
 	}
+	rememberDuration, err := requiredDuration("SESSION_REMEMBER_DURATION", 30*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
+	rememberIdle, err := requiredDuration("SESSION_REMEMBER_IDLE", 7*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
+	touchInterval, err := requiredDuration("SESSION_TOUCH_INTERVAL", 5*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	if rememberIdle > rememberDuration {
+		return Config{}, fmt.Errorf("SESSION_REMEMBER_IDLE no puede ser mayor que SESSION_REMEMBER_DURATION")
+	}
+	retention, err := requiredDuration("SESSION_RETENTION", 7*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
+	cleanup, err := requiredDuration("SESSION_CLEANUP_INTERVAL", time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{
+		AppEnv:               get("APP_ENV", "development"),
+		AppPort:              get("APP_PORT", "8080"),
+		DatabaseURL:          databaseURL(),
+		SessionDuration:      sessionDuration,
+		RememberDuration:     rememberDuration,
+		RememberIdle:         rememberIdle,
+		SessionTouchInterval: touchInterval,
+		SessionRetention:     retention,
+		SessionCleanup:       cleanup,
+		LoginHeaderImageURL:  get("LOGIN_HEADER_IMAGE_URL", ""),
+		FrontendURL:          get("FRONTEND_URL", "http://localhost:4200"),
+		PrecioCheckAPIKey:    get("PRECIOCHECK_API_KEY", ""),
+		PrecioCheckBaseURL:   get("PRECIOCHECK_BASE_URL", "https://preciocheck.com/api/v1"),
+		UPCItemDBBaseURL:     get("UPCITEMDB_BASE_URL", "https://api.upcitemdb.com/prod/trial"),
+	}, nil
+}
+
+func (c Config) SessionCookieName() string {
+	if c.AppEnv == "production" {
+		return "__Host-tienda_session"
+	}
+	return "tienda_session"
 }
 
 func get(key, fallback string) string {
@@ -43,12 +86,12 @@ func get(key, fallback string) string {
 	return fallback
 }
 
-func duration(key string, fallback time.Duration) time.Duration {
+func requiredDuration(key string, fallback time.Duration) (time.Duration, error) {
 	value, err := time.ParseDuration(get(key, fallback.String()))
-	if err != nil {
-		return fallback
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("%s debe ser una duración positiva válida", key)
 	}
-	return value
+	return value, nil
 }
 
 func databaseURL() string {

@@ -1,32 +1,28 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"tienda/backend/internal/config"
+	cuentaapplication "tienda/backend/internal/application/cuenta"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 func TestRequireAuthAceptaSesionValida(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	secret := "test-secret"
 	userID := uuid.New()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userID.String(), "exp": time.Now().Add(time.Hour).Unix(),
-	})
-	signed, err := token.SignedString([]byte(secret))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	router := gin.New()
-	router.Use(RequireAuth(config.Config{JWTSecret: secret}))
+	router.Use(RequireAuth(SessionAuthenticatorFunc(func(token string) (cuentaapplication.AuthenticatedSession, error) {
+		if token != "opaque-token" {
+			return cuentaapplication.AuthenticatedSession{}, errors.New("invalid")
+		}
+		return cuentaapplication.AuthenticatedSession{UserID: userID, Email: "test@example.com"}, nil
+	}), "tienda_session"))
 	router.GET("/", func(c *gin.Context) {
 		actual, ok := AuthenticatedUserID(c)
 		if !ok || actual != userID {
@@ -36,7 +32,7 @@ func TestRequireAuthAceptaSesionValida(t *testing.T) {
 		c.Status(http.StatusNoContent)
 	})
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
-	request.AddCookie(&http.Cookie{Name: "tienda_session", Value: signed})
+	request.AddCookie(&http.Cookie{Name: "tienda_session", Value: "opaque-token"})
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 
@@ -45,20 +41,16 @@ func TestRequireAuthAceptaSesionValida(t *testing.T) {
 	}
 }
 
-func TestRequireAuthRechazaSesionSinExpiracion(t *testing.T) {
+func TestRequireAuthRechazaSesionInvalida(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	secret := "test-secret"
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": uuid.NewString()})
-	signed, err := token.SignedString([]byte(secret))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	router := gin.New()
-	router.Use(RequireAuth(config.Config{JWTSecret: secret}))
+	router.Use(RequireAuth(SessionAuthenticatorFunc(func(string) (cuentaapplication.AuthenticatedSession, error) {
+		return cuentaapplication.AuthenticatedSession{}, errors.New("invalid")
+	}), "tienda_session"))
 	router.GET("/", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
-	request.AddCookie(&http.Cookie{Name: "tienda_session", Value: signed})
+	request.AddCookie(&http.Cookie{Name: "tienda_session", Value: "invalid-token"})
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 

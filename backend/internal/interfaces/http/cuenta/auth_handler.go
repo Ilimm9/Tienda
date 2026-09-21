@@ -2,7 +2,7 @@ package cuenta
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"net"
 	"net/http"
 	application "tienda/backend/internal/application/cuenta"
 	"tienda/backend/internal/config"
@@ -11,12 +11,13 @@ import (
 )
 
 type AuthHandler struct {
-	auth *application.AuthService
-	cfg  config.Config
+	auth     *application.AuthService
+	sessions *application.SessionService
+	cfg      config.Config
 }
 
-func NewAuthHandler(auth *application.AuthService, cfg config.Config) *AuthHandler {
-	return &AuthHandler{auth: auth, cfg: cfg}
+func NewAuthHandler(auth *application.AuthService, sessions *application.SessionService, cfg config.Config) *AuthHandler {
+	return &AuthHandler{auth: auth, sessions: sessions, cfg: cfg}
 }
 
 type loginRequest struct {
@@ -60,33 +61,56 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": err.Error()})
 		return
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": user.ID.String(), "correo": user.Correo, "exp": jwt.NewNumericDate(time.Now().Add(h.cfg.JWTExpiration))})
-	signed, err := token.SignedString([]byte(h.cfg.JWTSecret))
+	session, err := h.sessions.Create(user.ID, input.Recordarme, requestIP(c.Request), c.Request.UserAgent())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible iniciar sesión"})
 		return
 	}
-	maxAge := int(h.cfg.JWTExpiration.Seconds())
-	if input.Recordarme {
-		maxAge = int((30 * 24 * time.Hour).Seconds())
-	}
-	c.SetCookie("tienda_session", signed, maxAge, "/", "", h.cfg.AppEnv == "production", true)
+	h.setCookies(c, session)
 	c.JSON(http.StatusOK, gin.H{"usuario": gin.H{"id": user.ID, "correo": user.Correo}})
 }
 func (h *AuthHandler) Logout(c *gin.Context) {
-	c.SetCookie("tienda_session", "", -1, "/", "", h.cfg.AppEnv == "production", true)
+	if token, err := c.Cookie(h.cfg.SessionCookieName()); err == nil {
+		if err := h.sessions.Revoke(token, "logout"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cerrar la sesión"})
+			return
+		}
+	}
+	h.clearCookies(c)
 	c.Status(http.StatusNoContent)
 }
 func (h *AuthHandler) Me(c *gin.Context) {
-	value, err := c.Cookie("tienda_session")
-	if err != nil {
+	userID, idOK := transporthttp.AuthenticatedUserID(c)
+	email, emailOK := transporthttp.AuthenticatedEmail(c)
+	if !idOK || !emailOK {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
 	}
-	_, claims, err := transporthttp.ParseSession(value, h.cfg.JWTSecret)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
-		return
+	c.JSON(http.StatusOK, gin.H{"autenticado": true, "usuario": gin.H{"id": userID, "correo": email}})
+}
+
+func (h *AuthHandler) setCookies(c *gin.Context, session application.CreatedSession) {
+	secure := h.cfg.AppEnv == "production"
+	maxAge := int(time.Until(session.ExpiresAt).Seconds())
+	if maxAge < 1 {
+		maxAge = 1
 	}
-	c.JSON(http.StatusOK, gin.H{"autenticado": true, "usuario": gin.H{"id": claims["sub"], "correo": claims["correo"]}})
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(h.cfg.SessionCookieName(), session.Token, maxAge, "/", "", secure, true)
+	c.SetCookie(transporthttp.CSRFCookieName, session.CSRFToken, maxAge, "/", "", secure, false)
+}
+
+func (h *AuthHandler) clearCookies(c *gin.Context) {
+	secure := h.cfg.AppEnv == "production"
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(h.cfg.SessionCookieName(), "", -1, "/", "", secure, true)
+	c.SetCookie(transporthttp.CSRFCookieName, "", -1, "/", "", secure, false)
+}
+
+func requestIP(request *http.Request) string {
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return request.RemoteAddr
 }

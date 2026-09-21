@@ -19,25 +19,25 @@ type ProductRepository struct {
 	db *gorm.DB
 }
 
-func (r *ProductRepository) ListCategories() ([]domain.CatalogOption, error) {
+func (r *ProductRepository) ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error) {
 	var options []domain.CatalogOption
-	err := r.db.Table("categorias").Select("id, nombre").Where("activo = TRUE").Order("nombre ASC").Scan(&options).Error
+	err := r.db.Table("categorias").Select("id, nombre").Where("negocio_id = ? AND activo = TRUE", businessID).Order("nombre ASC").Scan(&options).Error
 	return options, err
 }
 
-func (r *ProductRepository) ListBrands() ([]domain.CatalogOption, error) {
+func (r *ProductRepository) ListBrands(businessID uuid.UUID) ([]domain.CatalogOption, error) {
 	var options []domain.CatalogOption
-	err := r.db.Table("marcas").Select("id, nombre").Where("activo = TRUE").Order("nombre ASC").Scan(&options).Error
+	err := r.db.Table("marcas").Select("id, nombre").Where("negocio_id = ? AND activo = TRUE", businessID).Order("nombre ASC").Scan(&options).Error
 	return options, err
 }
 
-func (r *ProductRepository) ListUnits() ([]domain.UnidadMedida, error) {
+func (r *ProductRepository) ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida, error) {
 	items := make([]domain.UnidadMedida, 0)
-	err := r.db.Where("activo = TRUE").Order("tipo ASC, nombre ASC").Find(&items).Error
+	err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Order("tipo ASC, nombre ASC").Find(&items).Error
 	return items, err
 }
 
-func (r *ProductRepository) CreateUnit(i domain.CreateUnidadMedidaInput) error {
+func (r *ProductRepository) CreateUnit(businessID uuid.UUID, i domain.CreateUnidadMedidaInput) error {
 	i.Codigo = strings.TrimSpace(strings.ToLower(i.Codigo))
 	i.Nombre = strings.TrimSpace(i.Nombre)
 	i.Simbolo = strings.TrimSpace(i.Simbolo)
@@ -49,10 +49,19 @@ func (r *ProductRepository) CreateUnit(i domain.CreateUnidadMedidaInput) error {
 	if i.PermiteFraccion != nil {
 		fraccion = *i.PermiteFraccion
 	}
-	return r.db.Create(&domain.UnidadMedida{Codigo: i.Codigo, Nombre: i.Nombre, Simbolo: i.Simbolo, Tipo: i.Tipo, UnidadBaseID: i.UnidadBaseID, FactorABase: i.FactorABase, PermiteFraccion: fraccion, Decimales: i.Decimales, Activo: true}).Error
+	if i.UnidadBaseID != nil {
+		var total int64
+		if err := r.db.Model(&domain.UnidadMedida{}).Where("id = ? AND negocio_id = ?", *i.UnidadBaseID, businessID).Count(&total).Error; err != nil {
+			return err
+		}
+		if total == 0 {
+			return errors.New("la unidad base no pertenece al negocio")
+		}
+	}
+	return r.db.Create(&domain.UnidadMedida{NegocioID: businessID, Codigo: i.Codigo, Nombre: i.Nombre, Simbolo: i.Simbolo, Tipo: i.Tipo, UnidadBaseID: i.UnidadBaseID, FactorABase: i.FactorABase, PermiteFraccion: fraccion, Decimales: i.Decimales, Activo: true}).Error
 }
 
-func (r *ProductRepository) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
+func (r *ProductRepository) UpdateUnit(businessID, id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
 	values := map[string]interface{}{}
 	if i.Codigo != nil {
 		values["codigo"] = strings.TrimSpace(strings.ToLower(*i.Codigo))
@@ -67,6 +76,13 @@ func (r *ProductRepository) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedida
 		values["tipo"] = strings.TrimSpace(strings.ToUpper(*i.Tipo))
 	}
 	if i.UnidadBaseID != nil {
+		var total int64
+		if err := r.db.Model(&domain.UnidadMedida{}).Where("id = ? AND negocio_id = ?", *i.UnidadBaseID, businessID).Count(&total).Error; err != nil {
+			return err
+		}
+		if total == 0 {
+			return errors.New("la unidad base no pertenece al negocio")
+		}
 		values["unidad_base_id"] = i.UnidadBaseID
 	}
 	if i.FactorABase != nil {
@@ -84,18 +100,18 @@ func (r *ProductRepository) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedida
 	if len(values) == 0 {
 		return nil
 	}
-	result := r.db.Model(&domain.UnidadMedida{}).Where("id = ?", id).Updates(values)
+	result := r.db.Model(&domain.UnidadMedida{}).Where("id = ? AND negocio_id = ?", id, businessID).Updates(values)
 	if result.RowsAffected == 0 && result.Error == nil {
 		return errors.New("unidad no encontrada")
 	}
 	return result.Error
 }
 
-func (r *ProductRepository) ImportUnits(rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error) {
+func (r *ProductRepository) ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		current := make([]domain.UnidadMedida, 0)
-		if err := tx.Find(&current).Error; err != nil {
+		if err := tx.Where("negocio_id = ?", businessID).Find(&current).Error; err != nil {
 			return err
 		}
 		existing := make(map[string]struct{}, len(current)*3)
@@ -119,7 +135,7 @@ func (r *ProductRepository) ImportUnits(rows []domain.CatalogImportUnitRow) (dom
 				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El código, nombre o símbolo de la unidad ya existe"})
 				continue
 			}
-			created = append(created, domain.UnidadMedida{Codigo: strings.ToLower(strings.TrimSpace(row.Codigo)), Nombre: strings.TrimSpace(row.Nombre), Simbolo: strings.TrimSpace(row.Simbolo), Tipo: strings.ToUpper(strings.TrimSpace(row.Tipo)), FactorABase: row.FactorABase, Decimales: row.Decimales, PermiteFraccion: true, Activo: true})
+			created = append(created, domain.UnidadMedida{NegocioID: businessID, Codigo: strings.ToLower(strings.TrimSpace(row.Codigo)), Nombre: strings.TrimSpace(row.Nombre), Simbolo: strings.TrimSpace(row.Simbolo), Tipo: strings.ToUpper(strings.TrimSpace(row.Tipo)), FactorABase: row.FactorABase, Decimales: row.Decimales, PermiteFraccion: true, Activo: true})
 			existing[key] = struct{}{}
 			existing[catalogImportKey(row.Nombre)] = struct{}{}
 			existing[catalogImportKey(row.Simbolo)] = struct{}{}
@@ -144,19 +160,19 @@ func containsUnitKey(existing map[string]struct{}, values ...string) bool {
 	return false
 }
 
-func (r *ProductRepository) ListBrandsAdmin() ([]domain.Marca, error) {
+func (r *ProductRepository) ListBrandsAdmin(businessID uuid.UUID) ([]domain.Marca, error) {
 	v := make([]domain.Marca, 0)
-	e := r.db.Order("nombre ASC").Find(&v).Error
+	e := r.db.Where("negocio_id = ?", businessID).Order("nombre ASC").Find(&v).Error
 	return v, e
 }
-func (r *ProductRepository) CreateBrand(i domain.CreateMarcaInput) error {
+func (r *ProductRepository) CreateBrand(businessID uuid.UUID, i domain.CreateMarcaInput) error {
 	i.Nombre = strings.TrimSpace(i.Nombre)
 	if i.Nombre == "" {
 		return errors.New("el nombre de la marca es obligatorio")
 	}
-	return r.db.Create(&domain.Marca{Nombre: i.Nombre, Activo: true}).Error
+	return r.db.Create(&domain.Marca{NegocioID: businessID, Nombre: i.Nombre, Activo: true}).Error
 }
-func (r *ProductRepository) UpdateBrand(id uuid.UUID, i domain.UpdateMarcaInput) error {
+func (r *ProductRepository) UpdateBrand(businessID, id uuid.UUID, i domain.UpdateMarcaInput) error {
 	values := map[string]interface{}{}
 	if i.Nombre != nil {
 		*i.Nombre = strings.TrimSpace(*i.Nombre)
@@ -168,18 +184,18 @@ func (r *ProductRepository) UpdateBrand(id uuid.UUID, i domain.UpdateMarcaInput)
 	if len(values) == 0 {
 		return nil
 	}
-	result := r.db.Model(&domain.Marca{}).Where("id = ?", id).Updates(values)
+	result := r.db.Model(&domain.Marca{}).Where("id = ? AND negocio_id = ?", id, businessID).Updates(values)
 	if result.RowsAffected == 0 && result.Error == nil {
 		return errors.New("marca no encontrada")
 	}
 	return result.Error
 }
 
-func (r *ProductRepository) ImportBrands(rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error) {
+func (r *ProductRepository) ImportBrands(businessID uuid.UUID, rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		var current []domain.Marca
-		if err := tx.Find(&current).Error; err != nil {
+		if err := tx.Where("negocio_id = ?", businessID).Find(&current).Error; err != nil {
 			return err
 		}
 		existing := make(map[string]struct{}, len(current))
@@ -201,7 +217,7 @@ func (r *ProductRepository) ImportBrands(rows []domain.CatalogImportBrandRow) (d
 				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La marca ya existe"})
 				continue
 			}
-			brands = append(brands, domain.Marca{Nombre: strings.TrimSpace(row.Nombre), Activo: true})
+			brands = append(brands, domain.Marca{NegocioID: businessID, Nombre: strings.TrimSpace(row.Nombre), Activo: true})
 		}
 		if len(brands) == 0 {
 			return nil
@@ -215,19 +231,25 @@ func (r *ProductRepository) ImportBrands(rows []domain.CatalogImportBrandRow) (d
 	return result, err
 }
 
-func (r *ProductRepository) ListCategoriesAdmin() ([]domain.Categoria, error) {
+func (r *ProductRepository) ListCategoriesAdmin(businessID uuid.UUID) ([]domain.Categoria, error) {
 	v := make([]domain.Categoria, 0)
-	e := r.db.Order("nombre ASC").Find(&v).Error
+	e := r.db.Where("negocio_id = ?", businessID).Order("nombre ASC").Find(&v).Error
 	return v, e
 }
-func (r *ProductRepository) CreateCategory(i domain.CreateCategoriaInput) error {
+func (r *ProductRepository) CreateCategory(businessID uuid.UUID, i domain.CreateCategoriaInput) error {
 	i.Nombre = strings.TrimSpace(i.Nombre)
 	if i.Nombre == "" {
 		return errors.New("el nombre de la categoría es obligatorio")
 	}
-	return r.db.Create(&domain.Categoria{Nombre: i.Nombre, CategoriaPadreID: i.CategoriaPadreID, Descripcion: i.Descripcion, Activo: true}).Error
+	if err := validarCategoriaPadre(r.db, businessID, uuid.Nil, i.CategoriaPadreID); err != nil {
+		return err
+	}
+	return r.db.Create(&domain.Categoria{NegocioID: businessID, Nombre: i.Nombre, CategoriaPadreID: i.CategoriaPadreID, Descripcion: i.Descripcion, Activo: true}).Error
 }
-func (r *ProductRepository) UpdateCategory(id uuid.UUID, i domain.UpdateCategoriaInput) error {
+func (r *ProductRepository) UpdateCategory(businessID, id uuid.UUID, i domain.UpdateCategoriaInput) error {
+	if err := validarCategoriaPadre(r.db, businessID, id, i.CategoriaPadreID); err != nil {
+		return err
+	}
 	values := map[string]interface{}{}
 	if i.Nombre != nil {
 		*i.Nombre = strings.TrimSpace(*i.Nombre)
@@ -245,18 +267,18 @@ func (r *ProductRepository) UpdateCategory(id uuid.UUID, i domain.UpdateCategori
 	if len(values) == 0 {
 		return nil
 	}
-	result := r.db.Model(&domain.Categoria{}).Where("id = ?", id).Updates(values)
+	result := r.db.Model(&domain.Categoria{}).Where("id = ? AND negocio_id = ?", id, businessID).Updates(values)
 	if result.RowsAffected == 0 && result.Error == nil {
 		return errors.New("categoría no encontrada")
 	}
 	return result.Error
 }
 
-func (r *ProductRepository) ImportCategories(rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error) {
+func (r *ProductRepository) ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		var current []domain.Categoria
-		if err := tx.Find(&current).Error; err != nil {
+		if err := tx.Where("negocio_id = ?", businessID).Find(&current).Error; err != nil {
 			return err
 		}
 		existing := make(map[string]uuid.UUID, len(current))
@@ -328,7 +350,7 @@ func (r *ProductRepository) ImportCategories(rows []domain.CatalogImportCategory
 			} else if id, exists := created[parentKey]; parentKey != "" && exists {
 				parentID = &id
 			}
-			category := domain.Categoria{ID: uuid.New(), Nombre: strings.TrimSpace(row.Nombre), CategoriaPadreID: parentID, Activo: true}
+			category := domain.Categoria{ID: uuid.New(), NegocioID: businessID, Nombre: strings.TrimSpace(row.Nombre), CategoriaPadreID: parentID, Activo: true}
 			if description := strings.TrimSpace(row.Descripcion); description != "" {
 				category.Descripcion = &description
 			}
@@ -350,6 +372,25 @@ func catalogImportKey(value string) string {
 		}
 		return r
 	}, norm.NFD.String(strings.TrimSpace(value))))
+}
+
+func validarCategoriaPadre(db *gorm.DB, businessID, categoryID uuid.UUID, parentID *uuid.UUID) error {
+	if parentID == nil {
+		return nil
+	}
+	if categoryID != uuid.Nil && *parentID == categoryID {
+		return errors.New("una categoría no puede ser su propia categoría padre")
+	}
+	var total int64
+	if err := db.Model(&domain.Categoria{}).
+		Where("id = ? AND negocio_id = ?", *parentID, businessID).
+		Count(&total).Error; err != nil {
+		return err
+	}
+	if total == 0 {
+		return errors.New("la categoría padre no pertenece al negocio")
+	}
+	return nil
 }
 
 func (r *ProductRepository) ListProviders(businessID uuid.UUID) ([]domain.Proveedor, error) {
@@ -428,12 +469,18 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 			return errors.New("la sucursal no pertenece al negocio o está inactiva")
 		}
 		var category domain.Categoria
-		if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
 			return errors.New("la categoría no existe o está inactiva")
+		}
+		if input.MarcaID != nil {
+			var brand domain.Marca
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.MarcaID, businessID).First(&brand).Error; err != nil {
+				return errors.New("la marca no existe o está inactiva")
+			}
 		}
 		if input.UnidadMedidaID != nil {
 			var unit domain.UnidadMedida
-			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.UnidadMedidaID, businessID).First(&unit).Error; err != nil {
 				return errors.New("la unidad de medida no existe o está inactiva")
 			}
 		}
@@ -445,7 +492,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 			return errors.New("el SKU ya existe en este negocio")
 		}
 		if barcode != "" {
-			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ?", barcode).Count(&duplicate).Error; err != nil {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&duplicate).Error; err != nil {
 				return err
 			}
 			if duplicate > 0 {
@@ -454,7 +501,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		}
 
 		product := domain.Producto{
-			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID,
+			NegocioID: businessID, Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID,
 			Contenido: input.Contenido, UnidadContenido: input.UnidadContenido,
 			Presentacion: input.Presentacion, Activo: true,
 		}
@@ -462,7 +509,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -471,7 +518,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 				return err
 			}
 		}
-		if err := tx.Create(&domain.ProductoCategoria{ProductoID: product.ID, CategoriaID: input.CategoriaID, EsPrincipal: true}).Error; err != nil {
+		if err := tx.Create(&domain.ProductoCategoria{NegocioID: businessID, ProductoID: product.ID, CategoriaID: input.CategoriaID, EsPrincipal: true}).Error; err != nil {
 			return err
 		}
 		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: product.ID, SKUInterno: &input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
@@ -516,18 +563,18 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			return errors.New("producto no encontrado")
 		}
 		var category domain.Categoria
-		if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
 			return errors.New("la categoría no existe o está inactiva")
 		}
 		if input.MarcaID != nil {
 			var brand domain.Marca
-			if err := tx.Where("id = ? AND activo = TRUE", input.MarcaID).First(&brand).Error; err != nil {
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.MarcaID, businessID).First(&brand).Error; err != nil {
 				return errors.New("la marca no existe o está inactiva")
 			}
 		}
 		if input.UnidadMedidaID != nil {
 			var unit domain.UnidadMedida
-			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.UnidadMedidaID, businessID).First(&unit).Error; err != nil {
 				return errors.New("la unidad de medida no existe o está inactiva")
 			}
 		}
@@ -539,7 +586,7 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			return errors.New("el SKU ya existe en este negocio")
 		}
 		if barcode != "" {
-			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ? AND producto_id <> ?", barcode, productID).Count(&duplicates).Error; err != nil {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ? AND producto_id <> ?", businessID, barcode, productID).Count(&duplicates).Error; err != nil {
 				return err
 			}
 			if duplicates > 0 {
@@ -552,21 +599,21 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			"unidad_medida_id": input.UnidadMedidaID, "contenido": input.Contenido,
 			"unidad_contenido": input.UnidadContenido, "presentacion": input.Presentacion,
 		}
-		if err := tx.Model(&domain.Producto{}).Where("id = ?", productID).Updates(productValues).Error; err != nil {
+		if err := tx.Model(&domain.Producto{}).Where("id = ? AND negocio_id = ?", productID, businessID).Updates(productValues).Error; err != nil {
 			return err
 		}
 		if err := tx.Model(&domain.ProductoNegocio{}).Where("id = ?", commercial.ID).Updates(map[string]interface{}{"sku_interno": input.SKUInterno, "precio_venta": input.PrecioVenta}).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&domain.ProductoCategoria{}).Where("producto_id = ? AND es_principal = TRUE", productID).Updates(map[string]interface{}{"categoria_id": input.CategoriaID}).Error; err != nil {
+		if err := tx.Model(&domain.ProductoCategoria{}).Where("negocio_id = ? AND producto_id = ? AND es_principal = TRUE", businessID, productID).Updates(map[string]interface{}{"categoria_id": input.CategoriaID}).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Where("producto_id = ? AND es_principal = TRUE", productID).Delete(&domain.ProductoCodigo{}).Error; err != nil {
+		if err := tx.Where("negocio_id = ? AND producto_id = ? AND es_principal = TRUE", businessID, productID).Delete(&domain.ProductoCodigo{}).Error; err != nil {
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{ProductoID: productID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: productID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -604,13 +651,13 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	var categories []domain.Categoria
 	var brands []domain.Marca
 	var units []domain.UnidadMedida
-	if err := r.db.Where("activo = TRUE").Find(&categories).Error; err != nil {
+	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&categories).Error; err != nil {
 		return nil, result, err
 	}
-	if err := r.db.Where("activo = TRUE").Find(&brands).Error; err != nil {
+	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&brands).Error; err != nil {
 		return nil, result, err
 	}
-	if err := r.db.Where("activo = TRUE").Find(&units).Error; err != nil {
+	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&units).Error; err != nil {
 		return nil, result, err
 	}
 	categoryIDs := make(map[string]uuid.UUID, len(categories))
@@ -629,7 +676,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	if err := r.db.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno IS NOT NULL", businessID).Pluck("sku_interno", &existingSKUs).Error; err != nil {
 		return nil, result, err
 	}
-	if err := r.db.Model(&domain.ProductoCodigo{}).Pluck("codigo", &existingCodes).Error; err != nil {
+	if err := r.db.Model(&domain.ProductoCodigo{}).Where("negocio_id = ?", businessID).Pluck("codigo", &existingCodes).Error; err != nil {
 		return nil, result, err
 	}
 	type productIdentity struct {
@@ -797,13 +844,19 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 		}
 		if input.CategoriaID != nil {
 			var category domain.Categoria
-			if err := tx.Where("id = ? AND activo = TRUE", input.CategoriaID).First(&category).Error; err != nil {
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.CategoriaID, businessID).First(&category).Error; err != nil {
 				return errors.New("la categoría no existe o está inactiva")
+			}
+		}
+		if input.MarcaID != nil {
+			var brand domain.Marca
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.MarcaID, businessID).First(&brand).Error; err != nil {
+				return errors.New("la marca no existe o está inactiva")
 			}
 		}
 		if input.UnidadMedidaID != nil {
 			var unit domain.UnidadMedida
-			if err := tx.Where("id = ? AND activo = TRUE", input.UnidadMedidaID).First(&unit).Error; err != nil {
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.UnidadMedidaID, businessID).First(&unit).Error; err != nil {
 				return errors.New("la unidad de medida no existe o está inactiva")
 			}
 		}
@@ -833,19 +886,19 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 			}
 		}
 		if barcode != "" {
-			if err := tx.Model(&domain.ProductoCodigo{}).Where("codigo = ?", barcode).Count(&duplicate).Error; err != nil {
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&duplicate).Error; err != nil {
 				return err
 			}
 			if duplicate > 0 {
 				return errors.New("el código de barras ya está asignado a otro producto")
 			}
 		}
-		product := domain.Producto{Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido, Presentacion: input.Presentacion, Activo: true}
+		product := domain.Producto{NegocioID: businessID, Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido, Presentacion: input.Presentacion, Activo: true}
 		if err := tx.Create(&product).Error; err != nil {
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -855,7 +908,7 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 			}
 		}
 		if input.CategoriaID != nil {
-			if err := tx.Create(&domain.ProductoCategoria{ProductoID: product.ID, CategoriaID: *input.CategoriaID, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCategoria{NegocioID: businessID, ProductoID: product.ID, CategoriaID: *input.CategoriaID, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}

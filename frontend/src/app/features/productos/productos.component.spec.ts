@@ -39,7 +39,7 @@ describe('ProductosComponent', () => {
       .flush([{ id: 'marca-coca-cola', nombre: 'Coca Cola' }]);
     http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/sucursales`)
       .flush([{ id: 'sucursal-1', nombre: 'Tienda prueba' }]);
-    http.expectOne(`${environment.apiUrl}/catalogo/unidades-medida`)
+    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/unidades-medida`)
       .flush([{ id: 'unidad-ml', nombre: 'Mililitro', codigo: 'ml', simbolo: 'ml' }]);
   });
 

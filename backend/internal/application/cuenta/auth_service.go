@@ -29,7 +29,7 @@ func (s *AuthService) Login(email, password string) (*cuentadomain.Usuario, erro
 		return nil, ErrInvalidCredentials
 	}
 	now := time.Now()
-	if user.DeshabilitadoEn != nil || user.Estado != "activo" || (user.BloqueadoHasta != nil && user.BloqueadoHasta.After(now)) {
+	if user.DeshabilitadoEn != nil || user.Estado != "activo" || user.CorreoVerificadoEn == nil || (user.BloqueadoHasta != nil && user.BloqueadoHasta.After(now)) {
 		return nil, ErrAccountUnavailable
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.HashContrasena), []byte(password)) != nil {
@@ -71,7 +71,11 @@ func (s *AuthService) Register(fullName, email, phone, password string) error {
 		surnames = strings.Join(parts[1:], " ")
 	}
 
-	user := &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "activo"}
+	// Compatibilidad temporal hasta que la fase 3 active OTP: el registro conserva
+	// su contrato actual y crea la cuenta verificada. Esa fase cambiará este estado
+	// a pendiente y será la única que lo active después de validar el código.
+	now := time.Now()
+	user := &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "activo", CorreoVerificadoEn: &now}
 	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: surnames}
 	if phone != "" {
 		cleanPhone := strings.TrimSpace(phone)

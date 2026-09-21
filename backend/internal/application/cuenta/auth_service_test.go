@@ -3,6 +3,7 @@ package cuenta
 import (
 	"errors"
 	"testing"
+	"time"
 
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 
@@ -42,18 +43,22 @@ func TestAuthServiceRegisterConservaContrato(t *testing.T) {
 	if repository.createdUser == nil || repository.createdUser.Correo != "ada@example.com" {
 		t.Fatalf("usuario creado = %#v", repository.createdUser)
 	}
+	if repository.createdUser.CorreoVerificadoEn == nil {
+		t.Fatal("durante la transición previa a OTP el registro debe conservar el acceso existente")
+	}
 	if repository.createdProfile == nil || repository.createdProfile.Nombres != "Ada" || repository.createdProfile.Apellidos != "Lovelace" {
 		t.Fatalf("perfil creado = %#v", repository.createdProfile)
 	}
 }
 
 func TestAuthServiceLoginConservaContrato(t *testing.T) {
+	verifiedAt := time.Now()
 	hash, err := bcrypt.GenerateFromPassword([]byte("contrasena-segura"), bcrypt.MinCost)
 	if err != nil {
 		t.Fatal(err)
 	}
 	repository := &userRepositoryStub{user: &cuentadomain.Usuario{
-		Correo: "ada@example.com", HashContrasena: string(hash), Estado: "activo",
+		Correo: "ada@example.com", HashContrasena: string(hash), Estado: "activo", CorreoVerificadoEn: &verifiedAt,
 	}}
 	service := NewAuthService(repository)
 

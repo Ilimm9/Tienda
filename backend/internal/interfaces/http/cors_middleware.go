@@ -12,8 +12,8 @@ func CORSMiddleware(frontendURL string) gin.HandlerFunc {
 		if origin == frontendURL {
 			c.Header("Access-Control-Allow-Origin", frontendURL)
 			c.Header("Access-Control-Allow-Credentials", "true")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, X-XSRF-TOKEN")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			c.Header("Access-Control-Max-Age", "600")
 			c.Header("Vary", "Origin")
 		}

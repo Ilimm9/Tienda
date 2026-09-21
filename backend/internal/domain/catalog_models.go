@@ -21,6 +21,7 @@ type Sucursal struct {
 
 type Marca struct {
 	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID     uuid.UUID `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	Nombre        string    `gorm:"type:varchar(180);not null" json:"nombre"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
 	CreadoEn      time.Time `json:"creado_en"`
@@ -29,9 +30,10 @@ type Marca struct {
 
 type UnidadMedida struct {
 	ID              uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	Codigo          string     `gorm:"type:varchar(30);uniqueIndex;not null" json:"codigo"`
-	Nombre          string     `gorm:"type:varchar(100);uniqueIndex;not null" json:"nombre"`
-	Simbolo         string     `gorm:"type:varchar(20);uniqueIndex;not null" json:"simbolo"`
+	NegocioID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
+	Codigo          string     `gorm:"type:varchar(30);not null" json:"codigo"`
+	Nombre          string     `gorm:"type:varchar(100);not null" json:"nombre"`
+	Simbolo         string     `gorm:"type:varchar(20);not null" json:"simbolo"`
 	Tipo            string     `gorm:"type:varchar(30);not null" json:"tipo"`
 	UnidadBaseID    *uuid.UUID `gorm:"type:uuid;index" json:"unidad_base_id,omitempty"`
 	FactorABase     float64    `gorm:"type:numeric(18,6);not null;default:1" json:"factor_a_base"`
@@ -44,6 +46,7 @@ type UnidadMedida struct {
 
 type Producto struct {
 	ID                uuid.UUID     `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID         uuid.UUID     `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	Nombre            string        `gorm:"type:varchar(255);not null" json:"nombre"`
 	Descripcion       *string       `gorm:"type:text" json:"descripcion,omitempty"`
 	MarcaID           *uuid.UUID    `gorm:"type:uuid;index" json:"marca_id,omitempty"`
@@ -62,6 +65,7 @@ type Producto struct {
 
 type Categoria struct {
 	ID               uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID        uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	Nombre           string     `gorm:"type:varchar(180);not null" json:"nombre"`
 	CategoriaPadreID *uuid.UUID `gorm:"type:uuid;index" json:"categoria_padre_id,omitempty"`
 	Descripcion      *string    `gorm:"type:text" json:"descripcion,omitempty"`
@@ -73,6 +77,7 @@ type Categoria struct {
 
 type ProductoCategoria struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID   uuid.UUID `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	ProductoID  uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_categoria" json:"producto_id"`
 	CategoriaID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_categoria" json:"categoria_id"`
 	EsPrincipal bool      `gorm:"not null;default:false" json:"es_principal"`
@@ -83,9 +88,10 @@ type ProductoCategoria struct {
 
 type ProductoCodigo struct {
 	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID     uuid.UUID `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	ProductoID    uuid.UUID `gorm:"type:uuid;not null;index" json:"producto_id"`
 	Tipo          string    `gorm:"type:varchar(20);not null" json:"tipo"`
-	Codigo        string    `gorm:"type:varchar(120);uniqueIndex;not null" json:"codigo"`
+	Codigo        string    `gorm:"type:varchar(120);not null" json:"codigo"`
 	EsPrincipal   bool      `gorm:"not null;default:false" json:"es_principal"`
 	CreadoEn      time.Time `json:"creado_en"`
 	ActualizadoEn time.Time `json:"actualizado_en"`

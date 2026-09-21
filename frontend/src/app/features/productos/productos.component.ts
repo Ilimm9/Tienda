@@ -165,7 +165,7 @@ export class ProductosComponent {
         this.formError = 'No fue posible cargar las sucursales.';
       },
     });
-    this.productosService.listUnits().subscribe({
+    this.productosService.listUnits(this.negocioID).subscribe({
       next: (items) => this.units.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
     });
@@ -212,7 +212,7 @@ export class ProductosComponent {
       next: (items) => this.brands.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
     });
-    this.productosService.listUnits().subscribe({
+    this.productosService.listUnits(this.negocioID).subscribe({
       next: (items) => this.units.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
     });

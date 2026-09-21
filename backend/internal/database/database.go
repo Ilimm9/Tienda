@@ -4,6 +4,8 @@ import (
 	"tienda/backend/internal/domain"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
+	"tienda/backend/internal/infrastructure"
+	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 
 	"github.com/google/uuid"
@@ -21,6 +23,9 @@ func Open(url string) (*gorm.DB, error) {
 }
 
 func Init(db *gorm.DB) error {
+	if err := infrastructure.MigrateCatalogTenancy(db); err != nil {
+		return err
+	}
 	if err := negocioinfra.MigratePhaseOne(db); err != nil {
 		return err
 	}
@@ -35,7 +40,7 @@ func Init(db *gorm.DB) error {
 	}
 
 	models := []interface{}{
-		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{},
+		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &cuentadomain.SesionUsuario{},
 		&negociodomain.Direccion{}, &negociodomain.Negocio{}, &negociodomain.ConfiguracionNegocio{},
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
 		&negociodomain.Permiso{}, &negociodomain.PermisoRol{}, &negociodomain.RolMembresia{},
@@ -55,6 +60,12 @@ func Init(db *gorm.DB) error {
 		}
 	}
 	if err := db.AutoMigrate(models...); err != nil {
+		return err
+	}
+	if err := cuentainfra.MigrateSessionBaseline(db); err != nil {
+		return err
+	}
+	if err := infrastructure.MigrateCatalogTenancy(db); err != nil {
 		return err
 	}
 	if err := negocioinfra.MigratePhaseTwo(db); err != nil {
