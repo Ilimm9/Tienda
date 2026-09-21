@@ -1,6 +1,7 @@
 package application
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/url"
@@ -43,6 +44,9 @@ type ProductRepository interface {
 	ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
 	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error)
 	CreateImportedProducts(uuid.UUID, []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error)
+	CreateProductImportJob(uuid.UUID, uuid.UUID) (domain.ProductImportJob, error)
+	GetProductImportJob(uuid.UUID, uuid.UUID) (domain.ProductImportJob, error)
+	UpdateProductImportJob(uuid.UUID, string, string, int, *domain.CatalogImportResult, *string) error
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
@@ -52,26 +56,19 @@ type ProductRepository interface {
 }
 
 func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
+	return s.importProducts(businessID, branchID, file, nil)
+}
+
+func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.Reader, progress func(string, int)) (domain.CatalogImportResult, error) {
 	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
 	if err != nil {
 		return result, err
 	}
-	for index := range prepared {
-		if prepared[index].Input.CodigoBarras == nil {
-			continue
-		}
-		barcode := *prepared[index].Input.CodigoBarras
-		lookup, lookupErr := s.LookupProduct(barcode)
-		if lookupErr != nil {
-			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: prepared[index].Fila, Motivo: "No fue posible buscar la imagen; se creará sin imagen"})
-			continue
-		}
-		if lookup.ImagenURL == nil || !validImportImageURL(strings.TrimSpace(*lookup.ImagenURL)) {
-			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: prepared[index].Fila, Motivo: "No se encontró una imagen para el código de barras"})
-			continue
-		}
-		imageURL := strings.TrimSpace(*lookup.ImagenURL)
-		prepared[index].Input.ImagenURL = &imageURL
+	if progress != nil {
+		progress("Archivo validado", 20)
+	}
+	if progress != nil {
+		progress("Creando productos", 30)
 	}
 	imported, err := s.products.CreateImportedProducts(businessID, prepared)
 	if err != nil {
@@ -80,12 +77,42 @@ func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.
 	result.Creadas += imported.Creadas
 	result.Omitidas += imported.Omitidas
 	result.Invalidas += imported.Invalidas
+	result.SKUsGenerados += imported.SKUsGenerados
 	result.Errores = append(result.Errores, imported.Errores...)
 	return result, nil
 }
 
+func (s *ProductService) StartProductImport(businessID, branchID uuid.UUID, content []byte) (domain.ProductImportJob, error) {
+	job, err := s.products.CreateProductImportJob(businessID, branchID)
+	if err != nil {
+		return domain.ProductImportJob{}, err
+	}
+	go func() {
+		_ = s.products.UpdateProductImportJob(job.ID, "procesando", "Validando archivo", 10, nil, nil)
+		result, importErr := s.importProducts(businessID, branchID, bytes.NewReader(content), func(stage string, progress int) {
+			_ = s.products.UpdateProductImportJob(job.ID, "procesando", stage, progress, nil, nil)
+		})
+		if importErr != nil {
+			message := importErr.Error()
+			_ = s.products.UpdateProductImportJob(job.ID, "fallida", "No fue posible importar", 100, nil, &message)
+			return
+		}
+		_ = s.products.UpdateProductImportJob(job.ID, "completada", "Importación terminada", 100, &result, nil)
+	}()
+	return job, nil
+}
+
+func (s *ProductService) GetProductImportJob(businessID, jobID uuid.UUID) (domain.ProductImportJob, error) {
+	return s.products.GetProductImportJob(businessID, jobID)
+}
+
 func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
 	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
+	for _, row := range prepared {
+		if row.Input.SKUInterno == nil || strings.TrimSpace(*row.Input.SKUInterno) == "" {
+			result.SKUsGenerados++
+		}
+	}
 	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared)}, err
 }
 

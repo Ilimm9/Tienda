@@ -1,4 +1,4 @@
-# Capability 05: Preparación segura para producción en AWS Lightsail
+# Capability 06: Preparación segura para producción en AWS Lightsail
 
 ## Estado
 

@@ -38,6 +38,7 @@ describe('ProductosService', () => {
     const payload = {
       nombre: 'Producto manual',
       sku_interno: 'PROD-001',
+      generar_sku_interno: false,
       marca_id: null,
       categoria_id: 'categoria-1',
       sucursal_id: 'sucursal-1',
@@ -99,7 +100,7 @@ describe('ProductosService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body.get('sucursal_id')).toBe('sucursal-1');
     expect(request.request.body.get('archivo')).toBe(file);
-    request.flush({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, errores: [], advertencias: [] });
+    request.flush({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, skus_generados: 0, errores: [], advertencias: [] });
   });
 
   it('validates the spreadsheet before importing it', () => {
@@ -111,6 +112,6 @@ describe('ProductosService', () => {
     const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/validar-importacion`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body.get('sucursal_id')).toBe('sucursal-1');
-    request.flush({ procesadas: 3, insertables: 2, creadas: 0, omitidas: 0, invalidas: 1, errores: [], advertencias: [] });
+    request.flush({ procesadas: 3, insertables: 2, creadas: 0, omitidas: 0, invalidas: 1, skus_generados: 1, errores: [], advertencias: [] });
   });
 });

@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, CreateProductRequest, ProductImportPreview, ProductImportResult, ProductListResponse, ProductLookup, UpdateProductRequest } from './product.models';
+import { CatalogOption, CreateProductRequest, ProductImportJob, ProductImportPreview, ProductListResponse, ProductLookup, UpdateProductRequest } from './product.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
@@ -64,13 +64,17 @@ export class ProductosService {
     return `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importacion/plantilla`;
   }
 
-  importProducts(businessId: string, branchId: string, file: File): Observable<ProductImportResult> {
+  importProducts(businessId: string, branchId: string, file: File): Observable<ProductImportJob> {
     const data = new FormData();
     data.append('archivo', file);
     data.append('sucursal_id', branchId);
-    return this.http.post<ProductImportResult>(
+    return this.http.post<ProductImportJob>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importar`, data,
     );
+  }
+
+  productImportStatus(businessId: string, importId: string): Observable<ProductImportJob> {
+    return this.http.get<ProductImportJob>(`${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importaciones/${importId}`);
   }
 
   previewProductImport(businessId: string, branchId: string, file: File): Observable<ProductImportPreview> {

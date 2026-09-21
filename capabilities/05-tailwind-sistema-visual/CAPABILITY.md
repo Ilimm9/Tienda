@@ -1,4 +1,4 @@
-# Capability 04: Tailwind y sistema visual
+# Capability 05: Tailwind y sistema visual
 
 ## Estado
 

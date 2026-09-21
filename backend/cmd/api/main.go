@@ -165,6 +165,7 @@ func main() {
 	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
 	catalogoGestion.POST("/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
 	catalogoGestion.POST("/catalogo/productos/importar", productHandler.ImportProducts)
+	catalogoGestion.GET("/catalogo/productos/importaciones/:importacionId", productHandler.ProductImportStatus)
 	catalogoGestion.POST("/catalogo/marcas", productHandler.CreateBrand)
 	catalogoGestion.PATCH("/catalogo/marcas/:id", productHandler.UpdateBrand)
 	catalogoGestion.GET("/catalogo/marcas/importacion/plantilla", productHandler.BrandImportTemplate)

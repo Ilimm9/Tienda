@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -346,16 +347,34 @@ func (h *ProductHandler) ImportProducts(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	result, err := h.products.ImportProducts(businessID, branchID, file)
+	content, err := io.ReadAll(file)
 	if err != nil {
-		if errors.Is(err, application.ErrInvalidImportFile) {
-			c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "No fue posible leer el archivo"})
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	job, err := h.products.StartProductImport(businessID, branchID, content)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible iniciar la importación"})
+		return
+	}
+	c.JSON(http.StatusAccepted, job)
+}
+
+func (h *ProductHandler) ProductImportStatus(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	jobID, ok := parseID(c, "importacionId")
+	if !ok {
+		return
+	}
+	job, err := h.products.GetProductImportJob(businessID, jobID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"mensaje": "No se encontró la importación"})
+		return
+	}
+	c.JSON(http.StatusOK, job)
 }
 
 func (h *ProductHandler) PreviewProductImport(c *gin.Context) {

@@ -28,6 +28,7 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		`DO $$ BEGIN
 			IF EXISTS (
 				SELECT 1 FROM producto_negocio
+				WHERE producto_id IS NOT NULL
 				GROUP BY producto_id HAVING count(DISTINCT negocio_id) > 1
 			) THEN
 				RAISE EXCEPTION 'migración de catálogo detenida: existen productos asociados a varios negocios';
@@ -40,6 +41,17 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 			FROM producto_negocio GROUP BY producto_id
 		) origen
 		WHERE p.id = origen.producto_id AND p.negocio_id IS NULL`,
+
+		// Los productos base de variantes no tienen fila en producto_negocio; su dueño es la familia.
+		`DO $$ BEGIN
+			IF to_regclass('familias_producto') IS NOT NULL AND EXISTS (
+				SELECT 1 FROM information_schema.columns WHERE table_name = 'productos' AND column_name = 'familia_producto_id'
+			) THEN
+				UPDATE productos p SET negocio_id = f.negocio_id
+				FROM familias_producto f
+				WHERE f.id = p.familia_producto_id AND p.negocio_id IS NULL;
+			END IF;
+		END $$`,
 
 		`DO $$ DECLARE total_negocios integer; BEGIN
 			SELECT count(*) INTO total_negocios FROM negocios;
@@ -103,6 +115,15 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		FROM productos p WHERE p.id = pc.producto_id AND pc.negocio_id IS NULL`,
 		`UPDATE producto_codigos codigo SET negocio_id = p.negocio_id
 		FROM productos p WHERE p.id = codigo.producto_id AND codigo.negocio_id IS NULL`,
+		`DO $$ BEGIN
+			IF to_regclass('producto_variantes') IS NOT NULL AND EXISTS (
+				SELECT 1 FROM information_schema.columns WHERE table_name = 'producto_codigos' AND column_name = 'producto_variante_id'
+			) THEN
+				UPDATE producto_codigos codigo SET negocio_id = p.negocio_id
+				FROM producto_variantes v JOIN productos p ON p.id = v.producto_id
+				WHERE v.id = codigo.producto_variante_id AND codigo.negocio_id IS NULL;
+			END IF;
+		END $$`,
 
 		`DO $$ BEGIN
 			IF EXISTS (SELECT 1 FROM marcas WHERE negocio_id IS NULL)
@@ -139,6 +160,7 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		`DROP INDEX IF EXISTS idx_unidades_medida_nombre`,
 		`DROP INDEX IF EXISTS idx_unidades_medida_simbolo`,
 		`DROP INDEX IF EXISTS idx_producto_codigos_codigo`,
+		`DROP INDEX IF EXISTS idx_familia_producto_codigo`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_marcas_negocio_nombre_ci ON marcas (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_categorias_negocio_nombre_ci ON categorias (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_unidades_negocio_codigo_ci ON unidades_medida (negocio_id, lower(btrim(codigo)))`,

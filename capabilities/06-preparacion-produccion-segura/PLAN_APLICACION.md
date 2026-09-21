@@ -6,7 +6,7 @@ Fases 1, 2 y 3 implementadas y verificadas mediante pruebas automatizadas. La mi
 
 ## Relación con la capability
 
-Este documento desarrolla únicamente los cambios de aplicación de la [Capability 05](CAPABILITY.md). La creación de la instancia, DNS, TLS y demás trabajo de AWS Lightsail se realizará después y no forma parte de estas fases inmediatas.
+Este documento desarrolla únicamente los cambios de aplicación de la [Capability 06](CAPABILITY.md). La creación de la instancia, DNS, TLS y demás trabajo de AWS Lightsail se realizará después y no forma parte de estas fases inmediatas.
 
 ## Decisiones confirmadas
 
@@ -421,7 +421,7 @@ Cada evento tendrá fecha, actor cuando exista, acción, resultado, request ID y
 
 ### Criterios de aceptación
 
-- Todos los controles P0 de aplicación de la capability 05 están cerrados.
+- Todos los controles P0 de aplicación de la capability 06 están cerrados.
 - No existen vulnerabilidades críticas o altas conocidas sin excepción explícita.
 - Logs permiten investigar eventos sin exponer credenciales.
 - La evidencia y resultados quedan registrados en la capability.

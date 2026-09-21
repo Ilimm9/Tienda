@@ -9,6 +9,42 @@
     display: grid;
 }
 
+.product-page {
+    width: min(100%, 980px);
+    padding: 36px 32px 56px;
+    margin: 0 auto;
+}
+
+.form-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-page-header h1 {
+    margin: 5px 0 8px;
+    color: var(--text);
+    font-size: 34px;
+    line-height: 1.2;
+}
+
+.form-page-header p:last-child {
+    max-width: 600px;
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.form-page-card {
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+    background: var(--surface-raised);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
 .products-header {
     display: flex;
     justify-content: space-between;
@@ -74,6 +110,55 @@
 
 .product-name {
     font-weight: 600;
+}
+
+.expander-column {
+    width: 3rem;
+    text-align: center;
+}
+
+.variant-summary {
+    color: var(--text-muted);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.variant-expansion-row > td {
+    padding: 0 !important;
+}
+
+.variant-expansion {
+    margin: 0 .75rem .75rem 3.5rem;
+    padding: .75rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text-muted));
+    border-radius: .45rem;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--text-muted));
+    overflow-x: auto;
+}
+
+.variant-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+    font-size: .82rem;
+}
+
+.variant-table th,
+.variant-table td {
+    padding: .65rem .5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.variant-table th {
+    color: var(--text-muted);
+    font-size: .72rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.variant-table tbody tr:last-child td {
+    border-bottom: 0;
 }
 
 .table-actions {
@@ -228,6 +313,31 @@ code {
     padding-top: .25rem;
 }
 
+.variant-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, var(--text-muted));
+    border-radius: .5rem;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--text-muted));
+}
+
+.variant-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    color: var(--text-muted);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.variant-remove-button {
+    flex: 0 0 auto;
+}
+
 .field {
     display: grid;
     gap: .4rem;
@@ -286,31 +396,22 @@ code {
 
 .barcode-input-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: .65rem;
+    align-items: center;
 }
 
 .barcode-input-row .secondary-button {
     white-space: nowrap;
 }
 
-.image-preview {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .65rem;
+.barcode-thumbnail {
+    width: 2.5rem;
+    height: 2.5rem;
     border: 1px solid var(--border);
     border-radius: .35rem;
-    color: var(--text-muted);
-    background: var(--surface-hover);
-}
-
-.image-preview img {
-    width: 4rem;
-    height: 4rem;
-    border-radius: .35rem;
     object-fit: contain;
-    background: #fff;
+    background: var(--surface-raised);
 }
 
 .full-field {
@@ -331,14 +432,54 @@ code {
     border-top: 1px solid var(--border);
 }
 
+.multimedia-section > p {
+    margin: -.35rem 0 .15rem;
+    color: var(--text-muted);
+    font-size: .85rem;
+}
+
+.multimedia-placeholder {
+    display: grid;
+    min-height: 8rem;
+    place-items: center;
+    align-content: center;
+    gap: .5rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: .5rem;
+    color: var(--text-muted);
+    background: var(--surface-hover);
+}
+
+.multimedia-placeholder i {
+    font-size: 1.4rem;
+}
+
 @media (max-width: 620px) {
     .products-page {
         padding: 26px 16px;
     }
 
+    .product-page {
+        padding: 26px 16px 40px;
+    }
+
     .products-header {
         gap: 1rem;
         flex-direction: column;
+    }
+
+    .form-page-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-page-header .products-actions,
+    .form-page-header > .secondary-button {
+        width: 100%;
+    }
+
+    .form-page-header .products-actions button {
+        flex: 1;
     }
 
     .products-header h1 {
@@ -347,6 +488,15 @@ code {
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .variant-card-header {
+        align-items: flex-start;
+    }
+
+    .variant-expansion {
+        margin-left: .5rem;
+        margin-right: .5rem;
     }
 
     .full-field {

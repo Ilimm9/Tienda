@@ -46,24 +46,67 @@ func TestCatalogImportTemplateHasExpectedHeaders(t *testing.T) {
 	}
 }
 
-func TestParseProductImportKeepsOptionalSKUAndCategoryAndReportsFieldErrors(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras"}
+func TestParseProductImportKeepsOptionalSKUAndReportsFieldErrors(t *testing.T) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
 	file := workbook(t, headers, [][]string{
-		{"Refresco", "", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038"},
-		{"", "", "", "", "", "", "-2", "", "", "-10", "texto", "123"},
+		{"Refresco", "REF-600", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038", "Sabor=Cola"},
+		{"", "", "", "", "", "", "-2", "", "", "-10", "texto", "123", ""},
 	})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
 	}
-	if len(rows) != 1 || rows[0].SKUInterno != "" || rows[0].Categoria != "" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
+	if len(rows) != 1 || rows[0].SKUInterno != "REF-600" || rows[0].Categoria != "" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
 		t.Fatalf("rows = %#v, want one parsed product", rows)
 	}
-	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 5 {
-		t.Fatalf("result = %#v, want one invalid row with five field errors", result)
+	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 4 || len(result.Advertencias) != 1 {
+		t.Fatalf("result = %#v, want one invalid row with four field errors and one warning", result)
 	}
 	if result.Errores[0].Campo != "Nombre" || result.Errores[1].Campo != "Contenido" {
 		t.Fatalf("errors = %#v, want field-specific errors", result.Errores)
+	}
+}
+
+func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "", "10", "2", "1234567", ""}})
+
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || result.Invalidas != 0 || len(result.Errores) != 0 || len(result.Advertencias) != 1 {
+		t.Fatalf("rows = %#v, result = %#v, want one insertable row with one warning", rows, result)
+	}
+	if result.Advertencias[0].Fila != 2 || result.Advertencias[0].Campo != "Código de barras" {
+		t.Fatalf("warnings = %#v, want barcode warning for row 2", result.Advertencias)
+	}
+}
+
+func TestParseProductImportAllowsMissingSKU(t *testing.T) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "4", "", ""}})
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].SKUInterno != "" || result.Invalidas != 0 || len(result.Errores) != 0 {
+		t.Fatalf("rows = %#v, result = %#v, want one valid row without SKU", rows, result)
+	}
+}
+
+func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "", "Kinder", "", "Unidad", "", "", "", "28", "0", "", "Colección=Dinosaurios; Color=Azul"}})
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if result.Invalidas != 0 || len(rows) != 1 || len(rows[0].Variantes) != 2 {
+		t.Fatalf("rows = %#v, result = %#v, want one row with two variant attributes", rows, result)
+	}
+	if rows[0].Variantes[0].Nombre != "Colección" || rows[0].Variantes[1].Valor != "Azul" {
+		t.Fatalf("attributes = %#v, want parsed attributes", rows[0].Variantes)
 	}
 }
 

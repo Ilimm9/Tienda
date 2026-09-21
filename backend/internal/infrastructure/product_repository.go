@@ -1,9 +1,14 @@
 package infrastructure
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"tienda/backend/internal/domain"
 	"unicode"
@@ -14,6 +19,7 @@ import (
 )
 
 var productBarcodePattern = regexp.MustCompile(`^\d{8,14}$`)
+var importedProductBarcodePattern = regexp.MustCompile(`^\d{1,14}$`)
 
 type ProductRepository struct {
 	db *gorm.DB
@@ -446,9 +452,12 @@ func (r *ProductRepository) ListBranches(businessID uuid.UUID) ([]domain.Catalog
 }
 
 func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProductInput) error {
+	if len(input.Variantes) > 0 {
+		return r.createProductFamily(businessID, input)
+	}
 	input.Nombre = strings.TrimSpace(input.Nombre)
 	input.SKUInterno = strings.TrimSpace(input.SKUInterno)
-	if input.Nombre == "" || input.SKUInterno == "" || input.PrecioVenta < 0 || input.StockInicial < 0 {
+	if input.Nombre == "" || (!input.GenerarSKUInterno && input.SKUInterno == "") || input.PrecioVenta < 0 || input.StockInicial < 0 {
 		return errors.New("los datos del producto no son válidos")
 	}
 	barcode := optionalString(input.CodigoBarras)
@@ -468,9 +477,11 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
 			return errors.New("la sucursal no pertenece al negocio o está inactiva")
 		}
-		var category domain.Categoria
-		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
-			return errors.New("la categoría no existe o está inactiva")
+		if input.CategoriaID != nil {
+			var category domain.Categoria
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
+				return errors.New("la categoría no existe o está inactiva")
+			}
 		}
 		if input.MarcaID != nil {
 			var brand domain.Marca
@@ -483,6 +494,13 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.UnidadMedidaID, businessID).First(&unit).Error; err != nil {
 				return errors.New("la unidad de medida no existe o está inactiva")
 			}
+		}
+		if input.GenerarSKUInterno {
+			generatedSKU, err := reserveGeneratedProductSKU(tx, businessID)
+			if err != nil {
+				return err
+			}
+			input.SKUInterno = generatedSKU
 		}
 		var duplicate int64
 		if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, input.SKUInterno).Count(&duplicate).Error; err != nil {
@@ -509,7 +527,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: &product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -518,10 +536,12 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 				return err
 			}
 		}
-		if err := tx.Create(&domain.ProductoCategoria{NegocioID: businessID, ProductoID: product.ID, CategoriaID: input.CategoriaID, EsPrincipal: true}).Error; err != nil {
-			return err
+		if input.CategoriaID != nil {
+			if err := tx.Create(&domain.ProductoCategoria{NegocioID: businessID, ProductoID: product.ID, CategoriaID: *input.CategoriaID, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
 		}
-		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: product.ID, SKUInterno: &input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
+		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: &product.ID, SKUInterno: &input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
 		if err := tx.Create(&commercial).Error; err != nil {
 			return err
 		}
@@ -537,6 +557,314 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		}
 		return nil
 	})
+}
+
+func (r *ProductRepository) createProductFamily(businessID uuid.UUID, input domain.CreateProductInput) error {
+	input.Nombre = strings.TrimSpace(input.Nombre)
+	if input.Nombre == "" || input.SucursalID == uuid.Nil || len(input.Variantes) == 0 {
+		return errors.New("los datos del producto con variantes no son válidos")
+	}
+	if input.UnidadMedidaID != nil {
+		var unit domain.UnidadMedida
+		if err := r.db.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.UnidadMedidaID, businessID).First(&unit).Error; err != nil {
+			return errors.New("la unidad de medida no existe o está inactiva")
+		}
+	}
+	if imageURL := optionalString(input.ImagenURL); imageURL != "" {
+		parsed, err := url.Parse(imageURL)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return errors.New("la URL de imagen no es válida")
+		}
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var branch domain.Sucursal
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
+			return errors.New("la sucursal no pertenece al negocio o está inactiva")
+		}
+		if input.CategoriaID != nil {
+			var category domain.Categoria
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
+				return errors.New("la categoría no existe o está inactiva")
+			}
+		}
+		if input.MarcaID != nil {
+			var brand domain.Marca
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", *input.MarcaID, businessID).First(&brand).Error; err != nil {
+				return errors.New("la marca no existe o está inactiva")
+			}
+		}
+		family, product, _, err := r.resolveVariantBase(tx, businessID, variantBaseInput{
+			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, CategoriaID: input.CategoriaID,
+			UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido,
+			Presentacion: input.Presentacion, ImagenURL: input.ImagenURL,
+		})
+		if err != nil {
+			return err
+		}
+		seenVariants := make(map[string]struct{}, len(input.Variantes))
+		for _, variant := range input.Variantes {
+			variantKey, err := productVariantKey(variant.Atributos)
+			if err != nil {
+				return err
+			}
+			if _, exists := seenVariants[variantKey]; exists {
+				return errors.New("no puede repetir la misma combinación de variantes")
+			}
+			seenVariants[variantKey] = struct{}{}
+			if err := r.createFamilyVariant(tx, businessID, input.SucursalID, product, family, variant, variantKey); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *ProductRepository) createFamilyVariant(tx *gorm.DB, businessID, branchID uuid.UUID, product domain.Producto, family domain.FamiliaProducto, variant domain.CreateProductVariantInput, variantKey string) error {
+	sku := strings.TrimSpace(variant.SKUInterno)
+	if !variant.GenerarSKUInterno && sku == "" {
+		return errors.New("cada variante requiere un SKU o generación automática")
+	}
+	if variant.PrecioVenta < 0 || variant.StockInicial < 0 {
+		return errors.New("el precio y stock de la variante deben ser válidos")
+	}
+	if variant.GenerarSKUInterno {
+		generatedSKU, err := reserveGeneratedProductSKU(tx, businessID)
+		if err != nil {
+			return err
+		}
+		sku = generatedSKU
+	}
+	var duplicate int64
+	if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, sku).Count(&duplicate).Error; err != nil {
+		return err
+	}
+	if duplicate > 0 {
+		return errors.New("el SKU ya existe en este negocio")
+	}
+	barcode := optionalString(variant.CodigoBarras)
+	if barcode != "" {
+		if !productBarcodePattern.MatchString(barcode) {
+			return errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+		}
+		if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&duplicate).Error; err != nil {
+			return err
+		}
+		if duplicate > 0 {
+			return errors.New("el código de barras ya está asignado a otro producto")
+		}
+	}
+	productVariant := domain.ProductoVariante{ProductoID: product.ID, FamiliaProductoID: family.ID, Clave: variantKey, Activo: true}
+	if err := tx.Create(&productVariant).Error; err != nil {
+		return err
+	}
+	for _, attribute := range variant.Atributos {
+		if err := tx.Create(&domain.ProductoVarianteAtributo{ProductoVarianteID: productVariant.ID, Nombre: strings.TrimSpace(attribute.Nombre), Valor: strings.TrimSpace(attribute.Valor)}).Error; err != nil {
+			return err
+		}
+	}
+	if barcode != "" {
+		if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoVarianteID: &productVariant.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			return err
+		}
+	}
+	commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoVarianteID: &productVariant.ID, SKUInterno: &sku, PrecioVenta: variant.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
+	if err := tx.Create(&commercial).Error; err != nil {
+		return err
+	}
+	inventory := domain.InventarioSucursal{SucursalID: branchID, ProductoNegocioID: commercial.ID, StockActual: variant.StockInicial, StockMinimo: 0}
+	if err := tx.Create(&inventory).Error; err != nil {
+		return err
+	}
+	if variant.StockInicial > 0 {
+		return tx.Create(&domain.MovimientoInventario{SucursalID: branchID, ProductoNegocioID: commercial.ID, Tipo: "AJUSTE_ENTRADA", Cantidad: variant.StockInicial, StockAnterior: 0, StockNuevo: variant.StockInicial}).Error
+	}
+	return nil
+}
+
+type variantBaseInput struct {
+	Nombre          string
+	Descripcion     *string
+	MarcaID         *uuid.UUID
+	CategoriaID     *uuid.UUID
+	UnidadMedidaID  *uuid.UUID
+	Contenido       *float64
+	UnidadContenido *string
+	Presentacion    *string
+	ImagenURL       *string
+}
+
+// resolveVariantBase is the sole owner of a variant family base product.  It
+// reuses the parent on subsequent manual entries and spreadsheet rows.
+func (r *ProductRepository) resolveVariantBase(tx *gorm.DB, businessID uuid.UUID, input variantBaseInput) (domain.FamiliaProducto, domain.Producto, bool, error) {
+	familyKey := productBaseKey(input.Nombre, input.Presentacion, input.MarcaID, input.CategoriaID)
+	var family domain.FamiliaProducto
+	err := tx.Where("negocio_id = ? AND clave = ?", businessID, familyKey).First(&family).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		code, codeErr := reserveGeneratedFamilyCode(tx, businessID, input.Nombre)
+		if codeErr != nil {
+			return family, domain.Producto{}, false, codeErr
+		}
+		family = domain.FamiliaProducto{NegocioID: businessID, Nombre: input.Nombre, Codigo: code, Clave: familyKey, Activo: true}
+		if err := tx.Create(&family).Error; err != nil {
+			return family, domain.Producto{}, false, err
+		}
+	} else if err != nil {
+		return family, domain.Producto{}, false, err
+	}
+
+	var product domain.Producto
+	err = tx.Where("negocio_id = ? AND familia_producto_id = ?", businessID, family.ID).First(&product).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		product = domain.Producto{NegocioID: businessID, Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, UnidadMedidaID: input.UnidadMedidaID, FamiliaProductoID: &family.ID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido, Presentacion: input.Presentacion, Activo: true}
+		if err := tx.Create(&product).Error; err != nil {
+			return family, domain.Producto{}, false, err
+		}
+		if input.CategoriaID != nil {
+			if err := tx.Create(&domain.ProductoCategoria{NegocioID: businessID, ProductoID: product.ID, CategoriaID: *input.CategoriaID, EsPrincipal: true}).Error; err != nil {
+				return family, domain.Producto{}, false, err
+			}
+		}
+		if imageURL := optionalString(input.ImagenURL); imageURL != "" {
+			if err := tx.Create(&domain.ProductoImagen{ProductoID: product.ID, URL: imageURL, EsPrincipal: true, Orden: 0}).Error; err != nil {
+				return family, domain.Producto{}, false, err
+			}
+		}
+		return family, product, true, nil
+	}
+	if err != nil {
+		return family, domain.Producto{}, false, err
+	}
+	if !sameVariantBaseData(tx, product, input) {
+		return family, domain.Producto{}, false, errors.New("los datos compartidos no coinciden con el producto base existente")
+	}
+	return family, product, false, nil
+}
+
+func sameVariantBaseData(tx *gorm.DB, product domain.Producto, input variantBaseInput) bool {
+	if !sameOptionalString(product.Descripcion, input.Descripcion) || !sameOptionalUUID(product.UnidadMedidaID, input.UnidadMedidaID) ||
+		!sameOptionalFloat(product.Contenido, input.Contenido) || !sameOptionalString(product.UnidadContenido, input.UnidadContenido) {
+		return false
+	}
+	var imageURL string
+	if err := tx.Table("producto_imagenes").Select("url").Where("producto_id = ? AND es_principal = TRUE", product.ID).Limit(1).Scan(&imageURL).Error; err != nil {
+		return false
+	}
+	return catalogImportKey(imageURL) == catalogImportKey(optionalString(input.ImagenURL))
+}
+
+func sameVariantBaseInput(first, second variantBaseInput) bool {
+	return sameOptionalString(first.Descripcion, second.Descripcion) &&
+		sameOptionalUUID(first.UnidadMedidaID, second.UnidadMedidaID) &&
+		sameOptionalFloat(first.Contenido, second.Contenido) &&
+		sameOptionalString(first.UnidadContenido, second.UnidadContenido) &&
+		sameOptionalString(first.ImagenURL, second.ImagenURL)
+}
+
+func sameOptionalString(first, second *string) bool {
+	return catalogImportKey(optionalString(first)) == catalogImportKey(optionalString(second))
+}
+
+func sameOptionalUUID(first, second *uuid.UUID) bool {
+	if first == nil || second == nil {
+		return first == nil && second == nil
+	}
+	return *first == *second
+}
+
+func sameOptionalFloat(first, second *float64) bool {
+	if first == nil || second == nil {
+		return first == nil && second == nil
+	}
+	return *first == *second
+}
+
+func productFamilyKey(name string, brandID *uuid.UUID, presentation *string, categoryID *uuid.UUID) string {
+	brand := ""
+	if brandID != nil {
+		brand = brandID.String()
+	}
+	category := ""
+	if categoryID != nil {
+		category = categoryID.String()
+	}
+	canonical := strings.Join([]string{catalogImportKey(name), catalogImportKey(optionalString(presentation)), brand, category}, "|")
+	sum := sha256.Sum256([]byte(canonical))
+	return hex.EncodeToString(sum[:])
+}
+
+func productBaseKey(name string, presentation *string, brandID *uuid.UUID, categoryID *uuid.UUID) string {
+	return productFamilyKey(name, brandID, presentation, categoryID)
+}
+
+func reserveGeneratedFamilyCode(tx *gorm.DB, businessID uuid.UUID, name string) (string, error) {
+	var sequence struct {
+		Numero int64 `gorm:"column:numero"`
+	}
+	if err := tx.Raw(`INSERT INTO familia_producto_consecutivos (id, negocio_id, siguiente_numero) VALUES (?, ?, 2) ON CONFLICT (negocio_id) DO UPDATE SET siguiente_numero = familia_producto_consecutivos.siguiente_numero + 1 RETURNING siguiente_numero - 1 AS numero`, uuid.New(), businessID).Scan(&sequence).Error; err != nil {
+		return "", err
+	}
+	slug := strings.ToUpper(catalogImportKey(name))
+	slug = strings.Map(func(r rune) rune {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return '-'
+	}, slug)
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		slug = "PRODUCTO"
+	}
+	if len(slug) > 80 {
+		slug = slug[:80]
+	}
+	return fmt.Sprintf("FAM-%s-%06d", slug, sequence.Numero), nil
+}
+
+func productVariantKey(attributes []domain.ProductVariantAttributeInput) (string, error) {
+	if len(attributes) == 0 {
+		return "", errors.New("cada variante requiere al menos un atributo")
+	}
+	items := make([]string, 0, len(attributes))
+	seen := make(map[string]struct{}, len(attributes))
+	for _, attribute := range attributes {
+		name, value := catalogImportKey(attribute.Nombre), catalogImportKey(attribute.Valor)
+		if name == "" || value == "" {
+			return "", errors.New("los atributos de variante requieren nombre y valor")
+		}
+		if _, exists := seen[name]; exists {
+			return "", errors.New("no puede repetir el mismo atributo en una variante")
+		}
+		seen[name] = struct{}{}
+		items = append(items, name+"="+value)
+	}
+	sort.Strings(items)
+	return strings.Join(items, ";"), nil
+}
+
+func reserveGeneratedProductSKU(tx *gorm.DB, businessID uuid.UUID) (string, error) {
+	for {
+		var sequence struct {
+			Numero int64 `gorm:"column:numero"`
+		}
+		if err := tx.Raw(`
+			INSERT INTO producto_sku_consecutivos (id, negocio_id, siguiente_numero, creado_en, actualizado_en)
+			VALUES (?, ?, 2, NOW(), NOW())
+			ON CONFLICT (negocio_id) DO UPDATE
+			SET siguiente_numero = producto_sku_consecutivos.siguiente_numero + 1,
+				actualizado_en = NOW()
+			RETURNING siguiente_numero - 1 AS numero
+		`, uuid.New(), businessID).Scan(&sequence).Error; err != nil {
+			return "", err
+		}
+		sku := fmt.Sprintf("PROD-%06d", sequence.Numero)
+		var duplicate int64
+		if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, sku).Count(&duplicate).Error; err != nil {
+			return "", err
+		}
+		if duplicate == 0 {
+			return sku, nil
+		}
+	}
 }
 
 func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error {
@@ -613,7 +941,7 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: productID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: &productID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -672,35 +1000,65 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	for _, item := range units {
 		unitIDs[catalogImportKey(item.Nombre)] = item.ID
 	}
-	var existingSKUs, existingCodes []string
-	if err := r.db.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno IS NOT NULL", businessID).Pluck("sku_interno", &existingSKUs).Error; err != nil {
-		return nil, result, err
-	}
+	var existingCodes []string
 	if err := r.db.Model(&domain.ProductoCodigo{}).Where("negocio_id = ?", businessID).Pluck("codigo", &existingCodes).Error; err != nil {
 		return nil, result, err
 	}
+	var existingSKUs []string
+	if err := r.db.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno IS NOT NULL", businessID).Pluck("sku_interno", &existingSKUs).Error; err != nil {
+		return nil, result, err
+	}
 	type productIdentity struct {
-		Nombre       string
-		Presentacion string
+		Nombre            string
+		SKUInterno        string
+		Presentacion      string
+		FamiliaProductoID *uuid.UUID
 	}
 	var existingProducts []productIdentity
 	if err := r.db.Table("productos AS p").
-		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion").
+		Select("p.nombre, COALESCE(pn.sku_interno, '') AS sku_interno, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id").
 		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
 		Scan(&existingProducts).Error; err != nil {
 		return nil, result, err
 	}
-	seenSKUs, seenCodes := make(map[string]struct{}, len(existingSKUs)), make(map[string]struct{}, len(existingCodes))
+	existingCodeSet := make(map[string]struct{}, len(existingCodes))
+	seenFileCodes := make(map[string]struct{})
+	existingSKUSet := make(map[string]struct{}, len(existingSKUs))
+	seenFileSKUs := make(map[string]struct{})
+	seenProductIdentities := make(map[string]struct{}, len(existingProducts))
 	seenNamePresentations := make(map[string]struct{}, len(existingProducts))
-	for _, sku := range existingSKUs {
-		seenSKUs[catalogImportKey(sku)] = struct{}{}
-	}
+	seenVariantIdentities := make(map[string]struct{})
 	for _, code := range existingCodes {
-		seenCodes[code] = struct{}{}
+		existingCodeSet[code] = struct{}{}
+	}
+	for _, sku := range existingSKUs {
+		existingSKUSet[catalogImportKey(sku)] = struct{}{}
 	}
 	for _, product := range existingProducts {
-		seenNamePresentations[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = struct{}{}
+		seenProductIdentities[productImportIdentityKey(product.Nombre, product.SKUInterno, product.Presentacion)] = struct{}{}
+		if product.FamiliaProductoID == nil {
+			seenNamePresentations[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = struct{}{}
+		}
 	}
+	var existingVariants []struct {
+		Nombre       string     `gorm:"column:nombre"`
+		Presentacion string     `gorm:"column:presentacion"`
+		MarcaID      *uuid.UUID `gorm:"column:marca_id"`
+		CategoriaID  *uuid.UUID `gorm:"column:categoria_id"`
+		Clave        string     `gorm:"column:clave"`
+	}
+	if err := r.db.Table("producto_variantes AS pv").
+		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.marca_id, pc.categoria_id, pv.clave").
+		Joins("JOIN productos p ON p.id = pv.producto_id").
+		Joins("LEFT JOIN producto_categorias pc ON pc.producto_id = p.id AND pc.es_principal = TRUE").
+		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ?", businessID).
+		Where("pv.activo = TRUE").Scan(&existingVariants).Error; err != nil {
+		return nil, result, err
+	}
+	for _, variant := range existingVariants {
+		seenVariantIdentities[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = struct{}{}
+	}
+	seenVariantBases := make(map[string]variantBaseInput)
 	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
 
 	for _, row := range rows {
@@ -710,22 +1068,39 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			hasError = true
 			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: field, Motivo: reason})
 		}
-		skuKey := catalogImportKey(row.SKUInterno)
+		productIdentityKey := productImportIdentityKey(row.Nombre, row.SKUInterno, row.Presentacion)
 		namePresentationKey := productImportNamePresentationKey(row.Nombre, row.Presentacion)
-		if _, exists := seenNamePresentations[namePresentationKey]; exists {
-			hasDuplicate = true
-			addError("Nombre y presentación", "ya existe en el negocio o está repetido en el archivo")
-		}
 		if row.SKUInterno != "" {
-			if _, exists := seenSKUs[skuKey]; exists {
+			skuKey := catalogImportKey(row.SKUInterno)
+			if _, exists := existingSKUSet[skuKey]; exists {
 				hasDuplicate = true
-				addError("SKU interno", "ya existe en este negocio o está repetido en el archivo")
+				addError("SKU interno", "ya está registrado en el negocio")
+			} else if _, exists := seenFileSKUs[skuKey]; exists {
+				hasDuplicate = true
+				addError("SKU interno", "está repetido en el archivo")
+			}
+		}
+		// A row with variant attributes is identified by its attribute combination.
+		// Empty SKU or barcode values must not turn different flavours/colours into
+		// duplicate simple products.
+		if len(row.Variantes) == 0 {
+			if row.SKUInterno == "" {
+				if _, exists := seenNamePresentations[namePresentationKey]; exists {
+					hasDuplicate = true
+					addError("Producto", "ya existe en el negocio o está repetido en el archivo")
+				}
+			} else if _, exists := seenProductIdentities[productIdentityKey]; exists {
+				hasDuplicate = true
+				addError("Producto", "ya existe en el negocio o está repetido en el archivo")
 			}
 		}
 		if row.CodigoBarras != "" {
-			if _, exists := seenCodes[row.CodigoBarras]; exists {
+			if _, exists := existingCodeSet[row.CodigoBarras]; exists {
 				hasDuplicate = true
-				addError("Código de barras", "ya está asignado o está repetido en el archivo")
+				addError("Código de barras", "ya está registrado en el negocio")
+			} else if _, exists := seenFileCodes[row.CodigoBarras]; exists {
+				hasDuplicate = true
+				addError("Código de barras", "está repetido en el archivo")
 			}
 		}
 		var categoryID *uuid.UUID
@@ -755,6 +1130,26 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				unitID = &id
 			}
 		}
+		if len(row.Variantes) > 0 {
+			variantKey, variantErr := productVariantKey(row.Variantes)
+			if variantErr != nil {
+				addError("Variantes", variantErr.Error())
+			} else {
+				base := variantBaseInput{Nombre: row.Nombre, Descripcion: importOptionalString(row.Descripcion), MarcaID: brandID, CategoriaID: categoryID, UnidadMedidaID: unitID, Contenido: row.Contenido, UnidadContenido: importOptionalString(row.UnidadContenido), Presentacion: importOptionalString(row.Presentacion), ImagenURL: importOptionalString(row.ImagenURL)}
+				baseKey := productBaseKey(base.Nombre, base.Presentacion, base.MarcaID, base.CategoriaID)
+				if previous, exists := seenVariantBases[baseKey]; exists && !sameVariantBaseInput(previous, base) {
+					addError("Producto base", "los datos compartidos no coinciden con otra fila del archivo")
+				} else {
+					seenVariantBases[baseKey] = base
+				}
+				variantIdentity := baseKey + "\x00" + variantKey
+				if _, exists := seenVariantIdentities[variantIdentity]; exists {
+					hasDuplicate = true
+					addError("Variantes", "la combinación ya existe o está repetida en el archivo")
+				}
+				seenVariantIdentities[variantIdentity] = struct{}{}
+			}
+		}
 		if hasError {
 			if hasDuplicate {
 				result.Omitidas++
@@ -769,13 +1164,18 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		input.UnidadContenido = importOptionalString(row.UnidadContenido)
 		input.UnidadMedidaID = unitID
 		input.CodigoBarras = importOptionalString(row.CodigoBarras)
-		if row.SKUInterno != "" {
-			seenSKUs[skuKey] = struct{}{}
-		}
+		input.ImagenURL = importOptionalString(row.ImagenURL)
+		input.Variantes = row.Variantes
 		if row.CodigoBarras != "" {
-			seenCodes[row.CodigoBarras] = struct{}{}
+			seenFileCodes[row.CodigoBarras] = struct{}{}
 		}
-		seenNamePresentations[namePresentationKey] = struct{}{}
+		if row.SKUInterno != "" {
+			seenFileSKUs[catalogImportKey(row.SKUInterno)] = struct{}{}
+		}
+		if len(row.Variantes) == 0 {
+			seenProductIdentities[productIdentityKey] = struct{}{}
+			seenNamePresentations[namePresentationKey] = struct{}{}
+		}
 		prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input})
 	}
 	return prepared, result, nil
@@ -783,9 +1183,17 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 
 func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
+	accountedVariantBases := make(map[string]struct{})
 	for _, row := range rows {
-		if err := r.createImportedProduct(businessID, row.Input); err != nil {
-			if strings.Contains(err.Error(), "SKU ya existe") || strings.Contains(err.Error(), "código de barras ya está asignado") || strings.Contains(err.Error(), "nombre y presentación ya existen") {
+		baseCreated := false
+		var err error
+		if len(row.Input.Variantes) > 0 {
+			baseCreated, err = r.createImportedVariant(businessID, row.Input)
+		} else {
+			err = r.createImportedProduct(businessID, row.Input)
+		}
+		if err != nil {
+			if strings.Contains(err.Error(), "producto ya existe") || strings.Contains(err.Error(), "código de barras ya está asignado") {
 				result.Omitidas++
 			} else {
 				result.Invalidas++
@@ -794,16 +1202,29 @@ func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []
 			continue
 		}
 		result.Creadas++
+		if len(row.Input.Variantes) > 0 {
+			result.VariantesCreadas++
+			baseKey := productBaseKey(row.Input.Nombre, row.Input.Presentacion, row.Input.MarcaID, row.Input.CategoriaID)
+			if _, counted := accountedVariantBases[baseKey]; !counted {
+				if baseCreated {
+					result.ProductosBaseCreados++
+				} else {
+					result.ProductosBaseReutilizados++
+				}
+				accountedVariantBases[baseKey] = struct{}{}
+			}
+		}
+		if row.Input.SKUInterno == nil || strings.TrimSpace(*row.Input.SKUInterno) == "" {
+			result.SKUsGenerados++
+		}
 	}
 	return result, nil
 }
 
 func importErrorField(message string) string {
 	switch {
-	case strings.Contains(message, "SKU"):
-		return "SKU interno"
-	case strings.Contains(message, "nombre y presentación"):
-		return "Nombre y presentación"
+	case strings.Contains(message, "producto ya existe"):
+		return "Producto"
 	case strings.Contains(message, "código de barras"):
 		return "Código de barras"
 	case strings.Contains(message, "categoría"):
@@ -817,19 +1238,27 @@ func importErrorField(message string) string {
 	}
 }
 
+func productImportIdentityKey(name, sku, presentation string) string {
+	return catalogImportKey(name) + "\x00" + catalogImportKey(sku) + "\x00" + catalogImportKey(presentation)
+}
+
 func productImportNamePresentationKey(name, presentation string) string {
 	return catalogImportKey(name) + "\x00" + catalogImportKey(presentation)
 }
 
 func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input domain.CreateImportedProductInput) error {
+	if len(input.Variantes) > 0 {
+		_, err := r.createImportedVariant(businessID, input)
+		return err
+	}
 	input.Nombre = strings.TrimSpace(input.Nombre)
 	if input.Nombre == "" || input.PrecioVenta < 0 || input.StockInicial < 0 {
 		return errors.New("los datos del producto no son válidos")
 	}
 	barcode := optionalString(input.CodigoBarras)
 	imageURL := optionalString(input.ImagenURL)
-	if barcode != "" && !productBarcodePattern.MatchString(barcode) {
-		return errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	if barcode != "" && !importedProductBarcodePattern.MatchString(barcode) {
+		return errors.New("el código de barras debe contener entre 1 y 14 dígitos")
 	}
 	if imageURL != "" {
 		parsed, err := url.Parse(imageURL)
@@ -860,31 +1289,33 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 				return errors.New("la unidad de medida no existe o está inactiva")
 			}
 		}
+		generateSKU := input.SKUInterno == nil || strings.TrimSpace(*input.SKUInterno) == ""
+		if generateSKU {
+			generatedSKU, err := reserveGeneratedProductSKU(tx, businessID)
+			if err != nil {
+				return err
+			}
+			input.SKUInterno = &generatedSKU
+		}
 		type productIdentity struct {
 			Nombre       string
+			SKUInterno   string
 			Presentacion string
 		}
 		var existingProducts []productIdentity
 		if err := tx.Table("productos AS p").
-			Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion").
+			Select("p.nombre, COALESCE(pn.sku_interno, '') AS sku_interno, COALESCE(p.presentacion, '') AS presentacion").
 			Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
 			Scan(&existingProducts).Error; err != nil {
 			return err
 		}
 		for _, product := range existingProducts {
-			if productImportNamePresentationKey(product.Nombre, product.Presentacion) == productImportNamePresentationKey(input.Nombre, optionalString(input.Presentacion)) {
-				return errors.New("el nombre y presentación ya existen en este negocio")
+			if (generateSKU && productImportNamePresentationKey(product.Nombre, product.Presentacion) == productImportNamePresentationKey(input.Nombre, optionalString(input.Presentacion))) ||
+				(!generateSKU && productImportIdentityKey(product.Nombre, product.SKUInterno, product.Presentacion) == productImportIdentityKey(input.Nombre, *input.SKUInterno, optionalString(input.Presentacion))) {
+				return errors.New("el producto ya existe en este negocio")
 			}
 		}
 		var duplicate int64
-		if input.SKUInterno != nil {
-			if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, *input.SKUInterno).Count(&duplicate).Error; err != nil {
-				return err
-			}
-			if duplicate > 0 {
-				return errors.New("el SKU ya existe en este negocio")
-			}
-		}
 		if barcode != "" {
 			if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&duplicate).Error; err != nil {
 				return err
@@ -898,7 +1329,7 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 			return err
 		}
 		if barcode != "" {
-			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: &product.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
 				return err
 			}
 		}
@@ -912,7 +1343,7 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 				return err
 			}
 		}
-		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: product.ID, SKUInterno: input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
+		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoID: &product.ID, SKUInterno: input.SKUInterno, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
 		if err := tx.Create(&commercial).Error; err != nil {
 			return err
 		}
@@ -927,6 +1358,105 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 		}
 		return nil
 	})
+}
+
+func (r *ProductRepository) createImportedVariant(businessID uuid.UUID, input domain.CreateImportedProductInput) (bool, error) {
+	input.Nombre = strings.TrimSpace(input.Nombre)
+	if input.Nombre == "" || input.PrecioVenta < 0 || input.StockInicial < 0 {
+		return false, errors.New("los datos de la variante no son válidos")
+	}
+	variantKey, err := productVariantKey(input.Variantes)
+	if err != nil {
+		return false, err
+	}
+	if imageURL := optionalString(input.ImagenURL); imageURL != "" {
+		parsed, parseErr := url.Parse(imageURL)
+		if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return false, errors.New("la URL de imagen no es válida")
+		}
+	}
+	baseCreated := false
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		var branch domain.Sucursal
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
+			return errors.New("la sucursal no pertenece al negocio o está inactiva")
+		}
+		if input.CategoriaID != nil {
+			var category domain.Categoria
+			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
+				return errors.New("la categoría no existe o está inactiva")
+			}
+		}
+		family, product, created, err := r.resolveVariantBase(tx, businessID, variantBaseInput{
+			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, CategoriaID: input.CategoriaID,
+			UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido,
+			Presentacion: input.Presentacion, ImagenURL: input.ImagenURL,
+		})
+		if err != nil {
+			return err
+		}
+		baseCreated = created
+		var duplicate int64
+		if err := tx.Model(&domain.ProductoVariante{}).Where("familia_producto_id = ? AND clave = ?", family.ID, variantKey).Count(&duplicate).Error; err != nil {
+			return err
+		}
+		if duplicate > 0 {
+			return errors.New("la combinación de variantes ya existe en este producto")
+		}
+		sku := optionalString(input.SKUInterno)
+		if sku == "" {
+			generated, err := reserveGeneratedProductSKU(tx, businessID)
+			if err != nil {
+				return err
+			}
+			sku = generated
+		}
+		if err := tx.Model(&domain.ProductoNegocio{}).Where("negocio_id = ? AND sku_interno = ?", businessID, sku).Count(&duplicate).Error; err != nil {
+			return err
+		}
+		if duplicate > 0 {
+			return errors.New("el SKU ya existe en este negocio")
+		}
+		barcode := optionalString(input.CodigoBarras)
+		if barcode != "" {
+			if !importedProductBarcodePattern.MatchString(barcode) {
+				return errors.New("el código de barras debe contener entre 1 y 14 dígitos")
+			}
+			if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&duplicate).Error; err != nil {
+				return err
+			}
+			if duplicate > 0 {
+				return errors.New("el código de barras ya está asignado a otro producto")
+			}
+		}
+		productVariant := domain.ProductoVariante{ProductoID: product.ID, FamiliaProductoID: family.ID, Clave: variantKey, Activo: true}
+		if err := tx.Create(&productVariant).Error; err != nil {
+			return err
+		}
+		for _, attribute := range input.Variantes {
+			if err := tx.Create(&domain.ProductoVarianteAtributo{ProductoVarianteID: productVariant.ID, Nombre: strings.TrimSpace(attribute.Nombre), Valor: strings.TrimSpace(attribute.Valor)}).Error; err != nil {
+				return err
+			}
+		}
+		if barcode != "" {
+			if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoVarianteID: &productVariant.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+				return err
+			}
+		}
+		commercial := domain.ProductoNegocio{NegocioID: businessID, ProductoVarianteID: &productVariant.ID, SKUInterno: &sku, PrecioVenta: input.PrecioVenta, PrecioIncluyeImpuestos: true, Activo: true}
+		if err := tx.Create(&commercial).Error; err != nil {
+			return err
+		}
+		inventory := domain.InventarioSucursal{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, StockActual: input.StockInicial, StockMinimo: 0}
+		if err := tx.Create(&inventory).Error; err != nil {
+			return err
+		}
+		if input.StockInicial > 0 {
+			return tx.Create(&domain.MovimientoInventario{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, Tipo: "AJUSTE_ENTRADA", Cantidad: input.StockInicial, StockAnterior: 0, StockNuevo: input.StockInicial}).Error
+		}
+		return nil
+	})
+	return baseCreated, err
 }
 
 func importOptionalString(value string) *string {
@@ -946,6 +1476,45 @@ func optionalString(value *string) string {
 
 func NewProductRepository(db *gorm.DB) *ProductRepository {
 	return &ProductRepository{db: db}
+}
+
+func (r *ProductRepository) CreateProductImportJob(businessID, branchID uuid.UUID) (domain.ProductImportJob, error) {
+	job := domain.ImportacionProducto{ID: uuid.New(), NegocioID: businessID, SucursalID: branchID, Estado: "pendiente", Etapa: "Preparando importación"}
+	if err := r.db.Create(&job).Error; err != nil {
+		return domain.ProductImportJob{}, err
+	}
+	return productImportJobView(job), nil
+}
+
+func (r *ProductRepository) GetProductImportJob(businessID, jobID uuid.UUID) (domain.ProductImportJob, error) {
+	var job domain.ImportacionProducto
+	if err := r.db.Where("id = ? AND negocio_id = ?", jobID, businessID).First(&job).Error; err != nil {
+		return domain.ProductImportJob{}, err
+	}
+	return productImportJobView(job), nil
+}
+
+func (r *ProductRepository) UpdateProductImportJob(jobID uuid.UUID, state, stage string, progress int, result *domain.CatalogImportResult, message *string) error {
+	updates := map[string]interface{}{"estado": state, "etapa": stage, "porcentaje": progress, "mensaje_error": message}
+	if result != nil {
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		updates["resultado_json"] = encoded
+	}
+	return r.db.Model(&domain.ImportacionProducto{}).Where("id = ?", jobID).Updates(updates).Error
+}
+
+func productImportJobView(job domain.ImportacionProducto) domain.ProductImportJob {
+	view := domain.ProductImportJob{ID: job.ID, Estado: job.Estado, Etapa: job.Etapa, Porcentaje: job.Porcentaje, MensajeError: job.MensajeError}
+	if len(job.ResultadoJSON) > 0 {
+		var result domain.CatalogImportResult
+		if json.Unmarshal(job.ResultadoJSON, &result) == nil {
+			view.Resultado = &result
+		}
+	}
+	return view
 }
 
 func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error) {
@@ -974,10 +1543,17 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 				WHEN COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) <= COALESCE((SELECT SUM(isu.stock_minimo) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) THEN 'Bajo stock'
 				ELSE 'En stock'
 			END AS estado`).
-		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Joins(`JOIN LATERAL (
+			SELECT pn.*
+			FROM producto_negocio pn
+			WHERE pn.negocio_id = ? AND pn.activo = TRUE
+				AND (pn.producto_id = p.id OR pn.producto_variante_id IN (SELECT pv.id FROM producto_variantes pv WHERE pv.producto_id = p.id AND pv.activo = TRUE))
+			ORDER BY CASE WHEN pn.producto_id IS NOT NULL THEN 0 ELSE 1 END, pn.creado_en ASC
+			LIMIT 1
+		) pn ON TRUE`, businessID).
 		Joins("LEFT JOIN marcas m ON m.id = p.marca_id").
 		Joins("LEFT JOIN unidades_medida u ON u.id = p.unidad_medida_id").
-		Where("p.activo = TRUE").
+		Where("p.negocio_id = ? AND p.activo = TRUE", businessID).
 		Order("p.nombre ASC")
 
 	if err := query.Scan(&products).Error; err != nil {
@@ -994,8 +1570,9 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 		Stock      float64   `gorm:"column:stock"`
 	}
 	if err := r.db.Table("inventario_sucursal AS i").
-		Select("pn.producto_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
+		Select("COALESCE(pn.producto_id, pv.producto_id) AS producto_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
 		Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Joins("LEFT JOIN producto_variantes pv ON pv.id = pn.producto_variante_id").
 		Joins("JOIN sucursales s ON s.id = i.sucursal_id").
 		Order("s.nombre ASC").Scan(&branches).Error; err != nil {
 		return nil, err
@@ -1004,10 +1581,55 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 		key := branch.ProductoID.String()
 		stockByProduct[key] = append(stockByProduct[key], domain.ProductBranchStock{SucursalID: branch.SucursalID.String(), Sucursal: branch.Sucursal, Stock: branch.Stock})
 	}
+	variantsByProduct := make(map[string][]domain.ProductVariantRow)
+	var variants []struct {
+		ProductoID   uuid.UUID `gorm:"column:producto_id"`
+		ID           uuid.UUID `gorm:"column:id"`
+		SKU          *string   `gorm:"column:sku"`
+		Precio       float64   `gorm:"column:precio"`
+		Stock        float64   `gorm:"column:stock"`
+		CodigoBarras *string   `gorm:"column:codigo_barras"`
+	}
+	if err := r.db.Table("producto_variantes AS pv").
+		Select(`pv.producto_id, pv.id, pn.sku_interno AS sku, pn.precio_venta AS precio,
+			COALESCE((SELECT SUM(i.stock_actual) FROM inventario_sucursal i WHERE i.producto_negocio_id = pn.id), 0) AS stock,
+			(SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras`).
+		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Where("pv.activo = TRUE").Scan(&variants).Error; err != nil {
+		return nil, err
+	}
+	attributesByVariant := make(map[string][]domain.ProductVariantAttributeInput, len(variants))
+	var attributes []struct {
+		ProductoVarianteID uuid.UUID `gorm:"column:producto_variante_id"`
+		Nombre             string    `gorm:"column:nombre"`
+		Valor              string    `gorm:"column:valor"`
+	}
+	if len(variants) > 0 {
+		variantIDs := make([]uuid.UUID, 0, len(variants))
+		for _, variant := range variants {
+			variantIDs = append(variantIDs, variant.ID)
+		}
+		if err := r.db.Table("producto_variante_atributos").Where("producto_variante_id IN ?", variantIDs).Order("nombre ASC").Scan(&attributes).Error; err != nil {
+			return nil, err
+		}
+	}
+	for _, attribute := range attributes {
+		key := attribute.ProductoVarianteID.String()
+		attributesByVariant[key] = append(attributesByVariant[key], domain.ProductVariantAttributeInput{Nombre: attribute.Nombre, Valor: attribute.Valor})
+	}
+	for _, variant := range variants {
+		key := variant.ProductoID.String()
+		variantsByProduct[key] = append(variantsByProduct[key], domain.ProductVariantRow{ID: variant.ID, SKU: variant.SKU, Precio: variant.Precio, Stock: variant.Stock, CodigoBarras: variant.CodigoBarras, Atributos: attributesByVariant[variant.ID.String()]})
+	}
 	for index := range products {
 		products[index].Inventario = stockByProduct[products[index].ID.String()]
 		if products[index].Inventario == nil {
 			products[index].Inventario = make([]domain.ProductBranchStock, 0)
+		}
+		if variants, exists := variantsByProduct[products[index].ID.String()]; exists {
+			products[index].Variantes = variants
+		} else {
+			products[index].Variantes = make([]domain.ProductVariantRow, 0)
 		}
 	}
 	return products, nil

@@ -80,6 +80,32 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 		t.Fatalf("la marca ajena cambió a %q", unchanged.Nombre)
 	}
 
+	barcode := "7501234567890"
+	for index, business := range []negociodomain.Negocio{first, second} {
+		branch := negociodomain.Sucursal{ID: uuid.New(), NegocioID: business.ID, Codigo: "SUC-001", Nombre: "Principal", EsPrincipal: true, Activo: true}
+		if err := db.Create(&branch).Error; err != nil {
+			t.Fatal(err)
+		}
+		variants := []domain.CreateProductVariantInput{{
+			Atributos:         []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "M"}},
+			GenerarSKUInterno: true, PrecioVenta: 100, StockInicial: 1, CodigoBarras: &barcode,
+		}}
+		if err := repository.Create(business.ID, domain.CreateProductInput{Nombre: "Playera", SucursalID: branch.ID, Variantes: variants}); err != nil {
+			t.Fatalf("variantes del negocio %d: %v", index+1, err)
+		}
+	}
+	firstProducts, err := repository.ListByBusiness(first.ID)
+	if err != nil || len(firstProducts) != 1 {
+		t.Fatalf("productos primer negocio=%+v error=%v", firstProducts, err)
+	}
+	var variantCodes []domain.ProductoCodigo
+	if err := db.Where("codigo = ?", barcode).Find(&variantCodes).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(variantCodes) != 2 || variantCodes[0].NegocioID == variantCodes[1].NegocioID {
+		t.Fatalf("códigos de variante sin aislar por negocio: %+v", variantCodes)
+	}
+
 	verifiedAt := time.Now().UTC()
 	user := cuentadomain.Usuario{ID: uuid.New(), Correo: "sesiones@example.com", HashContrasena: "no-usada-en-prueba", Estado: "activo", CorreoVerificadoEn: &verifiedAt}
 	if err := db.Create(&user).Error; err != nil {

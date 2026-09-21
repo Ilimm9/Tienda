@@ -2,6 +2,15 @@ package domain
 
 import "github.com/google/uuid"
 
+type ProductImportJob struct {
+	ID           uuid.UUID            `json:"id"`
+	Estado       string               `json:"estado"`
+	Etapa        string               `json:"etapa"`
+	Porcentaje   int                  `json:"porcentaje"`
+	MensajeError *string              `json:"mensaje_error,omitempty"`
+	Resultado    *CatalogImportResult `json:"resultado,omitempty"`
+}
+
 type ProductRow struct {
 	ID              uuid.UUID            `json:"id"`
 	Nombre          string               `json:"nombre"`
@@ -22,6 +31,30 @@ type ProductRow struct {
 	CodigoBarras    *string              `json:"codigo_barras"`
 	Inventario      []ProductBranchStock `json:"inventario" gorm:"-"`
 	Estado          string               `json:"estado"`
+	Variantes       []ProductVariantRow  `json:"variantes" gorm:"-"`
+}
+
+type ProductVariantAttributeInput struct {
+	Nombre string `json:"nombre"`
+	Valor  string `json:"valor"`
+}
+
+type CreateProductVariantInput struct {
+	Atributos         []ProductVariantAttributeInput `json:"atributos"`
+	SKUInterno        string                         `json:"sku_interno"`
+	GenerarSKUInterno bool                           `json:"generar_sku_interno"`
+	PrecioVenta       float64                        `json:"precio_venta"`
+	StockInicial      float64                        `json:"stock_inicial"`
+	CodigoBarras      *string                        `json:"codigo_barras"`
+}
+
+type ProductVariantRow struct {
+	ID           uuid.UUID                      `json:"id"`
+	SKU          *string                        `json:"sku"`
+	Precio       float64                        `json:"precio"`
+	Stock        float64                        `json:"stock"`
+	CodigoBarras *string                        `json:"codigo_barras"`
+	Atributos    []ProductVariantAttributeInput `json:"atributos"`
 }
 
 type ProductBranchStock struct {
@@ -36,20 +69,22 @@ type CatalogOption struct {
 }
 
 type CreateProductInput struct {
-	Nombre          string     `json:"nombre" binding:"required"`
-	SKUInterno      string     `json:"sku_interno" binding:"required"`
-	MarcaID         *uuid.UUID `json:"marca_id"`
-	CategoriaID     uuid.UUID  `json:"categoria_id" binding:"required"`
-	SucursalID      uuid.UUID  `json:"sucursal_id" binding:"required"`
-	Descripcion     *string    `json:"descripcion"`
-	Contenido       *float64   `json:"contenido"`
-	UnidadContenido *string    `json:"unidad_contenido"`
-	UnidadMedidaID  *uuid.UUID `json:"unidad_medida_id"`
-	Presentacion    *string    `json:"presentacion"`
-	PrecioVenta     float64    `json:"precio_venta"`
-	StockInicial    float64    `json:"stock_inicial"`
-	CodigoBarras    *string    `json:"codigo_barras"`
-	ImagenURL       *string    `json:"imagen_url"`
+	Nombre            string                      `json:"nombre" binding:"required"`
+	SKUInterno        string                      `json:"sku_interno"`
+	GenerarSKUInterno bool                        `json:"generar_sku_interno"`
+	MarcaID           *uuid.UUID                  `json:"marca_id"`
+	CategoriaID       *uuid.UUID                  `json:"categoria_id,omitempty"`
+	SucursalID        uuid.UUID                   `json:"sucursal_id" binding:"required"`
+	Descripcion       *string                     `json:"descripcion"`
+	Contenido         *float64                    `json:"contenido"`
+	UnidadContenido   *string                     `json:"unidad_contenido"`
+	UnidadMedidaID    *uuid.UUID                  `json:"unidad_medida_id"`
+	Presentacion      *string                     `json:"presentacion"`
+	PrecioVenta       float64                     `json:"precio_venta"`
+	StockInicial      float64                     `json:"stock_inicial"`
+	CodigoBarras      *string                     `json:"codigo_barras"`
+	ImagenURL         *string                     `json:"imagen_url"`
+	Variantes         []CreateProductVariantInput `json:"variantes"`
 }
 
 // UpdateProductInput intentionally excludes stock and branch assignment: inventory
@@ -99,12 +134,16 @@ type CatalogImportIssue struct {
 
 // CatalogImportResult is returned after a bulk catalog import.
 type CatalogImportResult struct {
-	Procesadas   int                  `json:"procesadas"`
-	Creadas      int                  `json:"creadas"`
-	Omitidas     int                  `json:"omitidas"`
-	Invalidas    int                  `json:"invalidas"`
-	Errores      []CatalogImportIssue `json:"errores"`
-	Advertencias []CatalogImportIssue `json:"advertencias"`
+	Procesadas                int                  `json:"procesadas"`
+	Creadas                   int                  `json:"creadas"`
+	Omitidas                  int                  `json:"omitidas"`
+	Invalidas                 int                  `json:"invalidas"`
+	SKUsGenerados             int                  `json:"skus_generados"`
+	ProductosBaseCreados      int                  `json:"productos_base_creados"`
+	ProductosBaseReutilizados int                  `json:"productos_base_reutilizados"`
+	VariantesCreadas          int                  `json:"variantes_creadas"`
+	Errores                   []CatalogImportIssue `json:"errores"`
+	Advertencias              []CatalogImportIssue `json:"advertencias"`
 }
 
 // ProductImportPreview is the non-mutating result shown before a bulk import
@@ -130,6 +169,7 @@ type ProductImportRow struct {
 	StockInicial    float64
 	CodigoBarras    string
 	ImagenURL       string
+	Variantes       []ProductVariantAttributeInput
 }
 
 type ValidatedProductImportRow struct {
@@ -153,6 +193,7 @@ type CreateImportedProductInput struct {
 	StockInicial    float64
 	CodigoBarras    *string
 	ImagenURL       *string
+	Variantes       []ProductVariantAttributeInput
 }
 
 type CatalogImportBrandRow struct {
