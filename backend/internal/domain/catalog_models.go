@@ -48,6 +48,7 @@ type Producto struct {
 	Descripcion       *string       `gorm:"type:text" json:"descripcion,omitempty"`
 	MarcaID           *uuid.UUID    `gorm:"type:uuid;index" json:"marca_id,omitempty"`
 	UnidadMedidaID    *uuid.UUID    `gorm:"type:uuid;index" json:"unidad_medida_id,omitempty"`
+	FamiliaProductoID *uuid.UUID    `gorm:"type:uuid;index" json:"familia_producto_id,omitempty"`
 	Contenido         *float64      `json:"contenido,omitempty"`
 	UnidadContenido   *string       `gorm:"type:varchar(30)" json:"unidad_contenido,omitempty"`
 	Presentacion      *string       `gorm:"type:varchar(100)" json:"presentacion,omitempty"`
@@ -58,6 +59,57 @@ type Producto struct {
 	ActualizadoEn     time.Time     `json:"actualizado_en"`
 	Marca             *Marca        `gorm:"foreignKey:MarcaID" json:"-"`
 	UnidadMedida      *UnidadMedida `gorm:"foreignKey:UnidadMedidaID" json:"-"`
+}
+
+// ImportacionProducto tracks an asynchronous product spreadsheet import.
+type ImportacionProducto struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID     uuid.UUID `gorm:"type:uuid;not null;index" json:"negocio_id"`
+	SucursalID    uuid.UUID `gorm:"type:uuid;not null" json:"sucursal_id"`
+	Estado        string    `gorm:"type:varchar(20);not null;index" json:"estado"`
+	Etapa         string    `gorm:"type:varchar(80);not null" json:"etapa"`
+	Porcentaje    int       `gorm:"not null;default:0" json:"porcentaje"`
+	MensajeError  *string   `gorm:"type:text" json:"mensaje_error,omitempty"`
+	ResultadoJSON []byte    `gorm:"type:jsonb" json:"-"`
+	CreadoEn      time.Time `json:"creado_en"`
+	ActualizadoEn time.Time `json:"actualizado_en"`
+}
+
+// FamiliaProducto groups new sellable products that differ only by variant attributes.
+type FamiliaProducto struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID     uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_familia_producto_clave" json:"negocio_id"`
+	Nombre        string    `gorm:"type:varchar(255);not null" json:"nombre"`
+	Codigo        string    `gorm:"type:varchar(160);not null;uniqueIndex:idx_familia_producto_codigo" json:"codigo"`
+	Clave         string    `gorm:"type:text;not null;uniqueIndex:idx_familia_producto_clave" json:"-"`
+	Activo        bool      `gorm:"not null;default:true" json:"activo"`
+	CreadoEn      time.Time `json:"creado_en"`
+	ActualizadoEn time.Time `json:"actualizado_en"`
+}
+
+type FamiliaProductoConsecutivo struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey"`
+	NegocioID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex"`
+	SiguienteNumero int64     `gorm:"not null"`
+}
+
+type ProductoVariante struct {
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	ProductoID        uuid.UUID `gorm:"type:uuid;not null;index" json:"producto_id"`
+	FamiliaProductoID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_variante_clave" json:"familia_producto_id"`
+	Clave             string    `gorm:"type:text;not null;uniqueIndex:idx_producto_variante_clave" json:"-"`
+	Activo            bool      `gorm:"not null;default:true" json:"activo"`
+	CreadoEn          time.Time `json:"creado_en"`
+	ActualizadoEn     time.Time `json:"actualizado_en"`
+	Producto          Producto  `gorm:"foreignKey:ProductoID" json:"-"`
+}
+
+type ProductoVarianteAtributo struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	ProductoVarianteID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_variante_atributo" json:"producto_variante_id"`
+	Nombre             string    `gorm:"type:varchar(100);not null;uniqueIndex:idx_producto_variante_atributo" json:"nombre"`
+	Valor              string    `gorm:"type:varchar(180);not null" json:"valor"`
+	CreadoEn           time.Time `json:"creado_en"`
 }
 
 type Categoria struct {
@@ -82,14 +134,16 @@ type ProductoCategoria struct {
 }
 
 type ProductoCodigo struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	ProductoID    uuid.UUID `gorm:"type:uuid;not null;index" json:"producto_id"`
-	Tipo          string    `gorm:"type:varchar(20);not null" json:"tipo"`
-	Codigo        string    `gorm:"type:varchar(120);uniqueIndex;not null" json:"codigo"`
-	EsPrincipal   bool      `gorm:"not null;default:false" json:"es_principal"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
-	Producto      Producto  `gorm:"foreignKey:ProductoID" json:"-"`
+	ID                 uuid.UUID         `gorm:"type:uuid;primaryKey" json:"id"`
+	ProductoID         *uuid.UUID        `gorm:"type:uuid;index" json:"producto_id,omitempty"`
+	ProductoVarianteID *uuid.UUID        `gorm:"type:uuid;index" json:"producto_variante_id,omitempty"`
+	Tipo               string            `gorm:"type:varchar(20);not null" json:"tipo"`
+	Codigo             string            `gorm:"type:varchar(120);uniqueIndex;not null" json:"codigo"`
+	EsPrincipal        bool              `gorm:"not null;default:false" json:"es_principal"`
+	CreadoEn           time.Time         `json:"creado_en"`
+	ActualizadoEn      time.Time         `json:"actualizado_en"`
+	Producto           *Producto         `gorm:"foreignKey:ProductoID" json:"-"`
+	ProductoVariante   *ProductoVariante `gorm:"foreignKey:ProductoVarianteID" json:"-"`
 }
 
 type ProductoImagen struct {
@@ -116,19 +170,30 @@ type ProductoUnidad struct {
 }
 
 type ProductoNegocio struct {
-	ID                     uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	NegocioID              uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_negocio" json:"negocio_id"`
-	ProductoID             uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_negocio" json:"producto_id"`
-	SKUInterno             *string   `gorm:"type:varchar(120)" json:"sku_interno,omitempty"`
-	PrecioVenta            float64   `gorm:"type:numeric(14,2);not null" json:"precio_venta"`
-	PrecioMayoreo          *float64  `gorm:"type:numeric(14,2)" json:"precio_mayoreo,omitempty"`
-	CostoReferencia        *float64  `gorm:"type:numeric(14,2)" json:"costo_referencia,omitempty"`
-	PrecioIncluyeImpuestos bool      `gorm:"not null;default:true" json:"precio_incluye_impuestos"`
-	Activo                 bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn               time.Time `json:"creado_en"`
-	ActualizadoEn          time.Time `json:"actualizado_en"`
-	Negocio                Negocio   `gorm:"foreignKey:NegocioID" json:"-"`
-	Producto               Producto  `gorm:"foreignKey:ProductoID" json:"-"`
+	ID                     uuid.UUID         `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID              uuid.UUID         `gorm:"type:uuid;not null;uniqueIndex:idx_producto_negocio" json:"negocio_id"`
+	ProductoID             *uuid.UUID        `gorm:"type:uuid;uniqueIndex:idx_producto_negocio" json:"producto_id,omitempty"`
+	ProductoVarianteID     *uuid.UUID        `gorm:"type:uuid;index" json:"producto_variante_id,omitempty"`
+	SKUInterno             *string           `gorm:"type:varchar(120)" json:"sku_interno,omitempty"`
+	PrecioVenta            float64           `gorm:"type:numeric(14,2);not null" json:"precio_venta"`
+	PrecioMayoreo          *float64          `gorm:"type:numeric(14,2)" json:"precio_mayoreo,omitempty"`
+	CostoReferencia        *float64          `gorm:"type:numeric(14,2)" json:"costo_referencia,omitempty"`
+	PrecioIncluyeImpuestos bool              `gorm:"not null;default:true" json:"precio_incluye_impuestos"`
+	Activo                 bool              `gorm:"not null;default:true" json:"activo"`
+	CreadoEn               time.Time         `json:"creado_en"`
+	ActualizadoEn          time.Time         `json:"actualizado_en"`
+	Negocio                Negocio           `gorm:"foreignKey:NegocioID" json:"-"`
+	Producto               *Producto         `gorm:"foreignKey:ProductoID" json:"-"`
+	ProductoVariante       *ProductoVariante `gorm:"foreignKey:ProductoVarianteID" json:"-"`
+}
+
+// ProductoSKUConsecutivo reserves the next generated SKU number for a business.
+type ProductoSKUConsecutivo struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"negocio_id"`
+	SiguienteNumero int64     `gorm:"not null" json:"siguiente_numero"`
+	CreadoEn        time.Time `json:"creado_en"`
+	ActualizadoEn   time.Time `json:"actualizado_en"`
 }
 
 type Impuesto struct {
@@ -232,38 +297,48 @@ type MovimientoInventario struct {
 	Usuario           *Usuario        `gorm:"foreignKey:UsuarioID" json:"-"`
 }
 
-func (Sucursal) TableName() string             { return "sucursales" }
-func (Marca) TableName() string                { return "marcas" }
-func (UnidadMedida) TableName() string         { return "unidades_medida" }
-func (Producto) TableName() string             { return "productos" }
-func (Categoria) TableName() string            { return "categorias" }
-func (ProductoCategoria) TableName() string    { return "producto_categorias" }
-func (ProductoCodigo) TableName() string       { return "producto_codigos" }
-func (ProductoImagen) TableName() string       { return "producto_imagenes" }
-func (ProductoUnidad) TableName() string       { return "producto_unidades" }
-func (ProductoNegocio) TableName() string      { return "producto_negocio" }
-func (Impuesto) TableName() string             { return "impuestos" }
-func (ProductoImpuesto) TableName() string     { return "producto_impuestos" }
-func (InventarioSucursal) TableName() string   { return "inventario_sucursal" }
-func (Proveedor) TableName() string            { return "proveedores" }
-func (ProductoProveedor) TableName() string    { return "producto_proveedor" }
-func (Lote) TableName() string                 { return "lotes" }
-func (MovimientoInventario) TableName() string { return "movimientos_inventario" }
+func (Sucursal) TableName() string                   { return "sucursales" }
+func (Marca) TableName() string                      { return "marcas" }
+func (UnidadMedida) TableName() string               { return "unidades_medida" }
+func (Producto) TableName() string                   { return "productos" }
+func (FamiliaProducto) TableName() string            { return "familias_producto" }
+func (FamiliaProductoConsecutivo) TableName() string { return "familia_producto_consecutivos" }
+func (ProductoVariante) TableName() string           { return "producto_variantes" }
+func (ProductoVarianteAtributo) TableName() string   { return "producto_variante_atributos" }
+func (Categoria) TableName() string                  { return "categorias" }
+func (ProductoCategoria) TableName() string          { return "producto_categorias" }
+func (ProductoCodigo) TableName() string             { return "producto_codigos" }
+func (ProductoImagen) TableName() string             { return "producto_imagenes" }
+func (ProductoUnidad) TableName() string             { return "producto_unidades" }
+func (ProductoNegocio) TableName() string            { return "producto_negocio" }
+func (ProductoSKUConsecutivo) TableName() string     { return "producto_sku_consecutivos" }
+func (Impuesto) TableName() string                   { return "impuestos" }
+func (ProductoImpuesto) TableName() string           { return "producto_impuestos" }
+func (InventarioSucursal) TableName() string         { return "inventario_sucursal" }
+func (Proveedor) TableName() string                  { return "proveedores" }
+func (ProductoProveedor) TableName() string          { return "producto_proveedor" }
+func (Lote) TableName() string                       { return "lotes" }
+func (MovimientoInventario) TableName() string       { return "movimientos_inventario" }
 
-func (s *Sucursal) BeforeCreate(*gorm.DB) error             { setID(&s.ID); return nil }
-func (m *Marca) BeforeCreate(*gorm.DB) error                { setID(&m.ID); return nil }
-func (u *UnidadMedida) BeforeCreate(*gorm.DB) error         { setID(&u.ID); return nil }
-func (p *Producto) BeforeCreate(*gorm.DB) error             { setID(&p.ID); return nil }
-func (c *Categoria) BeforeCreate(*gorm.DB) error            { setID(&c.ID); return nil }
-func (p *ProductoCategoria) BeforeCreate(*gorm.DB) error    { setID(&p.ID); return nil }
-func (p *ProductoCodigo) BeforeCreate(*gorm.DB) error       { setID(&p.ID); return nil }
-func (p *ProductoImagen) BeforeCreate(*gorm.DB) error       { setID(&p.ID); return nil }
-func (p *ProductoUnidad) BeforeCreate(*gorm.DB) error       { setID(&p.ID); return nil }
-func (p *ProductoNegocio) BeforeCreate(*gorm.DB) error      { setID(&p.ID); return nil }
-func (i *Impuesto) BeforeCreate(*gorm.DB) error             { setID(&i.ID); return nil }
-func (p *ProductoImpuesto) BeforeCreate(*gorm.DB) error     { setID(&p.ID); return nil }
-func (i *InventarioSucursal) BeforeCreate(*gorm.DB) error   { setID(&i.ID); return nil }
-func (p *Proveedor) BeforeCreate(*gorm.DB) error            { setID(&p.ID); return nil }
-func (p *ProductoProveedor) BeforeCreate(*gorm.DB) error    { setID(&p.ID); return nil }
-func (l *Lote) BeforeCreate(*gorm.DB) error                 { setID(&l.ID); return nil }
-func (m *MovimientoInventario) BeforeCreate(*gorm.DB) error { setID(&m.ID); return nil }
+func (s *Sucursal) BeforeCreate(*gorm.DB) error                   { setID(&s.ID); return nil }
+func (m *Marca) BeforeCreate(*gorm.DB) error                      { setID(&m.ID); return nil }
+func (u *UnidadMedida) BeforeCreate(*gorm.DB) error               { setID(&u.ID); return nil }
+func (p *Producto) BeforeCreate(*gorm.DB) error                   { setID(&p.ID); return nil }
+func (p *FamiliaProducto) BeforeCreate(*gorm.DB) error            { setID(&p.ID); return nil }
+func (p *FamiliaProductoConsecutivo) BeforeCreate(*gorm.DB) error { setID(&p.ID); return nil }
+func (p *ProductoVariante) BeforeCreate(*gorm.DB) error           { setID(&p.ID); return nil }
+func (p *ProductoVarianteAtributo) BeforeCreate(*gorm.DB) error   { setID(&p.ID); return nil }
+func (c *Categoria) BeforeCreate(*gorm.DB) error                  { setID(&c.ID); return nil }
+func (p *ProductoCategoria) BeforeCreate(*gorm.DB) error          { setID(&p.ID); return nil }
+func (p *ProductoCodigo) BeforeCreate(*gorm.DB) error             { setID(&p.ID); return nil }
+func (p *ProductoImagen) BeforeCreate(*gorm.DB) error             { setID(&p.ID); return nil }
+func (p *ProductoUnidad) BeforeCreate(*gorm.DB) error             { setID(&p.ID); return nil }
+func (p *ProductoNegocio) BeforeCreate(*gorm.DB) error            { setID(&p.ID); return nil }
+func (p *ProductoSKUConsecutivo) BeforeCreate(*gorm.DB) error     { setID(&p.ID); return nil }
+func (i *Impuesto) BeforeCreate(*gorm.DB) error                   { setID(&i.ID); return nil }
+func (p *ProductoImpuesto) BeforeCreate(*gorm.DB) error           { setID(&p.ID); return nil }
+func (i *InventarioSucursal) BeforeCreate(*gorm.DB) error         { setID(&i.ID); return nil }
+func (p *Proveedor) BeforeCreate(*gorm.DB) error                  { setID(&p.ID); return nil }
+func (p *ProductoProveedor) BeforeCreate(*gorm.DB) error          { setID(&p.ID); return nil }
+func (l *Lote) BeforeCreate(*gorm.DB) error                       { setID(&l.ID); return nil }
+func (m *MovimientoInventario) BeforeCreate(*gorm.DB) error       { setID(&m.ID); return nil }

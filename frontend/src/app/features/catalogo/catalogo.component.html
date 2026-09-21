@@ -1,3 +1,4 @@
+@if (isListPage()) {
 <main class="catalog-page">
   <header class="catalog-header">
     <div>
@@ -8,11 +9,11 @@
     @if (items().length > 0) {
       <div class="catalog-actions">
         @if (canImport()) {
-          <button class="secondary-button" type="button" (click)="openImport()">
+          <button class="secondary-button" type="button" (click)="navigateToImport()">
             <i class="pi pi-upload"></i> Carga masiva
           </button>
         }
-        <button class="primary-button" type="button" (click)="openCreate()">
+        <button class="primary-button" type="button" (click)="isProvider() ? openCreate() : navigateToCreate()">
           <i class="pi pi-plus"></i> Agregar
           {{
             section === 'proveedores'
@@ -38,11 +39,11 @@
       <p>Aún no hay registros para mostrar.</p>
       <div class="catalog-actions">
         @if (canImport()) {
-          <button class="secondary-button" type="button" (click)="openImport()">
+          <button class="secondary-button" type="button" (click)="navigateToImport()">
             <i class="pi pi-upload"></i> Carga masiva
           </button>
         }
-        <button class="primary-button" type="button" (click)="openCreate()">
+        <button class="primary-button" type="button" (click)="isProvider() ? openCreate() : navigateToCreate()">
           {{
             section === 'unidades'
               ? 'Agregar nueva unidad de medida'
@@ -113,7 +114,7 @@
               <button
                 class="icon-button"
                 type="button"
-                (click)="openEdit(item)"
+                (click)="isProvider() ? openEdit(item) : navigateToEdit(item)"
                 aria-label="Editar"
               >
                 <i class="pi pi-pencil"></i>
@@ -124,6 +125,8 @@
     </section>
   }
 </main>
+}
+@if (isProvider() && isListPage()) {
 <p-dialog
   [visible]="dialogVisible()"
   (visibleChange)="dialogVisible.set($event)"
@@ -307,3 +310,75 @@
     </footer>
   </section>
 </p-dialog>
+}
+
+@if (isFormPage()) {
+  <main class="catalog-page catalog-form-page">
+    <header class="catalog-header">
+      <div>
+        <p class="eyebrow">Catálogo</p>
+        <h1>{{ editingId ? 'Editar ' : 'Agregar ' }}{{ title.slice(0, -1) }}</h1>
+        <p>Completa los datos para registrar el elemento en el catálogo.</p>
+      </div>
+      <div class="catalog-actions">
+        <button class="secondary-button" type="button" [disabled]="saving()" (click)="goToList()">Cancelar</button>
+        <button class="primary-button" type="submit" form="catalog-form" [disabled]="saving()">{{ saving() ? 'Guardando...' : 'Guardar' }}</button>
+      </div>
+    </header>
+    @if (loading()) {
+      <section class="catalog-state">Cargando {{ title.toLowerCase() }}...</section>
+    } @else if (error()) {
+      <section class="catalog-state error-state">{{ error() }}</section>
+    } @else {
+      <form id="catalog-form" [formGroup]="form" (ngSubmit)="save()" class="catalog-form catalog-page-card">
+        <label>Nombre *<input pInputText formControlName="nombre" /></label>
+        @if (hasError('nombre')) { <small>El nombre es obligatorio.</small> }
+        @if (isUnit()) {
+          <div class="form-grid">
+            <label>Código *<input pInputText formControlName="codigo" placeholder="g" /></label>
+            <label>Símbolo *<input pInputText formControlName="simbolo" placeholder="g" /></label>
+            <label>Tipo *<p-select formControlName="tipo" [options]="unitTypeOptions" optionLabel="label" optionValue="value" placeholder="Selecciona un tipo" [style]="{ width: '100%' }"></p-select></label>
+            <label>Factor a unidad base *<input pInputText type="number" formControlName="factor_a_base" min="0.000001" /></label>
+            <label>Decimales *<input pInputText type="number" formControlName="decimales" min="0" max="6" /></label>
+          </div>
+        }
+        @if (isCategory()) {
+          <label>Descripción<textarea pTextarea formControlName="descripcion" rows="3"></textarea></label>
+          <label>Categoría padre<p-select formControlName="categoria_padre_id" [options]="parentCategoryOptions" optionLabel="label" optionValue="value" placeholder="Sin categoría padre" [showClear]="true" [style]="{ width: '100%' }"></p-select></label>
+        }
+        @if (formError()) { <p class="form-error" role="alert">{{ formError() }}</p> }
+      </form>
+    }
+  </main>
+}
+
+@if (isImportPage()) {
+  <main class="catalog-page catalog-form-page">
+    <header class="catalog-header">
+      <div><p class="eyebrow">Catálogo</p><h1>Importar {{ title.toLowerCase() }}</h1><p>Descarga la plantilla, complétala y sube el archivo XLSX.</p></div>
+      <div class="catalog-actions">
+        <button class="secondary-button" type="button" [disabled]="importing()" (click)="goToList()">Cancelar</button>
+        <button class="primary-button" type="button" (click)="importCatalog()" [disabled]="!importFile || importing()">{{ importing() ? 'Importando...' : 'Importar archivo' }}</button>
+      </div>
+    </header>
+    <section class="catalog-form import-form catalog-page-card">
+      <a class="template-link" [href]="templateUrl()"><i class="pi pi-download"></i> Descargar plantilla</a>
+      <div class="file-dropzone" [class.is-dragging]="importDropActive" [class.has-file]="importFile" [class.is-disabled]="importing()" role="button" tabindex="0" (click)="openFilePicker($event, importInput)" (keydown.enter)="importInput.click()" (keydown.space)="importInput.click(); $event.preventDefault()" (dragover)="onImportDragOver($event)" (dragleave)="onImportDragLeave($event)" (drop)="onImportDrop($event)">
+        <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing()" />
+        <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i></span>
+        @if (importFile) {
+          <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small>
+          <button class="remove-file-button" type="button" aria-label="Quitar archivo seleccionado" [disabled]="importing()" (click)="removeImportFile($event, importInput)" (keydown)="$event.stopPropagation()"><i class="pi pi-times" aria-hidden="true"></i></button>
+        } @else { <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span><small>Solo archivos XLSX, máximo 5 MB</small> }
+      </div>
+      <section class="import-output" aria-live="polite">
+        @if (importError()) { <p class="form-error">{{ importError() }}</p> }
+        @else if (importResult(); as result) {
+          <section class="import-result"><strong>Resultado de la importación</strong><p>{{ result.creadas }} creadas · {{ result.omitidas }} omitidas · {{ result.invalidas }} inválidas</p>
+            @if (result.errores.length) { <ul>@for (issue of result.errores; track issue.fila + issue.motivo) { <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li> }</ul> }
+          </section>
+        } @else { <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p> }
+      </section>
+    </section>
+  </main>
+}

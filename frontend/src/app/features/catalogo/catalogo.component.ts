@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -36,7 +36,9 @@ export class CatalogoComponent {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly contexto = inject(ContextoService);
+  private readonly router = inject(Router, { optional: true });
   readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores' | 'unidades';
+  readonly pageMode = (this.route.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ?? 'list';
   readonly items = signal<CatalogRecord[]>([]);
   readonly parents = signal<Categoria[]>([]);
   readonly unitTypeOptions: SelectOption[] = [
@@ -71,7 +73,10 @@ export class CatalogoComponent {
     codigo: [''], simbolo: [''], tipo: ['PESO'], factor_a_base: [1, [Validators.min(0.000001)]], decimales: [2, [Validators.min(0), Validators.max(6)]],
   });
   constructor() {
-    this.load();
+    if (this.pageMode === 'list') this.load();
+    else if (this.pageMode === 'create') this.prepareCreate();
+    else if (this.pageMode === 'import') this.prepareImport();
+    else this.loadForEdit();
   }
   get title(): string {
     return this.section === 'marcas'
@@ -112,18 +117,74 @@ export class CatalogoComponent {
       },
     });
   }
+
+  isListPage(): boolean {
+    return this.pageMode === 'list';
+  }
+
+  isFormPage(): boolean {
+    return this.pageMode === 'create' || this.pageMode === 'edit';
+  }
+
+  isImportPage(): boolean {
+    return this.pageMode === 'import';
+  }
+
+  private loadForEdit(): void {
+    const itemId = this.route.snapshot.paramMap.get('id');
+    if (!itemId) {
+      this.goToList();
+      return;
+    }
+    const request = this.section === 'marcas'
+      ? this.service.marcas()
+      : this.section === 'categorias'
+        ? this.service.categorias()
+        : this.service.unidades();
+    this.loading.set(true);
+    request.subscribe({
+      next: (items) => {
+        this.items.set(items);
+        if (this.section === 'categorias') this.parents.set(items as Categoria[]);
+        this.loading.set(false);
+        const item = items.find((candidate) => candidate.id === itemId);
+        if (!item) {
+          this.error.set(`No fue posible encontrar ${this.title.toLowerCase().slice(0, -1)}.`);
+          return;
+        }
+        this.prepareEdit(item);
+      },
+      error: () => {
+        this.error.set(`No fue posible cargar ${this.title.toLowerCase()}.`);
+        this.loading.set(false);
+      },
+    });
+  }
+
   openCreate(): void {
+    this.prepareCreate();
+    if (!this.isProvider()) this.navigateToCreate();
+    else this.dialogVisible.set(true);
+  }
+
+  private prepareCreate(): void {
+    this.loading.set(false);
     this.editingId = null;
     this.form.reset();
     this.formError.set(null);
-    this.dialogVisible.set(true);
   }
+
   openImport(): void {
+    this.prepareImport();
+    this.navigateToImport();
+  }
+
+  private prepareImport(): void {
+    this.loading.set(false);
     this.importFile = null;
     this.importDropActive = false;
     this.importError.set(null);
     this.importResult.set(null);
-    this.importDialogVisible = true;
   }
   onImportFile(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -185,6 +246,12 @@ export class CatalogoComponent {
     });
   }
   openEdit(item: CatalogRecord): void {
+    this.prepareEdit(item);
+    if (!this.isProvider()) this.navigateToEdit(item);
+    else this.dialogVisible.set(true);
+  }
+
+  private prepareEdit(item: CatalogRecord): void {
     this.editingId = item.id;
     this.form.reset({
       nombre: item.nombre,
@@ -202,7 +269,6 @@ export class CatalogoComponent {
       decimales: 'decimales' in item ? item.decimales : 2,
     });
     this.formError.set(null);
-    this.dialogVisible.set(true);
   }
   save(): void {
     if (this.form.invalid) {
@@ -243,8 +309,11 @@ export class CatalogoComponent {
     request.subscribe({
       next: () => {
         this.saving.set(false);
-        this.dialogVisible.set(false);
-        this.load();
+        if (this.isFormPage()) this.goToList();
+        else {
+          this.dialogVisible.set(false);
+          this.load();
+        }
       },
       error: (e) => {
         this.saving.set(false);
@@ -269,5 +338,29 @@ export class CatalogoComponent {
   }
   canImport(): boolean {
     return this.section === 'marcas' || this.section === 'categorias' || this.section === 'unidades';
+  }
+
+  navigateToCreate(): void {
+    this.navigate([this.catalogBasePath(), 'nuevo']);
+  }
+
+  navigateToEdit(item: CatalogRecord): void {
+    this.navigate([this.catalogBasePath(), item.id, 'editar']);
+  }
+
+  navigateToImport(): void {
+    this.navigate([this.catalogBasePath(), 'importar']);
+  }
+
+  goToList(): void {
+    this.navigate([this.catalogBasePath()]);
+  }
+
+  private catalogBasePath(): string {
+    return this.section === 'unidades' ? '/catalogo/unidades-medida' : `/catalogo/${this.section}`;
+  }
+
+  private navigate(commands: string[]): void {
+    void this.router?.navigate(commands);
   }
 }

@@ -123,6 +123,7 @@ func main() {
 	negocioActual.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
 	negocioActual.POST("/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
 	negocioActual.POST("/catalogo/productos/importar", productHandler.ImportProducts)
+	negocioActual.GET("/catalogo/productos/importaciones/:importacionId", productHandler.ProductImportStatus)
 	router.GET("/api/v1/catalogo/marcas", productHandler.ListBrandsAdmin)
 	router.POST("/api/v1/catalogo/marcas", productHandler.CreateBrand)
 	router.PATCH("/api/v1/catalogo/marcas/:id", productHandler.UpdateBrand)

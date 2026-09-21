@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { CatalogoComponent } from './catalogo.component';
@@ -9,6 +9,7 @@ import { CatalogoComponent } from './catalogo.component';
 describe('CatalogoComponent', () => {
   let component: CatalogoComponent;
   let http: HttpTestingController;
+  const router = { navigate: vi.fn().mockResolvedValue(true) };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -20,11 +21,13 @@ describe('CatalogoComponent', () => {
           provide: ActivatedRoute,
           useValue: { snapshot: { data: { section: 'marcas' } } },
         },
+        { provide: Router, useValue: router },
       ],
     });
     component = TestBed.createComponent(CatalogoComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
     http.expectOne(`${environment.apiUrl}/catalogo/marcas`).flush([]);
+    router.navigate.mockClear();
   });
 
   afterEach(() => http.verify());
@@ -99,5 +102,15 @@ describe('CatalogoComponent', () => {
 
     expect(stopPropagation).toHaveBeenCalled();
     expect(component.importFile).toBeNull();
+  });
+
+  it('navigates brands to the dedicated pages', () => {
+    component.navigateToCreate();
+    component.navigateToImport();
+    component.navigateToEdit({ id: 'marca-1', nombre: 'Marca', activo: true });
+
+    expect(router.navigate).toHaveBeenNthCalledWith(1, ['/catalogo/marcas', 'nuevo']);
+    expect(router.navigate).toHaveBeenNthCalledWith(2, ['/catalogo/marcas', 'importar']);
+    expect(router.navigate).toHaveBeenNthCalledWith(3, ['/catalogo/marcas', 'marca-1', 'editar']);
   });
 });
