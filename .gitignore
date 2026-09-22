@@ -38,3 +38,7 @@ dist/
 # =========================
 docker-example.txt
 thrs/
+
+.graphifyignore    
+graphify-out/    
+.codex/
