@@ -3,8 +3,8 @@
 }
 
 .placeholder-page {
-  width: min(100%, 1180px);
-  padding: 36px 32px;
+  width: min(100%, var(--section-max-width));
+  padding: 36px var(--section-padding-inline);
   margin: 0 auto;
 }
 

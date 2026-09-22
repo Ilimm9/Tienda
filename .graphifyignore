@@ -1,0 +1,20 @@
+# Angular / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Dependencias y archivos generados
+**/node_modules/
+**/dist/
+
+# No analizar capabilities
+capabilities/
+
+# Tests Angular
+**/*.spec.ts
+**/*.test.ts
+
+# Carpetas de testing
+**/test/
+**/tests/
+**/testing/

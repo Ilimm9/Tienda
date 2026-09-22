@@ -27,6 +27,8 @@
   --shadow-card: 0 8px 24px rgb(20 34 60 / 5%);
   --shadow-menu: 0 14px 38px rgb(20 34 60 / 16%);
   --shadow-drawer: 12px 0 36px rgb(20 34 60 / 18%);
+  --section-max-width: 1440px;
+  --section-padding-inline: clamp(1rem, 2vw, 2rem);
 }
 
 :root[data-theme='dark'] {

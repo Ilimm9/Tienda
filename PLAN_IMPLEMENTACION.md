@@ -33,6 +33,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 04 | [Resumen de cambios de productos](capabilities/04-productos-importacion-variantes/CAPABILITY.md) | — | Catálogo de productos e importación XLSX existentes | — | Resumen consolidado de los cambios antes documentados en las capabilities 04–14 |
 | 05 | [Tailwind y sistema visual](capabilities/05-tailwind-sistema-visual/CAPABILITY.md) | En revisión | Tema, layout y estilos actuales del frontend | Pendiente | Integración incremental; piloto en shell e inicio |
 | 06 | [Preparación segura para producción en AWS Lightsail](capabilities/06-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1, 2 y 3 aprobadas el 2026-09-20 | Fases 1, 2 y 3 implementadas y verificadas; fase 3 usa Mailpit local y no SES; base legacy `5433`, fases 4–7 y despliegue pendientes |
+| 07 | [Área de secciones administrativas](capabilities/07-area-secciones-administrativas/CAPABILITY.md) | En implementación | Shell autenticado y estilos actuales del frontend | Aprobada explícitamente el 2026-09-21 | Amplía el área útil a 1440px mediante tokens globales y aclara el panel de variantes |
 
 ## Restricciones vigentes
 

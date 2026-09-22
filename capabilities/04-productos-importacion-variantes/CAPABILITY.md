@@ -19,3 +19,4 @@ En este cambio se editan los archivos relacionados a productos; su carga masiva 
 - Las familias de variantes usan una clave técnica segura y un código legible consecutivo para su identificación.
 - La importación se procesa como una tarea con progreso y resultado; la búsqueda de imágenes se separa de la carga.
 - Pueden coexistir productos simples y familias de variantes con el mismo nombre.
+- La vista de productos permite expandir variantes y filtrar por texto, categoría, marca, estado o tipo; la búsqueda también cubre atributos, SKU y códigos de las variantes.
