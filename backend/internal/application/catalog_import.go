@@ -10,6 +10,7 @@ import (
 	"strings"
 	"tienda/backend/internal/domain"
 
+	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -17,30 +18,30 @@ var ErrInvalidImportFile = errors.New("el archivo no tiene el formato de plantil
 
 var shortBarcodePattern = regexp.MustCompile(`^\d{1,7}$`)
 
-func (s *ProductService) ImportBrands(file io.Reader) (domain.CatalogImportResult, error) {
+func (s *ProductService) ImportBrands(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
 	rows, result, err := parseBrandImport(file)
 	if err != nil {
 		return result, err
 	}
-	imported, err := s.products.ImportBrands(rows)
+	imported, err := s.products.ImportBrands(businessID, rows)
 	return mergeImportResults(result, imported), err
 }
 
-func (s *ProductService) ImportCategories(file io.Reader) (domain.CatalogImportResult, error) {
+func (s *ProductService) ImportCategories(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
 	rows, result, err := parseCategoryImport(file)
 	if err != nil {
 		return result, err
 	}
-	imported, err := s.products.ImportCategories(rows)
+	imported, err := s.products.ImportCategories(businessID, rows)
 	return mergeImportResults(result, imported), err
 }
 
-func (s *ProductService) ImportUnits(file io.Reader) (domain.CatalogImportResult, error) {
+func (s *ProductService) ImportUnits(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
 	rows, result, err := parseUnitImport(file)
 	if err != nil {
 		return result, err
 	}
-	imported, err := s.products.ImportUnits(rows)
+	imported, err := s.products.ImportUnits(businessID, rows)
 	return mergeImportResults(result, imported), err
 }
 

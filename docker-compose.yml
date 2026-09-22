@@ -27,6 +27,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       # Valor neutro a proposito: "development" sembraria datos demo y
       # "production" marcaria la cookie de sesion como Secure (se pierde sobre HTTP).
@@ -38,8 +40,21 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-tienda}
       DB_SSLMODE: disable
-      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en el archivo .env}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}
+      SESSION_DURATION: ${SESSION_DURATION:-24h}
+      SESSION_REMEMBER_DURATION: ${SESSION_REMEMBER_DURATION:-720h}
+      SESSION_REMEMBER_IDLE: ${SESSION_REMEMBER_IDLE:-168h}
+      SESSION_TOUCH_INTERVAL: ${SESSION_TOUCH_INTERVAL:-5m}
+      SESSION_RETENTION: ${SESSION_RETENTION:-168h}
+      SESSION_CLEANUP_INTERVAL: ${SESSION_CLEANUP_INTERVAL:-1h}
+      OTP_HMAC_SECRET: ${OTP_HMAC_SECRET:-development-only-change-otp-secret}
+      OTP_TTL: ${OTP_TTL:-10m}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTP_RESEND_WAIT: ${OTP_RESEND_WAIT:-1m}
+      OTP_HOURLY_SEND_MAX: ${OTP_HOURLY_SEND_MAX:-5}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: ${SMTP_FROM:-no-reply@tienda.local}
+      SMTP_TIMEOUT: ${SMTP_TIMEOUT:-5s}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8090}
       LOGIN_HEADER_IMAGE_URL: ${LOGIN_HEADER_IMAGE_URL:-}
       PRECIOCHECK_API_KEY: ${PRECIOCHECK_API_KEY:-}
@@ -64,6 +79,15 @@ services:
       - backend
     ports:
       - "${WEB_PORT:-8090}:80"
+
+  # Bandeja SMTP exclusiva para desarrollo. En producción la fase 4 la sustituirá
+  # por el proveedor de correo configurado (Amazon SES).
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
 
   pgadmin:
     image: dpage/pgadmin4:latest

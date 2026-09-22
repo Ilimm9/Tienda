@@ -99,12 +99,13 @@ export class CatalogoComponent {
   }
   load(): void {
     this.loading.set(true);
+    const negocioId = this.contexto.negocio()?.id ?? '';
     const request =
       this.section === 'marcas'
-        ? this.service.marcas()
+        ? this.service.marcas(negocioId)
         : this.section === 'categorias'
-          ? this.service.categorias()
-          : this.section === 'proveedores' ? this.service.proveedores(this.contexto.negocio()?.id ?? '') : this.service.unidades();
+          ? this.service.categorias(negocioId)
+          : this.section === 'proveedores' ? this.service.proveedores(negocioId) : this.service.unidades(negocioId);
     request.subscribe({
       next: (v) => {
         this.items.set(v);
@@ -136,11 +137,12 @@ export class CatalogoComponent {
       this.goToList();
       return;
     }
+    const negocioId = this.contexto.negocio()?.id ?? '';
     const request = this.section === 'marcas'
-      ? this.service.marcas()
+      ? this.service.marcas(negocioId)
       : this.section === 'categorias'
-        ? this.service.categorias()
-        : this.service.unidades();
+        ? this.service.categorias(negocioId)
+        : this.service.unidades(negocioId);
     this.loading.set(true);
     request.subscribe({
       next: (items) => {
@@ -226,14 +228,14 @@ export class CatalogoComponent {
     this.importResult.set(null);
   }
   templateUrl(): string {
-    return this.service.plantillaUrl(this.section as 'marcas' | 'categorias' | 'unidades');
+    return this.service.plantillaUrl(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'unidades');
   }
   importCatalog(): void {
     if (!this.importFile || !this.canImport()) return;
     this.importing.set(true);
     this.importError.set(null);
     this.importResult.set(null);
-    this.service.importar(this.section as 'marcas' | 'categorias' | 'unidades', this.importFile).subscribe({
+    this.service.importar(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'unidades', this.importFile).subscribe({
       next: (result) => {
         this.importing.set(false);
         this.importResult.set(result);
@@ -298,14 +300,11 @@ export class CatalogoComponent {
         direccion: v.direccion || null,
       });
     if (this.section === 'unidades') Object.assign(payload, { codigo: v.codigo, simbolo: v.simbolo, tipo: v.tipo, factor_a_base: v.factor_a_base, decimales: v.decimales });
-    const path =
-      this.section === 'proveedores'
-        ? `negocios/${this.contexto.negocio()?.id ?? ''}/catalogo/proveedores`
-        : `catalogo/${this.section}`;
-    const requestPath = this.section === 'unidades' ? 'catalogo/unidades-medida' : path;
+    const negocioId = this.contexto.negocio()?.id ?? '';
+    const requestPath = this.section === 'unidades' ? 'unidades-medida' : this.section;
     const request = this.editingId
-      ? this.service.actualizar(requestPath, this.editingId, payload)
-      : this.service.crear(requestPath, payload);
+      ? this.service.actualizar(negocioId, requestPath, this.editingId, payload)
+      : this.service.crear(negocioId, requestPath, payload);
     request.subscribe({
       next: () => {
         this.saving.set(false);

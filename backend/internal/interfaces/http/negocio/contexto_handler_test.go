@@ -6,15 +6,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
+	cuentaapplication "tienda/backend/internal/application/cuenta"
 	application "tienda/backend/internal/application/negocio"
-	"tienda/backend/internal/config"
 	domain "tienda/backend/internal/domain/negocio"
 	transporthttp "tienda/backend/internal/interfaces/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -39,24 +37,19 @@ func (r *contextoRepositoryStub) SucursalActivaDelNegocio(context.Context, uuid.
 func testContextoRouter(t *testing.T, repository *contextoRepositoryStub) (*gin.Engine, *http.Cookie) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	secret := "phase-three-test-secret"
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": uuid.New().String(), "exp": time.Now().Add(time.Hour).Unix(),
-	})
-	signed, err := token.SignedString([]byte(secret))
-	if err != nil {
-		t.Fatal(err)
-	}
+	userID := uuid.New()
 	service := application.NewContextoService(repository)
 	handler := NewContextoHandler(service)
 	router := gin.New()
 	protegido := router.Group("/api/v1")
-	protegido.Use(transporthttp.RequireAuth(config.Config{JWTSecret: secret}))
+	protegido.Use(transporthttp.RequireAuth(transporthttp.SessionAuthenticatorFunc(func(string) (cuentaapplication.AuthenticatedSession, error) {
+		return cuentaapplication.AuthenticatedSession{UserID: userID}, nil
+	}), "tienda_session"))
 	protegido.GET("/contexto/opciones", handler.Opciones)
 	porNegocio := protegido.Group("/negocios")
 	porNegocio.Use(RequireNegocioActivo(service))
 	porNegocio.GET("/:negocioId/prueba", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
-	return router, &http.Cookie{Name: "tienda_session", Value: signed}
+	return router, &http.Cookie{Name: "tienda_session", Value: "opaque-test-token"}
 }
 
 func TestContextoHandlerOpcionesRequiereSesion(t *testing.T) {

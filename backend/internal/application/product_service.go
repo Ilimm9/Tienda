@@ -27,21 +27,21 @@ type ProductLookupProvider interface {
 
 type ProductRepository interface {
 	ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error)
-	ListCategories() ([]domain.CatalogOption, error)
-	ListBrands() ([]domain.CatalogOption, error)
+	ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error)
+	ListBrands(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	Create(businessID uuid.UUID, input domain.CreateProductInput) error
 	Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error
 	Deactivate(businessID, productID uuid.UUID) error
-	ListBrandsAdmin() ([]domain.Marca, error)
-	CreateBrand(domain.CreateMarcaInput) error
-	UpdateBrand(uuid.UUID, domain.UpdateMarcaInput) error
-	ImportBrands([]domain.CatalogImportBrandRow) (domain.CatalogImportResult, error)
-	ListCategoriesAdmin() ([]domain.Categoria, error)
-	CreateCategory(domain.CreateCategoriaInput) error
-	UpdateCategory(uuid.UUID, domain.UpdateCategoriaInput) error
-	ImportCategories([]domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
-	ImportUnits([]domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
+	ListBrandsAdmin(businessID uuid.UUID) ([]domain.Marca, error)
+	CreateBrand(businessID uuid.UUID, input domain.CreateMarcaInput) error
+	UpdateBrand(businessID, brandID uuid.UUID, input domain.UpdateMarcaInput) error
+	ImportBrands(businessID uuid.UUID, rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error)
+	ListCategoriesAdmin(businessID uuid.UUID) ([]domain.Categoria, error)
+	CreateCategory(businessID uuid.UUID, input domain.CreateCategoriaInput) error
+	UpdateCategory(businessID, categoryID uuid.UUID, input domain.UpdateCategoriaInput) error
+	ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
+	ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
 	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error)
 	CreateImportedProducts(uuid.UUID, []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error)
 	CreateProductImportJob(uuid.UUID, uuid.UUID) (domain.ProductImportJob, error)
@@ -50,9 +50,9 @@ type ProductRepository interface {
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
-	ListUnits() ([]domain.UnidadMedida, error)
-	CreateUnit(domain.CreateUnidadMedidaInput) error
-	UpdateUnit(uuid.UUID, domain.UpdateUnidadMedidaInput) error
+	ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida, error)
+	CreateUnit(businessID uuid.UUID, input domain.CreateUnidadMedidaInput) error
+	UpdateUnit(businessID, unitID uuid.UUID, input domain.UpdateUnidadMedidaInput) error
 }
 
 func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
@@ -136,23 +136,23 @@ func validImportImageURL(value string) bool {
 	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
 }
 
-func (s *ProductService) ListBrandsAdmin() ([]domain.Marca, error) {
-	return s.products.ListBrandsAdmin()
+func (s *ProductService) ListBrandsAdmin(businessID uuid.UUID) ([]domain.Marca, error) {
+	return s.products.ListBrandsAdmin(businessID)
 }
-func (s *ProductService) CreateBrand(i domain.CreateMarcaInput) error {
-	return s.products.CreateBrand(i)
+func (s *ProductService) CreateBrand(businessID uuid.UUID, i domain.CreateMarcaInput) error {
+	return s.products.CreateBrand(businessID, i)
 }
-func (s *ProductService) UpdateBrand(id uuid.UUID, i domain.UpdateMarcaInput) error {
-	return s.products.UpdateBrand(id, i)
+func (s *ProductService) UpdateBrand(businessID, id uuid.UUID, i domain.UpdateMarcaInput) error {
+	return s.products.UpdateBrand(businessID, id, i)
 }
-func (s *ProductService) ListCategoriesAdmin() ([]domain.Categoria, error) {
-	return s.products.ListCategoriesAdmin()
+func (s *ProductService) ListCategoriesAdmin(businessID uuid.UUID) ([]domain.Categoria, error) {
+	return s.products.ListCategoriesAdmin(businessID)
 }
-func (s *ProductService) CreateCategory(i domain.CreateCategoriaInput) error {
-	return s.products.CreateCategory(i)
+func (s *ProductService) CreateCategory(businessID uuid.UUID, i domain.CreateCategoriaInput) error {
+	return s.products.CreateCategory(businessID, i)
 }
-func (s *ProductService) UpdateCategory(id uuid.UUID, i domain.UpdateCategoriaInput) error {
-	return s.products.UpdateCategory(id, i)
+func (s *ProductService) UpdateCategory(businessID, id uuid.UUID, i domain.UpdateCategoriaInput) error {
+	return s.products.UpdateCategory(businessID, id, i)
 }
 func (s *ProductService) ListProviders(id uuid.UUID) ([]domain.Proveedor, error) {
 	return s.products.ListProviders(id)
@@ -163,20 +163,22 @@ func (s *ProductService) CreateProvider(id uuid.UUID, i domain.CreateProveedorIn
 func (s *ProductService) UpdateProvider(businessID, id uuid.UUID, i domain.UpdateProveedorInput) error {
 	return s.products.UpdateProvider(businessID, id, i)
 }
-func (s *ProductService) ListUnits() ([]domain.UnidadMedida, error) { return s.products.ListUnits() }
-func (s *ProductService) CreateUnit(i domain.CreateUnidadMedidaInput) error {
-	return s.products.CreateUnit(i)
+func (s *ProductService) ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida, error) {
+	return s.products.ListUnits(businessID)
 }
-func (s *ProductService) UpdateUnit(id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
-	return s.products.UpdateUnit(id, i)
+func (s *ProductService) CreateUnit(businessID uuid.UUID, i domain.CreateUnidadMedidaInput) error {
+	return s.products.CreateUnit(businessID, i)
 }
-
-func (s *ProductService) ListCategories() ([]domain.CatalogOption, error) {
-	return s.products.ListCategories()
+func (s *ProductService) UpdateUnit(businessID, id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
+	return s.products.UpdateUnit(businessID, id, i)
 }
 
-func (s *ProductService) ListBrands() ([]domain.CatalogOption, error) {
-	return s.products.ListBrands()
+func (s *ProductService) ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error) {
+	return s.products.ListCategories(businessID)
+}
+
+func (s *ProductService) ListBrands(businessID uuid.UUID) ([]domain.CatalogOption, error) {
+	return s.products.ListBrands(businessID)
 }
 
 func (s *ProductService) ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error) {

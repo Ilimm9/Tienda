@@ -64,7 +64,11 @@ func (h *ProductHandler) List(c *gin.Context) {
 }
 
 func (h *ProductHandler) Categories(c *gin.Context) {
-	items, err := h.products.ListCategories()
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	items, err := h.products.ListCategories(businessID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las categorías"})
 		return
@@ -73,7 +77,11 @@ func (h *ProductHandler) Categories(c *gin.Context) {
 }
 
 func (h *ProductHandler) Brands(c *gin.Context) {
-	items, err := h.products.ListBrands()
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	items, err := h.products.ListBrands(businessID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las marcas"})
 		return
@@ -172,7 +180,11 @@ func (h *ProductHandler) sucursalActiva(c *gin.Context, negocioID, sucursalID uu
 	return true
 }
 func (h *ProductHandler) ListBrandsAdmin(c *gin.Context) {
-	v, e := h.products.ListBrandsAdmin()
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	v, e := h.products.ListBrandsAdmin(businessID)
 	if e != nil {
 		c.JSON(500, gin.H{"mensaje": "No fue posible cargar las marcas"})
 		return
@@ -180,18 +192,26 @@ func (h *ProductHandler) ListBrandsAdmin(c *gin.Context) {
 	c.JSON(200, v)
 }
 func (h *ProductHandler) CreateBrand(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	var i domain.CreateMarcaInput
 	if c.ShouldBindJSON(&i) != nil {
 		c.JSON(400, gin.H{"mensaje": "El nombre de la marca es obligatorio"})
 		return
 	}
-	if e := h.products.CreateBrand(i); e != nil {
+	if e := h.products.CreateBrand(businessID, i); e != nil {
 		c.JSON(400, gin.H{"mensaje": e.Error()})
 		return
 	}
 	c.Status(201)
 }
 func (h *ProductHandler) UpdateBrand(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	id, ok := parseID(c, "id")
 	if !ok {
 		return
@@ -201,14 +221,18 @@ func (h *ProductHandler) UpdateBrand(c *gin.Context) {
 		c.JSON(400, gin.H{"mensaje": "Los datos no son válidos"})
 		return
 	}
-	if e := h.products.UpdateBrand(id, i); e != nil {
+	if e := h.products.UpdateBrand(businessID, id, i); e != nil {
 		c.JSON(400, gin.H{"mensaje": e.Error()})
 		return
 	}
 	c.Status(204)
 }
 func (h *ProductHandler) ListCategoriesAdmin(c *gin.Context) {
-	v, e := h.products.ListCategoriesAdmin()
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	v, e := h.products.ListCategoriesAdmin(businessID)
 	if e != nil {
 		c.JSON(500, gin.H{"mensaje": "No fue posible cargar las categorías"})
 		return
@@ -216,18 +240,26 @@ func (h *ProductHandler) ListCategoriesAdmin(c *gin.Context) {
 	c.JSON(200, v)
 }
 func (h *ProductHandler) CreateCategory(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	var i domain.CreateCategoriaInput
 	if c.ShouldBindJSON(&i) != nil {
 		c.JSON(400, gin.H{"mensaje": "El nombre de la categoría es obligatorio"})
 		return
 	}
-	if e := h.products.CreateCategory(i); e != nil {
+	if e := h.products.CreateCategory(businessID, i); e != nil {
 		c.JSON(400, gin.H{"mensaje": e.Error()})
 		return
 	}
 	c.Status(201)
 }
 func (h *ProductHandler) UpdateCategory(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	id, ok := parseID(c, "id")
 	if !ok {
 		return
@@ -237,7 +269,7 @@ func (h *ProductHandler) UpdateCategory(c *gin.Context) {
 		c.JSON(400, gin.H{"mensaje": "Los datos no son válidos"})
 		return
 	}
-	if e := h.products.UpdateCategory(id, i); e != nil {
+	if e := h.products.UpdateCategory(businessID, id, i); e != nil {
 		c.JSON(400, gin.H{"mensaje": e.Error()})
 		return
 	}
@@ -386,6 +418,10 @@ func (h *ProductHandler) UnitImportTemplate(c *gin.Context) { h.catalogImportTem
 func (h *ProductHandler) ImportUnits(c *gin.Context)        { h.importCatalog(c, "unidades") }
 
 func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogImportSize)
 	fileHeader, err := c.FormFile("archivo")
 	if err != nil {
@@ -405,11 +441,11 @@ func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
 
 	var result domain.CatalogImportResult
 	if section == "marcas" {
-		result, err = h.products.ImportBrands(file)
+		result, err = h.products.ImportBrands(businessID, file)
 	} else if section == "categorias" {
-		result, err = h.products.ImportCategories(file)
+		result, err = h.products.ImportCategories(businessID, file)
 	} else {
-		result, err = h.products.ImportUnits(file)
+		result, err = h.products.ImportUnits(businessID, file)
 	}
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidImportFile) {
@@ -471,7 +507,11 @@ func (h *ProductHandler) UpdateProvider(c *gin.Context) {
 }
 
 func (h *ProductHandler) ListUnits(c *gin.Context) {
-	items, err := h.products.ListUnits()
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	items, err := h.products.ListUnits(businessID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las unidades de medida"})
 		return
@@ -480,12 +520,16 @@ func (h *ProductHandler) ListUnits(c *gin.Context) {
 }
 
 func (h *ProductHandler) CreateUnit(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	var input domain.CreateUnidadMedidaInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los campos obligatorios de la unidad"})
 		return
 	}
-	if err := h.products.CreateUnit(input); err != nil {
+	if err := h.products.CreateUnit(businessID, input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
 		return
 	}
@@ -493,6 +537,10 @@ func (h *ProductHandler) CreateUnit(c *gin.Context) {
 }
 
 func (h *ProductHandler) UpdateUnit(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
 	id, ok := parseID(c, "id")
 	if !ok {
 		return
@@ -502,7 +550,7 @@ func (h *ProductHandler) UpdateUnit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Los datos de la unidad no son válidos"})
 		return
 	}
-	if err := h.products.UpdateUnit(id, input); err != nil {
+	if err := h.products.UpdateUnit(businessID, id, input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
 		return
 	}

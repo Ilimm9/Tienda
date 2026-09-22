@@ -18,6 +18,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'verificar-correo',
+    loadComponent: () =>
+      import('./features/auth/verification/verification.component').then(
+        (module) => module.VerificationComponent,
+      ),
+  },
+  {
     // La aceptación de invitación vive fuera del shell autenticado: el invitado puede no tener cuenta.
     path: 'invitacion/:token',
     loadComponent: () =>

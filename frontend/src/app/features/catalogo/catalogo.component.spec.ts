@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { CatalogoComponent } from './catalogo.component';
 
@@ -21,12 +23,16 @@ describe('CatalogoComponent', () => {
           provide: ActivatedRoute,
           useValue: { snapshot: { data: { section: 'marcas' } } },
         },
+        {
+          provide: ContextoService,
+          useValue: { negocio: signal({ id: environment.defaultBusinessId }) },
+        },
         { provide: Router, useValue: router },
       ],
     });
     component = TestBed.createComponent(CatalogoComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${environment.apiUrl}/catalogo/marcas`).flush([]);
+    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`).flush([]);
     router.navigate.mockClear();
   });
 
@@ -39,7 +45,7 @@ describe('CatalogoComponent', () => {
     component.save();
 
     http
-      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/catalogo/marcas/marca-1` })
+      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas/marca-1` })
       .flush({ mensaje: 'La marca ya existe.' }, { status: 400, statusText: 'Bad Request' });
 
     expect(component.saving()).toBe(false);
@@ -51,7 +57,7 @@ describe('CatalogoComponent', () => {
     component.save();
 
     http
-      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/catalogo/marcas/marca-1` })
+      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas/marca-1` })
       .error(new ProgressEvent('error'));
 
     expect(component.formError()).toBe(

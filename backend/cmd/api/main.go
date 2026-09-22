@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"tienda/backend/internal/application"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
+	negociodomain "tienda/backend/internal/domain/negocio"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
@@ -20,7 +22,10 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
 	db, err := database.Open(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal(err)
@@ -34,7 +39,29 @@ func main() {
 		}
 	}
 	cuentaRepo := cuentainfra.NewUserRepository(db)
-	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), cfg)
+	sessionRepo := cuentainfra.NewSessionRepository(db)
+	verificationRepo := cuentainfra.NewVerificationRepository(db)
+	sessionService := cuentaapplication.NewSessionService(sessionRepo, cuentaapplication.SessionConfig{
+		Duration:              cfg.SessionDuration,
+		RememberDuration:      cfg.RememberDuration,
+		RememberIdleDuration:  cfg.RememberIdle,
+		ActivityTouchInterval: cfg.SessionTouchInterval,
+	})
+	go func() {
+		ticker := time.NewTicker(cfg.SessionCleanup)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := sessionService.CleanupInactive(cfg.SessionRetention); err != nil {
+				log.Printf("no fue posible depurar sesiones inactivas: %v", err)
+			}
+		}
+	}()
+	verificationMailer := cuentainfra.NewDevelopmentSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.SMTPTimeout)
+	verificationService := cuentaapplication.NewVerificationService(cuentaRepo, verificationRepo, verificationMailer, cuentaapplication.VerificationConfig{
+		HMACSecret: cfg.OTPHMACSecret, TTL: cfg.OTPTTL, MaxAttempts: cfg.OTPMaxAttempts,
+		ResendWait: cfg.OTPResendWait, HourlySendMax: cfg.OTPHourlySendMax,
+	})
+	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, verificationService, cfg)
 	productRepo := infrastructure.NewProductRepository(db)
 	precioCheckClient := infrastructure.NewPrecioCheckClient(cfg.PrecioCheckBaseURL, cfg.PrecioCheckAPIKey)
 	upcItemDBClient := infrastructure.NewUPCItemDBClient(cfg.UPCItemDBBaseURL)
@@ -58,15 +85,23 @@ func main() {
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
 	router := gin.Default()
+	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
+		log.Fatal(err)
+	}
 	router.Use(transporthttp.CORSMiddleware(cfg.FrontendURL))
+	router.Use(transporthttp.RequireTrustedOrigin(cfg.FrontendURL))
 	router.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"estado": "ok"}) })
 	auth := router.Group("/api/v1/auth")
 	auth.POST("/register", cuentaHandler.Register)
 	auth.POST("/login", cuentaHandler.Login)
-	auth.POST("/logout", cuentaHandler.Logout)
-	auth.GET("/me", cuentaHandler.Me)
+	auth.POST("/verificar-correo", cuentaHandler.VerifyEmail)
+	auth.POST("/reenviar-verificacion", cuentaHandler.ResendVerification)
+	authProtected := auth.Group("")
+	authProtected.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
+	authProtected.POST("/logout", cuentaHandler.Logout)
+	authProtected.GET("/me", cuentaHandler.Me)
 	negocios := router.Group("/api/v1/negocios")
-	negocios.Use(transporthttp.RequireAuth(cfg))
+	negocios.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
 	negocios.GET("", negocioHandler.Listar)
 	negocios.POST("", negocioHandler.Crear)
 	negocios.GET("/:negocioId", negocioHandler.Obtener)
@@ -103,45 +138,48 @@ func main() {
 	router.GET("/api/v1/invitaciones/:token", invitacionHandler.Consultar)
 	// Aceptar sí exige sesión iniciada con el correo invitado.
 	invitaciones := router.Group("/api/v1/invitaciones")
-	invitaciones.Use(transporthttp.RequireAuth(cfg))
+	invitaciones.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
 	invitaciones.POST("/:token/aceptar", invitacionHandler.Aceptar)
 
 	contexto := router.Group("/api/v1/contexto")
-	contexto.Use(transporthttp.RequireAuth(cfg))
+	contexto.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()))
 	contexto.GET("/opciones", contextoHandler.Opciones)
 	negocioActual := router.Group("/api/v1/negocios/:negocioId")
-	negocioActual.Use(transporthttp.RequireAuth(cfg), negociohttp.RequireNegocioActivo(contextoService))
-	negocioActual.GET("/catalogo/productos", productHandler.List)
-	negocioActual.GET("/catalogo/productos/consulta-codigo/:codigoBarras", productHandler.LookupProduct)
-	negocioActual.GET("/catalogo/productos/consulta-preciocheck/:codigoBarras", productHandler.LookupProduct)
-	negocioActual.GET("/catalogo/categorias", productHandler.Categories)
-	negocioActual.GET("/catalogo/marcas", productHandler.Brands)
-	negocioActual.GET("/sucursales", productHandler.Branches)
-	negocioActual.POST("/catalogo/productos", productHandler.Create)
-	negocioActual.PATCH("/catalogo/productos/:productoId", productHandler.Update)
-	negocioActual.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
-	negocioActual.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
-	negocioActual.POST("/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
-	negocioActual.POST("/catalogo/productos/importar", productHandler.ImportProducts)
-	negocioActual.GET("/catalogo/productos/importaciones/:importacionId", productHandler.ProductImportStatus)
-	router.GET("/api/v1/catalogo/marcas", productHandler.ListBrandsAdmin)
-	router.POST("/api/v1/catalogo/marcas", productHandler.CreateBrand)
-	router.PATCH("/api/v1/catalogo/marcas/:id", productHandler.UpdateBrand)
-	router.GET("/api/v1/catalogo/marcas/importacion/plantilla", productHandler.BrandImportTemplate)
-	router.POST("/api/v1/catalogo/marcas/importar", productHandler.ImportBrands)
-	router.GET("/api/v1/catalogo/categorias", productHandler.ListCategoriesAdmin)
-	router.POST("/api/v1/catalogo/categorias", productHandler.CreateCategory)
-	router.PATCH("/api/v1/catalogo/categorias/:id", productHandler.UpdateCategory)
-	router.GET("/api/v1/catalogo/unidades-medida", productHandler.ListUnits)
-	router.POST("/api/v1/catalogo/unidades-medida", productHandler.CreateUnit)
-	router.PATCH("/api/v1/catalogo/unidades-medida/:id", productHandler.UpdateUnit)
-	router.GET("/api/v1/catalogo/categorias/importacion/plantilla", productHandler.CategoryImportTemplate)
-	router.POST("/api/v1/catalogo/categorias/importar", productHandler.ImportCategories)
-	router.GET("/api/v1/catalogo/unidades/importacion/plantilla", productHandler.UnitImportTemplate)
-	router.POST("/api/v1/catalogo/unidades/importar", productHandler.ImportUnits)
-	negocioActual.GET("/catalogo/proveedores", productHandler.ListProviders)
-	negocioActual.POST("/catalogo/proveedores", productHandler.CreateProvider)
-	negocioActual.PATCH("/catalogo/proveedores/:id", productHandler.UpdateProvider)
+	negocioActual.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF(), negociohttp.RequireNegocioActivo(contextoService))
+	catalogoLectura := negocioActual.Group("")
+	catalogoLectura.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCatalogoVer))
+	catalogoLectura.GET("/catalogo/productos", productHandler.List)
+	catalogoLectura.GET("/catalogo/productos/consulta-codigo/:codigoBarras", productHandler.LookupProduct)
+	catalogoLectura.GET("/catalogo/productos/consulta-preciocheck/:codigoBarras", productHandler.LookupProduct)
+	catalogoLectura.GET("/catalogo/categorias", productHandler.ListCategoriesAdmin)
+	catalogoLectura.GET("/catalogo/marcas", productHandler.ListBrandsAdmin)
+	catalogoLectura.GET("/catalogo/unidades-medida", productHandler.ListUnits)
+	catalogoLectura.GET("/catalogo/proveedores", productHandler.ListProviders)
+	catalogoLectura.GET("/sucursales", productHandler.Branches)
+
+	catalogoGestion := negocioActual.Group("")
+	catalogoGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCatalogoGestionar))
+	catalogoGestion.POST("/catalogo/productos", productHandler.Create)
+	catalogoGestion.PATCH("/catalogo/productos/:productoId", productHandler.Update)
+	catalogoGestion.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
+	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
+	catalogoGestion.POST("/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
+	catalogoGestion.POST("/catalogo/productos/importar", productHandler.ImportProducts)
+	catalogoGestion.GET("/catalogo/productos/importaciones/:importacionId", productHandler.ProductImportStatus)
+	catalogoGestion.POST("/catalogo/marcas", productHandler.CreateBrand)
+	catalogoGestion.PATCH("/catalogo/marcas/:id", productHandler.UpdateBrand)
+	catalogoGestion.GET("/catalogo/marcas/importacion/plantilla", productHandler.BrandImportTemplate)
+	catalogoGestion.POST("/catalogo/marcas/importar", productHandler.ImportBrands)
+	catalogoGestion.POST("/catalogo/categorias", productHandler.CreateCategory)
+	catalogoGestion.PATCH("/catalogo/categorias/:id", productHandler.UpdateCategory)
+	catalogoGestion.GET("/catalogo/categorias/importacion/plantilla", productHandler.CategoryImportTemplate)
+	catalogoGestion.POST("/catalogo/categorias/importar", productHandler.ImportCategories)
+	catalogoGestion.POST("/catalogo/unidades-medida", productHandler.CreateUnit)
+	catalogoGestion.PATCH("/catalogo/unidades-medida/:id", productHandler.UpdateUnit)
+	catalogoGestion.GET("/catalogo/unidades/importacion/plantilla", productHandler.UnitImportTemplate)
+	catalogoGestion.POST("/catalogo/unidades/importar", productHandler.ImportUnits)
+	catalogoGestion.POST("/catalogo/proveedores", productHandler.CreateProvider)
+	catalogoGestion.PATCH("/catalogo/proveedores/:id", productHandler.UpdateProvider)
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)
