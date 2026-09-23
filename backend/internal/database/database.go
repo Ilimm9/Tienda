@@ -1,6 +1,8 @@
 package database
 
 import (
+	"time"
+
 	"tienda/backend/internal/domain"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
@@ -19,8 +21,10 @@ const (
 )
 
 func Open(url string) (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(url), &gorm.Config{})
+	return gorm.Open(postgres.Open(url), &gorm.Config{NowFunc: nowUTC})
 }
+
+func nowUTC() time.Time { return time.Now().UTC() }
 
 func Init(db *gorm.DB) error {
 	if err := infrastructure.MigrateCatalogTenancy(db); err != nil {

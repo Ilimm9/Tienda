@@ -65,7 +65,7 @@
             }
           </header>
           <dl class="team-data">
-            <div><dt>Asignada</dt><dd>{{ asignacion.asignado_en | date: 'mediumDate' }}</dd></div>
+            <div><dt>Asignada</dt><dd>{{ asignacion.asignado_en | fechaMexico: 'mediumDate' }}</dd></div>
           </dl>
           @if (puedeEditar()) {
             <footer>

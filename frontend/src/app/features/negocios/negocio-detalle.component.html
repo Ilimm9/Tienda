@@ -192,11 +192,11 @@
         <dl>
           <div>
             <dt>Fecha de registro</dt>
-            <dd>{{ current.creado_en | date: 'dd MMM yyyy' }}</dd>
+            <dd>{{ current.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
           </div>
           <div>
             <dt>Última modificación</dt>
-            <dd>{{ current.actualizado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dd>{{ current.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
           </div>
           <div>
             <dt>Sucursales activas</dt>

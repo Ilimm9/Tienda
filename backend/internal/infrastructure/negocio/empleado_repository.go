@@ -139,7 +139,7 @@ func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleado
 		cambios["estado"] = *input.Estado.Value
 		// Terminar sin fecha explícita deja constancia del día en que ocurrió.
 		if *input.Estado.Value == domain.EstadoEmpleadoTerminado && !input.TerminadoEn.Set {
-			cambios["terminado_en"] = time.Now()
+			cambios["terminado_en"] = time.Now().UTC()
 		}
 	}
 	if input.ContratadoEn.Set {
@@ -151,7 +151,7 @@ func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleado
 	if len(cambios) == 0 {
 		return nil
 	}
-	cambios["actualizado_en"] = gorm.Expr("now()")
+	cambios["actualizado_en"] = time.Now().UTC()
 	return r.db.WithContext(ctx).Table("empleados").
 		Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Updates(cambios).Error
 }

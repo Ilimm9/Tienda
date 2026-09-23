@@ -29,10 +29,10 @@ Aprobada explícitamente por el usuario el 2026-09-23 mediante la instrucción: 
 
 - [x] Definir relación opcional de un proveedor por producto y alcance para variantes.
 - [x] Confirmar importación XLSX por nombre e invalidez por fila desconocida.
-- [ ] Exponer proveedor en los contratos de producto y persistir la relación.
-- [ ] Integrar selector, columna y filtros de Productos.
-- [ ] Extender plantilla, parser y validación de importación XLSX.
-- [ ] Ejecutar pruebas, actualización del grafo y registrar resultados.
+- [x] Exponer proveedor en los contratos de producto y persistir la relación.
+- [x] Integrar selector, columna y filtros de Productos.
+- [x] Extender plantilla, parser y validación de importación XLSX.
+- [x] Ejecutar pruebas, actualización del grafo y registrar resultados.
 
 ## Criterios de aceptación
 
@@ -43,4 +43,8 @@ Aprobada explícitamente por el usuario el 2026-09-23 mediante la instrucción: 
 
 ## Resultados
 
-Pendiente de verificaciones al completar la implementación.
+- `go test ./...`: correcto.
+- `frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.spec.json`: correcto.
+- `git diff --check` y `git diff --cached --check`: correctos.
+- `graphify update .`: correcto; actualizó la extracción estructural del proyecto. El grafo reportó que su conjunto de comunidades cambió y conserva etiquetas previas para 63 comunidades; es una advertencia de rotulado, no un fallo de integridad.
+- Pendiente conocido: las pruebas de Angular y el build de producción requieren Node `v22.22.3` o superior, mientras el entorno dispone de Node `v14.15.0`.

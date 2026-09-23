@@ -13,8 +13,8 @@ type PerfilUsuario struct {
 	Nombres       string    `gorm:"type:varchar(120);not null" json:"nombres"`
 	Apellidos     string    `gorm:"type:varchar(120);not null" json:"apellidos"`
 	Telefono      *string   `gorm:"type:varchar(30)" json:"telefono,omitempty"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 func (p *PerfilUsuario) BeforeCreate(*gorm.DB) error {

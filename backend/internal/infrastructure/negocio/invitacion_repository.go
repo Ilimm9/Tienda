@@ -52,8 +52,8 @@ func (r *InvitacionRepository) RolPerteneceANegocio(ctx context.Context, negocio
 func (r *InvitacionRepository) MarcarExpiradas(ctx context.Context, negocioID uuid.UUID) error {
 	return r.db.WithContext(ctx).Exec(
 		`UPDATE invitaciones_negocio SET estado = ?
-		 WHERE negocio_id = ? AND estado = ? AND expira_en < now()`,
-		domain.EstadoInvitacionExpirada, negocioID, domain.EstadoInvitacionPendiente).Error
+		 WHERE negocio_id = ? AND estado = ? AND expira_en < ?`,
+		domain.EstadoInvitacionExpirada, negocioID, domain.EstadoInvitacionPendiente, time.Now().UTC()).Error
 }
 
 func (r *InvitacionRepository) Listar(ctx context.Context, negocioID uuid.UUID, estado string) ([]domain.InvitacionResumen, error) {
@@ -149,7 +149,7 @@ func (r *InvitacionRepository) ExisteCuentaConCorreo(ctx context.Context, correo
 // Aceptar crea o reactiva la membresía, vincula al empleado y asigna el rol predeterminado, todo junto.
 func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacion domain.InvitacionNegocio, usuarioID uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		ahora := time.Now()
+		ahora := time.Now().UTC()
 		var membresia domain.MembresiaNegocio
 		err := tx.Where("negocio_id = ? AND usuario_id = ?", invitacion.NegocioID, usuarioID).
 			Take(&membresia).Error
@@ -168,7 +168,7 @@ func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacion domain.In
 			// Reactivar una membresía suspendida o revocada no debe degradar a un propietario.
 			err := tx.Table("membresias_negocio").Where("id = ?", membresia.ID).Updates(map[string]any{
 				"estado": "activo", "suspendido_en": nil, "revocado_en": nil,
-				"se_unio_en": gorm.Expr("COALESCE(se_unio_en, now())"), "actualizado_en": gorm.Expr("now()"),
+				"se_unio_en": gorm.Expr("COALESCE(se_unio_en, ?)", ahora), "actualizado_en": ahora,
 			}).Error
 			if err != nil {
 				return err
@@ -180,7 +180,7 @@ func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacion domain.In
 				Where("id = ? AND negocio_id = ?", *invitacion.EmpleadoID, invitacion.NegocioID).
 				Updates(map[string]any{
 					"membresia_id": membresia.ID, "estado": domain.EstadoEmpleadoActivo,
-					"actualizado_en": gorm.Expr("now()"),
+					"actualizado_en": ahora,
 				}).Error
 			if err != nil {
 				return err
@@ -189,10 +189,10 @@ func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacion domain.In
 
 		if invitacion.RolPredeterminadoID != nil {
 			err := tx.Exec(`INSERT INTO roles_membresia (id, membresia_negocio_id, rol_id, asignado_por_usuario_id, asignado_en)
-				SELECT gen_random_uuid(), ?, r.id, ?, now() FROM roles r
+				SELECT gen_random_uuid(), ?, r.id, ?, ? FROM roles r
 				WHERE r.id = ? AND r.negocio_id = ?
 				ON CONFLICT (membresia_negocio_id, rol_id) DO NOTHING`,
-				membresia.ID, invitacion.InvitadoPorUsuarioID,
+				membresia.ID, invitacion.InvitadoPorUsuarioID, ahora,
 				*invitacion.RolPredeterminadoID, invitacion.NegocioID).Error
 			if err != nil {
 				return err

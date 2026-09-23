@@ -5,12 +5,13 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { ApiErrorResponse, NegocioResumen } from './negocio.models';
 import { NegocioService } from './negocio.service';
 
 @Component({
   selector: 'app-negocios',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FechaMexicoPipe, FormsModule, RouterLink],
   templateUrl: './negocios.component.html',
   styleUrl: './negocios.component.css',
 })

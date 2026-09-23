@@ -3,6 +3,7 @@ package negocio
 import (
 	"context"
 	"errors"
+	"time"
 
 	application "tienda/backend/internal/application/negocio"
 	domain "tienda/backend/internal/domain/negocio"
@@ -94,7 +95,7 @@ func (r *AsignacionRepository) Asignar(ctx context.Context, negocioID, empleadoI
 			asignacionID = existente.ID
 			err := tx.Table("asignaciones_empleado_sucursal").Where("id = ?", existente.ID).
 				Updates(map[string]any{
-					"activo": true, "finalizado_en": nil, "asignado_en": gorm.Expr("now()"),
+					"activo": true, "finalizado_en": nil, "asignado_en": time.Now().UTC(),
 				}).Error
 			if err != nil {
 				return err
@@ -131,7 +132,7 @@ func (r *AsignacionRepository) Finalizar(ctx context.Context, negocioID, emplead
 			Where("id = ? AND negocio_id = ? AND empleado_id = ? AND activo = TRUE",
 				asignacionID, negocioID, empleadoID).
 			Updates(map[string]any{
-				"activo": false, "es_principal": false, "finalizado_en": gorm.Expr("now()"),
+				"activo": false, "es_principal": false, "finalizado_en": time.Now().UTC(),
 			})
 		if resultado.Error != nil {
 			return resultado.Error

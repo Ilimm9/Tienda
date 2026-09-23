@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"tienda/backend/internal/domain"
+	"time"
 	"unicode"
 
 	"github.com/google/uuid"
@@ -910,17 +911,18 @@ func productVariantKey(attributes []domain.ProductVariantAttributeInput) (string
 
 func reserveGeneratedProductSKU(tx *gorm.DB, businessID uuid.UUID) (string, error) {
 	for {
+		now := time.Now().UTC()
 		var sequence struct {
 			Numero int64 `gorm:"column:numero"`
 		}
 		if err := tx.Raw(`
 			INSERT INTO producto_sku_consecutivos (id, negocio_id, siguiente_numero, creado_en, actualizado_en)
-			VALUES (?, ?, 2, NOW(), NOW())
+			VALUES (?, ?, 2, ?, ?)
 			ON CONFLICT (negocio_id) DO UPDATE
 			SET siguiente_numero = producto_sku_consecutivos.siguiente_numero + 1,
-				actualizado_en = NOW()
+				actualizado_en = ?
 			RETURNING siguiente_numero - 1 AS numero
-		`, uuid.New(), businessID).Scan(&sequence).Error; err != nil {
+		`, uuid.New(), businessID, now, now, now).Scan(&sequence).Error; err != nil {
 			return "", err
 		}
 		sku := fmt.Sprintf("PROD-%06d", sequence.Numero)
@@ -1140,6 +1142,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		seenVariantIdentities[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = struct{}{}
 	}
 	seenVariantBases := make(map[string]variantBaseInput)
+	seenVariantProviders := make(map[string]*uuid.UUID)
 	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
 
 	for _, row := range rows {
@@ -1231,6 +1234,11 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 					addError("Producto base", "los datos compartidos no coinciden con otra fila del archivo")
 				} else {
 					seenVariantBases[baseKey] = base
+				}
+				if previous, exists := seenVariantProviders[baseKey]; exists && !sameOptionalUUID(previous, providerID) {
+					addError("Proveedor", "debe ser el mismo para todas las variantes del producto")
+				} else {
+					seenVariantProviders[baseKey] = providerID
 				}
 				variantIdentity := baseKey + "\x00" + variantKey
 				if _, exists := seenVariantIdentities[variantIdentity]; exists {

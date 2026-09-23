@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { NegocioDetalle } from '../negocios/negocio.models';
 import { NegocioService } from '../negocios/negocio.service';
 import { SucursalApiError, SucursalDetalle } from './sucursal.models';
@@ -13,7 +14,7 @@ import { SucursalService } from './sucursal.service';
 
 @Component({
   selector: 'app-sucursal-detalle',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FechaMexicoPipe, RouterLink],
   templateUrl: './sucursal-detalle.component.html',
   styleUrl: './sucursal-detalle.component.css',
 })

@@ -195,6 +195,13 @@ describe('ProductosComponent', () => {
 
     component.setProductSearch('piña');
     expect(component.filteredProducts()).toHaveLength(0);
+
+    component.setProductSearch('');
+    component.setProductProviderFilter('proveedor-1');
+    expect(component.filteredProducts()).toHaveLength(1);
+
+    component.setProductProviderFilter('__sin_proveedor__');
+    expect(component.filteredProducts()).toHaveLength(0);
   });
 
   it('keeps optional product filters empty until a value is selected', () => {

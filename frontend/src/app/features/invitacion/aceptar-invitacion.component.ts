@@ -5,12 +5,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { InvitacionPublica } from '../equipo/invitacion.models';
 import { InvitacionService } from '../equipo/invitacion.service';
 
 @Component({
   selector: 'app-aceptar-invitacion',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FechaMexicoPipe, RouterLink],
   templateUrl: './aceptar-invitacion.component.html',
   styleUrl: './aceptar-invitacion.component.css',
 })

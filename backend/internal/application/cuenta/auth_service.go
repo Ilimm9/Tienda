@@ -26,7 +26,7 @@ func (s *AuthService) Login(email, password string) (*cuentadomain.Usuario, erro
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	if user.DeshabilitadoEn != nil || user.Estado != "activo" || user.CorreoVerificadoEn == nil || (user.BloqueadoHasta != nil && user.BloqueadoHasta.After(now)) {
 		return nil, ErrAccountUnavailable
 	}

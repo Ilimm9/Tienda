@@ -14,8 +14,8 @@ type Sucursal struct {
 	Direccion     *string   `gorm:"type:text" json:"direccion,omitempty"`
 	Telefono      *string   `gorm:"type:varchar(30)" json:"telefono,omitempty"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Negocio       Negocio   `gorm:"foreignKey:NegocioID" json:"-"`
 }
 
@@ -24,8 +24,8 @@ type Marca struct {
 	NegocioID     uuid.UUID `gorm:"type:uuid;not null;index" json:"negocio_id"`
 	Nombre        string    `gorm:"type:varchar(180);not null" json:"nombre"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 type UnidadMedida struct {
@@ -40,8 +40,8 @@ type UnidadMedida struct {
 	PermiteFraccion bool       `gorm:"not null;default:true" json:"permite_fraccion"`
 	Decimales       int        `gorm:"not null;default:2" json:"decimales"`
 	Activo          bool       `gorm:"not null;default:true" json:"activo"`
-	CreadoEn        time.Time  `json:"creado_en"`
-	ActualizadoEn   time.Time  `json:"actualizado_en"`
+	CreadoEn        time.Time  `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn   time.Time  `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 type Producto struct {
@@ -58,8 +58,8 @@ type Producto struct {
 	RequiereCaducidad bool          `gorm:"not null;default:false" json:"requiere_caducidad"`
 	EsPerecedero      bool          `gorm:"not null;default:false" json:"es_perecedero"`
 	Activo            bool          `gorm:"not null;default:true" json:"activo"`
-	CreadoEn          time.Time     `json:"creado_en"`
-	ActualizadoEn     time.Time     `json:"actualizado_en"`
+	CreadoEn          time.Time     `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn     time.Time     `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Marca             *Marca        `gorm:"foreignKey:MarcaID" json:"-"`
 	UnidadMedida      *UnidadMedida `gorm:"foreignKey:UnidadMedidaID" json:"-"`
 }
@@ -74,8 +74,8 @@ type ImportacionProducto struct {
 	Porcentaje    int       `gorm:"not null;default:0" json:"porcentaje"`
 	MensajeError  *string   `gorm:"type:text" json:"mensaje_error,omitempty"`
 	ResultadoJSON []byte    `gorm:"type:jsonb" json:"-"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 // FamiliaProducto groups new sellable products that differ only by variant attributes.
@@ -86,8 +86,8 @@ type FamiliaProducto struct {
 	Codigo        string    `gorm:"type:varchar(160);not null;uniqueIndex:idx_familia_producto_negocio_codigo" json:"codigo"`
 	Clave         string    `gorm:"type:text;not null;uniqueIndex:idx_familia_producto_clave" json:"-"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 type FamiliaProductoConsecutivo struct {
@@ -102,8 +102,8 @@ type ProductoVariante struct {
 	FamiliaProductoID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_variante_clave" json:"familia_producto_id"`
 	Clave             string    `gorm:"type:text;not null;uniqueIndex:idx_producto_variante_clave" json:"-"`
 	Activo            bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn          time.Time `json:"creado_en"`
-	ActualizadoEn     time.Time `json:"actualizado_en"`
+	CreadoEn          time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn     time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Producto          Producto  `gorm:"foreignKey:ProductoID" json:"-"`
 }
 
@@ -112,7 +112,7 @@ type ProductoVarianteAtributo struct {
 	ProductoVarianteID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_variante_atributo" json:"producto_variante_id"`
 	Nombre             string    `gorm:"type:varchar(100);not null;uniqueIndex:idx_producto_variante_atributo" json:"nombre"`
 	Valor              string    `gorm:"type:varchar(180);not null" json:"valor"`
-	CreadoEn           time.Time `json:"creado_en"`
+	CreadoEn           time.Time `gorm:"autoCreateTime" json:"creado_en"`
 }
 
 type Categoria struct {
@@ -122,8 +122,8 @@ type Categoria struct {
 	CategoriaPadreID *uuid.UUID `gorm:"type:uuid;index" json:"categoria_padre_id,omitempty"`
 	Descripcion      *string    `gorm:"type:text" json:"descripcion,omitempty"`
 	Activo           bool       `gorm:"not null;default:true" json:"activo"`
-	CreadoEn         time.Time  `json:"creado_en"`
-	ActualizadoEn    time.Time  `json:"actualizado_en"`
+	CreadoEn         time.Time  `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn    time.Time  `gorm:"autoUpdateTime" json:"actualizado_en"`
 	CategoriaPadre   *Categoria `gorm:"foreignKey:CategoriaPadreID" json:"-"`
 }
 
@@ -133,7 +133,7 @@ type ProductoCategoria struct {
 	ProductoID  uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_categoria" json:"producto_id"`
 	CategoriaID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_producto_categoria" json:"categoria_id"`
 	EsPrincipal bool      `gorm:"not null;default:false" json:"es_principal"`
-	CreadoEn    time.Time `json:"creado_en"`
+	CreadoEn    time.Time `gorm:"autoCreateTime" json:"creado_en"`
 	Producto    Producto  `gorm:"foreignKey:ProductoID" json:"-"`
 	Categoria   Categoria `gorm:"foreignKey:CategoriaID" json:"-"`
 }
@@ -146,8 +146,8 @@ type ProductoCodigo struct {
 	Tipo               string            `gorm:"type:varchar(20);not null" json:"tipo"`
 	Codigo             string            `gorm:"type:varchar(120);not null" json:"codigo"`
 	EsPrincipal        bool              `gorm:"not null;default:false" json:"es_principal"`
-	CreadoEn           time.Time         `json:"creado_en"`
-	ActualizadoEn      time.Time         `json:"actualizado_en"`
+	CreadoEn           time.Time         `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn      time.Time         `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Producto           *Producto         `gorm:"foreignKey:ProductoID" json:"-"`
 	ProductoVariante   *ProductoVariante `gorm:"foreignKey:ProductoVarianteID" json:"-"`
 }
@@ -158,8 +158,8 @@ type ProductoImagen struct {
 	URL           string    `gorm:"type:text;not null" json:"url"`
 	EsPrincipal   bool      `gorm:"not null;default:false" json:"es_principal"`
 	Orden         int       `gorm:"not null;default:0" json:"orden"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Producto      Producto  `gorm:"foreignKey:ProductoID" json:"-"`
 }
 
@@ -170,8 +170,8 @@ type ProductoUnidad struct {
 	Factor        float64   `gorm:"not null" json:"factor"`
 	CodigoBarras  *string   `gorm:"type:varchar(120)" json:"codigo_barras,omitempty"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Producto      Producto  `gorm:"foreignKey:ProductoID" json:"-"`
 }
 
@@ -186,8 +186,8 @@ type ProductoNegocio struct {
 	CostoReferencia        *float64          `gorm:"type:numeric(14,2)" json:"costo_referencia,omitempty"`
 	PrecioIncluyeImpuestos bool              `gorm:"not null;default:true" json:"precio_incluye_impuestos"`
 	Activo                 bool              `gorm:"not null;default:true" json:"activo"`
-	CreadoEn               time.Time         `json:"creado_en"`
-	ActualizadoEn          time.Time         `json:"actualizado_en"`
+	CreadoEn               time.Time         `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn          time.Time         `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Negocio                Negocio           `gorm:"foreignKey:NegocioID" json:"-"`
 	Producto               *Producto         `gorm:"foreignKey:ProductoID" json:"-"`
 	ProductoVariante       *ProductoVariante `gorm:"foreignKey:ProductoVarianteID" json:"-"`
@@ -198,8 +198,8 @@ type ProductoSKUConsecutivo struct {
 	ID              uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	NegocioID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"negocio_id"`
 	SiguienteNumero int64     `gorm:"not null" json:"siguiente_numero"`
-	CreadoEn        time.Time `json:"creado_en"`
-	ActualizadoEn   time.Time `json:"actualizado_en"`
+	CreadoEn        time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn   time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 type Impuesto struct {
@@ -208,15 +208,15 @@ type Impuesto struct {
 	Tipo          string    `gorm:"type:varchar(30);not null" json:"tipo"`
 	Tasa          float64   `gorm:"type:numeric(7,4);not null" json:"tasa"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 type ProductoImpuesto struct {
 	ID                uuid.UUID       `gorm:"type:uuid;primaryKey" json:"id"`
 	ProductoNegocioID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_producto_impuesto" json:"producto_negocio_id"`
 	ImpuestoID        uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_producto_impuesto" json:"impuesto_id"`
-	CreadoEn          time.Time       `json:"creado_en"`
+	CreadoEn          time.Time       `gorm:"autoCreateTime" json:"creado_en"`
 	ProductoNegocio   ProductoNegocio `gorm:"foreignKey:ProductoNegocioID" json:"-"`
 	Impuesto          Impuesto        `gorm:"foreignKey:ImpuestoID" json:"-"`
 }
@@ -229,8 +229,8 @@ type InventarioSucursal struct {
 	StockMinimo       float64         `gorm:"not null;default:0" json:"stock_minimo"`
 	StockMaximo       *float64        `json:"stock_maximo,omitempty"`
 	Ubicacion         *string         `gorm:"type:varchar(120)" json:"ubicacion,omitempty"`
-	CreadoEn          time.Time       `json:"creado_en"`
-	ActualizadoEn     time.Time       `json:"actualizado_en"`
+	CreadoEn          time.Time       `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn     time.Time       `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Sucursal          Sucursal        `gorm:"foreignKey:SucursalID" json:"-"`
 	ProductoNegocio   ProductoNegocio `gorm:"foreignKey:ProductoNegocioID" json:"-"`
 }
@@ -245,8 +245,8 @@ type Proveedor struct {
 	Email         *string   `gorm:"type:varchar(255)" json:"email,omitempty"`
 	Direccion     *string   `gorm:"type:text" json:"direccion,omitempty"`
 	Activo        bool      `gorm:"not null;default:true" json:"activo"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	CreadoEn      time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Negocio       Negocio   `gorm:"foreignKey:NegocioID" json:"-"`
 }
 
@@ -257,8 +257,8 @@ type ProductoProveedor struct {
 	CodigoProveedor   *string         `gorm:"type:varchar(120)" json:"codigo_proveedor,omitempty"`
 	Costo             *float64        `gorm:"type:numeric(14,2)" json:"costo,omitempty"`
 	EsPrincipal       bool            `gorm:"not null;default:false" json:"es_principal"`
-	CreadoEn          time.Time       `json:"creado_en"`
-	ActualizadoEn     time.Time       `json:"actualizado_en"`
+	CreadoEn          time.Time       `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn     time.Time       `gorm:"autoUpdateTime" json:"actualizado_en"`
 	ProductoNegocio   ProductoNegocio `gorm:"foreignKey:ProductoNegocioID" json:"-"`
 	Proveedor         Proveedor       `gorm:"foreignKey:ProveedorID" json:"-"`
 }
@@ -276,8 +276,8 @@ type Lote struct {
 	FechaCaducidad    *time.Time      `json:"fecha_caducidad,omitempty"`
 	FechaRecepcion    time.Time       `gorm:"not null" json:"fecha_recepcion"`
 	Activo            bool            `gorm:"not null;default:true" json:"activo"`
-	CreadoEn          time.Time       `json:"creado_en"`
-	ActualizadoEn     time.Time       `json:"actualizado_en"`
+	CreadoEn          time.Time       `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn     time.Time       `gorm:"autoUpdateTime" json:"actualizado_en"`
 	Sucursal          Sucursal        `gorm:"foreignKey:SucursalID" json:"-"`
 	ProductoNegocio   ProductoNegocio `gorm:"foreignKey:ProductoNegocioID" json:"-"`
 	Proveedor         *Proveedor      `gorm:"foreignKey:ProveedorID" json:"-"`
@@ -296,7 +296,7 @@ type MovimientoInventario struct {
 	Motivo            *string         `gorm:"type:text" json:"motivo,omitempty"`
 	Referencia        *string         `gorm:"type:varchar(180)" json:"referencia,omitempty"`
 	UsuarioID         *uuid.UUID      `gorm:"type:uuid;index" json:"usuario_id,omitempty"`
-	CreadoEn          time.Time       `json:"creado_en"`
+	CreadoEn          time.Time       `gorm:"autoCreateTime" json:"creado_en"`
 	Sucursal          Sucursal        `gorm:"foreignKey:SucursalID" json:"-"`
 	ProductoNegocio   ProductoNegocio `gorm:"foreignKey:ProductoNegocioID" json:"-"`
 	Lote              *Lote           `gorm:"foreignKey:LoteID" json:"-"`
