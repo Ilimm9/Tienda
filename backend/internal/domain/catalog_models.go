@@ -252,7 +252,7 @@ type Proveedor struct {
 
 type ProductoProveedor struct {
 	ID                uuid.UUID       `gorm:"type:uuid;primaryKey" json:"id"`
-	ProductoNegocioID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_producto_proveedor" json:"producto_negocio_id"`
+	ProductoNegocioID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_producto_proveedor;uniqueIndex:idx_producto_proveedor_unico" json:"producto_negocio_id"`
 	ProveedorID       uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_producto_proveedor" json:"proveedor_id"`
 	CodigoProveedor   *string         `gorm:"type:varchar(120)" json:"codigo_proveedor,omitempty"`
 	Costo             *float64        `gorm:"type:numeric(14,2)" json:"costo,omitempty"`

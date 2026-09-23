@@ -180,7 +180,7 @@ describe('ProductosComponent', () => {
   it('filters a product base by attributes and identifiers of its variants', () => {
     component.products.set([{
       id: 'producto-1', nombre: 'Base de michelada', imagen_url: null, sku: null, precio: 0, stock: 0,
-      categoria: 'Botanas', categoria_id: 'categoria-1', marca: null, marca_id: null,
+      categoria: 'Botanas', categoria_id: 'categoria-1', marca: null, marca_id: null, proveedor: 'Distribuidora Norte', proveedor_id: 'proveedor-1',
       descripcion: null, presentacion: '1 litro', contenido: null, unidad_contenido: null,
       unidad_medida: 'Unidades', unidad_medida_id: 'unidad-1', codigo_barras: null,
       inventario: [], estado: 'En stock',
@@ -200,6 +200,7 @@ describe('ProductosComponent', () => {
   it('keeps optional product filters empty until a value is selected', () => {
     expect(component.productCategoryFilter()).toBeNull();
     expect(component.productBrandFilter()).toBeNull();
+    expect(component.productProviderFilter()).toBeNull();
     expect(component.productStatusFilter()).toBeNull();
 
     component.setProductCategoryFilter('categoria-1');

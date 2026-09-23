@@ -34,6 +34,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 05 | [Tailwind y sistema visual](capabilities/05-tailwind-sistema-visual/CAPABILITY.md) | En revisión | Tema, layout y estilos actuales del frontend | Pendiente | Integración incremental; piloto en shell e inicio |
 | 06 | [Preparación segura para producción en AWS Lightsail](capabilities/06-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1, 2 y 3 aprobadas el 2026-09-20 | Fases 1, 2 y 3 implementadas y verificadas; fase 3 usa Mailpit local y no SES; base legacy `5433`, fases 4–7 y despliegue pendientes |
 | 08 | [Proveedores como sección independiente](capabilities/08-proveedores-seccion-independiente/CAPABILITY.md) | En implementación | Navegación, rutas y pantalla de catálogo actuales | Aprobada explícitamente el 2026-09-22 | Proveedores se separa de Catálogo, usa `/proveedores` y elimina la ruta anterior |
+| 09 | [Proveedor opcional en productos](capabilities/09-productos-proveedores/CAPABILITY.md) | En implementación | Productos, proveedores e importación XLSX | Aprobada explícitamente el 2026-09-23 | Un proveedor opcional por producto, incluidos filtros, formulario y carga masiva |
 
 ## Restricciones vigentes
 

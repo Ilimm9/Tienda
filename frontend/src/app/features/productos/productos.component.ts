@@ -55,10 +55,15 @@ export class ProductosComponent {
   readonly productPageFirst = signal(0);
   readonly productCategoryFilter = signal<string | null>(null);
   readonly productBrandFilter = signal<string | null>(null);
+  readonly productProviderFilter = signal<string | null>(null);
   readonly productStatusFilter = signal<string | null>(null);
   readonly productTypeFilter = signal<'all' | 'simple' | 'variants'>('all');
   readonly productCategoryOptions = computed(() => this.filterOptions(this.products(), 'categoria'));
   readonly productBrandOptions = computed(() => this.filterOptions(this.products(), 'marca'));
+  readonly productProviderOptions = computed(() => [
+    { id: '__sin_proveedor__', nombre: 'Sin proveedor' },
+    ...this.providers(),
+  ]);
   readonly productStatusOptions = [
     { id: 'En stock', nombre: 'En stock' },
     { id: 'Bajo stock', nombre: 'Bajo stock' },
@@ -74,6 +79,7 @@ export class ProductosComponent {
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
+  readonly providers = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
   readonly units = signal<CatalogOption[]>([]);
   readonly catalogLoadErrors = signal<string[]>([]);
@@ -109,6 +115,7 @@ export class ProductosComponent {
     codigo_barras: ['', Validators.pattern(/^\d{8,14}$/)],
     imagen_url: [''],
     marca_id: [''],
+    proveedor_id: [''],
     categoria_id: [''],
     sucursal_id: ['', Validators.required],
     descripcion: ['', Validators.maxLength(2000)],
@@ -148,6 +155,10 @@ export class ProductosComponent {
         this.error.set('No fue posible cargar los productos.');
         this.loading.set(false);
       },
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.providers.set([]),
     });
   }
 
@@ -191,7 +202,7 @@ export class ProductosComponent {
     this.loading.set(false);
     const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
-      nombre: '', sku_interno: '', generar_sku_interno: false, tiene_variantes: false, marca_id: '', categoria_id: '', sucursal_id: '',
+      nombre: '', sku_interno: '', generar_sku_interno: false, tiene_variantes: false, marca_id: '', proveedor_id: '', categoria_id: '', sucursal_id: '',
       codigo_barras: '', imagen_url: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
       unidad_medida_id: '',
@@ -206,6 +217,7 @@ export class ProductosComponent {
     this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
+    this.providers.set([]);
     this.branches.set([]);
     this.branchReady.set(false);
     this.imageLookupLoading.set(false);
@@ -233,6 +245,10 @@ export class ProductosComponent {
         this.applyCatalogSuggestions();
       },
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar los proveedores.'),
     });
     this.productosService.listBranches(this.negocioID).subscribe({
       next: (items) => {
@@ -277,6 +293,7 @@ export class ProductosComponent {
       codigo_barras: product.codigo_barras ?? '',
       imagen_url: product.imagen_url ?? '',
       marca_id: product.marca_id ?? '',
+      proveedor_id: product.proveedor_id ?? '',
       categoria_id: product.categoria_id ?? '',
       sucursal_id: '',
       descripcion: product.descripcion ?? '',
@@ -298,6 +315,10 @@ export class ProductosComponent {
     this.productosService.listBrands(this.negocioID).subscribe({
       next: (items) => this.brands.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar los proveedores.'),
     });
     this.productosService.listUnits(this.negocioID).subscribe({
       next: (items) => this.units.set(items),
@@ -679,6 +700,10 @@ export class ProductosComponent {
     this.productBrandFilter.set(value);
     this.resetProductPagination();
   }
+  setProductProviderFilter(value: string | null): void {
+    this.productProviderFilter.set(value);
+    this.resetProductPagination();
+  }
 
   setProductStatusFilter(value: string | null): void {
     this.productStatusFilter.set(value);
@@ -694,6 +719,7 @@ export class ProductosComponent {
     this.productSearch.set('');
     this.productCategoryFilter.set(null);
     this.productBrandFilter.set(null);
+    this.productProviderFilter.set(null);
     this.productStatusFilter.set(null);
     this.productTypeFilter.set('all');
     this.resetProductPagination();
@@ -721,10 +747,13 @@ export class ProductosComponent {
     const query = this.normalizeProductFilter(this.productSearch());
     const category = this.productCategoryFilter();
     const brand = this.productBrandFilter();
+    const provider = this.productProviderFilter();
     const status = this.productStatusFilter();
     const type = this.productTypeFilter();
     if (category && product.categoria_id !== category) return false;
     if (brand && product.marca_id !== brand) return false;
+    if (provider === '__sin_proveedor__' && product.proveedor_id) return false;
+    if (provider && provider !== '__sin_proveedor__' && product.proveedor_id !== provider) return false;
     if (status && product.estado !== status) return false;
     if (type === 'simple' && this.hasVariants(product)) return false;
     if (type === 'variants' && !this.hasVariants(product)) return false;
@@ -780,6 +809,7 @@ export class ProductosComponent {
     const payload = {
       ...value,
       marca_id: value.marca_id || null,
+      proveedor_id: value.proveedor_id || null,
       categoria_id: value.categoria_id || null,
       descripcion: value.descripcion || null,
       contenido: value.contenido,
@@ -803,6 +833,7 @@ export class ProductosComponent {
           nombre: payload.nombre,
           sku_interno: payload.sku_interno,
           marca_id: payload.marca_id,
+          proveedor_id: payload.proveedor_id,
           categoria_id: payload.categoria_id as string,
           descripcion: payload.descripcion,
           contenido: payload.contenido,

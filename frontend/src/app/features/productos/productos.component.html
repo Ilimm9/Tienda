@@ -78,6 +78,10 @@
           />
         </label>
         <label class="filter-field">
+          <span>Proveedor</span>
+          <p-select [ngModel]="productProviderFilter()" (ngModelChange)="setProductProviderFilter($event)" [options]="productProviderOptions()" optionLabel="nombre" optionValue="id" placeholder="Todos" [showClear]="true" />
+        </label>
+        <label class="filter-field">
           <span>Estado</span>
           <p-select
             [ngModel]="productStatusFilter()"
@@ -136,6 +140,7 @@
             <th>Precio</th>
             <th>Stock</th>
             <th>Categoría</th>
+            <th>Proveedor</th>
             <th>Estado</th>
             <th class="actions-column">Acciones</th>
           </tr>
@@ -185,6 +190,7 @@
             <td>@if (hasVariants(product)) { <span class="variant-summary">Ver variantes</span> } @else { {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }} }</td>
             <td>{{ hasVariants(product) ? variantStockTotal(product) : product.stock }} und.</td>
             <td>{{ product.categoria || 'Sin categoría' }}</td>
+            <td>{{ product.proveedor || 'Sin proveedor' }}</td>
             <td>
               <span class="status" [class]="getStatusClass(product.estado)">
                 {{ product.estado || 'Sin estado' }}
@@ -398,6 +404,10 @@
             [showClear]="true"
             [style]="{ width: '100%' }"
           />
+        </label>
+        <label class="field">
+          <span>Proveedor <small class="optional-label">(opcional)</small></span>
+          <p-select formControlName="proveedor_id" [options]="providers()" optionLabel="nombre" optionValue="id" placeholder="Sin proveedor" [showClear]="true" [style]="{ width: '100%' }" />
         </label>
 
         <label class="field full-field">

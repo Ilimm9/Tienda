@@ -74,7 +74,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 	}
 	if section == "productos" {
 		sheet = "Productos"
-		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	}
 	book.SetSheetName(book.GetSheetName(0), sheet)
 	for index, header := range headers {
@@ -100,9 +100,9 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		instructionRows := [][]string{
 			{"Carga masiva de productos", "Completa una fila por producto. La hoja Productos debe conservar sus encabezados."},
 			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
-			{"Campos opcionales", "SKU interno, Categoría, Marca, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
+			{"Campos opcionales", "SKU interno, Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
 			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
-			{"Catálogos", "Categoría, Marca y Unidad de medida solo se validan si se indican y deben existir activas."},
+			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida solo se validan si se indican y deben existir activos."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
 			{"SKU interno", "Es opcional. Si se omite, se generará un identificador automático al importar."},
 			{"Variantes", "Opcional. Usa Atributo=Valor; por ejemplo Colección=Dinosaurios o Sabor=Fresa; Color=Rojo."},
@@ -129,7 +129,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 }
 
 func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.CatalogImportResult, error) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	rows, result, err := readImportRows(file, headers)
 	if err != nil {
 		return nil, result, err
@@ -185,7 +185,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			result.Invalidas++
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
 	}
 	return valid, result, nil
 }
