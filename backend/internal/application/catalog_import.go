@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/mail"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,6 +46,15 @@ func (s *ProductService) ImportUnits(businessID uuid.UUID, file io.Reader) (doma
 	return mergeImportResults(result, imported), err
 }
 
+func (s *ProductService) ImportProviders(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
+	rows, result, err := parseProviderImport(file)
+	if err != nil {
+		return result, err
+	}
+	imported, err := s.products.ImportProviders(businessID, rows)
+	return mergeImportResults(result, imported), err
+}
+
 func CatalogImportTemplate(section string) ([]byte, error) {
 	book := excelize.NewFile()
 	defer book.Close()
@@ -57,6 +67,10 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 	if section == "unidades" {
 		sheet = "Unidades"
 		headers = []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}
+	}
+	if section == "proveedores" {
+		sheet = "Proveedores"
+		headers = []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}
 	}
 	if section == "productos" {
 		sheet = "Productos"
@@ -250,6 +264,33 @@ func parseCategoryImport(file io.Reader) ([]domain.CatalogImportCategoryRow, dom
 			continue
 		}
 		valid = append(valid, domain.CatalogImportCategoryRow{Fila: index + 2, Nombre: nombre, Descripcion: cell(row, 1), CategoriaPadre: cell(row, 2)})
+	}
+	return valid, result, nil
+}
+
+func parseProviderImport(file io.Reader) ([]domain.CatalogImportProviderRow, domain.CatalogImportResult, error) {
+	rows, result, err := readImportRows(file, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"})
+	if err != nil {
+		return nil, result, err
+	}
+	valid := make([]domain.CatalogImportProviderRow, 0, len(rows))
+	for index, row := range rows {
+		rowNumber := index + 2
+		nombre, email := cell(row, 0), cell(row, 4)
+		if nombre == "" {
+			result.Invalidas++
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Nombre", Motivo: "es obligatorio"})
+			continue
+		}
+		if email != "" {
+			address, parseErr := mail.ParseAddress(email)
+			if parseErr != nil || address.Address != email {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Correo", Motivo: "debe ser una dirección válida"})
+				continue
+			}
+		}
+		valid = append(valid, domain.CatalogImportProviderRow{Fila: rowNumber, Nombre: nombre, RazonSocial: cell(row, 1), RFC: cell(row, 2), Telefono: cell(row, 3), Email: email, Direccion: cell(row, 5)})
 	}
 	return valid, result, nil
 }

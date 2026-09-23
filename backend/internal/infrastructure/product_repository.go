@@ -404,6 +404,61 @@ func (r *ProductRepository) ListProviders(businessID uuid.UUID) ([]domain.Provee
 	e := r.db.Where("negocio_id = ?", businessID).Order("nombre ASC").Find(&v).Error
 	return v, e
 }
+func (r *ProductRepository) ImportProviders(businessID uuid.UUID, rows []domain.CatalogImportProviderRow) (domain.CatalogImportResult, error) {
+	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var current []domain.Proveedor
+		if err := tx.Where("negocio_id = ?", businessID).Find(&current).Error; err != nil {
+			return err
+		}
+		existing := make(map[string]struct{}, len(current))
+		for _, provider := range current {
+			existing[catalogImportKey(provider.Nombre)] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(rows))
+		providers := make([]domain.Proveedor, 0, len(rows))
+		for _, row := range rows {
+			key := catalogImportKey(row.Nombre)
+			if _, duplicate := seen[key]; duplicate {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El proveedor está repetido en el archivo"})
+				continue
+			}
+			seen[key] = struct{}{}
+			if _, exists := existing[key]; exists {
+				result.Omitidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El proveedor ya existe"})
+				continue
+			}
+			provider := domain.Proveedor{NegocioID: businessID, Nombre: strings.TrimSpace(row.Nombre), Activo: true}
+			if value := strings.TrimSpace(row.RazonSocial); value != "" {
+				provider.RazonSocial = &value
+			}
+			if value := strings.TrimSpace(row.RFC); value != "" {
+				provider.RFC = &value
+			}
+			if value := strings.TrimSpace(row.Telefono); value != "" {
+				provider.Telefono = &value
+			}
+			if value := strings.TrimSpace(row.Email); value != "" {
+				provider.Email = &value
+			}
+			if value := strings.TrimSpace(row.Direccion); value != "" {
+				provider.Direccion = &value
+			}
+			providers = append(providers, provider)
+		}
+		if len(providers) == 0 {
+			return nil
+		}
+		if err := tx.Create(&providers).Error; err != nil {
+			return err
+		}
+		result.Creadas = len(providers)
+		return nil
+	})
+	return result, err
+}
 func (r *ProductRepository) CreateProvider(id uuid.UUID, i domain.CreateProveedorInput) error {
 	i.Nombre = strings.TrimSpace(i.Nombre)
 	if i.Nombre == "" {

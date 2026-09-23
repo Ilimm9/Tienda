@@ -286,6 +286,10 @@ func (h *ProductHandler) CategoryImportTemplate(c *gin.Context) {
 	h.catalogImportTemplate(c, "categorias")
 }
 
+func (h *ProductHandler) ProviderImportTemplate(c *gin.Context) {
+	h.catalogImportTemplate(c, "proveedores")
+}
+
 func (h *ProductHandler) ProductImportTemplate(c *gin.Context) {
 	h.catalogImportTemplate(c, "productos")
 }
@@ -306,6 +310,9 @@ func (h *ProductHandler) catalogImportTemplate(c *gin.Context, section string) {
 	if section == "productos" {
 		filename = "plantilla-productos.xlsx"
 	}
+	if section == "proveedores" {
+		filename = "plantilla-proveedores.xlsx"
+	}
 	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", content)
 }
@@ -316,6 +323,10 @@ func (h *ProductHandler) ImportBrands(c *gin.Context) {
 
 func (h *ProductHandler) ImportCategories(c *gin.Context) {
 	h.importCatalog(c, "categorias")
+}
+
+func (h *ProductHandler) ImportProviders(c *gin.Context) {
+	h.importCatalog(c, "proveedores")
 }
 
 func (h *ProductHandler) ImportProducts(c *gin.Context) {
@@ -444,6 +455,8 @@ func (h *ProductHandler) importCatalog(c *gin.Context, section string) {
 		result, err = h.products.ImportBrands(businessID, file)
 	} else if section == "categorias" {
 		result, err = h.products.ImportCategories(businessID, file)
+	} else if section == "proveedores" {
+		result, err = h.products.ImportProviders(businessID, file)
 	} else {
 		result, err = h.products.ImportUnits(businessID, file)
 	}

@@ -207,6 +207,15 @@ type CatalogImportCategoryRow struct {
 	Descripcion    string
 	CategoriaPadre string
 }
+type CatalogImportProviderRow struct {
+	Fila        int
+	Nombre      string
+	RazonSocial string
+	RFC         string
+	Telefono    string
+	Email       string
+	Direccion   string
+}
 type CatalogImportUnitRow struct {
 	Fila        int
 	Codigo      string

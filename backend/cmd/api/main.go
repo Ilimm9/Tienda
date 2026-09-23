@@ -180,6 +180,8 @@ func main() {
 	catalogoGestion.POST("/catalogo/unidades/importar", productHandler.ImportUnits)
 	catalogoGestion.POST("/catalogo/proveedores", productHandler.CreateProvider)
 	catalogoGestion.PATCH("/catalogo/proveedores/:id", productHandler.UpdateProvider)
+	catalogoGestion.GET("/catalogo/proveedores/importacion/plantilla", productHandler.ProviderImportTemplate)
+	catalogoGestion.POST("/catalogo/proveedores/importar", productHandler.ImportProviders)
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)

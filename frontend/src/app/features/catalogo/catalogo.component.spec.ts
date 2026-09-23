@@ -32,7 +32,8 @@ describe('CatalogoComponent', () => {
     });
     component = TestBed.createComponent(CatalogoComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${environment.apiUrl}/catalogo/marcas`).flush([]);
+    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`).flush([]);
+    router.navigate.mockClear();
   });
   afterEach(() => http.verify());
 
@@ -72,6 +73,19 @@ describe('CatalogoComponent', () => {
       { label: 'Cantidad', value: 'CANTIDAD' },
       { label: 'Empaque', value: 'EMPAQUE' },
     ]);
+  });
+
+  it('uses explicit singular titles instead of trimming the plural label', () => {
+    const singularTitle = (section: string): string => {
+      const subject = Object.create(CatalogoComponent.prototype) as CatalogoComponent;
+      Object.defineProperty(subject, 'section', { value: section });
+      return subject.singularTitle;
+    };
+
+    expect(singularTitle('marcas')).toBe('Marca');
+    expect(singularTitle('categorias')).toBe('Categoría');
+    expect(singularTitle('proveedores')).toBe('Proveedor');
+    expect(singularTitle('unidades')).toBe('Unidad de medida');
   });
 
   it('maps parent categories to select options and excludes the edited category', () => {

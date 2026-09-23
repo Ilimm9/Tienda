@@ -81,6 +81,42 @@ export const routes: Routes = [
           import('./features/catalogo/catalogo.routes').then((module) => module.CATALOGO_ROUTES),
       },
       {
+        path: 'proveedores',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Proveedores', section: 'proveedores' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/nuevo',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Agregar proveedor', section: 'proveedores', mode: 'create' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/importar',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Importar proveedores', section: 'proveedores', mode: 'import' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/:id/editar',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Editar proveedor', section: 'proveedores', mode: 'edit' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
         path: 'equipo',
         loadChildren: () =>
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),

@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/xuri/excelize/v2"
@@ -19,6 +20,30 @@ func TestParseBrandImportNormalizesNames(t *testing.T) {
 	}
 	if result.Procesadas != 2 || result.Invalidas != 0 || len(result.Errores) != 0 {
 		t.Fatalf("result = %#v, want two valid rows", result)
+	}
+}
+
+func TestParseProviderImportAcceptsCurrentFormFields(t *testing.T) {
+	file := workbook(t, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}, [][]string{{"  Comercial Norte  ", "Norte SA", "NOR010101AA1", "5551234567", "ventas@norte.test", "Av. Central 1"}})
+
+	rows, result, err := parseProviderImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProviderImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].Nombre != "Comercial Norte" || rows[0].Email != "ventas@norte.test" || result.Invalidas != 0 {
+		t.Fatalf("rows = %#v, result = %#v", rows, result)
+	}
+}
+
+func TestParseProviderImportRejectsMissingNameAndInvalidEmail(t *testing.T) {
+	file := workbook(t, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}, [][]string{{"", "", "RFC010101AA1", "", "", ""}, {"Proveedor", "", "", "", "correo-invalido", ""}})
+
+	rows, result, err := parseProviderImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProviderImport() error = %v", err)
+	}
+	if len(rows) != 0 || result.Invalidas != 2 || len(result.Errores) != 2 {
+		t.Fatalf("rows = %#v, result = %#v", rows, result)
 	}
 }
 
@@ -43,6 +68,25 @@ func TestCatalogImportTemplateHasExpectedHeaders(t *testing.T) {
 	rows, err := book.GetRows("Categorías")
 	if err != nil || len(rows) == 0 || len(rows[0]) != 3 || rows[0][2] != "Categoría padre" {
 		t.Fatalf("template rows = %#v, error = %v", rows, err)
+	}
+}
+
+func TestProviderImportTemplateHasExpectedHeaders(t *testing.T) {
+	content, err := CatalogImportTemplate("proveedores")
+	if err != nil {
+		t.Fatalf("CatalogImportTemplate() error = %v", err)
+	}
+	book, err := excelize.OpenReader(bytes.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer book.Close()
+	rows, err := book.GetRows("Proveedores")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := rows[0], []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("headers = %#v, want %#v", got, want)
 	}
 }
 
