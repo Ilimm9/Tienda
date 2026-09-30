@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"tienda/backend/internal/application"
+	correoapplication "tienda/backend/internal/application/correo"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	negociodomain "tienda/backend/internal/domain/negocio"
 	"tienda/backend/internal/infrastructure"
+	correoinfra "tienda/backend/internal/infrastructure/correo"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 	transporthttp "tienda/backend/internal/interfaces/http"
@@ -56,11 +58,18 @@ func main() {
 			}
 		}
 	}()
-	verificationMailer := cuentainfra.NewDevelopmentSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.SMTPTimeout)
-	verificationService := cuentaapplication.NewVerificationService(cuentaRepo, verificationRepo, verificationMailer, cuentaapplication.VerificationConfig{
+	mailer, err := newMailer(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	verificationService := cuentaapplication.NewVerificationService(cuentaRepo, verificationRepo, mailer, cuentaapplication.VerificationConfig{
 		HMACSecret: cfg.OTPHMACSecret, TTL: cfg.OTPTTL, MaxAttempts: cfg.OTPMaxAttempts,
 		ResendWait: cfg.OTPResendWait, HourlySendMax: cfg.OTPHourlySendMax,
 	})
+	passwordResetHandler := cuentahttp.NewPasswordResetHandler(cuentaapplication.NewPasswordResetService(cuentaRepo, verificationRepo, mailer, cuentaapplication.PasswordResetConfig{
+		HMACSecret: cfg.OTPHMACSecret, TTL: cfg.PasswordResetTTL, MaxAttempts: cfg.OTPMaxAttempts,
+		ResendWait: cfg.OTPResendWait, HourlySendMax: cfg.OTPHourlySendMax,
+	}))
 	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, verificationService, cfg)
 	productRepo := infrastructure.NewProductRepository(db)
 	precioCheckClient := infrastructure.NewPrecioCheckClient(cfg.PrecioCheckBaseURL, cfg.PrecioCheckAPIKey)
@@ -80,7 +89,7 @@ func main() {
 	empleadoRepo := negocioinfra.NewEmpleadoRepository(db)
 	empleadoHandler := negociohttp.NewEmpleadoHandler(negocioapplication.NewEmpleadoService(empleadoRepo))
 	invitacionRepo := negocioinfra.NewInvitacionRepository(db)
-	invitacionHandler := negociohttp.NewInvitacionHandler(negocioapplication.NewInvitacionService(invitacionRepo))
+	invitacionHandler := negociohttp.NewInvitacionHandler(negocioapplication.NewInvitacionService(invitacionRepo, mailer))
 	asignacionRepo := negocioinfra.NewAsignacionRepository(db)
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
@@ -96,6 +105,8 @@ func main() {
 	auth.POST("/login", cuentaHandler.Login)
 	auth.POST("/verificar-correo", cuentaHandler.VerifyEmail)
 	auth.POST("/reenviar-verificacion", cuentaHandler.ResendVerification)
+	auth.POST("/solicitar-recuperacion", passwordResetHandler.Request)
+	auth.POST("/restablecer-contrasena", passwordResetHandler.Reset)
 	authProtected := auth.Group("")
 	authProtected.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
 	authProtected.POST("/logout", cuentaHandler.Logout)
@@ -184,4 +195,28 @@ func main() {
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// newMailer arma el servicio de correo: Mailpit en desarrollo y Amazon SES por SMTP en producción.
+func newMailer(cfg config.Config) (*correoapplication.Servicio, error) {
+	plantillas, err := correoinfra.NewRenderizador()
+	if err != nil {
+		return nil, err
+	}
+	logo, err := correoinfra.Logo()
+	if err != nil {
+		return nil, err
+	}
+	transporte, err := correoinfra.NewSMTPTransporte(correoinfra.SMTPConfig{
+		Host: cfg.SMTPHost, Port: cfg.SMTPPort, TLS: cfg.SMTPTLS,
+		Usuario: cfg.SMTPUsername, Contrasena: cfg.SMTPPassword, Timeout: cfg.SMTPTimeout,
+		Remitente: cfg.MailFrom, NombreRemitente: cfg.MailFromName, ResponderA: cfg.MailReplyTo,
+		ConfigurationSetSES: cfg.SESConfigurationSet,
+	}, logo)
+	if err != nil {
+		return nil, err
+	}
+	return correoapplication.NewServicio(transporte, plantillas, correoapplication.Config{
+		NombreApp: cfg.MailFromName, FrontendURL: cfg.FrontendURL,
+	}), nil
 }

@@ -84,4 +84,19 @@ describe('AuthService', () => {
     logoutRequest.flush(null);
     expect(service.currentUser()).toBeNull();
   });
+
+  it('sends password recovery requests to the reset endpoints', () => {
+    service.requestPasswordReset({ correo: 'persona@ejemplo.com' }).subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/auth/solicitar-recuperacion`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ correo: 'persona@ejemplo.com' });
+    request.flush({ mensaje: 'ok' });
+
+    const payload = { desafio_id: 'challenge-1', token: 'abc', contrasena: 'nueva-contraseña' };
+    service.resetPassword(payload).subscribe();
+    const reset = http.expectOne(`${environment.apiUrl}/auth/restablecer-contrasena`);
+    expect(reset.request.method).toBe('POST');
+    expect(reset.request.body).toEqual(payload);
+    reset.flush({ mensaje: 'ok' });
+  });
 });

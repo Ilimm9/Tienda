@@ -7,7 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const PropositoVerificacionCorreo = "verificacion_correo"
+const (
+	PropositoVerificacionCorreo     = "verificacion_correo"
+	PropositoRecuperacionContrasena = "recuperacion_contrasena"
+)
 
 type DesafioAutenticacion struct {
 	ID               uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`

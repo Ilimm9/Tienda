@@ -51,10 +51,17 @@ services:
       OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
       OTP_RESEND_WAIT: ${OTP_RESEND_WAIT:-1m}
       OTP_HOURLY_SEND_MAX: ${OTP_HOURLY_SEND_MAX:-5}
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      SMTP_FROM: ${SMTP_FROM:-no-reply@tienda.local}
-      SMTP_TIMEOUT: ${SMTP_TIMEOUT:-5s}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_TLS: ${SMTP_TLS:-none}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TIMEOUT: ${SMTP_TIMEOUT:-10s}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@tienda.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Tienda}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
+      SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}
+      PASSWORD_RESET_TTL: ${PASSWORD_RESET_TTL:-30m}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8090}
       LOGIN_HEADER_IMAGE_URL: ${LOGIN_HEADER_IMAGE_URL:-}
       PRECIOCHECK_API_KEY: ${PRECIOCHECK_API_KEY:-}
@@ -80,8 +87,8 @@ services:
     ports:
       - "${WEB_PORT:-8090}:80"
 
-  # Bandeja SMTP exclusiva para desarrollo. En producción la fase 4 la sustituirá
-  # por el proveedor de correo configurado (Amazon SES).
+  # Bandeja SMTP exclusiva para desarrollo. En producción SMTP_* apunta a Amazon SES
+  # (capabilities/07-servicio-correo-transaccional).
   mailpit:
     image: axllent/mailpit:v1.31.1
     restart: unless-stopped

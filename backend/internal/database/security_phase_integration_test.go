@@ -170,4 +170,52 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 	if activated.Estado != "activo" || activated.CorreoVerificadoEn == nil {
 		t.Fatalf("usuario no activado: %#v", activated)
 	}
+
+	activeSession, err := sessions.Create(activated.ID, false, "127.0.0.1", "integration-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&activated).Update("intentos_inicio_sesion_fallidos", 3).Error; err != nil {
+		t.Fatal(err)
+	}
+	resetChallenge := cuentadomain.DesafioAutenticacion{
+		ID: uuid.New(), UsuarioID: activated.ID, Proposito: cuentadomain.PropositoRecuperacionContrasena,
+		HashOTP: strings.Repeat("b", 64), DireccionIP: "127.0.0.1", UltimoEnvioEn: time.Now().UTC(), ExpiraEn: time.Now().UTC().Add(30 * time.Minute),
+	}
+	if err := verificationRepository.IssueChallenge(&resetChallenge); err != nil {
+		t.Fatal(err)
+	}
+	if last, err := verificationRepository.LastChallengeByUserAndPurpose(activated.ID, cuentadomain.PropositoRecuperacionContrasena); err != nil || last.ID != resetChallenge.ID {
+		t.Fatalf("último desafío de recuperación inesperado: %v %v", last, err)
+	}
+	var resets atomic.Int32
+	start = make(chan struct{})
+	for range 2 {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			<-start
+			if verificationRepository.ResetPasswordWithChallenge(resetChallenge.ID, activated.ID, "nuevo-hash", time.Now().UTC(), 5) == nil {
+				resets.Add(1)
+			}
+		}()
+	}
+	close(start)
+	wait.Wait()
+	if resets.Load() != 1 {
+		t.Fatalf("recuperaciones concurrentes exitosas=%d, se esperaba una", resets.Load())
+	}
+	var recovered cuentadomain.Usuario
+	if err := db.First(&recovered, "id = ?", activated.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if recovered.HashContrasena != "nuevo-hash" || recovered.ContrasenaCambiadaEn == nil || recovered.IntentosInicioSesionFallidos != 0 {
+		t.Fatalf("contraseña no restablecida: %#v", recovered)
+	}
+	if _, err := sessions.Authenticate(activeSession.Token); !errors.Is(err, cuentaapplication.ErrInvalidSession) {
+		t.Fatalf("recuperar la contraseña debía revocar las sesiones: %v", err)
+	}
+	if err := verificationRepository.ActivateUserWithChallenge(resetChallenge.ID, activated.ID, time.Now().UTC(), 5); err == nil {
+		t.Fatal("un desafío de recuperación no debe activar cuentas")
+	}
 }

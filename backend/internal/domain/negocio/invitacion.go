@@ -63,8 +63,9 @@ type InvitacionResumen struct {
 
 // InvitacionCreada acompaña al resumen con el token en claro, que no vuelve a estar disponible.
 type InvitacionCreada struct {
-	Invitacion InvitacionResumen `json:"invitacion"`
-	Token      string            `json:"token"`
+	Invitacion    InvitacionResumen `json:"invitacion"`
+	Token         string            `json:"token"`
+	CorreoEnviado bool              `json:"correo_enviado"`
 }
 
 // InvitacionPublica es lo que ve quien abre el enlace, sin revelar datos internos del negocio.

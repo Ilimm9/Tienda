@@ -1,0 +1,38 @@
+{{define "base"}}<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>{{template "titulo" .}}</title>
+    <style>
+      @media only screen and (max-width: 620px) {
+        .contenedor { width: 100% !important; }
+        .contenido { padding-left: 24px !important; padding-right: 24px !important; }
+        .codigo { font-size: 30px !important; letter-spacing: 6px !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#111c32;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#f8fafc;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" class="contenedor" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;">
+            <tr>
+              <td class="contenido" style="padding:32px 48px 8px;">
+                <img src="{{logoSrc}}" alt="{{.NombreApp}}" width="220" height="48" style="display:block;width:220px;max-width:100%;height:auto;border:0;">
+              </td>
+            </tr>
+            {{template "contenido" .}}
+            <tr>
+              <td class="contenido" style="padding:24px 48px 32px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.6;">
+                Este es un correo automático de {{.NombreApp}}; no respondas a este mensaje.<br>
+                &copy; {{.Anio}} {{.NombreApp}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>{{end}}

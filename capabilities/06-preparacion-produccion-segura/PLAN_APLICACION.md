@@ -253,6 +253,8 @@ Un OTP numérico tiene poca entropía. No basta con SHA-256: se almacenará un H
 
 ## Fase 4 — integración con Amazon Simple Email Service
 
+> **2026-09-25:** la integración de correo (SES por SMTP) de esta fase y el envío de recuperación e invitaciones de la fase 5 se trasladaron a la [Capability 07](../07-servicio-correo-transaccional/CAPABILITY.md), que es la ubicación canónica. Se decidió SMTP con `go-mail` en lugar del adaptador SES API v2 descrito abajo. El texto siguiente se conserva como antecedente.
+
 ### Objetivo
 
 Enviar OTP transaccional sin acoplar el dominio `cuenta` al SDK de AWS.

@@ -1,0 +1,14 @@
+{{define "asunto"}}Restablece tu contraseña de {{.NombreApp}}{{end}}
+{{define "texto"}}Restablece tu contraseña
+
+Recibimos una solicitud para cambiar la contraseña de tu cuenta de {{.NombreApp}}.
+
+Crea una nueva contraseña en este enlace:
+{{.Enlace}}
+
+El enlace vence en {{.Minutos}} minutos y solo puede usarse una vez.
+
+Si no solicitaste el cambio, ignora este correo; tu contraseña actual sigue funcionando.
+
+{{.NombreApp}}
+{{end}}

@@ -57,7 +57,7 @@ func (r *invitacionRepositoryStub) ObtenerPorHash(context.Context, string) (doma
 	return r.invitacion, nil
 }
 func (r *invitacionRepositoryStub) DatosPublicos(context.Context, uuid.UUID) (domain.InvitacionPublica, error) {
-	return domain.InvitacionPublica{Correo: r.invitacion.Correo}, nil
+	return domain.InvitacionPublica{Correo: r.invitacion.Correo, NombreNegocio: "Abarrotes Luna", NombreEmpleado: "Ana Ruiz"}, nil
 }
 func (r *invitacionRepositoryStub) CorreoDeUsuario(context.Context, uuid.UUID) (string, error) {
 	return r.correoUsuario, nil
@@ -81,7 +81,7 @@ func invitacionStub(permisos ...string) *invitacionRepositoryStub {
 }
 
 func TestInvitacionServiceCrearExigePermiso(t *testing.T) {
-	service := NewInvitacionService(invitacionStub(domain.PermisoInvitacionVer))
+	service := NewInvitacionService(invitacionStub(domain.PermisoInvitacionVer), nil)
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
 		domain.CrearInvitacionInput{EmpleadoID: uuid.New()})
@@ -93,7 +93,7 @@ func TestInvitacionServiceCrearExigePermiso(t *testing.T) {
 
 func TestInvitacionServiceCrearGuardaSoloElHash(t *testing.T) {
 	repository := invitacionStub(domain.PermisoInvitacionEnviar)
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	creada, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
 		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
@@ -121,7 +121,7 @@ func TestInvitacionServiceCrearGuardaSoloElHash(t *testing.T) {
 func TestInvitacionServiceCrearExigeCorreoDelEmpleado(t *testing.T) {
 	repository := invitacionStub(domain.PermisoInvitacionEnviar)
 	repository.empleado.Correo = nil
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
 		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
@@ -135,7 +135,7 @@ func TestInvitacionServiceCrearRechazaEmpleadoYaVinculado(t *testing.T) {
 	repository := invitacionStub(domain.PermisoInvitacionEnviar)
 	membresia := uuid.New()
 	repository.empleado.MembresiaID = &membresia
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
 		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
@@ -148,7 +148,7 @@ func TestInvitacionServiceCrearRechazaEmpleadoYaVinculado(t *testing.T) {
 func TestInvitacionServiceCrearRechazaRolDeOtroNegocio(t *testing.T) {
 	repository := invitacionStub(domain.PermisoInvitacionEnviar)
 	repository.rolPertenece = false
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 	rolAjeno := uuid.New()
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
@@ -162,7 +162,7 @@ func TestInvitacionServiceCrearRechazaRolDeOtroNegocio(t *testing.T) {
 func TestInvitacionServiceCrearRechazaNegocioArchivado(t *testing.T) {
 	repository := invitacionStub(domain.PermisoInvitacionEnviar)
 	repository.access.EstadoNegocio = "archivado"
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
 		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
@@ -183,7 +183,7 @@ func TestInvitacionServiceAceptarExigeCorreoCoincidente(t *testing.T) {
 	repository := invitacionStub()
 	repository.invitacion = invitacionVigente("ana@tienda.mx")
 	repository.correoUsuario = "otro@tienda.mx"
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	err := service.Aceptar(context.Background(), uuid.New(), "token-en-claro")
 
@@ -196,7 +196,7 @@ func TestInvitacionServiceAceptarConCorreoCoincidenteIgnoraMayusculas(t *testing
 	repository := invitacionStub()
 	repository.invitacion = invitacionVigente("ana@tienda.mx")
 	repository.correoUsuario = "  ANA@Tienda.MX "
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	if err := service.Aceptar(context.Background(), uuid.New(), "token-en-claro"); err != nil {
 		t.Fatalf("el correo debe compararse normalizado: %v", err)
@@ -211,7 +211,7 @@ func TestInvitacionServiceRechazaTokenExpirado(t *testing.T) {
 	repository.invitacion = invitacionVigente("ana@tienda.mx")
 	repository.invitacion.ExpiraEn = time.Now().Add(-time.Minute)
 	repository.correoUsuario = "ana@tienda.mx"
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	err := service.Aceptar(context.Background(), uuid.New(), "token-en-claro")
 
@@ -225,7 +225,7 @@ func TestInvitacionServiceRechazaTokenYaUsado(t *testing.T) {
 	repository.invitacion = invitacionVigente("ana@tienda.mx")
 	repository.invitacion.Estado = domain.EstadoInvitacionAceptada
 	repository.correoUsuario = "ana@tienda.mx"
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	err := service.Aceptar(context.Background(), uuid.New(), "token-en-claro")
 
@@ -235,7 +235,7 @@ func TestInvitacionServiceRechazaTokenYaUsado(t *testing.T) {
 }
 
 func TestInvitacionServiceRechazaTokenVacio(t *testing.T) {
-	service := NewInvitacionService(invitacionStub())
+	service := NewInvitacionService(invitacionStub(), nil)
 
 	_, err := service.Consultar(context.Background(), "   ")
 
@@ -248,7 +248,7 @@ func TestInvitacionServiceConsultarIndicaSiFaltaCuenta(t *testing.T) {
 	repository := invitacionStub()
 	repository.invitacion = invitacionVigente("ana@tienda.mx")
 	repository.existeCuenta = false
-	service := NewInvitacionService(repository)
+	service := NewInvitacionService(repository, nil)
 
 	publica, err := service.Consultar(context.Background(), "token-en-claro")
 
@@ -275,5 +275,51 @@ func TestGenerarTokenInvitacionProduceValoresDistintos(t *testing.T) {
 	}
 	if hashDeToken(primero) != hashPrimero {
 		t.Fatal("el hash debe ser reproducible a partir del token")
+	}
+}
+
+type invitacionMailerStub struct {
+	para, negocio, invitado, token string
+	llamadas                       int
+	err                            error
+}
+
+func (m *invitacionMailerStub) EnviarInvitacion(_ context.Context, para, negocio, invitado, token string, _ time.Time) error {
+	m.llamadas++
+	m.para, m.negocio, m.invitado, m.token = para, negocio, invitado, token
+	return m.err
+}
+
+func TestInvitacionServiceCrearEnviaElEnlacePorCorreo(t *testing.T) {
+	repository := invitacionStub(domain.PermisoInvitacionEnviar)
+	mailer := &invitacionMailerStub{}
+	service := NewInvitacionService(repository, mailer)
+
+	creada, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
+		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
+
+	if err != nil {
+		t.Fatalf("error inesperado: %v", err)
+	}
+	if !creada.CorreoEnviado || mailer.llamadas != 1 {
+		t.Fatalf("se esperaba un envío exitoso: %#v", mailer)
+	}
+	if mailer.para != "ana@tienda.mx" || mailer.token != creada.Token || mailer.negocio != "Abarrotes Luna" || mailer.invitado != "Ana Ruiz" {
+		t.Fatalf("datos del correo inesperados: %#v", mailer)
+	}
+}
+
+func TestInvitacionServiceCrearConservaLaInvitacionSiFallaElCorreo(t *testing.T) {
+	repository := invitacionStub(domain.PermisoInvitacionEnviar)
+	service := NewInvitacionService(repository, &invitacionMailerStub{err: errors.New("smtp caído")})
+
+	creada, err := service.Crear(context.Background(), uuid.New(), uuid.New(),
+		domain.CrearInvitacionInput{EmpleadoID: repository.empleado.ID})
+
+	if err != nil {
+		t.Fatalf("un fallo de correo no debe revertir la invitación: %v", err)
+	}
+	if creada.CorreoEnviado || creada.Token == "" || repository.creada.HashToken == "" {
+		t.Fatalf("la invitación debía quedar creada y marcada sin correo: %#v", creada)
 	}
 }

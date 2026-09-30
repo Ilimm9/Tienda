@@ -1,0 +1,12 @@
+{{define "asunto"}}{{.NombreNegocio}} te invitó a {{.NombreApp}}{{end}}
+{{define "texto"}}Hola, {{.NombreInvitado}}.
+
+{{.NombreNegocio}} te invitó a colaborar en {{.NombreApp}}.
+
+Acepta la invitación en este enlace:
+{{.Enlace}}
+
+La invitación vence en {{.Dias}} {{if eq .Dias 1}}día{{else}}días{{end}}. Si no esperabas esta invitación, ignora este correo.
+
+{{.NombreApp}}
+{{end}}

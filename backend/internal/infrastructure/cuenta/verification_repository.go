@@ -128,3 +128,47 @@ func (r *VerificationRepository) ActivateUserWithChallenge(challengeID, userID u
 			Update("usado_en", now).Error
 	})
 }
+
+func (r *VerificationRepository) LastChallengeByUserAndPurpose(userID uuid.UUID, purpose string) (*cuentadomain.DesafioAutenticacion, error) {
+	var challenge cuentadomain.DesafioAutenticacion
+	err := r.db.Where("usuario_id = ? AND proposito = ?", userID, purpose).
+		Order("ultimo_envio_en DESC").First(&challenge).Error
+	if err != nil {
+		return nil, err
+	}
+	return &challenge, nil
+}
+
+// ResetPasswordWithChallenge consume el desafío, cambia la contraseña, desbloquea
+// la cuenta y revoca todas sus sesiones en una sola transacción.
+func (r *VerificationRepository) ResetPasswordWithChallenge(challengeID, userID uuid.UUID, passwordHash string, now time.Time, maxAttempts int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var challenge cuentadomain.DesafioAutenticacion
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&challenge, "id = ?", challengeID).Error; err != nil {
+			return err
+		}
+		if challenge.UsuarioID != userID || challenge.Proposito != cuentadomain.PropositoRecuperacionContrasena || challenge.UsadoEn != nil || !challenge.ExpiraEn.After(now) || challenge.IntentosFallidos >= maxAttempts {
+			return errors.New("desafío inválido")
+		}
+		result := tx.Model(&cuentadomain.Usuario{}).
+			Where("id = ? AND estado = ? AND correo_verificado_en IS NOT NULL AND deshabilitado_en IS NULL", userID, "activo").
+			Updates(map[string]any{
+				"hash_contrasena": passwordHash, "contrasena_cambiada_en": now, "actualizado_en": now,
+				"intentos_inicio_sesion_fallidos": 0, "bloqueado_hasta": nil,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return errors.New("usuario no disponible")
+		}
+		if err := tx.Model(&cuentadomain.DesafioAutenticacion{}).
+			Where("usuario_id = ? AND proposito = ? AND usado_en IS NULL", userID, challenge.Proposito).
+			Update("usado_en", now).Error; err != nil {
+			return err
+		}
+		return tx.Model(&cuentadomain.SesionUsuario{}).
+			Where("usuario_id = ? AND revocado_en IS NULL", userID).
+			Updates(map[string]any{"revocado_en": now, "motivo_revocacion": "recuperacion_contrasena"}).Error
+	})
+}

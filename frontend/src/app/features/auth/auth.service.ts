@@ -7,6 +7,9 @@ import {
   AuthenticatedUser,
   LoginRequest,
   LoginResponse,
+  MessageResponse,
+  PasswordResetConfirmRequest,
+  PasswordResetRequest,
   RegisterRequest,
   RegisterResponse,
   ResendVerificationRequest,
@@ -39,6 +42,14 @@ export class AuthService {
 
   resendVerification(payload: ResendVerificationRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.url}/reenviar-verificacion`, payload);
+  }
+
+  requestPasswordReset(payload: PasswordResetRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.url}/solicitar-recuperacion`, payload);
+  }
+
+  resetPassword(payload: PasswordResetConfirmRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.url}/restablecer-contrasena`, payload);
   }
 
   me(): Observable<SessionResponse> {

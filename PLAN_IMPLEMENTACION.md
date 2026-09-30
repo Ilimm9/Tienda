@@ -33,6 +33,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 04 | [Resumen de cambios de productos](capabilities/04-productos-importacion-variantes/CAPABILITY.md) | — | Catálogo de productos e importación XLSX existentes | — | Resumen consolidado de los cambios antes documentados en las capabilities 04–14 |
 | 05 | [Tailwind y sistema visual](capabilities/05-tailwind-sistema-visual/CAPABILITY.md) | En revisión | Tema, layout y estilos actuales del frontend | Pendiente | Integración incremental; piloto en shell e inicio |
 | 06 | [Preparación segura para producción en AWS Lightsail](capabilities/06-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1, 2 y 3 aprobadas el 2026-09-20 | Fases 1, 2 y 3 implementadas y verificadas; fase 3 usa Mailpit local y no SES; base legacy `5433`, fases 4–7 y despliegue pendientes |
+| 07 | [Servicio de correo transaccional (SMTP + Amazon SES)](capabilities/07-servicio-correo-transaccional/CAPABILITY.md) | En implementación | OTP de la capability 06 fase 3, invitaciones de la 01 | Fases 1, 2 y 3 aprobadas el 2026-09-25 | Fases 1–3 verificadas (correo con go-mail, invitación por correo, recuperación de contraseña); fase 4 SES manual pendiente; sustituye la parte de correo de las fases 4 y 5 de la 06 |
 
 ## Restricciones vigentes
 

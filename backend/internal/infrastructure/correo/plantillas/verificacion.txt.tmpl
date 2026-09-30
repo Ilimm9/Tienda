@@ -1,0 +1,13 @@
+{{define "asunto"}}Tu código de verificación de {{.NombreApp}}{{end}}
+{{define "texto"}}Verifica tu correo
+
+Usa este código para activar tu cuenta de {{.NombreApp}}:
+
+{{.Codigo}}
+
+El código vence en {{.Minutos}} minutos. No lo compartas con nadie.
+
+Si no creaste una cuenta, ignora este correo.
+
+{{.NombreApp}}
+{{end}}

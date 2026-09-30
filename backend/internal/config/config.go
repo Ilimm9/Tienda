@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"log"
+	"net/mail"
 	"os"
 	"strconv"
 	"strings"
@@ -25,10 +27,17 @@ type Config struct {
 	OTPMaxAttempts       int
 	OTPResendWait        time.Duration
 	OTPHourlySendMax     int
+	PasswordResetTTL     time.Duration
 	SMTPHost             string
 	SMTPPort             int
-	SMTPFrom             string
+	SMTPTLS              string
+	SMTPUsername         string
+	SMTPPassword         string
 	SMTPTimeout          time.Duration
+	MailFrom             string
+	MailFromName         string
+	MailReplyTo          string
+	SESConfigurationSet  string
 	LoginHeaderImageURL  string
 	FrontendURL          string
 	PrecioCheckAPIKey    string
@@ -74,7 +83,11 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	smtpTimeout, err := requiredDuration("SMTP_TIMEOUT", 5*time.Second)
+	passwordResetTTL, err := requiredDuration("PASSWORD_RESET_TTL", 30*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	smtpTimeout, err := requiredDuration("SMTP_TIMEOUT", 10*time.Second)
 	if err != nil {
 		return Config{}, err
 	}
@@ -94,6 +107,19 @@ func Load() (Config, error) {
 	if appEnv == "production" && (len(otpSecret) < 32 || otpSecret == "development-only-change-otp-secret") {
 		return Config{}, fmt.Errorf("OTP_HMAC_SECRET debe configurarse en producción con al menos 32 caracteres")
 	}
+	mailCfg := mailConfig{
+		host:     get("SMTP_HOST", "localhost"),
+		tls:      strings.ToLower(get("SMTP_TLS", "none")),
+		username: os.Getenv("SMTP_USERNAME"),
+		password: os.Getenv("SMTP_PASSWORD"),
+		from:     mailFrom(),
+		fromName: get("MAIL_FROM_NAME", "Tienda"),
+		replyTo:  os.Getenv("MAIL_REPLY_TO"),
+	}
+	frontendURL := get("FRONTEND_URL", "http://localhost:4200")
+	if err := mailCfg.validate(appEnv, frontendURL); err != nil {
+		return Config{}, err
+	}
 	return Config{
 		AppEnv:               appEnv,
 		AppPort:              get("APP_PORT", "8080"),
@@ -109,16 +135,75 @@ func Load() (Config, error) {
 		OTPMaxAttempts:       otpMaxAttempts,
 		OTPResendWait:        otpResendWait,
 		OTPHourlySendMax:     otpHourlySendMax,
-		SMTPHost:             get("SMTP_HOST", "localhost"),
+		PasswordResetTTL:     passwordResetTTL,
+		SMTPHost:             mailCfg.host,
 		SMTPPort:             smtpPort,
-		SMTPFrom:             get("SMTP_FROM", "no-reply@tienda.local"),
+		SMTPTLS:              mailCfg.tls,
+		SMTPUsername:         mailCfg.username,
+		SMTPPassword:         mailCfg.password,
 		SMTPTimeout:          smtpTimeout,
+		MailFrom:             mailCfg.from,
+		MailFromName:         mailCfg.fromName,
+		MailReplyTo:          mailCfg.replyTo,
+		SESConfigurationSet:  os.Getenv("SES_CONFIGURATION_SET"),
 		LoginHeaderImageURL:  get("LOGIN_HEADER_IMAGE_URL", ""),
-		FrontendURL:          get("FRONTEND_URL", "http://localhost:4200"),
+		FrontendURL:          frontendURL,
 		PrecioCheckAPIKey:    get("PRECIOCHECK_API_KEY", ""),
 		PrecioCheckBaseURL:   get("PRECIOCHECK_BASE_URL", "https://preciocheck.com/api/v1"),
 		UPCItemDBBaseURL:     get("UPCITEMDB_BASE_URL", "https://api.upcitemdb.com/prod/trial"),
 	}, nil
+}
+
+type mailConfig struct {
+	host, tls, username, password, from, fromName, replyTo string
+}
+
+func (m mailConfig) validate(appEnv, frontendURL string) error {
+	switch m.tls {
+	case "none", "starttls", "tls":
+	default:
+		return fmt.Errorf("SMTP_TLS debe ser none, starttls o tls")
+	}
+	if _, err := mail.ParseAddress(m.from); err != nil {
+		return fmt.Errorf("MAIL_FROM debe ser una dirección de correo válida")
+	}
+	if m.replyTo != "" {
+		if _, err := mail.ParseAddress(m.replyTo); err != nil {
+			return fmt.Errorf("MAIL_REPLY_TO debe ser una dirección de correo válida")
+		}
+	}
+	if appEnv != "production" {
+		return nil
+	}
+	switch strings.ToLower(m.host) {
+	case "localhost", "127.0.0.1", "::1", "mailpit":
+		return fmt.Errorf("SMTP_HOST no puede apuntar a un servidor local en producción")
+	}
+	if m.tls == "none" {
+		return fmt.Errorf("SMTP_TLS debe ser starttls o tls en producción")
+	}
+	if m.username == "" || m.password == "" {
+		return fmt.Errorf("SMTP_USERNAME y SMTP_PASSWORD son obligatorios en producción")
+	}
+	if strings.HasSuffix(strings.ToLower(m.from), ".local") {
+		return fmt.Errorf("MAIL_FROM debe pertenecer a un dominio verificado en producción")
+	}
+	if !strings.HasPrefix(frontendURL, "https://") {
+		return fmt.Errorf("FRONTEND_URL debe usar https en producción")
+	}
+	return nil
+}
+
+// mailFrom acepta SMTP_FROM como alias temporal de MAIL_FROM.
+func mailFrom() string {
+	if value := os.Getenv("MAIL_FROM"); value != "" {
+		return value
+	}
+	if value := os.Getenv("SMTP_FROM"); value != "" {
+		log.Printf("SMTP_FROM está obsoleta; usa MAIL_FROM")
+		return value
+	}
+	return "no-reply@tienda.local"
 }
 
 func requiredPositiveInt(key string, fallback int) (int, error) {

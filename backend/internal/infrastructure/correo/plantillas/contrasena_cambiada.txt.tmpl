@@ -1,0 +1,10 @@
+{{define "asunto"}}Tu contraseña de {{.NombreApp}} cambió{{end}}
+{{define "texto"}}Tu contraseña cambió
+
+La contraseña de tu cuenta de {{.NombreApp}} se cambió correctamente y cerramos todas tus sesiones abiertas.
+
+Si no fuiste tú, restablece tu contraseña de inmediato:
+{{.EnlaceRecuperacion}}
+
+{{.NombreApp}}
+{{end}}

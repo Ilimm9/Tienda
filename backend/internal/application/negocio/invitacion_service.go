@@ -42,12 +42,19 @@ type InvitacionRepository interface {
 	MarcarExpiradas(ctx context.Context, negocioID uuid.UUID) error
 }
 
-type InvitacionService struct {
-	invitaciones InvitacionRepository
+// InvitacionMailer entrega el enlace de invitación; su implementación vive fuera de `negocio`.
+type InvitacionMailer interface {
+	EnviarInvitacion(ctx context.Context, para, nombreNegocio, nombreInvitado, token string, expiraEn time.Time) error
 }
 
-func NewInvitacionService(invitaciones InvitacionRepository) *InvitacionService {
-	return &InvitacionService{invitaciones: invitaciones}
+type InvitacionService struct {
+	invitaciones InvitacionRepository
+	mailer       InvitacionMailer
+}
+
+// NewInvitacionService acepta mailer nil: la invitación sigue disponible como enlace copiable.
+func NewInvitacionService(invitaciones InvitacionRepository, mailer InvitacionMailer) *InvitacionService {
+	return &InvitacionService{invitaciones: invitaciones, mailer: mailer}
 }
 
 func (s *InvitacionService) Listar(ctx context.Context, usuarioID, negocioID uuid.UUID, estado string) ([]domain.InvitacionResumen, error) {
@@ -103,7 +110,19 @@ func (s *InvitacionService) Crear(ctx context.Context, usuarioID, negocioID uuid
 	if err != nil {
 		return domain.InvitacionCreada{}, err
 	}
-	return domain.InvitacionCreada{Invitacion: resumen, Token: token}, nil
+	return domain.InvitacionCreada{Invitacion: resumen, Token: token, CorreoEnviado: s.enviarCorreo(ctx, resumen, token)}, nil
+}
+
+// enviarCorreo nunca revierte la invitación: si falla, el enlace copiable sigue siendo válido.
+func (s *InvitacionService) enviarCorreo(ctx context.Context, resumen domain.InvitacionResumen, token string) bool {
+	if s.mailer == nil {
+		return false
+	}
+	publica, err := s.invitaciones.DatosPublicos(ctx, resumen.ID)
+	if err != nil {
+		return false
+	}
+	return s.mailer.EnviarInvitacion(ctx, resumen.Correo, publica.NombreNegocio, publica.NombreEmpleado, token, resumen.ExpiraEn) == nil
 }
 
 func (s *InvitacionService) Cancelar(ctx context.Context, usuarioID, negocioID, invitacionID uuid.UUID) error {

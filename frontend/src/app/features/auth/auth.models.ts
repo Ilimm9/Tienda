@@ -44,3 +44,17 @@ export interface VerifyEmailResponse extends LoginResponse {
 export interface ResendVerificationRequest {
   desafio_id: string;
 }
+
+export interface PasswordResetRequest {
+  correo: string;
+}
+
+export interface PasswordResetConfirmRequest {
+  desafio_id: string;
+  token: string;
+  contrasena: string;
+}
+
+export interface MessageResponse {
+  mensaje: string;
+}

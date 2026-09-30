@@ -76,7 +76,11 @@ export class InvitacionesComponent {
           this.enlaceGenerado.set(this.invitacionService.enlaceDeToken(creada.token));
           this.empleadoSeleccionado = '';
           this.rolSeleccionado = '';
-          this.feedback.success('Invitación creada', 'Copia el enlace y compártelo con la persona.');
+          if (creada.correo_enviado) {
+            this.feedback.success('Invitación enviada', `Enviamos el enlace a ${creada.invitacion.correo}.`);
+          } else {
+            this.feedback.warning('No pudimos enviar el correo', 'Copia el enlace y compártelo con la persona.');
+          }
           this.load();
         },
         error: (response: HttpErrorResponse) => {

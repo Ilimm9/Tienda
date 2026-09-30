@@ -16,6 +16,7 @@ export interface InvitacionResumen {
 export interface InvitacionCreada {
   invitacion: InvitacionResumen;
   token: string;
+  correo_enviado: boolean;
 }
 
 export interface InvitacionPublica {

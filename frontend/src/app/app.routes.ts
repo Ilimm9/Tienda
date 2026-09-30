@@ -25,6 +25,20 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'recuperar-contrasena',
+    loadComponent: () =>
+      import('./features/auth/recover-password/recover-password.component').then(
+        (module) => module.RecoverPasswordComponent,
+      ),
+  },
+  {
+    path: 'restablecer-contrasena',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component').then(
+        (module) => module.ResetPasswordComponent,
+      ),
+  },
+  {
     // La aceptación de invitación vive fuera del shell autenticado: el invitado puede no tener cuenta.
     path: 'invitacion/:token',
     loadComponent: () =>
