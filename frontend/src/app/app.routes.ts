@@ -117,6 +117,18 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'compras',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Compras' },
+        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+      },
+      {
+        path: 'compras/nueva',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Registrar compra', mode: 'create' },
+        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+      },
+      {
         path: 'equipo',
         loadChildren: () =>
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),

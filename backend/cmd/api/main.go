@@ -6,15 +6,18 @@ import (
 	"time"
 
 	"tienda/backend/internal/application"
+	compraapplication "tienda/backend/internal/application/compra"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	negociodomain "tienda/backend/internal/domain/negocio"
 	"tienda/backend/internal/infrastructure"
+	comprainfra "tienda/backend/internal/infrastructure/compra"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 	transporthttp "tienda/backend/internal/interfaces/http"
+	comprahttp "tienda/backend/internal/interfaces/http/compra"
 	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
 	negociohttp "tienda/backend/internal/interfaces/http/negocio"
 
@@ -84,6 +87,7 @@ func main() {
 	asignacionRepo := negocioinfra.NewAsignacionRepository(db)
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
+	compraHandler := comprahttp.NewHandler(compraapplication.NewService(comprainfra.NewRepository(db)))
 	router := gin.Default()
 	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
 		log.Fatal(err)
@@ -156,10 +160,19 @@ func main() {
 	catalogoLectura.GET("/catalogo/unidades-medida", productHandler.ListUnits)
 	catalogoLectura.GET("/catalogo/proveedores", productHandler.ListProviders)
 	catalogoLectura.GET("/sucursales", productHandler.Branches)
+	comprasLectura := negocioActual.Group("")
+	comprasLectura.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraVer))
+	comprasLectura.GET("/compras", compraHandler.List)
+	comprasLectura.GET("/compras/:compraId", compraHandler.Get)
+	comprasLectura.GET("/compras/productos", compraHandler.Products)
 
 	catalogoGestion := negocioActual.Group("")
 	catalogoGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCatalogoGestionar))
 	catalogoGestion.POST("/catalogo/productos", productHandler.Create)
+	comprasGestion := negocioActual.Group("")
+	comprasGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraRegistrar))
+	comprasGestion.POST("/compras", compraHandler.Create)
+	comprasGestion.POST("/compras/unidades", productHandler.CreateUnit)
 	catalogoGestion.PATCH("/catalogo/productos/:productoId", productHandler.Update)
 	catalogoGestion.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
 	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)

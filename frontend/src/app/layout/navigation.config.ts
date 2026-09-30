@@ -21,6 +21,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     ],
   },
   { label: 'Proveedores', icon: 'pi pi-truck', route: '/proveedores' },
+  { label: 'Compras', icon: 'pi pi-shopping-bag', route: '/compras' },
   {
     label: 'Equipo',
     icon: 'pi pi-users',
