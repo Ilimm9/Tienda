@@ -400,12 +400,13 @@ AWS responde en unas **24 h**, a veces pide más detalles; se contesta en el mis
 2. La recuperación de contraseña se implementa aquí (fase 3).
 3. Logo PNG embebido por CID.
 4. Sin columna `invitaciones_negocio.correo_enviado_en`; la respuesta de creación informa `correo_enviado`.
-5. Dominio `mergemakers.com`; remitente `no-reply@mergemakers.com`; MAIL FROM personalizado `mail.mergemakers.com`. Región: pendiente.
+5. Dominio `mergemakers.com`; remitente `no-reply@mergemakers.com`; MAIL FROM personalizado `mail.mergemakers.com`; región `us-east-2` (US East, Ohio).
 
 ## Decisiones y seguimiento
 
 - 2026-09-25: borrador creado a partir de la referencia `didacticapp-backnestjs/src/mail/` y del estado de la fase 3 de la Capability 06. No se modificó código.
 - 2026-09-25: fases 1, 2 y 3 aprobadas por el usuario e implementadas. Capability registrada en `PLAN_IMPLEMENTACION.md`; `PLAN_APLICACION.md` de la 06 apunta aquí para las partes de correo de sus fases 4 y 5.
+- 2026-09-30: identidad SES y DNS de `mergemakers.com` validados en `us-east-2`; credenciales SMTP IAM generadas. Se documentó la separación entre `.env` raíz para Compose, `backend/.env` para ejecución directa y configuración pública del frontend. Los ejemplos solo contienen placeholders y valores locales seguros.
 
 ### Implementación real (2026-09-25)
 
@@ -431,10 +432,17 @@ Configuración: `backend/.env.example` y `docker-compose.yml` (variables paramet
 - Frontend con Node 24.21.0: `ng test --watch=false` 35 archivos / 122 pruebas en verde; `ng build` correcto (salida en scratchpad porque `frontend/dist/` pertenece a root). Solo advertencias de presupuesto previas.
 - Manual con Mailpit (`127.0.0.1:1025`): se enviaron los 4 correos con el transporte real. El logo llega inline (`logo@tienda`, `image/png`), la parte de texto está presente y el HTML check de Mailpit da ≈91–93 % de compatibilidad. Revisión visual con Chromium headless a 760 px y 375 px correcta. La prueba detectó que la invitación mostraba "6 días" por truncamiento; se corrigió redondeando y se reforzó la prueba. Los mensajes de prueba se borraron de Mailpit.
 
+### Verificaciones ejecutadas (2026-09-30)
+
+- Configuración activa de Compose validada sin exponer secretos: endpoint `email-smtp.us-east-2.amazonaws.com`, puerto `587`, STARTTLS, remitente `no-reply@mergemakers.com` y credenciales SMTP presentes.
+- Amazon SES sandbox aceptó un correo de recuperación y el aviso posterior de contraseña cambiada; ambos registraron `evento=correo_enviado` con `Message-ID` del dominio `mergemakers.com`. Los endpoints respondieron `202` y `200`, respectivamente.
+- `docker compose --env-file .env.docker.example config --quiet`, pruebas de `config`, `application/correo` e `infrastructure/correo`, y `git diff --check`: en verde.
+- Escaneo de archivos rastreados sin patrones de access keys AWS ni contraseñas SMTP reales. `.env`, `backend/.env` y descargas comunes de credenciales permanecen ignorados por Git.
+
 ### Pendientes conocidos
 
-- Fase 4: configurar SES (guía arriba) con la región definitiva y probar en sandbox.
+- Fase 4: completar en sandbox las pruebas de OTP e invitación y después solicitar acceso de producción. Recuperación y aviso de contraseña cambiada ya fueron aceptados por SES `us-east-2`; identidad, DNS y credenciales SMTP están configurados.
 - El límite por IP de solicitudes de recuperación solo cuenta desafíos emitidos; correos inexistentes no suman. El rate limiting general queda en la fase 6 de la Capability 06.
 - Webhooks SNS de rebotes/quejas fuera de alcance; se usa la lista de supresión de SES.
 - No se revisaron en navegador las pantallas nuevas del frontend; están cubiertas por pruebas unitarias.
-- `backend/.env.example` sigue repitiendo `APP_PORT`, `FRONTEND_PORT` y `FRONTEND_URL` al final; no se tocó porque puede ser una configuración local intencional.
+- Los secretos reales permanecen exclusivamente en archivos `.env` ignorados por Git; el frontend no recibe credenciales.

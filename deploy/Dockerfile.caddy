@@ -1,0 +1,9 @@
+FROM caddy:2.11.4-alpine
+
+# Caddy oficial trae CAP_NET_BIND_SERVICE para 80/443. Este gateway sólo usa
+# 8080 interno, por lo que se elimina para poder ejecutar con cap_drop: ALL.
+USER root
+RUN apk add --no-cache libcap \
+ && setcap -r /usr/bin/caddy \
+ && apk del libcap
+USER 1000:1000

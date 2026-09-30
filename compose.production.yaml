@@ -1,0 +1,215 @@
+name: stockion
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER es obligatorio}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD es obligatorio}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME es obligatorio}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 150
+    logging: *default-logging
+
+  backend:
+    image: stockion-backend:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:?DB_USER es obligatorio}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD es obligatorio}
+      DB_NAME: ${DB_NAME:?DB_NAME es obligatorio}
+      DB_SSLMODE: disable
+      SESSION_DURATION: ${SESSION_DURATION:-24h}
+      SESSION_REMEMBER_DURATION: ${SESSION_REMEMBER_DURATION:-720h}
+      SESSION_REMEMBER_IDLE: ${SESSION_REMEMBER_IDLE:-168h}
+      SESSION_TOUCH_INTERVAL: ${SESSION_TOUCH_INTERVAL:-5m}
+      SESSION_RETENTION: ${SESSION_RETENTION:-168h}
+      SESSION_CLEANUP_INTERVAL: ${SESSION_CLEANUP_INTERVAL:-1h}
+      OTP_HMAC_SECRET: ${OTP_HMAC_SECRET:?OTP_HMAC_SECRET es obligatorio}
+      OTP_TTL: ${OTP_TTL:-10m}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTP_RESEND_WAIT: ${OTP_RESEND_WAIT:-1m}
+      OTP_HOURLY_SEND_MAX: ${OTP_HOURLY_SEND_MAX:-5}
+      PASSWORD_RESET_TTL: ${PASSWORD_RESET_TTL:-30m}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST es obligatorio}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_TLS: ${SMTP_TLS:-starttls}
+      SMTP_USERNAME: ${SMTP_USERNAME:?SMTP_USERNAME es obligatorio}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD es obligatorio}
+      SMTP_TIMEOUT: ${SMTP_TIMEOUT:-10s}
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM es obligatorio}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Stockion}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
+      SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL es obligatorio}
+      LOGIN_HEADER_IMAGE_URL: ${LOGIN_HEADER_IMAGE_URL:-}
+      PRECIOCHECK_API_KEY: ${PRECIOCHECK_API_KEY:-}
+      PRECIOCHECK_BASE_URL: ${PRECIOCHECK_BASE_URL:-https://preciocheck.com/api/v1}
+      UPCITEMDB_BASE_URL: ${UPCITEMDB_BASE_URL:-https://api.upcitemdb.com/prod/trial}
+    networks:
+      - app
+      - data
+      - outbound
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/v1/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:uid=10001,gid=10001,mode=0700,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 200
+    logging: *default-logging
+
+  frontend:
+    image: stockion-frontend:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    init: true
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/_frontend/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:uid=101,gid=101,mode=0700,size=32m
+      - /var/run:uid=101,gid=101,mode=0700,size=4m
+      - /tmp:uid=101,gid=101,mode=0700,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 50
+    logging: *default-logging
+
+  gateway:
+    image: stockion-gateway:${APP_IMAGE_TAG:-local}
+    build:
+      context: ./deploy
+      dockerfile: Dockerfile.caddy
+    restart: unless-stopped
+    init: true
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    user: "1000:1000"
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - edge
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/_gateway/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /data:uid=1000,gid=1000,mode=0700,size=16m
+      - /config:uid=1000,gid=1000,mode=0700,size=16m
+      - /tmp:uid=1000,gid=1000,mode=0700,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 50
+    logging: *default-logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    restart: unless-stopped
+    init: true
+    depends_on:
+      gateway:
+        condition: service_healthy
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --loglevel
+      - info
+      - --metrics
+      - 0.0.0.0:2000
+      - run
+      - --token-file
+      - /run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
+    networks:
+      - edge
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 50
+    logging: *default-logging
+
+volumes:
+  postgres_data:
+
+networks:
+  edge:
+    internal: false
+  app:
+    internal: true
+  data:
+    internal: true
+  outbound:
+    internal: false
+
+secrets:
+  cloudflare_tunnel_token:
+    file: ${CLOUDFLARE_TUNNEL_TOKEN_FILE:-./secrets/cloudflare-tunnel-token}

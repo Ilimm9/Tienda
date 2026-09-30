@@ -8,6 +8,8 @@ En implementación. Fases 1, 2 y 3 implementadas y verificadas; fases 4 a 7 pend
 
 Las fases 1 y 2 de [PLAN_APLICACION.md](PLAN_APLICACION.md) fueron aprobadas explícitamente por el usuario el 2026-09-20 mediante la instrucción: “puedes comenzar con la fase 1 y fase 2”. La fase 3 fue aprobada explícitamente el 2026-09-20 mediante la instrucción: “implemente la fase 3”. Las fases 4 a 7, la infraestructura y el despliegue continúan pendientes de aprobación.
 
+El 2026-09-30 el usuario aprobó la arquitectura de demo con Cloudflare Tunnel mediante “si cloudflare tunnel esta bien” y autorizó su implementación mediante “autorizo implementacion”. La autorización cubre cambios locales del repositorio. El usuario ejecutará personalmente todo cambio en Cloudflare y servidor por SSH. Rama, commit, push y despliegue conservan sus aprobaciones separadas.
+
 ## Plan inmediato de aplicación
 
 El diseño detallado y ordenado de los cambios de código vive en [PLAN_APLICACION.md](PLAN_APLICACION.md). Ese plan prioriza rutas y aislamiento multiempresa, reemplaza JWT por sesiones opacas revocables y después incorpora verificación de correo mediante OTP y Amazon SES. Lightsail queda fuera de esas primeras fases.
@@ -43,6 +45,103 @@ Frontend estático      API Go (red privada Docker)
 ```
 
 Esta topología no ofrece alta disponibilidad: la instancia, su zona y su volumen siguen siendo puntos únicos de falla. Cuando las ventas dependan continuamente del sistema o el costo de una interrupción supere el ahorro de una sola VM, se deberá separar la base de datos, añadir redundancia y colocar protección administrada frente a tráfico abusivo o ataques volumétricos.
+
+### Arquitectura de demo robusta aprobada el 2026-09-30
+
+Para la permanencia estimada de seis meses se sustituye la exposición directa de `80/443` por un Cloudflare Tunnel administrado. `cloudflared` iniciará conexiones salientes cifradas y ningún contenedor de aplicación publicará puertos al host.
+
+```text
+Internet
+   |
+   v
+Cloudflare DNS, HTTPS, CDN, WAF y mitigación DDoS
+   |
+   v
+Cloudflare Tunnel (cloudflared, conexión saliente)
+   |
+   v
+Caddy interno (rutas, límites y cabeceras)
+   |-------------------|
+   v                   v
+Frontend Nginx         API Go
+                           |
+                           v
+                  PostgreSQL privado
+```
+
+Decisiones:
+
+- Host público: `https://stockion.mergemakers.com`.
+- Lightsail conserva la IP estática, pero la aplicación no la usa como origen público.
+- Tras verificar el túnel se cerrarán `80/tcp` y `443/tcp` en Lightsail y UFW. SSH quedará por llave y restringido al origen administrativo cuando sea viable.
+- Cloudflare Tunnel será público; no se colocará Cloudflare Access frente a clientes de la tienda.
+- Caddy sólo escuchará dentro de la red Docker. Enrutará `/api/*` al backend y el resto al frontend, y aplicará cabeceras y límites compatibles con la aplicación.
+- PostgreSQL, backend, frontend, Caddy y métricas no publicarán puertos del host.
+- La rama `production` partirá de `thrs`. El servidor clonará el repositorio privado con una deploy key de GitHub de sólo lectura.
+- El despliegue manual usará un Compose exclusivo de producción; Mailpit y pgAdmin no formarán parte de él.
+- La base de producción iniciará vacía en un volumen Docker persistente.
+- `cloudflared`, gateway, frontend, backend y PostgreSQL tendrán healthchecks, reinicio automático, límites de recursos/PIDs y rotación de logs donde resulte compatible.
+- Secretos se almacenarán sólo en `.env.production` del servidor con permisos `0600`; no entrarán a Git, imágenes ni frontend.
+- SES seguirá en `us-east-2`. La salida del sandbox se solicitará después de publicar y verificar los flujos transaccionales.
+- La instancia mantendrá actualizaciones automáticas de seguridad del sistema; actualizaciones de aplicación e imágenes serán controladas y verificadas.
+
+### Excepción temporal de recuperación
+
+Por decisión explícita del usuario, esta demo no incluirá respaldos de PostgreSQL. Por ello P0-07 permanece abierto y la puerta formal de producción no puede declararse cumplida. Se acepta únicamente como demo con datos prescindibles: una falla del volumen, corrupción, borrado o error operativo puede causar pérdida total e irreversible. Antes de almacenar información real o depender comercialmente del servicio se deberá implementar y probar restauración externa.
+
+### Entregables del despliegue demo
+
+- Manifiesto Compose de producción separado del desarrollo.
+- Configuración interna de Caddy y Cloudflare Tunnel.
+- Ejemplo de variables sin secretos y validación cerrada de configuración.
+- Runbook corto de instalación, despliegue, actualización, rollback de contenedores y diagnóstico.
+- Ajustes mínimos de host: SSH, UFW, firewall Lightsail, actualizaciones y permisos.
+- Verificación externa de HTTPS, cabeceras, puertos y flujos críticos.
+- Solicitud de acceso de producción de SES y prueba a un destinatario no verificado cuando AWS la apruebe.
+
+### Criterios de aceptación de la demo
+
+- `stockion.mergemakers.com` responde por HTTPS mediante Cloudflare Tunnel.
+- El origen no responde públicamente en `80/443`; PostgreSQL y API tampoco tienen puertos públicos.
+- Reiniciar Docker o la instancia recupera automáticamente los servicios y conserva el volumen PostgreSQL.
+- Registro, OTP, login, recuperación e invitación funcionan con configuración de producción.
+- Los logs no contienen secretos, OTP ni credenciales SMTP.
+- Credenciales y `.env.production` no están rastreados por Git.
+- SES acepta envíos a cualquier destinatario después de salir del sandbox.
+
+### Estado de implementación de la demo
+
+**Implementación local verificada el 2026-09-30; publicación externa pendiente del usuario.**
+
+Entregado:
+
+- `compose.production.yaml` separado, sin puertos publicados y con redes `edge`, `app`, `data` y `outbound` de responsabilidad limitada.
+- PostgreSQL 17.11 con volumen persistente, salud, límites y sin acceso desde host.
+- Backend no-root con filesystem de sólo lectura, secretos obligatorios, salud y salida exclusiva para SES/integraciones.
+- Frontend Nginx no-root con filesystem de sólo lectura y configuración exclusiva de producción.
+- Gateway Caddy interno no-root, sin capacidades Linux, con límites de cuerpo, timeouts, CSP y cabeceras defensivas.
+- Cloudflared 2026.9.3 con token montado como archivo secreto y sin exposición de puertos.
+- `.env.production.example`, reglas de exclusión de secretos y [RUNBOOK_DEMO.md](RUNBOOK_DEMO.md).
+
+Verificación ejecutada:
+
+- `docker compose ... config --quiet`: válido con valores de prueba y falla cerrada cuando faltan secretos.
+- Construcción de backend, frontend y gateway: correcta. Angular conserva advertencias existentes de presupuesto de bundle/CSS.
+- Caddy `validate` y Nginx `nginx -t`: correctos.
+- Stack local desde PostgreSQL vacío: todos los servicios saludables.
+- Gateway respondió frontend y `/api/v1/health`; cabeceras defensivas presentes.
+- Backend alcanzó por TCP el endpoint SES `email-smtp.us-east-2.amazonaws.com:587` sin usar credenciales.
+- Inspección Docker: ningún servicio publicó puertos; contenedores no privilegiados; backend, frontend y gateway con raíz de sólo lectura.
+- `go test ./...`: correcto.
+- `git diff --check`: correcto; `.env.production`, `backend/.env` y `secrets/` ignorados; sin patrones de access key AWS en archivos rastreados.
+- Stack y volumen de prueba fueron eliminados al terminar.
+
+Pendiente del usuario:
+
+- Revisar cambios y autorizar Git por separado.
+- Rotar credenciales SMTP usadas en pruebas locales antes del despliegue.
+- Ejecutar GitHub deploy key, Cloudflare Tunnel y comandos SSH conforme al runbook.
+- Completar verificación pública y solicitud SES de producción.
 
 ## Supuestos y objetivos operativos
 

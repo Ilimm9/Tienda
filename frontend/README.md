@@ -27,6 +27,19 @@ FRONTEND_URL=http://localhost:4200
 
 `npm start` lee ese archivo. Angular consume `/api/v1` y reenvía `/api/*` al backend mediante el proxy de desarrollo.
 
+## Variables y secretos
+
+El frontend no usa un archivo `.env` propio. Su configuración pública vive en
+`src/environments/environment.ts` y `src/environments/environment.prod.ts`.
+
+Nunca poner en el frontend `SMTP_USERNAME`, `SMTP_PASSWORD`, claves AWS,
+`JWT_SECRET`, `OTP_HMAC_SECRET` ni credenciales de base de datos: todo valor
+incluido en el bundle Angular queda visible para el navegador.
+
+Para Docker, copiar `.env.docker.example` a `.env` en la raíz del repositorio.
+Para ejecutar el backend con `go run`, copiar `backend/.env.example` a
+`backend/.env`. Esos son los únicos archivos locales que reciben secretos.
+
 ## Verificación
 
 ```bash

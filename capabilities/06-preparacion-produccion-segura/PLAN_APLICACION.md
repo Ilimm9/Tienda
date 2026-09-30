@@ -2,7 +2,7 @@
 
 ## Estado
 
-Fases 1, 2 y 3 implementadas y verificadas mediante pruebas automatizadas. La migración de la base local legacy del puerto `5433` está detenida de forma segura hasta resolver o eliminar sus catálogos sin propietario. Fases 4 a 7 pendientes de aprobación explícita.
+Fases 1, 2 y 3 implementadas y verificadas mediante pruebas automatizadas. La migración de la base local legacy del puerto `5433` está detenida de forma segura hasta resolver o eliminar sus catálogos sin propietario. La arquitectura Cloudflare Tunnel fue aprobada y su implementación local quedó verificada el 2026-09-30. El usuario conserva ejecución exclusiva de cambios en Cloudflare y servidor por SSH; publicación externa pendiente.
 
 ## Relación con la capability
 
@@ -16,7 +16,11 @@ Este documento desarrolla únicamente los cambios de aplicación de la [Capabili
 - No se implementaron access token y refresh token en esta etapa. Su reevaluación quedó condicionada a la aparición de un cliente móvil, una API externa o una arquitectura distribuida.
 - Marcas, categorías y unidades de medida pertenecen a un negocio; no son catálogos globales compartidos.
 - Amazon Simple Email Service (SES) será el proveedor de correo para OTP de verificación y, posteriormente, recuperación e invitaciones.
-- Las fases 1, 2 y 3 fueron autorizadas explícitamente el 2026-09-20. Las fases 4 a 7 no están autorizadas.
+- Las fases 1, 2 y 3 fueron autorizadas explícitamente el 2026-09-20.
+- Cloudflare Tunnel fue elegido explícitamente el 2026-09-30 para la demo de seis meses.
+- El manifiesto local de producción fue autorizado el 2026-09-30.
+- El usuario ejecutará los pasos de Cloudflare y SSH. Rama `production`, commit, push y despliegue externo aún requieren autorización separada.
+- Los respaldos fueron excluidos temporalmente por decisión del usuario; la demo tratará sus datos como prescindibles.
 
 ## Por qué no se implementó access token + refresh token
 
