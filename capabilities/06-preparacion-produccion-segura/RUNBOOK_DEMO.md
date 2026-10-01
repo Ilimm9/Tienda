@@ -13,7 +13,7 @@ El propietario ejecuta todos los cambios en GitHub, Cloudflare y Lightsail. Ning
 5. Crear `.env.production`, permisos `0600`, usando `.env.production.example`.
 6. Rotar las credenciales SMTP usadas durante pruebas y colocar las nuevas sólo en `.env.production`.
 7. Crear en Cloudflare un túnel remoto llamado `stockion-production`.
-8. Crear `secrets/cloudflare-tunnel-token`, permisos `0600`, con sólo el token del túnel.
+8. Guardar el token en `/home/thrs/.config/stockion/cloudflare-tunnel-token`, permisos `0600` y propiedad `65532:65532`, que corresponde al usuario no-root de la imagen oficial `cloudflared`.
 9. En Cloudflare, publicar `stockion.mergemakers.com` hacia `http://gateway:8080`. El registro A anterior deberá retirarse al crear el hostname del túnel.
 10. Construir y levantar el Compose de producción.
 11. Verificar aplicación, correo, reinicio y superficie pública.
@@ -25,7 +25,9 @@ El propietario ejecuta todos los cambios en GitHub, Cloudflare y Lightsail. Ning
 Estos comandos se ejecutan manualmente desde la carpeta del repositorio:
 
 ```bash
-chmod 600 .env.production secrets/cloudflare-tunnel-token
+chmod 600 .env.production
+sudo chown 65532:65532 /home/thrs/.config/stockion/cloudflare-tunnel-token
+sudo chmod 600 /home/thrs/.config/stockion/cloudflare-tunnel-token
 sudo docker compose --env-file .env.production -f compose.production.yaml config --quiet
 sudo docker compose --env-file .env.production -f compose.production.yaml build --pull
 sudo docker compose --env-file .env.production -f compose.production.yaml up -d
