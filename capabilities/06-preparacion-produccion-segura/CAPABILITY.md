@@ -123,6 +123,24 @@ Entregado:
 - Cloudflared 2026.9.3 con token montado como archivo secreto y sin exposición de puertos.
 - `.env.production.example`, reglas de exclusión de secretos y [RUNBOOK_DEMO.md](RUNBOOK_DEMO.md).
 
+Corrección local de compatibilidad Angular/CSP iniciada el 2026-10-01:
+
+- [x] Se reprodujo que el build productivo generaba la hoja global con `media="print"` y un `onload` inline para activar estilos no críticos.
+- [x] Se confirmó que la CSP estricta bloqueaba ese `onload`; PrimeIcons y su fuente respondían correctamente, pero sus reglas CSS no se aplicaban.
+- [x] Se decidió conservar `script-src 'self'` y desactivar únicamente `optimization.styles.inlineCritical` en el build productivo.
+- [x] Se verificó un artefacto Angular aislado: stylesheet normal, sin `media="print"` ni `onload`, con CSS y fuente de PrimeIcons incluidos.
+- [x] Se verificó visualmente el login local bajo CSP estricta; los iconos de correo, candado y ojo se muestran correctamente.
+- [ ] Recuperar el gate completo de la rama: el build y las suites tienen fallos previos no relacionados documentados abajo.
+
+Verificación de esta corrección:
+
+- `npm run build -- --configuration production`: el cambio compila, pero el gate del repositorio falla porque `productos.component.css` excede el máximo de 8 kB por 54 bytes.
+- Build aislado con ese presupuesto elevado sólo en `/tmp`: correcto; genera `<link rel="stylesheet" ...>` sin activador JavaScript inline.
+- Chromium local con la CSP de producción: correcto; PrimeIcons visibles en el formulario de inicio de sesión.
+- `npm test -- --watch=false`: 124 pruebas correctas y 10 fallidas por expectativas de navegación, locale `es-MX` y peticiones pendientes de proveedores; no relacionadas con esta corrección.
+- `go test ./...`: todos los paquetes salvo `internal/config`; el fixture SMTP de esa prueba usa una región distinta a la admitida actualmente.
+- No se modificó servidor remoto, Cloudflare, AWS, secretos ni estado Git.
+
 Verificación ejecutada:
 
 - `docker compose ... config --quiet`: válido con valores de prueba y falla cerrada cuando faltan secretos.
@@ -449,6 +467,7 @@ El despliegue público se autoriza únicamente cuando:
 - 2026-09-20: el usuario aprobó explícitamente implementar las fases 1 y 2; no autorizó las fases posteriores ni el despliegue.
 - 2026-09-20: se implementaron y verificaron mediante pruebas automatizadas las fases 1 y 2. La base legacy del puerto `5433` permanece bloqueada por datos ambiguos y debe reconstruirse o migrarse explícitamente.
 - 2026-09-20: el usuario aprobó explícitamente la fase 3. SES permanece en la fase 4 y no forma parte de esta autorización.
+- 2026-10-01: el usuario aprobó la corrección local de PrimeIcons sobre la rama `production` actualizada. El cambio no autoriza commit, push ni acceso al servidor remoto.
 
 ## Registro de implementación de las fases 1, 2 y 3
 
