@@ -146,6 +146,14 @@ Verificación de esta corrección:
 
 Verificación ejecutada:
 
+Corrección del lockfile aprobada por el usuario el 2026-10-01 mediante “corrigelo por favor”:
+
+- [x] Se reprodujo `EUSAGE` de `npm ci` en la rama `production` después de actualizar los cambios de login.
+- [x] Se regeneró únicamente `frontend/package-lock.json` con Node 24.21.0/npm 11.19.0: se añadieron tres entradas faltantes bajo Vite (`@rolldown/binding-wasm32-wasi` 1.1.5 y `@emnapi/core`/`runtime` 1.11.1), sin modificar dependencias declaradas ni versiones existentes.
+- [x] Instalación limpia en carpeta temporal: `npm ci --no-audit --no-fund`, correcta (394 paquetes); no se modificó el `node_modules` del workspace.
+- [x] `npm run build -- --configuration production` sobre esa instalación limpia: correcto; permanecen advertencias de presupuesto de bundle/CSS y de instalación/deprecación de paquetes.
+- [x] `git diff --check`: correcto. No se modificó Dockerfile, servidor, base de datos ni secretos; sin commit/push. No se ejecutó la imagen Alpine en esta verificación.
+
 - `docker compose ... config --quiet`: válido con valores de prueba y falla cerrada cuando faltan secretos.
 - Construcción de backend, frontend y gateway: correcta. Angular conserva advertencias existentes de presupuesto de bundle/CSS.
 - Caddy `validate` y Nginx `nginx -t`: correctos.
