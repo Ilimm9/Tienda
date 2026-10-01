@@ -1,8 +1,5 @@
 <main class="login-page">
-  <section class="login-card" aria-labelledby="login-title">
-    <h1 id="login-title">Iniciar sesión</h1>
-    <p class="intro">Accede con tu correo o número de teléfono</p>
-
+  <section class="login-card" aria-label="Iniciar sesión">
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="correo">Identificación</label>
       <span class="field-wrap">
@@ -73,6 +70,8 @@
       </button>
     </form>
 
-    <p class="create-account">¿No tienes una cuenta? <a routerLink="/registro">Crear cuenta</a></p>
+    <p class="create-account">
+      ¿Nuevo aqui? <button type="button" (click)="switchToRegister()">Crea tu cuenta</button>
+    </p>
   </section>
 </main>

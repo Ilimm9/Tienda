@@ -1,0 +1,104 @@
+<main class="auth-shell" [class.is-register]="mode() === 'registro'">
+  <section class="auth-shell__content" aria-label="Acceso a Stockion">
+    <a class="brand" routerLink="/login" aria-label="Stockion, ir a iniciar sesión">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="m4 8 8-4 8 4-8 4-8-4Z" fill="currentColor" />
+          <path d="M4 8v8l8 4v-8L4 8Zm16 0v8l-8 4v-8l8-4Z" fill="currentColor" opacity=".72" />
+        </svg>
+      </span>
+      <span>Stockion</span>
+    </a>
+
+    <div class="auth-shell__copy">
+      @if (mode() === 'login') {
+        <h1>Iniciar sesión</h1>
+      } @else {
+        <h1>Crear cuenta<br /></h1>
+      }
+    </div>
+
+    <div class="auth-shell__form"><router-outlet /></div>
+  </section>
+
+  <section
+    class="auth-shell__mosaic"
+    [attr.aria-label]="'Ilustración de inventario para ' + mode()"
+  >
+    <article #tile class="tile tile--beverages" data-flip-id="beverages">
+      <svg viewBox="0 0 100 140" aria-hidden="true">
+        <path
+          d="M43 12h14v13H43zM37 29h26l8 11v78a8 8 0 0 1-8 8H37a8 8 0 0 1-8-8V40l8-11Z"
+          fill="#4d6128"
+        />
+        <path d="M35 63h30v38H35z" rx="2" fill="#f8f3d9" />
+        <path d="M40 72h20M40 80h14" stroke="#4d6128" stroke-width="3" />
+      </svg>
+    </article>
+    <article #tile class="tile tile--coffee" data-flip-id="coffee">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <path
+          d="M28 17h64a7 7 0 0 0 0 14 7 7 0 0 0 0 14 7 7 0 0 0 0 14 7 7 0 0 0 0 14 7 7 0 0 0 0 14H28a7 7 0 0 0 0-14 7 7 0 0 0 0-14 7 7 0 0 0 0-14 7 7 0 0 0 0-14 7 7 0 0 0 0-14Z"
+          fill="#fff5df"
+        />
+        <path
+          d="M47 34h26M47 45h26M47 56h18M47 67h23"
+          stroke="#b54f29"
+          stroke-width="5"
+          stroke-linecap="round"
+        />
+        <path d="M79 35v34" stroke="#d76235" stroke-width="3" stroke-dasharray="4 4" />
+      </svg>
+    </article>
+    <article #tile class="tile tile--inventory" data-flip-id="inventory">
+      <svg viewBox="0 0 180 110" aria-hidden="true">
+        <path d="m20 35 57-28 76 28-62 29L20 35Z" fill="#dfb76f" />
+        <path d="m20 35 71 29v39L20 73V35Z" fill="#cf9f55" />
+        <path d="m91 64 62-29v39l-62 29V64Z" fill="#d9ad66" />
+        <path d="m68 11 13-6 72 30-13 6-72-30Z" fill="#fff1d2" />
+        <path d="m128 51 13-6v20l-13 6V51Z" fill="#fff6dd" />
+      </svg>
+    </article>
+    <article #tile class="tile tile--home" data-flip-id="home">
+      <svg viewBox="0 0 140 110" aria-hidden="true">
+        <path
+          d="M20 18h12l11 49h64l10-35H49"
+          fill="none"
+          stroke="#526626"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path d="M52 40h57l-8 25H58z" fill="#ce5b32" />
+        <circle cx="55" cy="84" r="8" fill="#526626" />
+        <circle cx="99" cy="84" r="8" fill="#526626" />
+      </svg>
+    </article>
+    <article #tile class="tile tile--pantry" data-flip-id="pantry">
+      <svg viewBox="0 0 130 100" aria-hidden="true">
+        <path
+          d="M42 32c0-13 9-21 23-21s23 8 23 21"
+          fill="none"
+          stroke="#50652a"
+          stroke-width="8"
+          stroke-linecap="round"
+        />
+        <path d="M30 31h70l-8 55H38l-8-55Z" fill="#50652a" />
+        <path d="M49 30c3-9 9-13 16-13s13 4 16 13" fill="none" stroke="#718542" stroke-width="5" />
+        <circle cx="53" cy="55" r="8" fill="#f5cc43" />
+        <path d="M71 47h14v19H71z" fill="#ffe176" />
+      </svg>
+    </article>
+    <article #tile class="tile tile--barcode" data-flip-id="barcode">
+      <svg viewBox="0 0 180 76" aria-hidden="true">
+        <path d="M18 12h110l32 26-32 26H18a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6Z" fill="#fff7e6" />
+        <g stroke="#1e2319" stroke-width="3">
+          <path
+            d="M30 26v24M37 26v24M45 26v24M53 26v24M61 26v24M70 26v24M78 26v24M87 26v24M95 26v24M103 26v24"
+          />
+        </g>
+        <circle cx="127" cy="38" r="6" fill="#1e2319" />
+      </svg>
+    </article>
+  </section>
+</main>

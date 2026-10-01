@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../auth.service';
+import { AuthTransitionService } from '../auth-transition.service';
 
 @Component({
   selector: 'app-login',
@@ -16,6 +17,7 @@ export class LoginComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly transition = inject(AuthTransitionService);
 
   readonly loading = signal(false);
   readonly error = signal('');
@@ -28,6 +30,10 @@ export class LoginComponent {
 
   togglePassword(): void {
     this.passwordVisible.update((visible) => !visible);
+  }
+
+  switchToRegister(): void {
+    this.transition.request('registro');
   }
 
   submit(): void {

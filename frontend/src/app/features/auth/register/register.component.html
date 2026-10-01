@@ -1,7 +1,5 @@
 <main class="register-page">
-  <section class="register-panel" aria-labelledby="register-title">
-    <h1 id="register-title">Crear cuenta</h1>
-
+  <section class="register-panel" aria-label="Crear cuenta">
     <form class="register-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="nombreCompleto">Nombre completo</label>
       <span class="field-wrap">
@@ -128,15 +126,8 @@
       </button>
     </form>
 
-    <p class="login-link">¿Ya tienes una cuenta? <a routerLink="/login">Iniciar sesión</a></p>
-    <footer>
-      <a href="#">AYUDA</a><span>•</span><a href="#">TÉRMINOS</a><span>•</span
-      ><a href="#">PRIVACIDAD</a>
-    </footer>
+    <p class="login-link">
+      ¿Ya tienes una cuenta? <button type="button" (click)="switchToLogin()">Inicia sesión</button>
+    </p>
   </section>
-  <div
-    class="register-image"
-    [style.backgroundImage]="'url(' + imageUrl + ')'"
-    aria-hidden="true"
-  ></div>
 </main>

@@ -1,39 +1,14 @@
 :host {
   display: block;
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 20px;
-  background: var(--background);
+  width: 100%;
 }
 
 .login-card {
-  width: min(100%, 440px);
-  padding: 38px 36px 34px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(17, 28, 50, 0.09);
-}
-
-h1 {
-  margin: 0 0 10px;
-  color: var(--text);
-  font-size: clamp(28px, 5vw, 36px);
-  line-height: 1.15;
-  letter-spacing: -0.04em;
-}
-
-.intro {
-  margin: 0 0 30px;
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.5;
+  width: min(100%, 410px);
 }
 
 label {
@@ -108,7 +83,7 @@ label {
 }
 
 .password-heading a {
-  color: var(--primary);
+  color: var(--auth-action, var(--primary));
   font-size: 12px;
   font-weight: 600;
 }
@@ -181,9 +156,9 @@ label {
   min-height: 48px;
   padding: 0 16px;
   color: #fff;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--auth-action, var(--primary));
   border-radius: 10px;
-  background: var(--primary);
+  background: var(--auth-action, var(--primary));
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -195,8 +170,8 @@ label {
 }
 
 .submit-button:enabled:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--auth-action-hover, var(--primary-hover));
+  border-color: var(--auth-action-hover, var(--primary-hover));
 }
 
 .submit-button:enabled:focus-visible {
@@ -217,20 +192,25 @@ label {
 }
 
 .create-account a {
-  color: var(--primary);
+  color: var(--auth-action, var(--primary));
   font-weight: 600;
 }
 
+.create-account button {
+  padding: 0;
+  color: var(--auth-action, var(--primary));
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.create-account button:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) {
-  .login-page {
-    padding: 20px 14px;
-  }
-
-  .login-card {
-    padding: 30px 22px 26px;
-    border-radius: 14px;
-  }
-
   .password-heading {
     align-items: flex-start;
     flex-direction: column;
