@@ -50,16 +50,22 @@ Todos los cambios en GitHub, Cloudflare, AWS y SSH los ejecuta el propietario. N
 - Tunnel `stockion-production` creado.
 - Token del Tunnel guardado fuera del repositorio.
 - Conector probado: DNS, QUIC, HTTP/2 y API de Cloudflare correctos.
+- Deploy key de sólo lectura instalada para el usuario de servicio `stockion`.
+- Rama `production` clonada en `/opt/stockion`.
+- Stack productivo construido y levantado desde PostgreSQL vacío.
+- Public Hostname `stockion.mergemakers.com` conectado a `http://gateway:8080`.
+- Aplicación pública operativa por HTTPS, sin puertos de aplicación expuestos.
+- Volumen persistente `stockion_postgres_data` creado y conservado entre despliegues.
+- PrimeIcons compatibles con la CSP estricta y locale Angular `es-MX` registrado.
+- Cloudflare Web Analytics/RUM desactivado para evitar inyectar un beacon bloqueado por la CSP.
 
 ### Pendiente
 
-- Ilián debe agregar deploy key GitHub de sólo lectura.
-- Clonar rama `production` en Lightsail.
-- Crear `.env.production` con secretos nuevos.
-- Construir y levantar el stack.
-- Crear Public Hostname de Cloudflare y sustituir registro A anterior.
-- Probar flujos completos.
-- Solicitar salida del sandbox de SES.
+- Mantener `.env.production` y credenciales fuera de Git.
+- Completar pruebas funcionales de los módulos principales.
+- Esperar resolución del caso de acceso a producción de Amazon SES.
+- Mientras SES permanezca en sandbox, verificar manualmente cada destinatario de prueba.
+- Implementar respaldos externos y restauración probada antes de almacenar información crítica.
 
 ## 3. Archivos importantes
 
@@ -72,58 +78,32 @@ Todos los cambios en GitHub, Cloudflare, AWS y SSH los ejecuta el propietario. N
 
 No usar `docker-compose.yml` para producción: incluye puertos y herramientas de desarrollo.
 
-## 4. Deploy key de GitHub
+## 4. Repositorio privado y usuario de servicio
 
-La llave privada debe existir únicamente en Lightsail:
-
-```bash
-mkdir -p /home/thrs/.ssh
-chmod 700 /home/thrs/.ssh
-ssh-keygen -t ed25519 -C "stockion-lightsail-deploy" -f /home/thrs/.ssh/stockion_github -N ""
-```
-
-Mostrar únicamente llave pública:
+El repositorio se administra con el usuario de servicio `stockion`; los operadores humanos usan `sudo -u stockion`. La llave privada existe únicamente en Lightsail:
 
 ```bash
-cat /home/thrs/.ssh/stockion_github.pub
+sudo stat -c '%a %U:%G %n' /var/lib/stockion/.ssh/stockion_github
 ```
 
-El propietario de `Ilimm9/Tienda` debe agregarla en:
+Permiso esperado: `600 stockion:stockion`. Nunca mostrar ni copiar la llave privada.
 
-```text
-Settings > Deploy keys > Add deploy key
-Title: stockion-lightsail
-Allow write access: desactivado
-```
-
-Nunca copiar ni mostrar `/home/thrs/.ssh/stockion_github`.
-
-Después de recibir permiso, crear `/home/thrs/.ssh/config` con:
-
-```sshconfig
-Host github-stockion
-    HostName github.com
-    User git
-    IdentityFile /home/thrs/.ssh/stockion_github
-    IdentitiesOnly yes
-```
-
-Aplicar permisos:
+Validar autenticación y acceso de sólo lectura:
 
 ```bash
-chmod 600 /home/thrs/.ssh/config
-ssh -T github-stockion
+sudo -u stockion -H ssh \
+  -i /var/lib/stockion/.ssh/stockion_github \
+  -o IdentitiesOnly=yes \
+  -T git@github.com
+
+sudo -u stockion -H git -C /opt/stockion status
+sudo -u stockion -H git -C /opt/stockion branch --show-current
+sudo -u stockion -H git -C /opt/stockion ls-remote --heads origin production
 ```
 
-Antes de aceptar por primera vez la identidad de GitHub, comparar la huella mostrada con las huellas publicadas en la documentación oficial de GitHub.
+La deploy key registrada en GitHub debe mantener `Allow write access` desactivado. Los operadores, incluida Ilián, deben iniciar sesión con su propia cuenta y tener autorización `sudo` para operar como `stockion`; no necesitan ser propietarios de `/opt/stockion`.
 
-Clonar sólo producción:
-
-```bash
-mkdir -p /home/thrs/apps
-git clone --branch production --single-branch git@github-stockion:Ilimm9/Tienda.git /home/thrs/apps/stockion
-cd /home/thrs/apps/stockion
-```
+No ejecutar Git como `root`, compartir la llave privada ni aplicar `chmod -R 777`.
 
 ## 5. Secretos y variables
 
@@ -146,7 +126,7 @@ Resultado esperado: `600 65532:65532`.
 Crear configuración de producción:
 
 ```bash
-cd /home/thrs/apps/stockion
+cd /opt/stockion
 cp .env.production.example .env.production
 chmod 600 .env.production
 nano .env.production
@@ -184,13 +164,13 @@ No usar credenciales locales, antiguas o enviadas por correo. No almacenar el CS
 
 ## 6. Validación y arranque
 
-Desde `/home/thrs/apps/stockion`:
+Desde `/opt/stockion`:
 
 ```bash
-sudo docker compose --env-file .env.production -f compose.production.yaml config --quiet
-sudo docker compose --env-file .env.production -f compose.production.yaml build --pull
-sudo docker compose --env-file .env.production -f compose.production.yaml up -d
-sudo docker compose --env-file .env.production -f compose.production.yaml ps
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml config --quiet
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml build --pull
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml up -d --remove-orphans
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml ps
 ```
 
 Todos los servicios deben aparecer `Up`; PostgreSQL, backend, frontend y gateway deben terminar como `healthy`.
@@ -198,7 +178,7 @@ Todos los servicios deben aparecer `Up`; PostgreSQL, backend, frontend y gateway
 Logs iniciales:
 
 ```bash
-sudo docker compose --env-file .env.production -f compose.production.yaml logs --tail=100
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml logs --tail=100
 ```
 
 No publicar logs que contengan información sensible.
@@ -220,13 +200,15 @@ El registro A anterior `stockion.mergemakers.com -> 52.7.215.247` entra en confl
 
 No abrir `80/443` en UFW ni Lightsail. Tunnel usa conexiones salientes. Conservar únicamente SSH `22`.
 
+Para conservar la CSP `script-src 'self'`, mantener desactivado el beacon JavaScript en **Analytics & Logs > Web Analytics > Manage site > Automatic setup > Disable**. Si no aparece esa opción, crear una Configuration Rule para `stockion.mergemakers.com` con **Disable Real User Monitoring (RUM)**. Esto no afecta Tunnel, DNS ni las métricas de tráfico obtenidas en el edge.
+
 ## 8. Verificación pública
 
 ```bash
 curl -fsS https://stockion.mergemakers.com/api/v1/health
 curl -fsSI https://stockion.mergemakers.com/
 sudo ss -lntp
-sudo docker compose --env-file .env.production -f compose.production.yaml ps
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml ps
 ```
 
 Resultado esperado:
@@ -246,7 +228,7 @@ Probar desde navegador:
 5. Invitación de empleado llega por correo.
 6. Reinicio de contenedores conserva datos PostgreSQL.
 
-Mientras SES esté en sandbox, destinatarios deben estar verificados.
+Mientras SES esté en sandbox, cada destinatario externo de prueba debe agregarse en **SES > Configuration > Identities > Create identity > Email address** dentro de `us-east-2`. El propietario del correo debe abrir el mensaje de AWS y confirmar el enlace antes de recibir OTP.
 
 ## 9. Sacar Amazon SES del sandbox
 
@@ -271,42 +253,46 @@ their organization. Bounces and complaints are monitored through Amazon SES,
 and failed addresses are not repeatedly contacted.
 ```
 
-Tras aprobación, probar un destinatario no verificado y revisar métricas de reputación.
+La solicitud fue enviada y AWS pidió información adicional; se respondió en el mismo caso con URL, tipo transaccional, volumen, origen de destinatarios, manejo de rebotes/quejas y muestra de correo. No crear solicitudes duplicadas mientras el caso siga abierto.
+
+Tras aprobación, confirmar que Account dashboard ya no indique sandbox, probar un destinatario no verificado y revisar métricas de reputación.
 
 ## 10. Operación normal
 
 Estado y logs:
 
 ```bash
-cd /home/thrs/apps/stockion
-sudo docker compose --env-file .env.production -f compose.production.yaml ps
-sudo docker compose --env-file .env.production -f compose.production.yaml logs --tail=200 backend gateway cloudflared postgres
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml ps
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml logs --tail=200 backend frontend gateway cloudflared postgres
 ```
 
 Reinicio controlado:
 
 ```bash
-sudo docker compose --env-file .env.production -f compose.production.yaml restart
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml restart
 ```
 
 Actualización de aplicación:
 
 ```bash
-git switch production
-git pull --ff-only origin production
-sudo docker compose --env-file .env.production -f compose.production.yaml build --pull
-sudo docker compose --env-file .env.production -f compose.production.yaml up -d
-sudo docker compose --env-file .env.production -f compose.production.yaml ps
+sudo -u stockion -H git -C /opt/stockion status --short
+sudo -u stockion -H git -C /opt/stockion pull --ff-only origin production
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml config --quiet
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml build --pull
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml up -d --remove-orphans
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml ps
 ```
 
-Revisar siempre estado, espacio y logs antes y después.
+Construir antes de ejecutar `up` evita reemplazar contenedores si la compilación falla. `up -d --remove-orphans` conserva el volumen nombrado `stockion_postgres_data`; no usar `down -v`.
+
+Revisar siempre estado, espacio y logs antes y después. Tras actualizar Angular, hacer recarga forzada en el navegador.
 
 ## 11. Diagnóstico rápido
 
 ### Cloudflare muestra Tunnel caído
 
 ```bash
-sudo docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 cloudflared
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml logs --tail=100 cloudflared
 sudo stat -c '%a %u:%g %n' /home/thrs/.config/stockion/cloudflare-tunnel-token
 ```
 
@@ -315,8 +301,8 @@ El token debe ser legible por `65532:65532` y tener permiso `600`.
 ### Sitio devuelve 502
 
 ```bash
-sudo docker compose --env-file .env.production -f compose.production.yaml ps
-sudo docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 gateway backend frontend
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml ps
+sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml logs --tail=100 gateway backend frontend
 ```
 
 Confirmar servicios `healthy`; no reiniciar borrando datos.
@@ -332,6 +318,14 @@ Revisar:
 - Restricciones del sandbox.
 - Logs del backend sin publicar secretos.
 
+### Angular muestra `NG0701`
+
+Confirmar que la versión desplegada incluye `import '@angular/common/locales/global/es-MX';` antes del bootstrap, reconstruir frontend y hacer recarga forzada. El locale mexicano debe tener una prueba específica que ejecute `FechaMexicoPipe`.
+
+### Consola muestra `VM... reportAllChanges ... startTime`
+
+Si el HTML público ya no contiene `static.cloudflareinsights.com`, este mensaje proviene del medidor Web Vitals inyectado por Chrome DevTools, no de Stockion. Actualizar Chrome, reiniciarlo y probar sin DevTools. Como alternativa temporal, desactivar `chrome://flags/#soft-navigation-heuristics`.
+
 ### Riesgo de disco
 
 ```bash
@@ -346,11 +340,14 @@ No borrar volúmenes para liberar espacio.
 
 - No ejecutar `docker compose down -v`: elimina PostgreSQL.
 - No ejecutar `docker volume rm` sobre volumen de Stockion.
+- No ejecutar `docker system prune --volumes`.
+- No cambiar el nombre del proyecto Compose ni `postgres_data` sin una migración planificada.
 - No pegar secretos en chat, GitHub, capturas, logs o correo.
 - No publicar PostgreSQL, backend, Caddy, Nginx o métricas.
 - No activar escritura en deploy key.
 - No usar cuenta root de AWS para operación diaria.
 - No desactivar UFW para diagnosticar.
+- No ejecutar Git como `root`; usar `sudo -u stockion -H git -C /opt/stockion ...`.
 
 ## 13. Limitación aceptada
 
