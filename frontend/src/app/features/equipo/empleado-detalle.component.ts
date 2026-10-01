@@ -6,13 +6,14 @@ import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { RolService } from '../roles-permisos/rol.service';
 import { EmpleadoApiError, EmpleadoDetalle, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
 
 @Component({
   selector: 'app-empleado-detalle',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FechaMexicoPipe, RouterLink],
   templateUrl: './empleado-detalle.component.html',
   styleUrl: './empleado-detalle.component.css',
 })

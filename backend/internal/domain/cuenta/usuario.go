@@ -17,8 +17,8 @@ type Usuario struct {
 	BloqueadoHasta               *time.Time `json:"-"`
 	UltimoInicioSesionEn         *time.Time `json:"ultimo_inicio_sesion_en,omitempty"`
 	ContrasenaCambiadaEn         *time.Time `json:"contrasena_cambiada_en,omitempty"`
-	CreadoEn                     time.Time  `json:"creado_en"`
-	ActualizadoEn                time.Time  `json:"actualizado_en"`
+	CreadoEn                     time.Time  `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn                time.Time  `gorm:"autoUpdateTime" json:"actualizado_en"`
 	DeshabilitadoEn              *time.Time `json:"deshabilitado_en,omitempty"`
 }
 

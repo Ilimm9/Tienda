@@ -138,11 +138,11 @@
         <dl>
           <div>
             <dt>Fecha de registro</dt>
-            <dd>{{ persona.creado_en | date: 'dd MMM yyyy' }}</dd>
+            <dd>{{ persona.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
           </div>
           <div>
             <dt>Última modificación</dt>
-            <dd>{{ persona.actualizado_en | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dd>{{ persona.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
           </div>
           <div>
             <dt>ID de empleado</dt>

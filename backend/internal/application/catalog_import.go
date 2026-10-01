@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/mail"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,6 +46,15 @@ func (s *ProductService) ImportUnits(businessID uuid.UUID, file io.Reader) (doma
 	return mergeImportResults(result, imported), err
 }
 
+func (s *ProductService) ImportProviders(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
+	rows, result, err := parseProviderImport(file)
+	if err != nil {
+		return result, err
+	}
+	imported, err := s.products.ImportProviders(businessID, rows)
+	return mergeImportResults(result, imported), err
+}
+
 func CatalogImportTemplate(section string) ([]byte, error) {
 	book := excelize.NewFile()
 	defer book.Close()
@@ -58,9 +68,13 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		sheet = "Unidades"
 		headers = []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}
 	}
+	if section == "proveedores" {
+		sheet = "Proveedores"
+		headers = []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}
+	}
 	if section == "productos" {
 		sheet = "Productos"
-		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	}
 	book.SetSheetName(book.GetSheetName(0), sheet)
 	for index, header := range headers {
@@ -86,9 +100,9 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		instructionRows := [][]string{
 			{"Carga masiva de productos", "Completa una fila por producto. La hoja Productos debe conservar sus encabezados."},
 			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
-			{"Campos opcionales", "SKU interno, Categoría, Marca, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
+			{"Campos opcionales", "SKU interno, Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
 			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
-			{"Catálogos", "Categoría, Marca y Unidad de medida solo se validan si se indican y deben existir activas."},
+			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida solo se validan si se indican y deben existir activos."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
 			{"SKU interno", "Es opcional. Si se omite, se generará un identificador automático al importar."},
 			{"Variantes", "Opcional. Usa Atributo=Valor; por ejemplo Colección=Dinosaurios o Sabor=Fresa; Color=Rojo."},
@@ -115,7 +129,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 }
 
 func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.CatalogImportResult, error) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	rows, result, err := readImportRows(file, headers)
 	if err != nil {
 		return nil, result, err
@@ -171,7 +185,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			result.Invalidas++
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
 	}
 	return valid, result, nil
 }
@@ -250,6 +264,33 @@ func parseCategoryImport(file io.Reader) ([]domain.CatalogImportCategoryRow, dom
 			continue
 		}
 		valid = append(valid, domain.CatalogImportCategoryRow{Fila: index + 2, Nombre: nombre, Descripcion: cell(row, 1), CategoriaPadre: cell(row, 2)})
+	}
+	return valid, result, nil
+}
+
+func parseProviderImport(file io.Reader) ([]domain.CatalogImportProviderRow, domain.CatalogImportResult, error) {
+	rows, result, err := readImportRows(file, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"})
+	if err != nil {
+		return nil, result, err
+	}
+	valid := make([]domain.CatalogImportProviderRow, 0, len(rows))
+	for index, row := range rows {
+		rowNumber := index + 2
+		nombre, email := cell(row, 0), cell(row, 4)
+		if nombre == "" {
+			result.Invalidas++
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Nombre", Motivo: "es obligatorio"})
+			continue
+		}
+		if email != "" {
+			address, parseErr := mail.ParseAddress(email)
+			if parseErr != nil || address.Address != email {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Correo", Motivo: "debe ser una dirección válida"})
+				continue
+			}
+		}
+		valid = append(valid, domain.CatalogImportProviderRow{Fila: rowNumber, Nombre: nombre, RazonSocial: cell(row, 1), RFC: cell(row, 2), Telefono: cell(row, 3), Email: email, Direccion: cell(row, 5)})
 	}
 	return valid, result, nil
 }

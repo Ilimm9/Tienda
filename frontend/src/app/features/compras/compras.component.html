@@ -1,0 +1,313 @@
+<main class="purchase-page">
+  @if (!createMode) {
+    <header class="purchase-header">
+      <div>
+        <p class="eyebrow">Abastecimiento</p>
+        <h1>Compras</h1>
+        <p>Recepciones de mercancía e ingresos a inventario.</p>
+      </div>
+      @if (purchases().length > 0) {
+        <div class="purchase-actions">
+          <button class="primary-button" type="button" routerLink="/compras/nueva">
+            <i class="pi pi-plus" aria-hidden="true"></i> Registrar compra
+          </button>
+        </div>
+      }
+    </header>
+    @if (loading()) {
+      <section class="purchase-state">Cargando compras…</section>
+    } @else if (error()) {
+      <section class="purchase-state error-state">{{ error() }}</section>
+    } @else if (!purchases().length) {
+      <section class="empty-purchases">
+        <span class="empty-icon"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
+        <h2>Aún no hay compras registradas</h2>
+        <p>
+          Registra la primera recepción de mercancía para actualizar el inventario de tu sucursal.
+        </p>
+        <button class="primary-button" type="button" routerLink="/compras/nueva">
+          <i class="pi pi-plus" aria-hidden="true"></i> Registrar nueva compra
+        </button>
+      </section>
+    } @else {
+      <section class="purchase-card data-table-card">
+        <p-table [value]="purchases()" class="app-table" responsiveLayout="scroll"
+          ><ng-template #header
+            ><tr>
+              <th>Recepción</th>
+              <th>Documento</th>
+              <th>Pago</th>
+              <th>Total</th>
+              <th>Pagado</th>
+            </tr></ng-template
+          ><ng-template #body let-item
+            ><tr>
+              <td>{{ item.fecha_recepcion }}</td>
+              <td>{{ item.tipo_documento }} {{ item.folio_documento }}</td>
+              <td>{{ item.forma_pago }}</td>
+              <td>{{ item.total | currency: 'MXN' }}</td>
+              <td>{{ item.importe_pagado | currency: 'MXN' }}</td>
+            </tr></ng-template
+          ></p-table
+        >
+      </section>
+    }
+  } @else {
+    <header class="purchase-header">
+      <div>
+        <p class="eyebrow">Abastecimiento</p>
+        <h1>Registrar compra</h1>
+        <p>La mercancía confirmada se agregará al stock de la sucursal.</p>
+      </div>
+      <div class="purchase-actions">
+        <button class="secondary-button" type="button" routerLink="/compras">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i> Cancelar
+        </button>
+      </div>
+    </header>
+    @if (loading()) {
+      <section class="purchase-state">Cargando catálogos…</section>
+    } @else {
+      <section class="purchase-workspace">
+        <form id="purchase-form" class="purchase-form" [formGroup]="form" (ngSubmit)="submit()">
+          <section class="purchase-card purchase-form-card purchase-grid">
+            <label
+              >Proveedor<p-select
+                formControlName="proveedor_id"
+                [options]="providers()"
+                optionLabel="nombre"
+                optionValue="id"
+                placeholder="Selecciona"
+                (onChange)="loadProducts()" /></label
+            ><label
+              >Sucursal receptora<p-select
+                formControlName="sucursal_id"
+                [options]="branches()"
+                optionLabel="nombre"
+                optionValue="id"
+                [disabled]="true" /></label
+            ><label
+              >Tipo de documento<p-select
+                formControlName="tipo_documento"
+                [options]="documentTypes" /></label
+            ><label>Folio<input pInputText formControlName="folio_documento" /></label
+            ><label
+              >Fecha del documento<input
+                pInputText
+                type="date"
+                formControlName="fecha_documento" /></label
+            ><label
+              >Fecha de recepción<input
+                pInputText
+                type="date"
+                formControlName="fecha_recepcion" /></label
+            ><label
+              >Forma de pago<p-select
+                formControlName="forma_pago"
+                [options]="paymentMethods" /></label
+            ><label>Número de cuenta<input pInputText formControlName="numero_cuenta" /></label
+            ><label class="purchase-field-wide"
+              >Observaciones<textarea pTextarea formControlName="observaciones" rows="3"></textarea>
+            </label>
+          </section>
+          <section class="purchase-card purchase-form-card">
+            <div class="purchase-section-heading">
+              <div>
+                <h2>Mercancía recibida</h2>
+                <p>Indica los empaques recibidos y el costo de cada producto.</p>
+              </div>
+              <button class="secondary-button" type="button" (click)="addDetail()">
+                <i class="pi pi-plus" aria-hidden="true"></i> Agregar producto
+              </button>
+            </div>
+            <div formArrayName="detalles">
+              @for (detail of details.controls; track $index) {
+                <section class="purchase-detail" [formGroupName]="$index">
+                  <div class="purchase-grid">
+                    <label
+                      >Producto<p-select
+                        formControlName="producto_negocio_id"
+                        [options]="productOptions()"
+                        optionLabel="nombre"
+                        optionValue="id"
+                        placeholder="Selecciona"
+                        (onChange)="selectProduct($index, $event.value)"
+                      /><small class="create-option"
+                        >Elige “Crear nuevo…” para darlo de alta.</small
+                      ></label
+                    >
+                    @if (isNewProduct($index)) {
+                      <section class="purchase-product-form">
+                        <h3>Nuevo producto</h3>
+                        <div class="purchase-grid">
+                          <label
+                            >Nombre del producto<input
+                              pInputText
+                              formControlName="nombre_producto_nuevo" /></label
+                          ><label
+                            >Código de barras<input
+                              pInputText
+                              formControlName="codigo_barras_nuevo"
+                          /></label>
+                        </div>
+                      </section>
+                    }
+                    <label
+                      >Unidad de empaque<p-select
+                        formControlName="unidad_medida_id"
+                        [options]="unitOptions()"
+                        optionLabel="nombre"
+                        optionValue="id"
+                        placeholder="Selecciona"
+                        (onChange)="selectUnit($index, $event.value)"
+                      /><small class="create-option"
+                        >Elige “Crear nuevo…” para agregar una unidad.</small
+                      ></label
+                    >
+                    @if (unitDetailIndex() === $index) {
+                      <section class="purchase-unit-form" [formGroup]="unitForm">
+                        <h3>Nueva unidad de empaque</h3>
+                        <div class="purchase-grid">
+                          <label>Código<input pInputText formControlName="codigo" /></label
+                          ><label>Nombre<input pInputText formControlName="nombre" /></label
+                          ><label>Símbolo<input pInputText formControlName="simbolo" /></label
+                          ><label
+                            >Piezas por empaque<input
+                              pInputText
+                              type="number"
+                              min="1"
+                              formControlName="factor_a_base"
+                          /></label>
+                        </div>
+                        <div class="purchase-actions">
+                          <button
+                            class="primary-button"
+                            type="button"
+                            (click)="createUnit()"
+                            [disabled]="unitForm.invalid || unitSaving()"
+                          >
+                            {{ unitSaving() ? 'Creando…' : 'Guardar unidad' }}
+                          </button>
+                        </div>
+                      </section>
+                    }
+                    <label
+                      >Empaques<input
+                        pInputText
+                        type="number"
+                        min="1"
+                        formControlName="cantidad_empaques" /></label
+                    ><label
+                      >Costo por empaque<input
+                        pInputText
+                        type="number"
+                        min="0"
+                        formControlName="costo_empaque" /></label
+                    ><label
+                      >Descuento<input
+                        pInputText
+                        type="number"
+                        min="0"
+                        formControlName="descuento" /></label
+                    ><label>Lote<input pInputText formControlName="numero_lote" /></label
+                    ><label
+                      >Caducidad<input
+                        pInputText
+                        type="date"
+                        formControlName="fecha_caducidad" /></label
+                    ><label class="purchase-checkbox"
+                      ><input type="checkbox" formControlName="tiene_anomalias" /> Registrar
+                      anomalías</label
+                    >
+                    @if (hasAnomalies($index)) {
+                      <label
+                        >Piezas dañadas<input
+                          pInputText
+                          type="number"
+                          min="0"
+                          formControlName="piezas_danadas" /></label
+                      ><label
+                        >Piezas faltantes<input
+                          pInputText
+                          type="number"
+                          min="0"
+                          formControlName="piezas_faltantes"
+                      /></label>
+                    }
+                  </div>
+                  <div class="detail-actions">
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      (click)="removeDetail($index)"
+                      [disabled]="details.length === 1"
+                    >
+                      Quitar producto
+                    </button>
+                  </div>
+                </section>
+              }
+            </div>
+          </section>
+          <section class="purchase-card purchase-form-card purchase-totals-card">
+            <div class="tax-options">
+              <label class="purchase-checkbox"
+                ><input type="checkbox" formControlName="incluye_ieps" /> Incluir IEPS</label
+              >
+              @if (form.controls.incluye_ieps.value) {
+                <label
+                  >Importe IEPS<input
+                    pInputText
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    formControlName="ieps"
+                /></label>
+              }
+              <label class="purchase-checkbox"
+                ><input type="checkbox" formControlName="incluye_iva" /> Incluir IVA (16 %)</label
+              >
+            </div>
+            <div class="purchase-summary">
+              <span
+                >Subtotal <strong>{{ subtotal() | currency: 'MXN' }}</strong></span
+              ><span
+                >IEPS <strong>{{ ieps() | currency: 'MXN' }}</strong></span
+              ><span
+                >IVA <strong>{{ iva() | currency: 'MXN' }}</strong></span
+              ><span
+                >Impuestos <strong>{{ taxes() | currency: 'MXN' }}</strong></span
+              ><span class="purchase-total"
+                >Total <strong>{{ total() | currency: 'MXN' }}</strong></span
+              >
+            </div>
+            <p>
+              Revisa el total calculado antes de confirmar.
+            </p>
+            @if (error()) {
+              <p class="form-error" role="alert">{{ error() }}</p>
+            }
+            <div class="purchase-actions purchase-submit-action">
+              <button class="primary-button" type="submit" [disabled]="form.invalid || saving()">
+                {{ saving() ? 'Confirmando…' : 'Confirmar compra y agregar stock' }}
+              </button>
+            </div>
+          </section>
+        </form>
+        <aside class="purchase-summary-panel" aria-label="Resumen de productos">
+          <p class="eyebrow">Resumen de productos</p>
+          <div class="product-summary-list">
+            @for (detail of details.controls; track $index) {
+              <section class="product-summary-item">
+                <strong>{{ productSummaryName($index) }}</strong
+                ><span>Empaques: {{ detail.get('cantidad_empaques')?.value || 0 }}</span
+                ><span>Piezas buenas: {{ pieces($index) }}</span
+                ><span>Subtotal: {{ detailSubtotal($index) | currency: 'MXN' }}</span>
+              </section>
+            }
+          </div>
+        </aside>
+      </section>
+    }
+  }
+</main>

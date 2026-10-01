@@ -3,6 +3,7 @@ package negocio
 import (
 	"context"
 	"errors"
+	"time"
 
 	application "tienda/backend/internal/application/negocio"
 	domain "tienda/backend/internal/domain/negocio"
@@ -129,7 +130,7 @@ func (r *RolRepository) ActualizarRol(ctx context.Context, negocioID, rolID uuid
 			cambios["activo"] = *input.Activo.Value
 		}
 		if len(cambios) > 0 {
-			cambios["actualizado_en"] = gorm.Expr("now()")
+			cambios["actualizado_en"] = time.Now().UTC()
 			err := tx.Table("roles").Where("id = ? AND negocio_id = ?", rolID, negocioID).Updates(cambios).Error
 			if err != nil {
 				return err
@@ -241,12 +242,13 @@ func (r *RolRepository) ReemplazarRolesDeMembresia(ctx context.Context, negocioI
 			return err
 		}
 		for _, rolID := range roles {
+			asignadoEn := time.Now().UTC()
 			// Un rol de otro negocio nunca puede asignarse: el INSERT filtra por negocio.
 			err := tx.Exec(`INSERT INTO roles_membresia (id, membresia_negocio_id, rol_id, asignado_por_usuario_id, asignado_en)
-				SELECT gen_random_uuid(), ?, r.id, ?, now() FROM roles r
+				SELECT gen_random_uuid(), ?, r.id, ?, ? FROM roles r
 				WHERE r.id = ? AND r.negocio_id = ?
 				ON CONFLICT (membresia_negocio_id, rol_id) DO NOTHING`,
-				membresiaID, asignadoPor, rolID, negocioID).Error
+				membresiaID, asignadoPor, asignadoEn, rolID, negocioID).Error
 			if err != nil {
 				return err
 			}
@@ -260,9 +262,10 @@ func reemplazarPermisosDeRol(tx *gorm.DB, rolID uuid.UUID, permisos []uuid.UUID)
 		return err
 	}
 	for _, permisoID := range permisos {
+		creadoEn := time.Now().UTC()
 		err := tx.Exec(`INSERT INTO permisos_rol (id, rol_id, permiso_id, creado_en)
-			SELECT gen_random_uuid(), ?, p.id, now() FROM permisos p WHERE p.id = ?
-			ON CONFLICT (rol_id, permiso_id) DO NOTHING`, rolID, permisoID).Error
+			SELECT gen_random_uuid(), ?, p.id, ? FROM permisos p WHERE p.id = ?
+			ON CONFLICT (rol_id, permiso_id) DO NOTHING`, rolID, creadoEn, permisoID).Error
 		if err != nil {
 			return err
 		}

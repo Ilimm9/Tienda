@@ -95,6 +95,60 @@ export const routes: Routes = [
           import('./features/catalogo/catalogo.routes').then((module) => module.CATALOGO_ROUTES),
       },
       {
+        path: 'proveedores',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Proveedores', section: 'proveedores' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/nuevo',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Agregar proveedor', section: 'proveedores', mode: 'create' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/importar',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Importar proveedores', section: 'proveedores', mode: 'import' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'proveedores/:id/editar',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Editar proveedor', section: 'proveedores', mode: 'edit' },
+        loadComponent: () =>
+          import('./features/proveedores/proveedores.component').then(
+            (module) => module.ProveedoresComponent,
+          ),
+      },
+      {
+        path: 'compras',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Compras' },
+        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+      },
+      {
+        path: 'compras/nueva',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Registrar compra', mode: 'create' },
+        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+      },
+      {
+        path: 'precios/validaciones',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Validar costos y precios' },
+        loadComponent: () => import('./features/precios/precios.component').then((module) => module.PreciosComponent),
+      },
+      {
         path: 'equipo',
         loadChildren: () =>
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),

@@ -6,19 +6,25 @@ import (
 	"time"
 
 	"tienda/backend/internal/application"
+	compraapplication "tienda/backend/internal/application/compra"
 	correoapplication "tienda/backend/internal/application/correo"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
+	precioapplication "tienda/backend/internal/application/precio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	negociodomain "tienda/backend/internal/domain/negocio"
 	"tienda/backend/internal/infrastructure"
+	comprainfra "tienda/backend/internal/infrastructure/compra"
 	correoinfra "tienda/backend/internal/infrastructure/correo"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
+	precioinfra "tienda/backend/internal/infrastructure/precio"
 	transporthttp "tienda/backend/internal/interfaces/http"
+	comprahttp "tienda/backend/internal/interfaces/http/compra"
 	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
 	negociohttp "tienda/backend/internal/interfaces/http/negocio"
+	preciohttp "tienda/backend/internal/interfaces/http/precio"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,6 +99,8 @@ func main() {
 	asignacionRepo := negocioinfra.NewAsignacionRepository(db)
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
+	compraHandler := comprahttp.NewHandler(compraapplication.NewService(comprainfra.NewRepository(db)))
+	precioHandler := preciohttp.NewHandler(precioapplication.NewService(precioinfra.NewRepository(db)))
 	router := gin.Default()
 	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
 		log.Fatal(err)
@@ -167,10 +175,21 @@ func main() {
 	catalogoLectura.GET("/catalogo/unidades-medida", productHandler.ListUnits)
 	catalogoLectura.GET("/catalogo/proveedores", productHandler.ListProviders)
 	catalogoLectura.GET("/sucursales", productHandler.Branches)
+	comprasLectura := negocioActual.Group("")
+	comprasLectura.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraVer))
+	comprasLectura.GET("/compras", compraHandler.List)
+	comprasLectura.GET("/compras/:compraId", compraHandler.Get)
+	comprasLectura.GET("/compras/productos", compraHandler.Products)
 
 	catalogoGestion := negocioActual.Group("")
 	catalogoGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCatalogoGestionar))
 	catalogoGestion.POST("/catalogo/productos", productHandler.Create)
+	comprasGestion := negocioActual.Group("")
+	comprasGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraRegistrar))
+	comprasGestion.POST("/compras", compraHandler.Create)
+	comprasGestion.POST("/compras/unidades", productHandler.CreateUnit)
+	negocioActual.GET("/precios/propuestas", precioHandler.ListPending)
+	negocioActual.PATCH("/precios/propuestas/:propuestaId/autorizar", precioHandler.Authorize)
 	catalogoGestion.PATCH("/catalogo/productos/:productoId", productHandler.Update)
 	catalogoGestion.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
 	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
@@ -191,6 +210,8 @@ func main() {
 	catalogoGestion.POST("/catalogo/unidades/importar", productHandler.ImportUnits)
 	catalogoGestion.POST("/catalogo/proveedores", productHandler.CreateProvider)
 	catalogoGestion.PATCH("/catalogo/proveedores/:id", productHandler.UpdateProvider)
+	catalogoGestion.GET("/catalogo/proveedores/importacion/plantilla", productHandler.ProviderImportTemplate)
+	catalogoGestion.POST("/catalogo/proveedores/importar", productHandler.ImportProviders)
 	log.Printf("API escuchando en http://localhost:%s", cfg.AppPort)
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)

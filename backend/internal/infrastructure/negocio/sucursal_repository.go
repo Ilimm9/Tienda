@@ -135,7 +135,7 @@ func (r *SucursalRepository) Actualizar(ctx context.Context, negocioID, sucursal
 			}
 		}
 
-		values := map[string]interface{}{"actualizado_en": time.Now()}
+		values := map[string]interface{}{"actualizado_en": time.Now().UTC()}
 		if input.Nombre.Set {
 			values["nombre"] = *input.Nombre.Value
 		}
@@ -174,7 +174,7 @@ func (r *SucursalRepository) Archivar(ctx context.Context, negocioID, sucursalID
 		if branch.EsPrincipal && len(active) > 1 {
 			return application.ErrSucursalPrincipalRequerida
 		}
-		now := time.Now()
+		now := time.Now().UTC()
 		return tx.Model(&domain.Sucursal{}).Where("id = ? AND negocio_id = ?", sucursalID, negocioID).
 			Updates(map[string]interface{}{
 				"activo": false, "es_principal": false, "eliminado_en": now, "actualizado_en": now,
@@ -206,7 +206,7 @@ func (r *SucursalRepository) Restaurar(ctx context.Context, negocioID, sucursalI
 		}
 		return tx.Model(&domain.Sucursal{}).Where("id = ? AND negocio_id = ?", sucursalID, negocioID).
 			Updates(map[string]interface{}{
-				"activo": true, "es_principal": !hasPrincipal, "eliminado_en": nil, "actualizado_en": time.Now(),
+				"activo": true, "es_principal": !hasPrincipal, "eliminado_en": nil, "actualizado_en": time.Now().UTC(),
 			}).Error
 	})
 }
@@ -236,7 +236,7 @@ func actualizarDireccionSucursal(tx *gorm.DB, branch *domain.Sucursal, input *do
 	}
 
 	values := direccionUpdates(*input)
-	values["actualizado_en"] = time.Now()
+	values["actualizado_en"] = time.Now().UTC()
 	if err := tx.Model(&domain.Direccion{}).Where("id = ?", *branch.DireccionID).Updates(values).Error; err != nil {
 		return err
 	}

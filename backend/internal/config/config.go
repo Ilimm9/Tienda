@@ -91,11 +91,11 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	otpMaxAttempts, err := requiredPositiveInt("OTP_MAX_ATTEMPTS", 5)
+	otpMaxAttempts, err := requiredPositiveInt("OTP_MAX_ATTEMPTS", 10)
 	if err != nil {
 		return Config{}, err
 	}
-	otpHourlySendMax, err := requiredPositiveInt("OTP_HOURLY_SEND_MAX", 5)
+	otpHourlySendMax, err := requiredPositiveInt("OTP_HOURLY_SEND_MAX", 10)
 	if err != nil {
 		return Config{}, err
 	}

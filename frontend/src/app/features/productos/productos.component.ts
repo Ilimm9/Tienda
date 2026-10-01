@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -51,10 +51,35 @@ export class ProductosComponent {
     (this.route?.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ?? 'list';
 
   readonly products = signal<ProductRow[]>([]);
+  readonly productSearch = signal('');
+  readonly productPageFirst = signal(0);
+  readonly productCategoryFilter = signal<string | null>(null);
+  readonly productBrandFilter = signal<string | null>(null);
+  readonly productProviderFilter = signal<string | null>(null);
+  readonly productStatusFilter = signal<string | null>(null);
+  readonly productTypeFilter = signal<'all' | 'simple' | 'variants'>('all');
+  readonly productCategoryOptions = computed(() => this.filterOptions(this.products(), 'categoria'));
+  readonly productBrandOptions = computed(() => this.filterOptions(this.products(), 'marca'));
+  readonly productProviderOptions = computed(() => [
+    { id: '__sin_proveedor__', nombre: 'Sin proveedor' },
+    ...this.providers(),
+  ]);
+  readonly productStatusOptions = [
+    { id: 'En stock', nombre: 'En stock' },
+    { id: 'Bajo stock', nombre: 'Bajo stock' },
+    { id: 'Agotado', nombre: 'Agotado' },
+  ];
+  readonly productTypeOptions = [
+    { id: 'all', nombre: 'Todos' },
+    { id: 'simple', nombre: 'Productos simples' },
+    { id: 'variants', nombre: 'Con variantes' },
+  ];
+  readonly filteredProducts = computed(() => this.products().filter((product) => this.matchesProductFilters(product)));
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
+  readonly providers = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
   readonly units = signal<CatalogOption[]>([]);
   readonly catalogLoadErrors = signal<string[]>([]);
@@ -90,6 +115,7 @@ export class ProductosComponent {
     codigo_barras: ['', Validators.pattern(/^\d{8,14}$/)],
     imagen_url: [''],
     marca_id: [''],
+    proveedor_id: [''],
     categoria_id: [''],
     sucursal_id: ['', Validators.required],
     descripcion: ['', Validators.maxLength(2000)],
@@ -129,6 +155,10 @@ export class ProductosComponent {
         this.error.set('No fue posible cargar los productos.');
         this.loading.set(false);
       },
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.providers.set([]),
     });
   }
 
@@ -172,7 +202,7 @@ export class ProductosComponent {
     this.loading.set(false);
     const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
-      nombre: '', sku_interno: '', generar_sku_interno: false, tiene_variantes: false, marca_id: '', categoria_id: '', sucursal_id: '',
+      nombre: '', sku_interno: '', generar_sku_interno: false, tiene_variantes: false, marca_id: '', proveedor_id: '', categoria_id: '', sucursal_id: '',
       codigo_barras: '', imagen_url: '',
       descripcion: '', contenido: null, unidad_contenido: '', presentacion: '',
       unidad_medida_id: '',
@@ -187,6 +217,7 @@ export class ProductosComponent {
     this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
+    this.providers.set([]);
     this.branches.set([]);
     this.branchReady.set(false);
     this.imageLookupLoading.set(false);
@@ -214,6 +245,10 @@ export class ProductosComponent {
         this.applyCatalogSuggestions();
       },
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar los proveedores.'),
     });
     this.productosService.listBranches(this.negocioID).subscribe({
       next: (items) => {
@@ -258,6 +293,7 @@ export class ProductosComponent {
       codigo_barras: product.codigo_barras ?? '',
       imagen_url: product.imagen_url ?? '',
       marca_id: product.marca_id ?? '',
+      proveedor_id: product.proveedor_id ?? '',
       categoria_id: product.categoria_id ?? '',
       sucursal_id: '',
       descripcion: product.descripcion ?? '',
@@ -279,6 +315,10 @@ export class ProductosComponent {
     this.productosService.listBrands(this.negocioID).subscribe({
       next: (items) => this.brands.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las marcas.'),
+    });
+    this.productosService.listProviders(this.negocioID).subscribe({
+      next: (items) => this.providers.set(items),
+      error: () => this.addCatalogLoadError('No fue posible cargar los proveedores.'),
     });
     this.productosService.listUnits(this.negocioID).subscribe({
       next: (items) => this.units.set(items),
@@ -646,6 +686,93 @@ export class ProductosComponent {
     return variant.atributos.map((attribute) => `${attribute.nombre}: ${attribute.valor}`).join(' · ');
   }
 
+  setProductSearch(value: string): void {
+    this.productSearch.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductCategoryFilter(value: string | null): void {
+    this.productCategoryFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductBrandFilter(value: string | null): void {
+    this.productBrandFilter.set(value);
+    this.resetProductPagination();
+  }
+  setProductProviderFilter(value: string | null): void {
+    this.productProviderFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductStatusFilter(value: string | null): void {
+    this.productStatusFilter.set(value);
+    this.resetProductPagination();
+  }
+
+  setProductTypeFilter(value: 'all' | 'simple' | 'variants' | null): void {
+    this.productTypeFilter.set(value ?? 'all');
+    this.resetProductPagination();
+  }
+
+  clearProductFilters(): void {
+    this.productSearch.set('');
+    this.productCategoryFilter.set(null);
+    this.productBrandFilter.set(null);
+    this.productProviderFilter.set(null);
+    this.productStatusFilter.set(null);
+    this.productTypeFilter.set('all');
+    this.resetProductPagination();
+  }
+
+  onProductTablePage(first: number): void {
+    this.productPageFirst.set(first);
+  }
+
+  private resetProductPagination(): void {
+    this.productPageFirst.set(0);
+  }
+
+  private filterOptions(products: ProductRow[], field: 'categoria' | 'marca'): CatalogOption[] {
+    const values = new Map<string, CatalogOption>();
+    for (const product of products) {
+      const value = product[field];
+      const id = field === 'categoria' ? product.categoria_id : product.marca_id;
+      if (value && id) values.set(id, { id, nombre: value });
+    }
+    return [...values.values()].sort((first, second) => first.nombre.localeCompare(second.nombre, 'es'));
+  }
+
+  private matchesProductFilters(product: ProductRow): boolean {
+    const query = this.normalizeProductFilter(this.productSearch());
+    const category = this.productCategoryFilter();
+    const brand = this.productBrandFilter();
+    const provider = this.productProviderFilter();
+    const status = this.productStatusFilter();
+    const type = this.productTypeFilter();
+    if (category && product.categoria_id !== category) return false;
+    if (brand && product.marca_id !== brand) return false;
+    if (provider === '__sin_proveedor__' && product.proveedor_id) return false;
+    if (provider && provider !== '__sin_proveedor__' && product.proveedor_id !== provider) return false;
+    if (status && product.estado !== status) return false;
+    if (type === 'simple' && this.hasVariants(product)) return false;
+    if (type === 'variants' && !this.hasVariants(product)) return false;
+    if (!query) return true;
+    const searchable = [
+      product.nombre, product.presentacion, product.descripcion, product.marca, product.categoria,
+      product.sku, product.codigo_barras,
+      ...product.variantes.flatMap((variant) => [
+        variant.sku, variant.codigo_barras,
+        ...variant.atributos.flatMap((attribute) => [attribute.nombre, attribute.valor, `${attribute.nombre}=${attribute.valor}`]),
+      ]),
+    ];
+    return searchable.some((value) => this.normalizeProductFilter(value).includes(query));
+  }
+
+  private normalizeProductFilter(value: string | null | undefined): string {
+    return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('es');
+  }
+
   handleProductImageError(productId: string): void {
     this.failedProductImages.update((current) => new Set([...current, productId]));
   }
@@ -682,6 +809,7 @@ export class ProductosComponent {
     const payload = {
       ...value,
       marca_id: value.marca_id || null,
+      proveedor_id: value.proveedor_id || null,
       categoria_id: value.categoria_id || null,
       descripcion: value.descripcion || null,
       contenido: value.contenido,
@@ -705,6 +833,7 @@ export class ProductosComponent {
           nombre: payload.nombre,
           sku_interno: payload.sku_interno,
           marca_id: payload.marca_id,
+          proveedor_id: payload.proveedor_id,
           categoria_id: payload.categoria_id as string,
           descripcion: payload.descripcion,
           contenido: payload.contenido,

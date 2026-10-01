@@ -176,4 +176,52 @@ describe('ProductosComponent', () => {
     expect(router.navigate).toHaveBeenNthCalledWith(2, ['/catalogo/productos/importar']);
     expect(router.navigate).toHaveBeenNthCalledWith(3, ['/catalogo/productos', 'producto-1', 'editar']);
   });
+
+  it('filters a product base by attributes and identifiers of its variants', () => {
+    component.products.set([{
+      id: 'producto-1', nombre: 'Base de michelada', imagen_url: null, sku: null, precio: 0, stock: 0,
+      categoria: 'Botanas', categoria_id: 'categoria-1', marca: null, marca_id: null, proveedor: 'Distribuidora Norte', proveedor_id: 'proveedor-1',
+      descripcion: null, presentacion: '1 litro', contenido: null, unidad_contenido: null,
+      unidad_medida: 'Unidades', unidad_medida_id: 'unidad-1', codigo_barras: null,
+      inventario: [], estado: 'En stock',
+      variantes: [{ id: 'variante-1', sku: null, precio: 150, stock: 4, codigo_barras: '7503030374392', atributos: [{ nombre: 'Sabor', valor: 'Mango' }] }],
+    }]);
+
+    component.setProductSearch('mángo');
+    expect(component.filteredProducts()).toHaveLength(1);
+
+    component.setProductSearch('7503030374392');
+    expect(component.filteredProducts()).toHaveLength(1);
+
+    component.setProductSearch('piña');
+    expect(component.filteredProducts()).toHaveLength(0);
+
+    component.setProductSearch('');
+    component.setProductProviderFilter('proveedor-1');
+    expect(component.filteredProducts()).toHaveLength(1);
+
+    component.setProductProviderFilter('__sin_proveedor__');
+    expect(component.filteredProducts()).toHaveLength(0);
+  });
+
+  it('keeps optional product filters empty until a value is selected', () => {
+    expect(component.productCategoryFilter()).toBeNull();
+    expect(component.productBrandFilter()).toBeNull();
+    expect(component.productProviderFilter()).toBeNull();
+    expect(component.productStatusFilter()).toBeNull();
+
+    component.setProductCategoryFilter('categoria-1');
+    component.setProductBrandFilter('marca-1');
+    component.setProductStatusFilter('En stock');
+
+    expect(component.productCategoryFilter()).toBe('categoria-1');
+    expect(component.productBrandFilter()).toBe('marca-1');
+    expect(component.productStatusFilter()).toBe('En stock');
+
+    component.clearProductFilters();
+
+    expect(component.productCategoryFilter()).toBeNull();
+    expect(component.productBrandFilter()).toBeNull();
+    expect(component.productStatusFilter()).toBeNull();
+  });
 });

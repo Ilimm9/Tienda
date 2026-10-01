@@ -106,8 +106,8 @@
                 {{ invitacion.estado }}
               </span>
             </td>
-            <td>{{ invitacion.expira_en | date: 'medium' }}</td>
-            <td>{{ invitacion.aceptado_en ? (invitacion.aceptado_en | date: 'medium') : '—' }}</td>
+            <td>{{ invitacion.expira_en | fechaMexico: 'medium' }}</td>
+            <td>{{ invitacion.aceptado_en ? (invitacion.aceptado_en | fechaMexico: 'medium') : '—' }}</td>
             <td class="actions-column">
               @if (puedeEnviar() && invitacion.estado === 'pendiente') {
                 <button

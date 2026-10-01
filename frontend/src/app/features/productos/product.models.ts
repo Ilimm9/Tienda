@@ -11,6 +11,8 @@ export interface ProductRow {
   categoria_id: string | null;
   marca: string | null;
   marca_id: string | null;
+  proveedor: string | null;
+  proveedor_id: string | null;
   descripcion: string | null;
   presentacion: string | null;
   contenido: number | null;
@@ -67,6 +69,7 @@ export interface CreateProductRequest {
   sku_interno: string;
   generar_sku_interno: boolean;
   marca_id: string | null;
+  proveedor_id: string | null;
   categoria_id: string | null;
   sucursal_id: string;
   descripcion: string | null;

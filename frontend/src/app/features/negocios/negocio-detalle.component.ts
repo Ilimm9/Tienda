@@ -4,12 +4,13 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { ApiErrorResponse, NegocioDetalle } from './negocio.models';
 import { NegocioService } from './negocio.service';
 
 @Component({
   selector: 'app-negocio-detalle',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FechaMexicoPipe, RouterLink],
   templateUrl: './negocio-detalle.component.html',
   styleUrl: './negocio-detalle.component.css',
 })

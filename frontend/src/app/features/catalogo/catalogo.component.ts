@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
@@ -22,7 +21,6 @@ interface SelectOption {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     InputTextModule,
     TableModule,
     TextareaModule,
@@ -51,11 +49,9 @@ export class CatalogoComponent {
   ];
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
-  readonly dialogVisible = signal(false);
   editingId: string | null = null;
   readonly saving = signal(false);
   readonly formError = signal<string | null>(null);
-  importDialogVisible = false;
   importFile: File | null = null;
   importDropActive = false;
   readonly importing = signal(false);
@@ -84,6 +80,15 @@ export class CatalogoComponent {
       : this.section === 'categorias'
         ? 'Categorías'
         : this.section === 'proveedores' ? 'Proveedores' : 'Unidades de medida';
+  }
+  get singularTitle(): string {
+    return this.section === 'marcas'
+      ? 'Marca'
+      : this.section === 'categorias'
+        ? 'Categoría'
+        : this.section === 'proveedores'
+          ? 'Proveedor'
+          : 'Unidad de medida';
   }
   get description(): string {
     return this.section === 'marcas'
@@ -142,7 +147,9 @@ export class CatalogoComponent {
       ? this.service.marcas(negocioId)
       : this.section === 'categorias'
         ? this.service.categorias(negocioId)
-        : this.service.unidades(negocioId);
+        : this.section === 'proveedores'
+          ? this.service.proveedores(negocioId)
+          : this.service.unidades(negocioId);
     this.loading.set(true);
     request.subscribe({
       next: (items) => {
@@ -165,8 +172,7 @@ export class CatalogoComponent {
 
   openCreate(): void {
     this.prepareCreate();
-    if (!this.isProvider()) this.navigateToCreate();
-    else this.dialogVisible.set(true);
+    this.navigateToCreate();
   }
 
   private prepareCreate(): void {
@@ -228,14 +234,14 @@ export class CatalogoComponent {
     this.importResult.set(null);
   }
   templateUrl(): string {
-    return this.service.plantillaUrl(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'unidades');
+    return this.service.plantillaUrl(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'proveedores' | 'unidades');
   }
   importCatalog(): void {
     if (!this.importFile || !this.canImport()) return;
     this.importing.set(true);
     this.importError.set(null);
     this.importResult.set(null);
-    this.service.importar(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'unidades', this.importFile).subscribe({
+    this.service.importar(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'proveedores' | 'unidades', this.importFile).subscribe({
       next: (result) => {
         this.importing.set(false);
         this.importResult.set(result);
@@ -249,8 +255,7 @@ export class CatalogoComponent {
   }
   openEdit(item: CatalogRecord): void {
     this.prepareEdit(item);
-    if (!this.isProvider()) this.navigateToEdit(item);
-    else this.dialogVisible.set(true);
+    this.navigateToEdit(item);
   }
 
   private prepareEdit(item: CatalogRecord): void {
@@ -308,11 +313,7 @@ export class CatalogoComponent {
     request.subscribe({
       next: () => {
         this.saving.set(false);
-        if (this.isFormPage()) this.goToList();
-        else {
-          this.dialogVisible.set(false);
-          this.load();
-        }
+        this.goToList();
       },
       error: (e) => {
         this.saving.set(false);
@@ -336,7 +337,7 @@ export class CatalogoComponent {
     return this.section === 'unidades';
   }
   canImport(): boolean {
-    return this.section === 'marcas' || this.section === 'categorias' || this.section === 'unidades';
+    return this.section === 'marcas' || this.section === 'categorias' || this.section === 'proveedores' || this.section === 'unidades';
   }
 
   navigateToCreate(): void {
@@ -356,6 +357,7 @@ export class CatalogoComponent {
   }
 
   private catalogBasePath(): string {
+    if (this.section === 'proveedores') return '/proveedores';
     return this.section === 'unidades' ? '/catalogo/unidades-medida' : `/catalogo/${this.section}`;
   }
 

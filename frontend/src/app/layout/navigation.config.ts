@@ -17,10 +17,12 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
       { label: 'Productos', icon: 'pi pi-tags', route: '/catalogo/productos' },
       { label: 'Marcas', icon: 'pi pi-bookmark', route: '/catalogo/marcas' },
       { label: 'Categorías', icon: 'pi pi-list', route: '/catalogo/categorias' },
-      { label: 'Proveedores', icon: 'pi pi-truck', route: '/catalogo/proveedores' },
       { label: 'Unidades de medida', icon: 'pi pi-sliders-h', route: '/catalogo/unidades-medida' },
     ],
   },
+  { label: 'Proveedores', icon: 'pi pi-truck', route: '/proveedores' },
+  { label: 'Compras', icon: 'pi pi-shopping-bag', route: '/compras' },
+  { label: 'Validar costos y precios', icon: 'pi pi-verified', route: '/precios/validaciones' },
   {
     label: 'Equipo',
     icon: 'pi pi-users',

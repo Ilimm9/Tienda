@@ -7,6 +7,7 @@ import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { RolResumen } from '../roles-permisos/rol.models';
 import { RolService } from '../roles-permisos/rol.service';
 import { EmpleadoResumen } from './empleado.models';
@@ -16,7 +17,7 @@ import { InvitacionService } from './invitacion.service';
 
 @Component({
   selector: 'app-invitaciones',
-  imports: [CommonModule, FormsModule, TableModule],
+  imports: [CommonModule, FechaMexicoPipe, FormsModule, TableModule],
   templateUrl: './invitaciones.component.html',
   styleUrl: './invitaciones.component.css',
 })

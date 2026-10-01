@@ -39,12 +39,89 @@
       </div>
     </div>
   } @else {
+    <section class="products-filters" aria-label="Filtros de productos">
+      <div class="products-filters-grid">
+        <label class="filter-search">
+          <span>Buscar</span>
+          <div class="filter-search-input">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input
+              pInputText
+              [ngModel]="productSearch()"
+              (ngModelChange)="setProductSearch($event)"
+              placeholder="Nombre, sabor, SKU o código..."
+            />
+          </div>
+        </label>
+        <label class="filter-field">
+          <span>Categoría</span>
+          <p-select
+            [ngModel]="productCategoryFilter()"
+            (ngModelChange)="setProductCategoryFilter($event)"
+            [options]="productCategoryOptions()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Todas"
+            [showClear]="true"
+          />
+        </label>
+        <label class="filter-field">
+          <span>Marca</span>
+          <p-select
+            [ngModel]="productBrandFilter()"
+            (ngModelChange)="setProductBrandFilter($event)"
+            [options]="productBrandOptions()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Todas"
+            [showClear]="true"
+          />
+        </label>
+        <label class="filter-field">
+          <span>Proveedor</span>
+          <p-select [ngModel]="productProviderFilter()" (ngModelChange)="setProductProviderFilter($event)" [options]="productProviderOptions()" optionLabel="nombre" optionValue="id" placeholder="Todos" [showClear]="true" />
+        </label>
+        <label class="filter-field">
+          <span>Estado</span>
+          <p-select
+            [ngModel]="productStatusFilter()"
+            (ngModelChange)="setProductStatusFilter($event)"
+            [options]="productStatusOptions"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Todos"
+            [showClear]="true"
+          />
+        </label>
+        <label class="filter-field">
+          <span>Tipo</span>
+          <p-select
+            [ngModel]="productTypeFilter()"
+            (ngModelChange)="setProductTypeFilter($event)"
+            [options]="productTypeOptions"
+            optionLabel="nombre"
+            optionValue="id"
+          />
+        </label>
+      </div>
+      <div class="products-filters-header">
+        <div>
+          <!-- <h2>Filtros</h2> -->
+          <p>{{ filteredProducts().length }} de {{ products().length }} productos</p>
+        </div>
+        <button class="secondary-button filter-clear-button" type="button" (click)="clearProductFilters()">
+          <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
+        </button>
+      </div>
+    </section>
     <div class="products-card data-table-card">
       <p-table
-        [value]="products()"
+        [value]="filteredProducts()"
         [loading]="false"
         [paginator]="true"
         [rows]="10"
+        [first]="productPageFirst()"
+        (onPage)="onProductTablePage($event.first)"
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
@@ -63,6 +140,7 @@
             <th>Precio</th>
             <th>Stock</th>
             <th>Categoría</th>
+            <th>Proveedor</th>
             <th>Estado</th>
             <th class="actions-column">Acciones</th>
           </tr>
@@ -112,6 +190,7 @@
             <td>@if (hasVariants(product)) { <span class="variant-summary">Ver variantes</span> } @else { {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }} }</td>
             <td>{{ hasVariants(product) ? variantStockTotal(product) : product.stock }} und.</td>
             <td>{{ product.categoria || 'Sin categoría' }}</td>
+            <td>{{ product.proveedor || 'Sin proveedor' }}</td>
             <td>
               <span class="status" [class]="getStatusClass(product.estado)">
                 {{ product.estado || 'Sin estado' }}
@@ -180,7 +259,7 @@
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="9" class="empty-message">Sin productos disponibles.</td>
+            <td colspan="9" class="empty-message">No hay productos que coincidan con los filtros.</td>
           </tr>
         </ng-template>
       </p-table>
@@ -325,6 +404,10 @@
             [showClear]="true"
             [style]="{ width: '100%' }"
           />
+        </label>
+        <label class="field">
+          <span>Proveedor <small class="optional-label">(opcional)</small></span>
+          <p-select formControlName="proveedor_id" [options]="providers()" optionLabel="nombre" optionValue="id" placeholder="Sin proveedor" [showClear]="true" [style]="{ width: '100%' }" />
         </label>
 
         <label class="field full-field">

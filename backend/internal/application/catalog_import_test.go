@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/xuri/excelize/v2"
@@ -19,6 +20,30 @@ func TestParseBrandImportNormalizesNames(t *testing.T) {
 	}
 	if result.Procesadas != 2 || result.Invalidas != 0 || len(result.Errores) != 0 {
 		t.Fatalf("result = %#v, want two valid rows", result)
+	}
+}
+
+func TestParseProviderImportAcceptsCurrentFormFields(t *testing.T) {
+	file := workbook(t, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}, [][]string{{"  Comercial Norte  ", "Norte SA", "NOR010101AA1", "5551234567", "ventas@norte.test", "Av. Central 1"}})
+
+	rows, result, err := parseProviderImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProviderImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].Nombre != "Comercial Norte" || rows[0].Email != "ventas@norte.test" || result.Invalidas != 0 {
+		t.Fatalf("rows = %#v, result = %#v", rows, result)
+	}
+}
+
+func TestParseProviderImportRejectsMissingNameAndInvalidEmail(t *testing.T) {
+	file := workbook(t, []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}, [][]string{{"", "", "RFC010101AA1", "", "", ""}, {"Proveedor", "", "", "", "correo-invalido", ""}})
+
+	rows, result, err := parseProviderImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProviderImport() error = %v", err)
+	}
+	if len(rows) != 0 || result.Invalidas != 2 || len(result.Errores) != 2 {
+		t.Fatalf("rows = %#v, result = %#v", rows, result)
 	}
 }
 
@@ -46,17 +71,36 @@ func TestCatalogImportTemplateHasExpectedHeaders(t *testing.T) {
 	}
 }
 
+func TestProviderImportTemplateHasExpectedHeaders(t *testing.T) {
+	content, err := CatalogImportTemplate("proveedores")
+	if err != nil {
+		t.Fatalf("CatalogImportTemplate() error = %v", err)
+	}
+	book, err := excelize.OpenReader(bytes.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer book.Close()
+	rows, err := book.GetRows("Proveedores")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := rows[0], []string{"Nombre", "Razón social", "RFC", "Teléfono", "Correo", "Dirección"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("headers = %#v, want %#v", got, want)
+	}
+}
+
 func TestParseProductImportKeepsOptionalSKUAndReportsFieldErrors(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	file := workbook(t, headers, [][]string{
-		{"Refresco", "REF-600", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038", "Sabor=Cola"},
-		{"", "", "", "", "", "", "-2", "", "", "-10", "texto", "123", ""},
+		{"Refresco", "REF-600", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038", "Sabor=Cola", "Distribuidora Norte"},
+		{"", "", "", "", "", "", "-2", "", "", "-10", "texto", "123", "", ""},
 	})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
 	}
-	if len(rows) != 1 || rows[0].SKUInterno != "REF-600" || rows[0].Categoria != "" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
+	if len(rows) != 1 || rows[0].SKUInterno != "REF-600" || rows[0].Proveedor != "Distribuidora Norte" || rows[0].Categoria != "" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
 		t.Fatalf("rows = %#v, want one parsed product", rows)
 	}
 	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 4 || len(result.Advertencias) != 1 {
@@ -68,8 +112,8 @@ func TestParseProductImportKeepsOptionalSKUAndReportsFieldErrors(t *testing.T) {
 }
 
 func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
-	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "", "10", "2", "1234567", ""}})
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "", "10", "2", "1234567", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -84,8 +128,8 @@ func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
 }
 
 func TestParseProductImportAllowsMissingSKU(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
-	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "4", "", ""}})
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "4", "", "", ""}})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
@@ -96,8 +140,8 @@ func TestParseProductImportAllowsMissingSKU(t *testing.T) {
 }
 
 func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes"}
-	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "", "Kinder", "", "Unidad", "", "", "", "28", "0", "", "Colección=Dinosaurios; Color=Azul"}})
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "", "Kinder", "", "Unidad", "", "", "", "28", "0", "", "Colección=Dinosaurios; Color=Azul", ""}})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
@@ -122,6 +166,10 @@ func TestProductImportTemplateIncludesInstructions(t *testing.T) {
 	defer book.Close()
 	if book.GetSheetName(0) != "Productos" {
 		t.Fatalf("first sheet = %q, want Productos", book.GetSheetName(0))
+	}
+	productRows, err := book.GetRows("Productos")
+	if err != nil || len(productRows) == 0 || productRows[0][13] != "Proveedor" {
+		t.Fatalf("product headers = %#v, error = %v", productRows, err)
 	}
 	rows, err := book.GetRows("Instrucciones")
 	if err != nil || len(rows) < 3 || rows[1][0] != "Campos obligatorios" {

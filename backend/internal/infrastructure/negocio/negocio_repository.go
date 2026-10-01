@@ -74,7 +74,7 @@ func (r *NegocioRepository) ExisteSlug(ctx context.Context, slug string) (bool, 
 
 func (r *NegocioRepository) Crear(ctx context.Context, usuarioID uuid.UUID, slug string, input domain.CrearNegocioInput) (domain.NegocioDetalle, error) {
 	negocioID := uuid.New()
-	now := time.Now()
+	now := time.Now().UTC()
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var direccionID *uuid.UUID
 		if input.Direccion != nil {
@@ -147,7 +147,7 @@ func (r *NegocioRepository) Actualizar(ctx context.Context, usuarioID, negocioID
 }
 
 func (r *NegocioRepository) Archivar(ctx context.Context, usuarioID, negocioID uuid.UUID) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	result := r.db.WithContext(ctx).Model(&domain.Negocio{}).
 		Where(`id = ? AND estado <> 'archivado' AND EXISTS (
 			SELECT 1 FROM membresias_negocio m
@@ -171,7 +171,7 @@ func (r *NegocioRepository) Restaurar(ctx context.Context, usuarioID, negocioID 
 			WHERE m.negocio_id = negocios.id AND m.usuario_id = ?
 			AND m.estado = 'activo' AND m.tipo_miembro = 'propietario'
 		)`, negocioID, usuarioID).
-		Updates(map[string]interface{}{"estado": "activo", "archivado_en": nil, "actualizado_en": time.Now()})
+		Updates(map[string]interface{}{"estado": "activo", "archivado_en": nil, "actualizado_en": time.Now().UTC()})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -203,7 +203,7 @@ func direccionDesdeInput(input domain.DireccionInput) domain.Direccion {
 }
 
 func negocioUpdates(input domain.ActualizarNegocioInput) map[string]interface{} {
-	values := map[string]interface{}{"actualizado_en": time.Now()}
+	values := map[string]interface{}{"actualizado_en": time.Now().UTC()}
 	if input.NombreComercial.Set {
 		values["nombre_comercial"] = *input.NombreComercial.Value
 		values["nombre"] = *input.NombreComercial.Value
@@ -251,7 +251,7 @@ func actualizarDireccion(tx *gorm.DB, negocio *domain.Negocio, input *domain.Act
 		return tx.Model(&domain.Negocio{}).Where("id = ?", negocio.ID).Update("direccion_id", direccion.ID).Error
 	}
 
-	values["actualizado_en"] = time.Now()
+	values["actualizado_en"] = time.Now().UTC()
 	if err := tx.Model(&domain.Direccion{}).Where("id = ?", *negocio.DireccionID).Updates(values).Error; err != nil {
 		return err
 	}

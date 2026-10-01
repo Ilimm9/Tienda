@@ -33,6 +33,9 @@ export class ProductosService {
   listUnits(businessId: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/catalogo/unidades-medida`);
   }
+  listProviders(businessId: string): Observable<CatalogOption[]> {
+    return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/catalogo/proveedores`);
+  }
 
   lookupProduct(businessId: string, barcode: string): Observable<ProductLookup> {
     return this.http.get<ProductLookup>(

@@ -3,15 +3,15 @@
 }
 
 .products-page {
-    width: min(100%, 1180px);
-    padding: 36px 32px;
+    width: min(100%, var(--section-max-width));
+    padding: 36px var(--section-padding-inline);
     margin: 0 auto;
     display: grid;
 }
 
 .product-page {
-    width: min(100%, 980px);
-    padding: 36px 32px 56px;
+    width: min(100%, var(--section-max-width));
+    padding: 36px var(--section-padding-inline) 56px;
     margin: 0 auto;
 }
 
@@ -73,6 +73,68 @@
     line-height: 1.6;
 }
 
+.products-filters {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: .55rem;
+    background: var(--surface-raised);
+}
+
+.products-filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.products-filters-header h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: .9rem;
+}
+
+.products-filters-header p {
+    margin: .2rem 0 0;
+    color: var(--text-muted);
+    font-size: .78rem;
+}
+
+.products-filters-grid {
+    display: grid;
+    grid-template-columns: minmax(15rem, 2fr) repeat(4, minmax(9rem, 1fr));
+    gap: .75rem;
+}
+
+.filter-field,
+.filter-search {
+    display: grid;
+    gap: .35rem;
+    color: var(--text-muted);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.filter-search-input {
+    position: relative;
+}
+
+.filter-search-input i {
+    position: absolute;
+    top: 50%;
+    left: .7rem;
+    z-index: 1;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+}
+
+.filter-search-input input {
+    width: 100%;
+    padding-left: 2rem;
+}
+
 .eyebrow {
     margin: 0;
     color: var(--primary);
@@ -130,9 +192,9 @@
 .variant-expansion {
     margin: 0 .75rem .75rem 3.5rem;
     padding: .75rem 1rem;
-    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text-muted));
+    border: 1px solid var(--border);
     border-radius: .45rem;
-    background: color-mix(in srgb, var(--surface-raised) 88%, var(--text-muted));
+    background: var(--surface-sidebar);
     overflow-x: auto;
 }
 
@@ -468,6 +530,15 @@ code {
         flex-direction: column;
     }
 
+    .products-filters-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .products-filters-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
     .form-page-header {
         flex-direction: column;
         gap: 1rem;
@@ -487,6 +558,10 @@ code {
     }
 
     .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .products-filters-grid {
         grid-template-columns: 1fr;
     }
 

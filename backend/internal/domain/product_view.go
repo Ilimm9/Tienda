@@ -22,6 +22,8 @@ type ProductRow struct {
 	CategoriaID     *uuid.UUID           `json:"categoria_id"`
 	Marca           *string              `json:"marca"`
 	MarcaID         *uuid.UUID           `json:"marca_id"`
+	Proveedor       *string              `json:"proveedor"`
+	ProveedorID     *uuid.UUID           `json:"proveedor_id"`
 	Descripcion     *string              `json:"descripcion"`
 	Presentacion    *string              `json:"presentacion"`
 	Contenido       *float64             `json:"contenido"`
@@ -73,6 +75,7 @@ type CreateProductInput struct {
 	SKUInterno        string                      `json:"sku_interno"`
 	GenerarSKUInterno bool                        `json:"generar_sku_interno"`
 	MarcaID           *uuid.UUID                  `json:"marca_id"`
+	ProveedorID       *uuid.UUID                  `json:"proveedor_id"`
 	CategoriaID       *uuid.UUID                  `json:"categoria_id,omitempty"`
 	SucursalID        uuid.UUID                   `json:"sucursal_id" binding:"required"`
 	Descripcion       *string                     `json:"descripcion"`
@@ -93,6 +96,7 @@ type UpdateProductInput struct {
 	Nombre          string     `json:"nombre" binding:"required"`
 	SKUInterno      string     `json:"sku_interno" binding:"required"`
 	MarcaID         *uuid.UUID `json:"marca_id"`
+	ProveedorID     *uuid.UUID `json:"proveedor_id"`
 	CategoriaID     uuid.UUID  `json:"categoria_id" binding:"required"`
 	Descripcion     *string    `json:"descripcion"`
 	Contenido       *float64   `json:"contenido"`
@@ -160,6 +164,7 @@ type ProductImportRow struct {
 	SKUInterno      string
 	Categoria       string
 	Marca           string
+	Proveedor       string
 	Descripcion     string
 	Presentacion    string
 	Contenido       *float64
@@ -182,6 +187,7 @@ type CreateImportedProductInput struct {
 	Nombre          string
 	SKUInterno      *string
 	MarcaID         *uuid.UUID
+	ProveedorID     *uuid.UUID
 	CategoriaID     *uuid.UUID
 	SucursalID      uuid.UUID
 	Descripcion     *string
@@ -206,6 +212,15 @@ type CatalogImportCategoryRow struct {
 	Nombre         string
 	Descripcion    string
 	CategoriaPadre string
+}
+type CatalogImportProviderRow struct {
+	Fila        int
+	Nombre      string
+	RazonSocial string
+	RFC         string
+	Telefono    string
+	Email       string
+	Direccion   string
 }
 type CatalogImportUnitRow struct {
 	Fila        int

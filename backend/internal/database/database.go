@@ -1,9 +1,13 @@
 package database
 
 import (
+	"time"
+
 	"tienda/backend/internal/domain"
+	compradomain "tienda/backend/internal/domain/compra"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
+	preciodomain "tienda/backend/internal/domain/precio"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
@@ -19,8 +23,10 @@ const (
 )
 
 func Open(url string) (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(url), &gorm.Config{})
+	return gorm.Open(postgres.Open(url), &gorm.Config{NowFunc: nowUTC})
 }
+
+func nowUTC() time.Time { return time.Now().UTC() }
 
 func Init(db *gorm.DB) error {
 	if err := infrastructure.MigrateCatalogTenancy(db); err != nil {
@@ -51,6 +57,8 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.ProductoSKUConsecutivo{}, &domain.Impuesto{},
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
+		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
+		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
 	}
 	for _, model := range models {
 		if !db.Migrator().HasTable(model) {

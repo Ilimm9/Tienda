@@ -14,7 +14,6 @@ export const CATALOGO_ROUTES: Routes = [
   { path: 'categorias/importar', data: { breadcrumb: 'Importar categorías', section: 'categorias', mode: 'import' }, loadComponent: catalogo },
   { path: 'categorias/:id/editar', data: { breadcrumb: 'Editar categoría', section: 'categorias', mode: 'edit' }, loadComponent: catalogo },
   { path: 'categorias', data: { breadcrumb: 'Categorías', section: 'categorias' }, loadComponent: catalogo },
-  { path: 'proveedores', canActivate: [contextoGuard], data: { breadcrumb: 'Proveedores', section: 'proveedores' }, loadComponent: catalogo },
   { path: 'unidades-medida/nuevo', data: { breadcrumb: 'Agregar unidad', section: 'unidades', mode: 'create' }, loadComponent: catalogo },
   { path: 'unidades-medida/importar', data: { breadcrumb: 'Importar unidades', section: 'unidades', mode: 'import' }, loadComponent: catalogo },
   { path: 'unidades-medida/:id/editar', data: { breadcrumb: 'Editar unidad', section: 'unidades', mode: 'edit' }, loadComponent: catalogo },

@@ -44,6 +44,8 @@ const (
 	PermisoAsignacionEditar  = "equipo.asignaciones.editar"
 	PermisoCatalogoVer       = "catalogo.ver"
 	PermisoCatalogoGestionar = "catalogo.gestionar"
+	PermisoCompraVer         = "compras.ver"
+	PermisoCompraRegistrar   = "compras.registrar"
 )
 
 // CatalogoPermisos es la fuente del sembrado idempotente del catálogo global.
@@ -66,4 +68,6 @@ var CatalogoPermisos = []Permiso{
 	{Codigo: PermisoAsignacionEditar, CodigoModulo: "equipo", Nombre: "Asignar empleados a sucursales"},
 	{Codigo: PermisoCatalogoVer, CodigoModulo: "catalogo", Nombre: "Ver catálogo"},
 	{Codigo: PermisoCatalogoGestionar, CodigoModulo: "catalogo", Nombre: "Gestionar catálogo"},
+	{Codigo: PermisoCompraVer, CodigoModulo: "compras", Nombre: "Ver compras"},
+	{Codigo: PermisoCompraRegistrar, CodigoModulo: "compras", Nombre: "Registrar compras"},
 }

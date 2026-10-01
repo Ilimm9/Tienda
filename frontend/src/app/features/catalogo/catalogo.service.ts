@@ -26,12 +26,12 @@ export class CatalogoService {
   actualizar(negocioId: string, path: string, id: string, payload: object): Observable<void> {
     return this.http.patch<void>(`${this.api}/negocios/${negocioId}/catalogo/${path}/${id}`, payload);
   }
-  importar(negocioId: string, section: 'marcas' | 'categorias' | 'unidades', file: File): Observable<CatalogImportResult> {
+  importar(negocioId: string, section: 'marcas' | 'categorias' | 'proveedores' | 'unidades', file: File): Observable<CatalogImportResult> {
     const data = new FormData();
     data.append('archivo', file);
     return this.http.post<CatalogImportResult>(`${this.api}/negocios/${negocioId}/catalogo/${section}/importar`, data);
   }
-  plantillaUrl(negocioId: string, section: 'marcas' | 'categorias' | 'unidades'): string {
+  plantillaUrl(negocioId: string, section: 'marcas' | 'categorias' | 'proveedores' | 'unidades'): string {
     if (section === 'unidades') return `${this.api}/negocios/${negocioId}/catalogo/unidades/importacion/plantilla`;
     return `${this.api}/negocios/${negocioId}/catalogo/${section}/importacion/plantilla`;
   }

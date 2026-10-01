@@ -15,11 +15,19 @@ describe('NAVIGATION_ITEMS', () => {
       '/catalogo/productos',
       '/catalogo/marcas',
       '/catalogo/categorias',
-      '/catalogo/proveedores',
       '/catalogo/unidades-medida',
+      '/proveedores',
       '/equipo/empleados',
       '/equipo/invitaciones',
       '/roles-permisos',
     ]);
+  });
+
+  it('shows Proveedores as a root entry instead of a Catálogo child', () => {
+    const catalogo = NAVIGATION_ITEMS.find((item) => item.label === 'Catálogo');
+    const proveedores = NAVIGATION_ITEMS.find((item) => item.label === 'Proveedores');
+
+    expect(catalogo?.children?.some((item) => item.label === 'Proveedores')).toBe(false);
+    expect(proveedores).toMatchObject({ route: '/proveedores', icon: 'pi pi-truck' });
   });
 });
