@@ -7,12 +7,12 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { environment } from '../../../../environments/environment';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { AuthService } from '../auth.service';
+import { AuthTransitionService } from '../auth-transition.service';
 
 function matchingPasswords(control: AbstractControl): ValidationErrors | null {
   const password = control.get('contrasena');
@@ -27,7 +27,7 @@ function matchingPasswords(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule],
   templateUrl: './register.component.html',
   styleUrl: './register.component.css',
 })
@@ -36,12 +36,12 @@ export class RegisterComponent {
   private readonly auth = inject(AuthService);
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
+  private readonly transition = inject(AuthTransitionService);
 
   readonly loading = signal(false);
   readonly error = signal('');
   readonly passwordVisible = signal(false);
   readonly confirmationVisible = signal(false);
-  readonly imageUrl = environment.loginHeaderImageUrl;
   readonly form = this.formBuilder.group(
     {
       nombreCompleto: ['', [Validators.required, Validators.minLength(3)]],
@@ -59,6 +59,10 @@ export class RegisterComponent {
 
   toggleConfirmation(): void {
     this.confirmationVisible.update((visible) => !visible);
+  }
+
+  switchToLogin(): void {
+    this.transition.request('login');
   }
 
   submit(): void {

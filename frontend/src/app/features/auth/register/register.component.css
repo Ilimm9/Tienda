@@ -1,38 +1,21 @@
 :host {
   display: block;
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .register-page {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: var(--surface-raised);
+  width: 100%;
 }
 
 .register-panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: min(100%, 520px);
-  justify-self: center;
-  padding: 40px 32px;
-}
-
-h1 {
-  margin: 0 0 24px;
-  color: var(--text);
-  font-size: clamp(26px, 3vw, 34px);
-  line-height: 1.2;
-  letter-spacing: -0.04em;
+  width: 100%;
 }
 
 .register-card {
-  padding: 26px 24px;
-  background: var(--surface-sidebar);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(17, 28, 50, 0.07);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 label {
@@ -147,9 +130,9 @@ label {
   min-height: 46px;
   padding: 0 16px;
   color: #fff;
-  border: 1px solid #2864e9;
+  border: 1px solid var(--auth-action, var(--primary));
   border-radius: 10px;
-  background: #2864e9;
+  background: var(--auth-action, var(--primary));
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -157,8 +140,8 @@ label {
 }
 
 .submit-button:enabled:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--auth-action-hover, var(--primary-hover));
+  border-color: var(--auth-action-hover, var(--primary-hover));
 }
 
 .submit-button:enabled:focus-visible {
@@ -179,8 +162,22 @@ label {
 }
 
 .login-link a {
-  color: #2864e9;
+  color: var(--auth-action, var(--primary));
   font-weight: 600;
+}
+
+.login-link button {
+  padding: 0;
+  color: var(--auth-action, var(--primary));
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-link button:hover {
+  text-decoration: underline;
 }
 
 .login-link a:hover,
@@ -188,45 +185,39 @@ footer a:hover {
   text-decoration: underline;
 }
 
-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
-}
-
-footer a {
-  color: var(--text-muted);
-}
-
-footer span {
-  color: #c8ccd3;
-}
-
-.register-image {
-  min-height: 100vh;
-  background-color: #101116;
-  background-position: center;
-  background-size: cover;
-}
-
 @media (max-width: 700px) {
-  .register-page {
-    display: block;
-    background: var(--background);
-  }
-
   .register-panel {
     width: 100%;
-    min-height: 100vh;
-    padding: 32px 20px;
+  }
+}
+
+@media (min-width: 821px) and (max-height: 760px) {
+  label {
+    margin-bottom: 4px;
+    font-size: 11px;
   }
 
-  .register-image {
-    display: none;
+  .field-wrap,
+  .password-field {
+    height: 38px;
+    margin-bottom: 8px;
+  }
+
+  .register-input {
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .password-toggle {
+    width: 30px;
+    height: 30px;
+  }
+
+  .submit-button {
+    min-height: 40px;
+  }
+
+  .login-link {
+    margin: 14px 0 0;
   }
 }

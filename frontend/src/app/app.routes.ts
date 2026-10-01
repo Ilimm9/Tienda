@@ -6,16 +6,25 @@ import { contextoGuard } from './contexto/contexto.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
   {
-    path: 'login',
+    path: '',
     loadComponent: () =>
-      import('./features/auth/login/login.component').then((module) => module.LoginComponent),
-  },
-  {
-    path: 'registro',
-    loadComponent: () =>
-      import('./features/auth/register/register.component').then(
-        (module) => module.RegisterComponent,
+      import('./features/auth/auth-shell/auth-shell.component').then(
+        (module) => module.AuthShellComponent,
       ),
+    children: [
+      {
+        path: 'login',
+        loadComponent: () =>
+          import('./features/auth/login/login.component').then((module) => module.LoginComponent),
+      },
+      {
+        path: 'registro',
+        loadComponent: () =>
+          import('./features/auth/register/register.component').then(
+            (module) => module.RegisterComponent,
+          ),
+      },
+    ],
   },
   {
     path: 'verificar-correo',
