@@ -1,3 +1,4 @@
+import '@angular/common/locales/global/es-MX';
 import 'zone.js';
 
 import { bootstrapApplication } from '@angular/platform-browser';

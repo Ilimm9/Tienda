@@ -131,6 +131,7 @@ Corrección local de compatibilidad Angular/CSP iniciada el 2026-10-01:
 - [x] Se verificó un artefacto Angular aislado: stylesheet normal, sin `media="print"` ni `onload`, con CSS y fuente de PrimeIcons incluidos.
 - [x] Se verificó visualmente el login local bajo CSP estricta; los iconos de correo, candado y ojo se muestran correctamente.
 - [x] Se elevó temporalmente el error máximo de estilos por componente de 8 kB a 9 kB; la advertencia permanece en 4 kB hasta optimizar el CSS.
+- [x] Se registró globalmente el locale `es-MX` antes del bootstrap para eliminar `NG0701` en los formatos de fecha.
 - [ ] Recuperar las suites completas de la rama; sus fallos previos no relacionados permanecen documentados abajo.
 
 Verificación de esta corrección:
@@ -138,7 +139,8 @@ Verificación de esta corrección:
 - `npm run build -- --configuration production` con salida temporal: correcto; `productos.component.css` permanece advertido con 8.05 kB, por debajo del error temporal de 9 kB.
 - El artefacto genera `<link rel="stylesheet" ...>` sin activador JavaScript inline.
 - Chromium local con la CSP de producción: correcto; PrimeIcons visibles en el formulario de inicio de sesión.
-- `npm test -- --watch=false`: 124 pruebas correctas y 10 fallidas por expectativas de navegación, locale `es-MX` y peticiones pendientes de proveedores; no relacionadas con esta corrección.
+- Prueba específica de `FechaMexicoPipe`: reproduce `NG0701` antes del registro de `es-MX` y pasa después del cambio.
+- `npm test -- --watch=false`: 125 pruebas correctas y 9 fallidas por expectativas de navegación y peticiones pendientes de proveedores; `NG0701` quedó resuelto.
 - `go test ./...`: todos los paquetes salvo `internal/config`; el fixture SMTP de esa prueba usa una región distinta a la admitida actualmente.
 - No se modificó servidor remoto, Cloudflare, AWS, secretos ni estado Git.
 
@@ -470,6 +472,7 @@ El despliegue público se autoriza únicamente cuando:
 - 2026-09-20: el usuario aprobó explícitamente la fase 3. SES permanece en la fase 4 y no forma parte de esta autorización.
 - 2026-10-01: el usuario aprobó la corrección local de PrimeIcons sobre la rama `production` actualizada. El cambio no autoriza commit, push ni acceso al servidor remoto.
 - 2026-10-01: el usuario aprobó elevar temporalmente a 9 kB el presupuesto de error de estilos por componente y optimizar el CSS posteriormente.
+- 2026-10-01: el usuario aprobó registrar `es-MX` localmente; Cloudflare permanece fuera del alcance de cambios automatizados.
 
 ## Registro de implementación de las fases 1, 2 y 3
 

@@ -1,3 +1,5 @@
+import '@angular/common/locales/global/es-MX';
+
 import { FechaMexicoPipe } from './fecha-mexico.pipe';
 
 describe('FechaMexicoPipe', () => {
