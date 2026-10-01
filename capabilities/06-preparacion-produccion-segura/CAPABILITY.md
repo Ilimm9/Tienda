@@ -82,7 +82,7 @@ Decisiones:
 - La base de producción iniciará vacía en un volumen Docker persistente.
 - `cloudflared`, gateway, frontend, backend y PostgreSQL tendrán healthchecks, reinicio automático, límites de recursos/PIDs y rotación de logs donde resulte compatible.
 - Secretos se almacenarán sólo en `.env.production` del servidor con permisos `0600`; no entrarán a Git, imágenes ni frontend.
-- SES seguirá en `us-east-2`. La salida del sandbox se solicitará después de publicar y verificar los flujos transaccionales.
+- SES permanece configurado en `us-east-2`; AWS rechazó su acceso a producción. Se propone Resend Free como proveedor operativo y SES como alternativa futura, conforme a la revisión de correo siguiente.
 - La instancia mantendrá actualizaciones automáticas de seguridad del sistema; actualizaciones de aplicación e imágenes serán controladas y verificadas.
 
 ### Excepción temporal de recuperación
@@ -97,7 +97,7 @@ Por decisión explícita del usuario, esta demo no incluirá respaldos de Postgr
 - Runbook corto de instalación, despliegue, actualización, rollback de contenedores y diagnóstico.
 - Ajustes mínimos de host: SSH, UFW, firewall Lightsail, actualizaciones y permisos.
 - Verificación externa de HTTPS, cabeceras, puertos y flujos críticos.
-- Solicitud de acceso de producción de SES y prueba a un destinatario no verificado cuando AWS la apruebe.
+- Configuración del proveedor SMTP elegido y prueba a un destinatario externo habilitado por ese proveedor; SES requiere aprobación para salir del sandbox.
 
 ### Criterios de aceptación de la demo
 
@@ -107,7 +107,60 @@ Por decisión explícita del usuario, esta demo no incluirá respaldos de Postgr
 - Registro, OTP, login, recuperación e invitación funcionan con configuración de producción.
 - Los logs no contienen secretos, OTP ni credenciales SMTP.
 - Credenciales y `.env.production` no están rastreados por Git.
-- SES acepta envíos a cualquier destinatario después de salir del sandbox.
+- El proveedor activo acepta envíos transaccionales a destinatarios externos sin verificación individual, dentro de sus cuotas y políticas; SES sólo cumple este criterio al salir del sandbox.
+
+### Revisión propuesta: Resend Free y compatibilidad con SES
+
+**Estado: En revisión.** El usuario solicitó esta propuesta tras el rechazo de SES y ya creó su cuenta Resend. Esta revisión documenta el alcance; su implementación y el despliegue requieren aprobación explícita. No modifica las aprobaciones anteriores.
+
+#### Alcance y arquitectura
+
+- Usar Resend Free para OTP, recuperación e invitaciones mediante el transporte SMTP existente de `infrastructure/correo`.
+- Conservar los contratos de `application/correo` y las plantillas definidos en la [Capability 07](../07-servicio-correo-transaccional/CAPABILITY.md), ubicación canónica del servicio de correo.
+- Seleccionar un único proveedor por ambiente mediante `SMTP_HOST`, puerto, TLS, credenciales y remitente; no agregar SDK, variable de selección redundante ni fallback automático entre proveedores.
+- Mantener SES como opción configurable sin eliminar sus registros DNS ni credenciales del servidor hasta confirmar la migración. La aplicación sólo usará las credenciales del proveedor activo.
+- Actualizar ejemplos de entorno y runbook para ambos proveedores; verificar compatibilidad mediante pruebas de configuración y transporte. No se requieren cambios frontend ni migraciones de base de datos.
+
+#### Configuración y contratos
+
+| Variable | Resend | SES |
+| --- | --- | --- |
+| `SMTP_HOST` | `smtp.resend.com` | `email-smtp.us-east-2.amazonaws.com` |
+| `SMTP_PORT` | `587` | `587` |
+| `SMTP_TLS` | `starttls` obligatorio | `starttls` obligatorio |
+| `SMTP_USERNAME` | `resend` | Usuario SMTP de SES |
+| `SMTP_PASSWORD` | API key con permiso Sending access restringido al dominio | Contraseña SMTP de SES |
+| `MAIL_FROM` | `no-reply@send.mergemakers.com` | `no-reply@mergemakers.com` |
+| `MAIL_FROM_NAME` | `Stockion` | `Stockion` |
+| `SES_CONFIGURATION_SET` | Vacío | Nombre opcional de configuration set SES |
+
+`SMTP_TIMEOUT=10s` y `FRONTEND_URL=https://stockion.mergemakers.com` permanecen vigentes. No exponer la API key al frontend ni guardarla en archivos rastreados. `MAIL_REPLY_TO` sólo debe apuntar a un buzón real atendido; verificar un dominio de envío no crea buzones.
+
+#### Reglas de operación
+
+- Plan gratuito consultado: 3,000 correos/mes y 100/día; confirmar las cuotas vigentes en la cuenta antes del despliegue. Cada OTP, reenvío, recuperación e invitación consume cuota.
+- Autenticar `send.mergemakers.com` con los registros exactos de SPF/DKIM que entregue Resend; conservar DMARC compatible y no duplicar registros SPF en un mismo nombre DNS.
+- Configurar sólo envío, sin habilitar recepción ni cambiar los MX de buzones existentes. Mantener desactivados seguimiento de aperturas y enlaces para correos de autenticación.
+- Conservar espera, límites y expiración actuales de OTP. Al agotarse la cuota o rechazarse SMTP, el envío debe fallar de manera controlada y la cuenta debe permanecer pendiente; no omitir OTP ni activar usuarios.
+- No añadir reintentos automáticos ni fallback SES: evita duplicar correos y no elude las restricciones del sandbox.
+- Revisar mensajes, rebotes, quejas y supresiones en el panel Resend; documentar responsable operativo y verificar la supresión con destinatarios de prueba oficiales. Aceptación SMTP no equivale a entrega en bandeja.
+- Webhook firmado, persistencia de eventos y lista de supresión propia quedan para una revisión posterior; no declarar que la aplicación ya procesa eventos que sólo administra el proveedor.
+
+#### Tareas, pruebas y aceptación
+
+- [ ] Aprobar esta revisión para implementación local.
+- [ ] Actualizar ejemplos raíz/backend y guía con perfiles Resend/SES, sin secretos reales.
+- [ ] Verificar configuración de Resend y SES con TLS/credenciales obligatorios; SMTP local continúa reservado para desarrollo.
+- [ ] Verificar que con Resend no se emite `X-SES-CONFIGURATION-SET` y que SES conserva esa cabecera cuando está configurada.
+- [ ] Ejecutar pruebas de configuración, correo, OTP e invitaciones; registrar resultados y fallos previos por separado.
+- [ ] Usuario verifica dominio y crea API key; después actualiza únicamente variables de correo del servidor y recrea backend.
+- [ ] Probar OTP con Gmail/Outlook externos, recuperación e invitación; comprobar entrega y autenticación SPF/DKIM/DMARC.
+- [ ] Simular rechazo/timeout/cuota y confirmar que no se activan cuentas ni se corrompen invitaciones.
+- [ ] Documentar cambio reversible de proveedor mediante configuración, sin alterar volumen PostgreSQL.
+
+Criterio de cierre: Resend envía los tres flujos con dominio autenticado; conserva protección de secretos y comportamiento ante fallos; SES sigue siendo compatible por configuración. No se garantiza entrega a toda dirección ni disponibilidad al superar la cuota gratuita.
+
+Fuentes: [SMTP Resend](https://resend.com/docs/send-with-smtp), [dominios y subdominios](https://resend.com/docs/dashboard/domains/introduction), [cuotas y precios](https://resend.com/pricing).
 
 ### Estado de implementación de la demo
 
