@@ -47,3 +47,7 @@ credenciales-aws.*
 # =========================
 docker-example.txt
 thrs/
+
+.codex/
+graphify-out/
+frontend/graphify-out/
