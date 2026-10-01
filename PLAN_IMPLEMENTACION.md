@@ -37,6 +37,7 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 09 | [Proveedor opcional en productos](capabilities/09-productos-proveedores/CAPABILITY.md) | En implementación | Productos, proveedores e importación XLSX | Aprobada explícitamente el 2026-09-23 | Un proveedor opcional por producto, incluidos filtros, formulario y carga masiva; pendiente de pruebas Angular con Node compatible |
 | 10 | [Compras y recepción de mercancía](capabilities/10-compras-proveedores/CAPABILITY.md) | En implementación | Proveedores, productos, unidades e inventario | Revisiones aprobadas explícitamente el 2026-09-28 | Mercancía antes de impuestos y pago; total e importe pagado automáticos |
 | 11 | [Fechas de auditoría y presentación en Ciudad de México](capabilities/10-fechas-auditoria/CAPABILITY.md) | En implementación | Timestamps UTC expuestos por la API y vistas Angular | Aprobada explícitamente el 2026-09-23 | UTC desde Go para auditoría y presentación fija en `America/Mexico_City`; pendiente ejecutar Angular con Node compatible |
+| 12 | [Validación de costos y precios por sucursal](capabilities/12-validacion-costos-precios-sucursal/CAPABILITY.md) | En implementación | Compras, productos, sucursales y RBAC | Aprobada explícitamente el 2026-09-30 | Recepción crea propuestas; administrador de sucursal edita y autoriza por renglón |
 
 ## Restricciones vigentes
 

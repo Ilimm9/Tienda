@@ -22,6 +22,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   },
   { label: 'Proveedores', icon: 'pi pi-truck', route: '/proveedores' },
   { label: 'Compras', icon: 'pi pi-shopping-bag', route: '/compras' },
+  { label: 'Validar costos y precios', icon: 'pi pi-verified', route: '/precios/validaciones' },
   {
     label: 'Equipo',
     icon: 'pi pi-users',

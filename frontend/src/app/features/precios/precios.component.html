@@ -1,0 +1,90 @@
+<section class="prices-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Control de sucursal</p>
+      <h1>Validar costos y precios</h1>
+      <p>La mercancía ya está disponible; valida los importes por pieza.</p>
+    </div>
+  </header>
+  @if (loading()) {
+    <section class="state-card">Cargando propuestas…</section>
+  } @else if (error()) {
+    <section class="state-card error">{{ error() }}</section>
+  } @else if (!items().length) {
+    <section class="state-card">No hay costos ni precios pendientes de validación.</section>
+  } @else {
+    <section class="proposal-list">
+      @for (item of items(); track item.id) {
+        <article class="proposal-card">
+          <header class="proposal-header">
+            <div>
+              <h2>{{ item.producto }}</h2>
+              <p>
+                @if (item.costo_anterior !== null) {
+                  Costo actual: <strong>{{ item.costo_anterior | currency: 'MXN' }}</strong> ·
+                }
+                Precio de venta actual:
+                <strong>{{ item.precio_anterior | currency: 'MXN' }}</strong>
+              </p>
+            </div>
+          </header>
+          <div class="metrics-grid">
+            <div class="metric">
+              <span>Piezas recibidas</span><strong>{{ item.piezas_buenas }}</strong>
+            </div>
+            <div class="metric">
+              <span>Costo por pieza</span
+              ><strong class="metric-value">{{ item.costo_capturado | currency: 'MXN' }}</strong>
+            </div>
+            <label class="metric"
+              ><span>Ganancia porcentual</span>
+              <div class="input-suffix">
+                <input
+                  pInputText
+                  class="price-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [(ngModel)]="item.margen_sugerido"
+                  (ngModelChange)="syncProfitFromPercent(item)"
+                /><span>%</span>
+              </div></label
+            ><label class="metric"
+              ><span>Ganancia</span>
+              <div class="input-prefix">
+                <span>$</span
+                ><input
+                  pInputText
+                  class="price-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [(ngModel)]="item.ganancia"
+                  (ngModelChange)="syncPercentFromProfit(item)"
+                /></div
+            ></label>
+            <div class="metric">
+              <span>Costo al público</span><strong>{{ finalPrice(item) | currency: 'MXN' }}</strong>
+            </div>
+          </div>
+          <p class="profit-summary">
+            Por esta compra ganas por pieza <strong>{{ item.ganancia | currency: 'MXN' }}</strong
+            >, sumando una ganancia total de
+            <strong>{{ totalProfit(item) | currency: 'MXN' }}</strong
+            >.
+          </p>
+          <footer class="proposal-actions">
+            <button
+              class="primary-button"
+              type="button"
+              (click)="authorize(item)"
+              [disabled]="saving() === item.id"
+            >
+              {{ saving() === item.id ? 'Actualizando…' : 'Actualizar costos' }}
+            </button>
+          </footer>
+        </article>
+      }
+    </section>
+  }
+</section>

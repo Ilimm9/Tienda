@@ -10,6 +10,7 @@ import (
 	compraapp "tienda/backend/internal/application/compra"
 	"tienda/backend/internal/domain"
 	compradomain "tienda/backend/internal/domain/compra"
+	preciodomain "tienda/backend/internal/domain/precio"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -114,6 +115,9 @@ func (r *Repository) Create(businessID, userID uuid.UUID, input compraapp.CrearC
 			if err := r.receiveDetail(tx, created, detail); err != nil {
 				return err
 			}
+			if err := r.createPriceProposal(tx, created, detail, subtotal, taxes); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -159,8 +163,8 @@ func (r *Repository) buildDetail(tx *gorm.DB, businessID, providerID uuid.UUID, 
 	piecesPerPackage := int(unit.FactorABase)
 	totalPieces := row.CantidadEmpaques * piecesPerPackage
 	good := totalPieces - row.PiezasDanadas - row.PiezasFaltantes
-	if good < 0 {
-		return compradomain.CompraProveedorDetalle{}, errors.New("las piezas dañadas y faltantes superan el total")
+	if good <= 0 {
+		return compradomain.CompraProveedorDetalle{}, errors.New("debe recibirse al menos una pieza buena")
 	}
 	gross := float64(row.CantidadEmpaques) * row.CostoEmpaque
 	if row.Descuento > gross {
@@ -184,7 +188,48 @@ func (r *Repository) buildDetail(tx *gorm.DB, businessID, providerID uuid.UUID, 
 	return compradomain.CompraProveedorDetalle{ProductoNegocioID: productID, UnidadMedidaID: unitID, CodigoBarras: barcode, CantidadEmpaques: row.CantidadEmpaques, PiezasPorEmpaque: piecesPerPackage, TotalPiezas: totalPieces, PiezasDanadas: row.PiezasDanadas, PiezasFaltantes: row.PiezasFaltantes, PiezasBuenas: good, CostoEmpaque: money(row.CostoEmpaque), CostoPieza: money4((gross - row.Descuento) / float64(totalPieces)), Descuento: money(row.Descuento), Subtotal: money(gross - row.Descuento), NumeroLote: trimPtr(row.NumeroLote), FechaCaducidad: expiry, ProductoNuevo: row.ProductoNuevo}, nil
 }
 
+// createPriceProposal guarda el costo final de la recepción sin hacerlo vigente hasta que la sucursal lo valide.
+func (r *Repository) createPriceProposal(tx *gorm.DB, purchase compradomain.CompraProveedor, detail compradomain.CompraProveedorDetalle, subtotal, taxes float64) error {
+	allocatedTaxes := 0.0
+	if subtotal > 0 {
+		allocatedTaxes = taxes * detail.Subtotal / subtotal
+	}
+	finalCost := money4((detail.Subtotal + allocatedTaxes) / float64(detail.PiezasBuenas))
+	var current preciodomain.PrecioSucursal
+	err := tx.Where("sucursal_id = ? AND producto_negocio_id = ?", purchase.SucursalID, detail.ProductoNegocioID).First(&current).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	var previousCost *float64
+	price := 0.0
+	margin := 0.30
+	if err == nil {
+		previousCost, price = &current.CostoVigente, current.PrecioVenta
+		if current.Margen != nil {
+			margin = *current.Margen
+		}
+	} else {
+		var product domain.ProductoNegocio
+		if err := tx.Where("id = ?", detail.ProductoNegocioID).First(&product).Error; err != nil {
+			return err
+		}
+		price = product.PrecioVenta
+		var configuration preciodomain.ConfiguracionSucursal
+		if configErr := tx.Where("sucursal_id = ?", purchase.SucursalID).First(&configuration).Error; configErr == nil {
+			margin = configuration.MargenPredeterminado
+		} else if !errors.Is(configErr, gorm.ErrRecordNotFound) {
+			return configErr
+		}
+	}
+	suggested := math.Ceil(finalCost * (1 + margin))
+	return tx.Create(&preciodomain.Propuesta{NegocioID: purchase.NegocioID, SucursalID: purchase.SucursalID, CompraDetalleID: detail.ID, ProductoNegocioID: detail.ProductoNegocioID, PiezasBuenas: detail.PiezasBuenas, CostoCapturado: finalCost, CostoAnterior: previousCost, PrecioAnterior: price, MargenSugerido: margin, PrecioSugerido: suggested, Estado: preciodomain.EstadoPendiente}).Error
+}
+
 func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProveedor, detail compradomain.CompraProveedorDetalle) error {
+	finalCost := detail.CostoPieza
+	if purchase.Subtotal > 0 {
+		finalCost = money4((detail.Subtotal + purchase.Impuestos*detail.Subtotal/purchase.Subtotal) / float64(detail.PiezasBuenas))
+	}
 	var inventory domain.InventarioSucursal
 	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("sucursal_id = ? AND producto_negocio_id = ?", purchase.SucursalID, detail.ProductoNegocioID).First(&inventory).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -202,13 +247,13 @@ func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProv
 	}
 	var lotID *uuid.UUID
 	if detail.NumeroLote != nil || detail.FechaCaducidad != nil {
-		lot := domain.Lote{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, ProveedorID: &purchase.ProveedorID, NumeroLote: detail.NumeroLote, CantidadInicial: float64(detail.PiezasBuenas), CantidadActual: float64(detail.PiezasBuenas), CostoUnitario: &detail.CostoPieza, FechaCaducidad: detail.FechaCaducidad, FechaRecepcion: purchase.FechaRecepcion, Activo: true}
+		lot := domain.Lote{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, ProveedorID: &purchase.ProveedorID, NumeroLote: detail.NumeroLote, CantidadInicial: float64(detail.PiezasBuenas), CantidadActual: float64(detail.PiezasBuenas), CostoUnitario: &finalCost, FechaCaducidad: detail.FechaCaducidad, FechaRecepcion: purchase.FechaRecepcion, Activo: true}
 		if err := tx.Create(&lot).Error; err != nil {
 			return err
 		}
 		lotID = &lot.ID
 	}
-	return tx.Create(&domain.MovimientoInventario{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, LoteID: lotID, Tipo: "COMPRA_ENTRADA", Cantidad: float64(detail.PiezasBuenas), StockAnterior: old, StockNuevo: next, CostoUnitario: &detail.CostoPieza, Referencia: &purchase.FolioDocumento, UsuarioID: &purchase.RecibidoPorUsuarioID}).Error
+	return tx.Create(&domain.MovimientoInventario{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, LoteID: lotID, Tipo: "COMPRA_ENTRADA", Cantidad: float64(detail.PiezasBuenas), StockAnterior: old, StockNuevo: next, CostoUnitario: &finalCost, Referencia: &purchase.FolioDocumento, UsuarioID: &purchase.RecibidoPorUsuarioID}).Error
 }
 
 func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.UUID, name, barcode string) (uuid.UUID, error) {

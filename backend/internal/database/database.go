@@ -7,6 +7,7 @@ import (
 	compradomain "tienda/backend/internal/domain/compra"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
+	preciodomain "tienda/backend/internal/domain/precio"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
@@ -57,6 +58,7 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
 		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
+		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
 	}
 	for _, model := range models {
 		if !db.Migrator().HasTable(model) {

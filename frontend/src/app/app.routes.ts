@@ -129,6 +129,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
       },
       {
+        path: 'precios/validaciones',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Validar costos y precios' },
+        loadComponent: () => import('./features/precios/precios.component').then((module) => module.PreciosComponent),
+      },
+      {
         path: 'equipo',
         loadChildren: () =>
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),

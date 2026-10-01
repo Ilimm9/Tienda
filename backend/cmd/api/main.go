@@ -9,6 +9,7 @@ import (
 	compraapplication "tienda/backend/internal/application/compra"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
+	precioapplication "tienda/backend/internal/application/precio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	negociodomain "tienda/backend/internal/domain/negocio"
@@ -16,10 +17,12 @@ import (
 	comprainfra "tienda/backend/internal/infrastructure/compra"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
+	precioinfra "tienda/backend/internal/infrastructure/precio"
 	transporthttp "tienda/backend/internal/interfaces/http"
 	comprahttp "tienda/backend/internal/interfaces/http/compra"
 	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
 	negociohttp "tienda/backend/internal/interfaces/http/negocio"
+	preciohttp "tienda/backend/internal/interfaces/http/precio"
 
 	"github.com/gin-gonic/gin"
 )
@@ -88,6 +91,7 @@ func main() {
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
 	compraHandler := comprahttp.NewHandler(compraapplication.NewService(comprainfra.NewRepository(db)))
+	precioHandler := preciohttp.NewHandler(precioapplication.NewService(precioinfra.NewRepository(db)))
 	router := gin.Default()
 	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
 		log.Fatal(err)
@@ -173,6 +177,8 @@ func main() {
 	comprasGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraRegistrar))
 	comprasGestion.POST("/compras", compraHandler.Create)
 	comprasGestion.POST("/compras/unidades", productHandler.CreateUnit)
+	negocioActual.GET("/precios/propuestas", precioHandler.ListPending)
+	negocioActual.PATCH("/precios/propuestas/:propuestaId/autorizar", precioHandler.Authorize)
 	catalogoGestion.PATCH("/catalogo/productos/:productoId", productHandler.Update)
 	catalogoGestion.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
 	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
