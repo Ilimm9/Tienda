@@ -82,15 +82,6 @@
         }
       </div>
     }
-    <button
-      class="icon-button"
-      type="button"
-      [attr.aria-label]="theme.theme() === 'light' ? 'Activar tema oscuro' : 'Activar tema claro'"
-      (click)="theme.toggle()"
-    >
-      <i [class]="theme.theme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" aria-hidden="true"></i>
-    </button>
-
     <div class="action-menu">
       <button
         class="icon-button"

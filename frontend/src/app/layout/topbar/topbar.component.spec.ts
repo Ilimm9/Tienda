@@ -5,7 +5,6 @@ import { of } from 'rxjs';
 
 import { AuthService } from '../../features/auth/auth.service';
 import { LayoutStateService } from '../layout-state.service';
-import { ThemeService } from '../theme.service';
 import { TopbarComponent } from './topbar.component';
 
 describe('TopbarComponent', () => {
@@ -21,7 +20,6 @@ describe('TopbarComponent', () => {
       sidebarCollapsed: signal(false),
       toggleNavigation: vi.fn(),
     };
-    const theme = { theme: signal('light'), toggle: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TopbarComponent],
@@ -29,7 +27,6 @@ describe('TopbarComponent', () => {
         { provide: AuthService, useValue: auth },
         { provide: Router, useValue: router },
         { provide: LayoutStateService, useValue: layout },
-        { provide: ThemeService, useValue: theme },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(TopbarComponent);

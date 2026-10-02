@@ -6,7 +6,6 @@ import { CambiosPendientesService } from '../../contexto/cambios-pendientes.serv
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { LayoutStateService } from '../layout-state.service';
-import { ThemeService } from '../theme.service';
 
 @Component({
   selector: 'app-topbar',
@@ -17,7 +16,6 @@ export class TopbarComponent {
   readonly auth = inject(AuthService);
   readonly contexto = inject(ContextoService);
   readonly layout = inject(LayoutStateService);
-  readonly theme = inject(ThemeService);
   private readonly feedback = inject(FeedbackService);
   private readonly cambiosPendientes = inject(CambiosPendientesService);
   private readonly router = inject(Router);

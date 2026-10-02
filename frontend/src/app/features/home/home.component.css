@@ -10,17 +10,18 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 h1 {
-  margin: 5px 0 8px;
+  margin: 6px 0 10px;
   color: var(--text);
-  font-size: clamp(26px, 3vw, 34px);
+  font-size: clamp(30px, 3.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
 .description {

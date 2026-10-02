@@ -30,7 +30,6 @@
                     class="navigation-link subnavigation-link"
                     [routerLink]="child.route"
                     routerLinkActive="active"
-                    [routerLinkActiveOptions]="{ exact: true }"
                     (click)="closeAfterNavigation()"
                   >
                     <i [class]="child.icon" aria-hidden="true"></i>
@@ -57,8 +56,3 @@
     }
   </ul>
 </nav>
-
-<aside class="security-card" aria-label="Información de seguridad">
-  <div class="security-title"><i class="pi pi-shield" aria-hidden="true"></i> Acceso seguro</div>
-  <p>Administra la información de tu negocio desde un entorno protegido.</p>
-</aside>

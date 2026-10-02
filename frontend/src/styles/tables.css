@@ -4,7 +4,7 @@
   margin-top: 2.125rem;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   background: var(--surface-raised);
   box-shadow: var(--shadow-card);
 }
@@ -31,14 +31,14 @@ p-table.app-table table {
 }
 
 p-table.app-table .p-datatable-thead > tr > th {
-  height: 3.5rem;
-  padding: 0.95rem 1.25rem;
-  color: var(--text);
-  background: var(--surface-sidebar);
-  border-bottom: 1px solid var(--border-strong);
-  font-size: 0.9rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  height: 3rem;
+  padding: 0.85rem 1.25rem;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.25;
   text-align: left;
   text-transform: none;
@@ -274,9 +274,9 @@ p-table.app-table .p-paginator button:hover:not(:disabled) {
 
 p-table.app-table .p-paginator button.p-highlight,
 p-table.app-table .p-paginator button.p-paginator-page-selected {
-  color: var(--primary);
-  background: var(--primary-soft);
-  font-weight: 700;
+  color: #fff;
+  background: var(--primary);
+  font-weight: 600;
 }
 
 p-table.app-table .p-paginator button:disabled {

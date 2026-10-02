@@ -1,35 +1,33 @@
-/* Paleta clara de las vistas de invitación. Vive aquí, no en styles.css, hasta que la
-   paleta global se revise; el modo oscuro queda fuera por ahora. */
+/* Alias de las vistas de invitación sobre la paleta global de styles.css. */
 :host {
-  --inv-fondo: #faf8f3;
-  --inv-superficie: #ffffff;
-  --inv-tinta: #172554;
+  --inv-fondo: var(--background);
+  --inv-superficie: var(--surface-raised);
+  --inv-tinta: var(--text);
   --inv-tinta-suave: #3b4566;
-  --inv-apagado: #5b6478;
-  --inv-borde: #e6e0d2;
+  --inv-apagado: var(--text-muted);
+  --inv-borde: var(--border);
   --inv-borde-suave: #efeae0;
-  --inv-borde-fuerte: #cfc8b8;
-  --inv-accion: #2c2e6a;
-  --inv-accion-hover: #20224e;
-  --inv-verde: #3f5147;
-  --inv-verde-texto: #2f4034;
-  --inv-salvia: #dfe5c8;
-  --inv-salvia-2: #cfd9bd;
-  --inv-durazno: #f4d3c1;
-  --inv-durazno-texto: #7a2e12;
-  --inv-arena: #f5e6c5;
-  --inv-arena-texto: #4a3608;
-  --inv-amarillo: #f8eac1;
-  --inv-amarillo-texto: #6b4a00;
-  --inv-neutro: #ece8dd;
-  --inv-peligro: #bd2525;
-  --inv-peligro-suave: #fff1f1;
+  --inv-borde-fuerte: var(--border-strong);
+  --inv-accion: var(--primary);
+  --inv-accion-hover: var(--primary-hover);
+  --inv-verde: var(--success);
+  --inv-verde-texto: var(--tone-sage-text);
+  --inv-salvia: var(--tone-sage);
+  --inv-salvia-2: var(--tone-sage-strong);
+  --inv-durazno: var(--tone-peach);
+  --inv-durazno-texto: var(--tone-peach-text);
+  --inv-arena: var(--tone-sand);
+  --inv-arena-texto: var(--tone-sand-text);
+  --inv-amarillo: var(--tone-butter);
+  --inv-amarillo-texto: var(--tone-butter-text);
+  --inv-neutro: var(--tone-neutral);
+  --inv-peligro: var(--danger);
+  --inv-peligro-suave: var(--danger-soft);
 
   display: block;
   min-height: 100%;
   color: var(--inv-tinta);
   background: var(--inv-fondo);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.45;
 }

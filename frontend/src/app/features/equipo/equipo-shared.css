@@ -15,8 +15,10 @@
 .page-heading h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(28px, 4vw, 40px);
-  line-height: 1.1;
+  font-size: clamp(30px, 3.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
 .page-heading p {
@@ -26,12 +28,10 @@
 
 .eyebrow {
   display: block;
-  margin-bottom: 8px;
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .primary-button,
@@ -44,9 +44,9 @@
   justify-content: center;
   gap: 8px;
   padding: 0 18px;
-  border-radius: 9px;
+  border-radius: 10px;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
