@@ -19,7 +19,7 @@
     border: 1px solid var(--border);
     border-radius: .75rem;
     background: var(--surface-raised);
-    box-shadow: 0 1px 2px rgb(23 37 84 / 4%);
+    box-shadow: 0 1px 2px rgb(11 31 51 / 4%);
 }
 
 .catalog-header {

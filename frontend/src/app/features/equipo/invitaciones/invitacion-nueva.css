@@ -49,18 +49,21 @@
   max-width: 460px;
 }
 
+/* Resumen como «ticket» marino, igual que en la lámina B6. */
 .resumen {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 24px;
-  color: var(--inv-arena-texto);
-  border-radius: 16px;
-  background: var(--inv-arena);
+  padding: 26px;
+  color: var(--brand-navy-text);
+  border-radius: 20px;
+  background: var(--brand-navy);
 }
 
 .resumen h2 {
   margin: 0;
+  color: var(--brand-emerald-bright);
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -69,29 +72,33 @@
 
 .resumen__frase {
   margin: 0;
-  color: var(--inv-tinta);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .resumen__frase--pendiente {
-  color: var(--inv-arena-texto);
+  color: var(--brand-navy-text);
 }
 
 .resumen dl {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 6px 16px;
+  gap: 8px 16px;
   margin: 0;
+  padding-top: 14px;
+  border-top: 1px dashed #47607a;
   font-size: 13px;
 }
 
 .resumen dd {
   margin: 0;
-  color: var(--inv-tinta);
+  color: #fff;
   font-weight: 600;
+  text-align: right;
 }
 
 @media (max-width: 520px) {

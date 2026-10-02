@@ -97,7 +97,7 @@
 
 .pieza--arena .pi {
   margin: auto 0;
-  color: #a4701f;
+  color: var(--brand-orange);
   font-size: 44px;
 }
 
@@ -398,5 +398,71 @@ h1 {
     margin: 0;
     color: var(--inv-tinta);
     font-weight: 600;
+  }
+}
+
+/* Variante B (lámina B7): fondo marino y formulario en tarjeta blanca. */
+:host {
+  background: var(--brand-navy);
+}
+
+.pieza--verde {
+  background: var(--brand-emerald);
+}
+
+.pieza--blanca {
+  border-color: transparent;
+}
+
+.columna {
+  justify-content: flex-start;
+  align-self: center;
+  width: min(100%, 500px);
+  padding: 32px;
+  border-radius: 24px;
+  background: var(--surface-raised);
+}
+
+.marca {
+  color: var(--brand-navy);
+  font-family: var(--font-display);
+}
+
+.marca__icono {
+  width: 24px;
+  height: 27px;
+  clip-path: var(--hex);
+  border-radius: 0;
+  color: var(--brand-emerald-bright);
+  background: var(--brand-navy);
+}
+
+h1 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.pasos li {
+  border-radius: 12px;
+}
+
+.pasos li.paso--activo {
+  border-color: var(--brand-navy);
+  background: var(--brand-navy);
+}
+
+.paso--activo .paso__numero {
+  color: var(--brand-navy);
+  background: var(--brand-orange);
+}
+
+@media (max-width: 820px) {
+  .contenido {
+    padding: 16px;
+  }
+
+  .columna {
+    padding: 24px 20px;
   }
 }

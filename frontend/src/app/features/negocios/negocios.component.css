@@ -40,7 +40,7 @@
   padding: 0 16px;
   color: var(--text-muted);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--surface-raised);
   font: inherit;
   font-weight: 600;
@@ -54,8 +54,8 @@
 
 .status-tabs button.active {
   color: #fff;
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--brand-navy);
+  background: var(--brand-navy);
 }
 
 .business-grid {

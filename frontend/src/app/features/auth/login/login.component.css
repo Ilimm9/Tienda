@@ -38,7 +38,7 @@ label {
   font: inherit;
   font-size: 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border-radius: 12px;
   outline: none;
   background: var(--surface-raised);
   transition:
@@ -56,7 +56,7 @@ label {
 
 .login-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
+  box-shadow: 0 0 0 2px rgba(4, 108, 94, 0.18);
 }
 
 .field-wrap > .pi {
@@ -157,7 +157,7 @@ label {
   padding: 0 16px;
   color: #fff;
   border: 1px solid var(--auth-action, var(--primary));
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--auth-action, var(--primary));
   font: inherit;
   font-size: 14px;
@@ -176,7 +176,7 @@ label {
 
 .submit-button:enabled:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 0 0 3px rgba(4, 108, 94, 0.2);
 }
 
 .submit-button:disabled {

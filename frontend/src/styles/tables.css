@@ -275,7 +275,7 @@ p-table.app-table .p-paginator button:hover:not(:disabled) {
 p-table.app-table .p-paginator button.p-highlight,
 p-table.app-table .p-paginator button.p-paginator-page-selected {
   color: #fff;
-  background: var(--primary);
+  background: var(--brand-navy);
   font-weight: 600;
 }
 

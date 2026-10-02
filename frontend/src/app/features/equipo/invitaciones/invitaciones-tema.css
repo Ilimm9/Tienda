@@ -3,10 +3,10 @@
   --inv-fondo: var(--background);
   --inv-superficie: var(--surface-raised);
   --inv-tinta: var(--text);
-  --inv-tinta-suave: #3b4566;
+  --inv-tinta-suave: #34465a;
   --inv-apagado: var(--text-muted);
   --inv-borde: var(--border);
-  --inv-borde-suave: #efeae0;
+  --inv-borde-suave: #e6ecea;
   --inv-borde-fuerte: var(--border-strong);
   --inv-accion: var(--primary);
   --inv-accion-hover: var(--primary-hover);
@@ -57,9 +57,9 @@
 
 .encabezado h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -82,7 +82,7 @@ a:hover {
   padding: 0 22px;
   color: #fff;
   border: 1px solid var(--inv-accion);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--inv-accion);
   font: inherit;
   font-weight: 600;
@@ -147,7 +147,7 @@ a:focus-visible {
   padding: 0;
   color: var(--inv-tinta-suave);
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   font-size: 16px;
   cursor: pointer;
@@ -188,7 +188,7 @@ a:focus-visible {
   padding: 0 14px;
   color: var(--inv-tinta);
   border: 1px solid var(--inv-borde-fuerte);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--inv-superficie);
   font: inherit;
   transition:
@@ -202,7 +202,7 @@ a:focus-visible {
 
 .campo:focus {
   border-color: var(--inv-accion);
-  box-shadow: 0 0 0 2px rgb(44 46 106 / 16%);
+  box-shadow: 0 0 0 2px rgb(4 108 94 / 18%);
   outline: none;
 }
 
@@ -236,7 +236,7 @@ a:focus-visible {
   gap: 10px;
   margin: 0;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 13px;
 }
 

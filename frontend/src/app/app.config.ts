@@ -9,21 +9,21 @@ import { providePrimeNG } from 'primeng/config';
 import { authInterceptor } from './features/auth/auth.interceptor';
 import { routes } from './app.routes';
 
-// Aura con la escala primaria en índigo: tablas, paginador, selects y foco coinciden con styles.css.
+// Aura con la escala primaria en esmeralda (variante B): tablas, paginador, selects y foco coinciden con styles.css.
 const TemaTienda = definePreset(Aura, {
   semantic: {
     primary: {
-      50: '#f3f3f9',
-      100: '#ececf4',
-      200: '#c9cae0',
-      300: '#a8aad0',
-      400: '#7e80b5',
-      500: '#5a5d9c',
-      600: '#414486',
-      700: '#2c2e6a',
-      800: '#20224e',
-      900: '#181a3c',
-      950: '#0f1027',
+      50: '#ecf8f4',
+      100: '#ddf5ec',
+      200: '#b5e8d6',
+      300: '#7fd6ba',
+      400: '#3fc29e',
+      500: '#12b88a',
+      600: '#0a8f72',
+      700: '#046c5e',
+      800: '#03574c',
+      900: '#02463d',
+      950: '#012b26',
     },
     colorScheme: {
       light: {

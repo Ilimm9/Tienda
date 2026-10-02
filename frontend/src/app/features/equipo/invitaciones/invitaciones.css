@@ -17,7 +17,7 @@
   padding: 0 16px;
   color: var(--inv-tinta-suave);
   border: 1px solid var(--inv-borde-fuerte);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--inv-superficie);
   font: inherit;
   font-weight: 600;
@@ -31,8 +31,8 @@
 
 .chip--activo {
   color: #fff;
-  border-color: var(--inv-accion);
-  background: var(--inv-accion);
+  border-color: var(--brand-navy);
+  background: var(--brand-navy);
 }
 
 .filtro-sucursal {
@@ -179,6 +179,6 @@
 }
 
 .nota--durazno {
-  color: #5e2410;
+  color: var(--tone-peach-text);
   background: var(--inv-durazno);
 }

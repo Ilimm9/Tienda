@@ -1,48 +1,59 @@
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/sora';
 @import 'sweetalert2/dist/sweetalert2.min.css';
 @import 'primeicons/primeicons.css';
 @import './styles/tables.css';
 @import './styles/uploads.css';
 
 :root {
-  /* Paleta clara: crema e índigo del acceso. Ver capabilities/thrs/03-paleta-tipografia-global.md. */
-  --text: #172554;
-  --text-muted: #5b6478;
-  --text-subtle: #6f7785;
-  --background: #faf8f3;
+  /* Variante B: colores del logo (marino, esmeralda, naranja). Rama thrs-vB, para comparar con A. */
+  --text: #0b1f33;
+  --text-muted: #4f5f70;
+  --text-subtle: #5a6978;
+  --background: #f4f6f3;
   --surface-raised: #ffffff;
-  --surface-sidebar: #faf8f3;
-  --surface-hover: #f3efe6;
-  --border: #e6e0d2;
-  --border-strong: #cfc8b8;
-  --primary: #2c2e6a;
-  --primary-hover: #20224e;
-  --primary-soft: #ececf4;
-  --primary-border: #c9cae0;
-  --accent: #2c2e6a;
-  --danger: #bd2525;
-  --danger-soft: #fff1f1;
-  --success: #3f5147;
-  --success-soft: #dfe5c8;
-  --warning: #6b4a00;
-  --warning-soft: #f8eac1;
-  /* Bloques suaves del mosaico, cada uno con su texto legible. */
-  --tone-sage: #dfe5c8;
-  --tone-sage-strong: #cfd9bd;
-  --tone-sage-text: #2f4034;
-  --tone-peach: #f4d3c1;
-  --tone-peach-text: #7a2e12;
-  --tone-sand: #f5e6c5;
-  --tone-sand-text: #4a3608;
-  --tone-butter: #f8eac1;
-  --tone-butter-text: #6b4a00;
-  --tone-neutral: #ece8dd;
+  --surface-sidebar: #eef1ef;
+  --surface-hover: #e9eeec;
+  --border: #dce3e0;
+  --border-strong: #bfcac6;
+  --primary: #046c5e;
+  --primary-hover: #03574c;
+  --primary-soft: #ddf5ec;
+  --primary-border: #a9dccb;
+  --accent: #046c5e;
+  --danger: #8f1d1d;
+  --danger-soft: #fde2e0;
+  --success: #045c50;
+  --success-soft: #ddf5ec;
+  --warning: #8a4208;
+  --warning-soft: #ffe9cf;
+  /* Marca: marino del hexágono, esmeralda y naranja del logo. */
+  --brand-navy: #0b1f33;
+  --brand-navy-raised: #16304a;
+  --brand-navy-text: #c4d0db;
+  --brand-navy-muted: #9fb1c3;
+  --brand-emerald: #12b88a;
+  --brand-emerald-bright: #3dd6a8;
+  --brand-orange: #f0923a;
+  --hex: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  /* Los nombres de tono se conservan para que las vistas de invitación no cambien de código. */
+  --tone-sage: #ddf5ec;
+  --tone-sage-strong: #b5e8d6;
+  --tone-sage-text: #045c50;
+  --tone-peach: #fde2e0;
+  --tone-peach-text: #8f1d1d;
+  --tone-sand: #ffe9cf;
+  --tone-sand-text: #8a4208;
+  --tone-butter: #ffe9cf;
+  --tone-butter-text: #8a4208;
+  --tone-neutral: #e8ecef;
   --shadow-card: none;
-  --shadow-menu: 0 14px 38px rgb(23 37 84 / 14%);
-  --shadow-drawer: 12px 0 36px rgb(23 37 84 / 16%);
+  --shadow-menu: 0 14px 38px rgb(11 31 51 / 16%);
+  --shadow-drawer: 12px 0 36px rgb(11 31 51 / 22%);
   --section-max-width: 1440px;
   --section-padding-inline: clamp(1rem, 2vw, 2rem);
   --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Sora Variable', Sora, var(--font-sans);
 }
 
 /* Tema oscuro desactivado: ThemeService aplica siempre el claro, así que este bloque no se usa.
@@ -101,13 +112,20 @@ a {
   text-decoration: none;
 }
 
+/* Títulos en Sora, geométrica como el hexágono del logo. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
 h1 {
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 h2,
 h3 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 /* PrimeNG y los controles nativos no heredan la familia por defecto. */
@@ -189,7 +207,7 @@ a:focus-visible {
 
 .tienda-alerta-container.swal2-container {
   padding: 1rem;
-  background: rgb(23 37 84 / 42%);
+  background: rgb(11 31 51 / 42%);
   backdrop-filter: blur(2px);
 }
 
@@ -307,7 +325,7 @@ a:focus-visible {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 18px 48px rgb(23 37 84 / 18%);
+  box-shadow: 0 18px 48px rgb(11 31 51 / 18%);
 }
 
 .product-dialog .p-dialog-header {
@@ -343,7 +361,7 @@ a:focus-visible {
 }
 
 .p-dialog-mask {
-  background: rgb(23 37 84 / 38%);
+  background: rgb(11 31 51 / 38%);
 }
 
 @media (max-width: 620px) {
@@ -405,7 +423,7 @@ a:focus-visible {
   padding: 0 16px;
   color: var(--text-muted);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--surface-raised);
   font: inherit;
   font-weight: 600;
@@ -419,6 +437,6 @@ a:focus-visible {
 
 .status-tabs button.active {
   color: #fff;
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--brand-navy);
+  background: var(--brand-navy);
 }
