@@ -51,8 +51,25 @@ export const EQUIPO_ROUTES: Routes = [
       {
         path: 'invitaciones',
         data: { breadcrumb: 'Invitaciones' },
-        loadComponent: () =>
-          import('./invitaciones.component').then((module) => module.InvitacionesComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./invitaciones/invitaciones').then((module) => module.Invitaciones),
+          },
+          {
+            path: 'nueva',
+            data: { breadcrumb: 'Nueva invitación' },
+            loadComponent: () =>
+              import('./invitaciones/invitacion-nueva').then((module) => module.InvitacionNueva),
+          },
+          {
+            path: ':invitacionId/corregir-correo',
+            data: { breadcrumb: 'Corregir correo' },
+            loadComponent: () =>
+              import('./invitaciones/corregir-correo').then((module) => module.CorregirCorreo),
+          },
+        ],
       },
     ],
   },

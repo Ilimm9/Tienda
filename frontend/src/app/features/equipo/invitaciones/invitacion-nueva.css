@@ -1,0 +1,105 @@
+.columnas {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.formulario {
+  display: flex;
+  flex: 1 1 440px;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+}
+
+.par {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.par > div {
+  flex: 1 1 180px;
+}
+
+.formulario > .ayuda {
+  margin-top: -8px;
+}
+
+.botones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enlace-cancelar {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 18px;
+}
+
+.lateral {
+  display: flex;
+  flex: 1 1 340px;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 460px;
+}
+
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  color: var(--inv-arena-texto);
+  border-radius: 16px;
+  background: var(--inv-arena);
+}
+
+.resumen h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.resumen__frase {
+  margin: 0;
+  color: var(--inv-tinta);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.resumen__frase--pendiente {
+  color: var(--inv-arena-texto);
+}
+
+.resumen dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.resumen dd {
+  margin: 0;
+  color: var(--inv-tinta);
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .lateral {
+    max-width: none;
+  }
+
+  .formulario {
+    padding: 20px;
+  }
+}

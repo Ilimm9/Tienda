@@ -1,0 +1,32 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(100%, 500px);
+  padding: 28px;
+  box-shadow: 0 8px 24px rgb(23 37 84 / 6%);
+}
+
+.panel h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.detalle {
+  margin: 8px 0 0;
+  color: var(--inv-apagado);
+}
+
+.botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.volver {
+  align-self: flex-start;
+}

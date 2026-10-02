@@ -1,0 +1,155 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>Invitar a un empleado</h1>
+  </header>
+
+  @if (error()) {
+    <p class="aviso aviso--error" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+    </p>
+  } @else if (loading()) {
+    <p class="estado-vacio">Cargando empleados y roles…</p>
+  } @else {
+    <div class="columnas">
+      <form class="tarjeta formulario" (ngSubmit)="emitir()" novalidate>
+        <div>
+          <label class="etiqueta" for="empleado">Empleado</label>
+          <select
+            id="empleado"
+            class="campo"
+            name="empleado"
+            [ngModel]="empleadoId()"
+            (ngModelChange)="empleadoId.set($event)"
+            [disabled]="!invitables().length"
+          >
+            <option value="">Selecciona…</option>
+            @for (item of invitables(); track item.id) {
+              <option [value]="item.id">{{ item.nombre_completo }}</option>
+            }
+          </select>
+          <small class="ayuda">
+            Solo aparecen empleados con correo y sin cuenta.
+            <a routerLink="/equipo/empleados/nuevo">Dar de alta un empleado</a>
+          </small>
+        </div>
+
+        <div>
+          <label class="etiqueta" for="correo">Correo del empleado</label>
+          <input
+            id="correo"
+            class="campo"
+            type="email"
+            readonly
+            [value]="empleado()?.correo ?? ''"
+            placeholder="Se toma del empleado"
+          />
+        </div>
+
+        <div class="par">
+          <div>
+            <label class="etiqueta" for="sucursal">Sucursal</label>
+            <select
+              id="sucursal"
+              class="campo"
+              name="sucursal"
+              [ngModel]="sucursalId()"
+              (ngModelChange)="sucursalId.set($event)"
+            >
+              <option value="">Selecciona…</option>
+              @for (item of sucursales(); track item.id) {
+                <option [value]="item.id">{{ item.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta" for="rol">Rol</label>
+            <select
+              id="rol"
+              class="campo"
+              name="rol"
+              [ngModel]="rolId()"
+              (ngModelChange)="rolId.set($event)"
+            >
+              <option value="">Selecciona…</option>
+              @for (item of roles(); track item.id) {
+                <option [value]="item.id">{{ item.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <small class="ayuda">
+          Una sucursal por invitación. Después puedes asignarle más desde Empleados. El rol
+          propietario no se delega.
+        </small>
+        @if (!roles().length) {
+          <p class="aviso aviso--arena">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>
+            <span>Todavía no hay roles para delegar. <a routerLink="/roles-permisos">Crear un rol</a></span>
+          </p>
+        }
+
+        <div class="botones">
+          <button type="submit" class="boton" [disabled]="!completa() || saving()" [attr.aria-busy]="saving()">
+            <i class="pi" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            {{ enlaceEmitido() ? 'Emitir otro enlace' : 'Emitir invitación' }}
+          </button>
+          <a class="enlace-cancelar" routerLink="..">{{ enlaceEmitido() ? 'Volver a invitaciones' : 'Cancelar' }}</a>
+        </div>
+      </form>
+
+      <div class="lateral">
+        <section class="resumen" aria-label="Resumen">
+          <h2>Resumen</h2>
+          @if (completa()) {
+            <p class="resumen__frase">
+              {{ empleado()?.nombre_completo }} entra a {{ sucursal()?.nombre }} como {{ rol()?.nombre }}
+            </p>
+          } @else {
+            <p class="resumen__frase resumen__frase--pendiente">Elige empleado, sucursal y rol</p>
+          }
+          <dl>
+            <dt>Empresa</dt>
+            <dd>{{ negocio()?.nombre_comercial }}</dd>
+            <dt>Sucursal</dt>
+            <dd>
+              @if (sucursal(); as elegida) {
+                {{ elegida.nombre }} · {{ elegida.codigo }}
+              } @else {
+                —
+              }
+            </dd>
+            <dt>Rol</dt>
+            <dd>{{ rol()?.nombre ?? '—' }}</dd>
+            <dt>Vigencia</dt>
+            <dd>72 horas desde la emisión</dd>
+          </dl>
+        </section>
+
+        @if (enlaceEmitido(); as emitido) {
+          <section class="tarjeta enlace-emitido" aria-label="Enlace emitido">
+            @if (emitido.correoEnviado) {
+              <p class="aviso aviso--salvia">
+                <i class="pi pi-check" aria-hidden="true"></i>Enviamos el enlace a {{ emitido.correo }}.
+              </p>
+            } @else {
+              <p class="aviso aviso--error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>No pudimos enviar el correo.
+                La invitación sigue activa: copia el enlace y compártelo.
+              </p>
+            }
+            <label class="etiqueta" for="enlace">Enlace de invitación</label>
+            <div class="enlace-emitido__fila">
+              <input id="enlace" class="campo" type="text" readonly [value]="emitido.enlace" />
+              <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
+                <i class="pi pi-copy" aria-hidden="true"></i>Copiar
+              </button>
+            </div>
+            <small class="ayuda">
+              Se muestra una sola vez. Si lo pierdes, reenvía la invitación para generar otro.
+            </small>
+          </section>
+        }
+      </div>
+    </div>
+  }
+</section>

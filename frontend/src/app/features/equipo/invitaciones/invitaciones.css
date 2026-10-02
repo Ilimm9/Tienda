@@ -1,0 +1,184 @@
+.filtros {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0 16px;
+  color: var(--inv-tinta-suave);
+  border: 1px solid var(--inv-borde-fuerte);
+  border-radius: 999px;
+  background: var(--inv-superficie);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--inv-accion);
+  outline-offset: 2px;
+}
+
+.chip--activo {
+  color: #fff;
+  border-color: var(--inv-accion);
+  background: var(--inv-accion);
+}
+
+.filtro-sucursal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filtro-sucursal .etiqueta {
+  margin: 0;
+}
+
+.filtro-sucursal .campo {
+  width: auto;
+  height: 44px;
+}
+
+.tabla-contenedor {
+  border-radius: 14px;
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla th:first-child,
+.tabla td:first-child {
+  padding-left: 20px;
+}
+
+.tabla thead tr {
+  color: var(--inv-apagado);
+  border-bottom: 1px solid var(--inv-borde);
+  font-size: 12px;
+}
+
+.tabla th {
+  font-weight: 600;
+}
+
+.tabla tbody tr + tr {
+  border-top: 1px solid var(--inv-borde-suave);
+}
+
+.tabla strong {
+  display: block;
+  font-weight: 600;
+}
+
+.secundario {
+  display: block;
+  color: var(--inv-apagado);
+  font-size: 13px;
+}
+
+.pastilla + .secundario {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.secundario.urgente {
+  color: var(--inv-durazno-texto);
+  font-weight: 600;
+}
+
+.fecha {
+  color: var(--inv-tinta-suave);
+  white-space: nowrap;
+}
+
+.pastilla {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pastilla--pendiente {
+  color: var(--inv-amarillo-texto);
+  background: var(--inv-amarillo);
+}
+
+.pastilla--expirada {
+  color: var(--inv-durazno-texto);
+  background: var(--inv-durazno);
+}
+
+.pastilla--aceptada {
+  color: var(--inv-verde-texto);
+  background: var(--inv-salvia);
+}
+
+.pastilla--cancelada {
+  color: var(--inv-tinta-suave);
+  background: var(--inv-neutro);
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.notas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.nota {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.nota strong {
+  display: block;
+  font-size: 14px;
+}
+
+.nota--salvia {
+  color: var(--inv-verde-texto);
+  background: var(--inv-salvia);
+}
+
+.nota--arena {
+  color: var(--inv-arena-texto);
+  background: var(--inv-arena);
+}
+
+.nota--durazno {
+  color: #5e2410;
+  background: var(--inv-durazno);
+}

@@ -95,7 +95,7 @@ func main() {
 	empleadoRepo := negocioinfra.NewEmpleadoRepository(db)
 	empleadoHandler := negociohttp.NewEmpleadoHandler(negocioapplication.NewEmpleadoService(empleadoRepo))
 	invitacionRepo := negocioinfra.NewInvitacionRepository(db)
-	invitacionHandler := negociohttp.NewInvitacionHandler(negocioapplication.NewInvitacionService(invitacionRepo, mailer))
+	invitacionHandler := negociohttp.NewInvitacionHandler(negocioapplication.NewInvitacionService(invitacionRepo, mailer, registroInvitacion{verificacion: verificationService}))
 	asignacionRepo := negocioinfra.NewAsignacionRepository(db)
 	asignacionHandler := negociohttp.NewAsignacionHandler(negocioapplication.NewAsignacionService(asignacionRepo))
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
@@ -149,13 +149,16 @@ func main() {
 	negocios.GET("/:negocioId/administracion/invitaciones", invitacionHandler.Listar)
 	negocios.POST("/:negocioId/administracion/invitaciones", invitacionHandler.Crear)
 	negocios.DELETE("/:negocioId/administracion/invitaciones/:invitacionId", invitacionHandler.Cancelar)
+	negocios.POST("/:negocioId/administracion/invitaciones/:invitacionId/reenviar", invitacionHandler.Reenviar)
 	negocios.GET("/:negocioId/administracion/empleados/:empleadoId/sucursales", asignacionHandler.Listar)
 	negocios.POST("/:negocioId/administracion/empleados/:empleadoId/sucursales", asignacionHandler.Asignar)
 	negocios.POST("/:negocioId/administracion/empleados/:empleadoId/sucursales/:asignacionId/principal", asignacionHandler.EstablecerPrincipal)
 	negocios.DELETE("/:negocioId/administracion/empleados/:empleadoId/sucursales/:asignacionId", asignacionHandler.Finalizar)
-	// La consulta del enlace es pública: quien lo abre todavía puede no tener cuenta.
-	router.GET("/api/v1/invitaciones/:token", invitacionHandler.Consultar)
-	// Aceptar sí exige sesión iniciada con el correo invitado.
+	// Consulta y registro son públicos: quien abre el enlace todavía puede no tener cuenta.
+	invitacionesPublicas := router.Group("/api/v1/invitaciones")
+	invitacionesPublicas.GET("/:token", transporthttp.LimitarPorIP(60, time.Minute), invitacionHandler.Consultar)
+	invitacionesPublicas.POST("/:token/registro", transporthttp.LimitarPorIP(10, time.Minute), invitacionHandler.Registrar)
+	// Aceptar sí exige sesión verificada con el correo invitado.
 	invitaciones := router.Group("/api/v1/invitaciones")
 	invitaciones.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
 	invitaciones.POST("/:token/aceptar", invitacionHandler.Aceptar)

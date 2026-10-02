@@ -1,0 +1,255 @@
+<main class="invitacion">
+  <aside class="mosaico" aria-label="Tu invitación">
+    <div class="pieza pieza--durazno pieza--a" aria-hidden="true"></div>
+    <div class="pieza pieza--salvia pieza--empresa">
+      <span class="pieza__rotulo">Te invita</span>
+      <span class="pieza__valor pieza__valor--grande">{{ invitacion()?.nombre_negocio || 'Stockion' }}</span>
+    </div>
+    <div class="pieza pieza--verde pieza--b" aria-hidden="true"></div>
+    <div class="pieza pieza--amarillo pieza--c" aria-hidden="true"></div>
+    <div class="pieza pieza--arena pieza--sucursal">
+      <span class="pieza__rotulo">Sucursal</span>
+      <i class="pi pi-shop" aria-hidden="true"></i>
+      <span class="pieza__valor">{{ invitacion()?.nombre_sucursal || '—' }}</span>
+    </div>
+    <div class="pieza pieza--blanca pieza--rol">
+      <span class="pieza__rotulo">Rol</span>
+      <span class="pieza__valor">{{ invitacion()?.nombre_rol || '—' }}</span>
+    </div>
+    <div class="pieza pieza--salvia-2 pieza--vigencia">
+      <i class="pi pi-clock" aria-hidden="true"></i>
+      @if (invitacion(); as datos) {
+        <span class="pieza__valor pieza__valor--chico">Vence en {{ horasRestantes() }} h</span>
+        <span class="pieza__nota">{{ datos.expira_en | fechaMexico: 'd MMM, HH:mm' }}</span>
+      }
+    </div>
+    <div class="pieza pieza--amarillo pieza--d" aria-hidden="true"></div>
+  </aside>
+
+  <section class="contenido">
+    <div class="columna">
+      <span class="marca">
+        <span class="marca__icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="m4 8 8-4 8 4-8 4-8-4Z" fill="currentColor" />
+            <path d="M4 8v8l8 4v-8L4 8Zm16 0v8l-8 4v-8l8-4Z" fill="currentColor" opacity=".72" />
+          </svg>
+        </span>
+        Stockion
+      </span>
+
+      @if (loading()) {
+        <p class="estado-vacio" role="status">Validando invitación…</p>
+      } @else if (bloqueo()) {
+        <h1>Este enlace no está disponible</h1>
+        <p class="aviso aviso--error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ bloqueo() }}
+        </p>
+      } @else if (invitacion(); as datos) {
+        <!-- Resumen para móvil: el mosaico se oculta en pantallas angostas. -->
+        <dl class="resumen-movil">
+          <div><dt>Empresa</dt><dd>{{ datos.nombre_negocio }}</dd></div>
+          <div><dt>Sucursal</dt><dd>{{ datos.nombre_sucursal }}</dd></div>
+          <div><dt>Rol</dt><dd>{{ datos.nombre_rol }}</dd></div>
+          <div><dt>Vence</dt><dd>En {{ horasRestantes() }} h</dd></div>
+        </dl>
+
+        <ol class="pasos" aria-label="Progreso">
+          <li [class.paso--activo]="paso() === 'cuenta'" [class.paso--hecho]="paso() !== 'cuenta'">
+            <span class="paso__numero">1</span>Cuenta
+          </li>
+          <li [class.paso--activo]="paso() === 'verificacion'" [class.paso--hecho]="paso() === 'acceso'">
+            <span class="paso__numero">2</span>Verificación
+          </li>
+          <li [class.paso--activo]="paso() === 'acceso'"><span class="paso__numero">3</span>Acceso</li>
+        </ol>
+
+        @if (correoDistinto()) {
+          <h1>Sesión de otro correo</h1>
+          <p class="invitado">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
+          </p>
+          <p class="aviso aviso--arena">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>La sesión abierta pertenece a otro
+            correo. Cambia de sesión para entrar con el correo invitado.
+          </p>
+          <button type="button" class="boton ancho" [disabled]="processing()" (click)="cambiarSesion()">
+            Cambiar de sesión
+          </button>
+        } @else if (paso() === 'verificacion') {
+          <h1>Verifica tu correo</h1>
+          <p class="invitado">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <span>Enviamos un código de 6 dígitos a <strong>{{ datos.correo_enmascarado }}</strong></span>
+          </p>
+          <form class="formulario" [formGroup]="codigoForm" (ngSubmit)="verificar()" novalidate>
+            <div>
+              <label class="etiqueta" for="codigo">Código de verificación</label>
+              <input
+                id="codigo"
+                class="campo campo--codigo"
+                type="text"
+                formControlName="codigo"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                placeholder="000000"
+              />
+              @if (codigoForm.controls.codigo.touched && codigoForm.controls.codigo.invalid) {
+                <small class="error-campo">Ingresa exactamente 6 números.</small>
+              }
+            </div>
+            @if (error()) {
+              <p class="aviso aviso--error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+              </p>
+            }
+            <button type="submit" class="boton ancho" [disabled]="processing()" [attr.aria-busy]="processing()">
+              @if (processing()) { <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> }
+              Verificar y entrar
+            </button>
+          </form>
+          <button
+            type="button"
+            class="enlace-boton"
+            [disabled]="secondsUntilResend() > 0 || resending()"
+            (click)="reenviarCodigo()"
+          >
+            @if (secondsUntilResend() > 0) {
+              Reenviar código en {{ secondsUntilResend() }} s
+            } @else if (resending()) {
+              Enviando…
+            } @else {
+              Reenviar código
+            }
+          </button>
+        } @else if (paso() === 'acceso') {
+          <h1>Confirmando tu acceso</h1>
+          @if (error()) {
+            <p class="aviso aviso--error" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+            </p>
+            @if (sesionActiva()) {
+              <button type="button" class="boton ancho" [disabled]="processing()" (click)="aceptar()">
+                Reintentar
+              </button>
+            } @else {
+              <button type="button" class="boton ancho" (click)="iniciarSesion()">Iniciar sesión</button>
+            }
+          } @else {
+            <p class="estado-vacio" role="status">
+              <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Preparando tu sucursal…
+            </p>
+          }
+        } @else if (datos.requiere_cuenta) {
+          <h1>Completa tu cuenta</h1>
+          <p class="invitado">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
+          </p>
+          <form class="formulario" [formGroup]="cuentaForm" (ngSubmit)="registrar()" novalidate>
+            <div class="par">
+              <div>
+                <label class="etiqueta" for="nombres">Nombre</label>
+                <input id="nombres" class="campo" type="text" formControlName="nombres" autocomplete="given-name" />
+                @if (cuentaForm.controls.nombres.touched && cuentaForm.controls.nombres.invalid) {
+                  <small class="error-campo">Ingresa tu nombre.</small>
+                }
+              </div>
+              <div>
+                <label class="etiqueta" for="apellidos">Apellidos</label>
+                <input id="apellidos" class="campo" type="text" formControlName="apellidos" autocomplete="family-name" />
+                @if (cuentaForm.controls.apellidos.touched && cuentaForm.controls.apellidos.invalid) {
+                  <small class="error-campo">Ingresa tus apellidos.</small>
+                }
+              </div>
+            </div>
+            <div>
+              <label class="etiqueta" for="telefono">Teléfono <span class="opcional">(opcional)</span></label>
+              <input
+                id="telefono"
+                class="campo"
+                type="tel"
+                formControlName="telefono"
+                autocomplete="tel"
+                placeholder="55 1234 5678"
+              />
+            </div>
+            <div>
+              <label class="etiqueta" for="contrasena">Contraseña</label>
+              <span class="campo-clave">
+                <input
+                  id="contrasena"
+                  class="campo"
+                  [type]="passwordVisible() ? 'text' : 'password'"
+                  formControlName="contrasena"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <button
+                  type="button"
+                  class="campo-clave__ver"
+                  (click)="togglePassword()"
+                  [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="passwordVisible()"
+                >
+                  <i class="pi" [class.pi-eye]="!passwordVisible()" [class.pi-eye-slash]="passwordVisible()" aria-hidden="true"></i>
+                </button>
+              </span>
+              @if (cuentaForm.controls.contrasena.touched && cuentaForm.controls.contrasena.invalid) {
+                <small class="error-campo">Usa entre 8 y 72 caracteres.</small>
+              }
+            </div>
+            <div>
+              <label class="etiqueta" for="confirmacion">Confirmar contraseña</label>
+              <input
+                id="confirmacion"
+                class="campo"
+                [type]="passwordVisible() ? 'text' : 'password'"
+                formControlName="confirmacion"
+                autocomplete="new-password"
+                placeholder="Repite tu contraseña"
+              />
+              @if (cuentaForm.controls.confirmacion.touched && contrasenasDistintas) {
+                <small class="error-campo">Las contraseñas no coinciden.</small>
+              }
+            </div>
+            @if (error()) {
+              <p class="aviso aviso--error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+              </p>
+            }
+            <button type="submit" class="boton ancho" [disabled]="processing()" [attr.aria-busy]="processing()">
+              @if (processing()) { <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> }
+              Crear cuenta y verificar correo
+            </button>
+          </form>
+        } @else {
+          <h1>Confirma tu acceso</h1>
+          <p class="invitado">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
+          </p>
+          @if (error()) {
+            <p class="aviso aviso--error" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+            </p>
+          }
+          @if (sesionActiva()) {
+            <p class="texto">Ya tienes cuenta. Al aceptar entrarás directo a la sucursal indicada.</p>
+            <button type="button" class="boton ancho" [disabled]="processing()" (click)="aceptar()">
+              Aceptar invitación
+            </button>
+            <button type="button" class="enlace-boton" [disabled]="processing()" (click)="cambiarSesion()">
+              Entrar con otra cuenta
+            </button>
+          } @else {
+            <p class="texto">Ya existe una cuenta con este correo. Inicia sesión para aceptar; tu contraseña no cambia.</p>
+            <button type="button" class="boton ancho" (click)="iniciarSesion()">Iniciar sesión</button>
+          }
+        }
+      }
+    </div>
+  </section>
+</main>

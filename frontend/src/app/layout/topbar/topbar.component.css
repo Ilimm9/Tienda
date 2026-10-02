@@ -5,6 +5,25 @@
   grid-column: 1 / -1;
 }
 
+/* Paleta clara del acceso (crema e índigo) aplicada solo a la topbar mediante variables locales.
+   El tema oscuro conserva los tokens globales. */
+:host-context(:root:not([data-theme='dark'])) {
+  --text: #172554;
+  --text-muted: #5b6478;
+  --text-subtle: #7b8394;
+  --surface-raised: #ffffff;
+  --surface-sidebar: #faf8f3;
+  --surface-hover: #f3efe6;
+  --border: #e6e0d2;
+  --primary: #2c2e6a;
+  --primary-hover: #20224e;
+  --primary-soft: #ececf4;
+  --primary-border: #c9cae0;
+  --accent: #2c2e6a;
+  --success: #3f5147;
+  --success-soft: #dfe5c8;
+}
+
 .topbar {
   display: flex;
   min-height: 64px;

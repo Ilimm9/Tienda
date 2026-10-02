@@ -88,6 +88,9 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseSeven(db); err != nil {
 		return err
 	}
+	if err := negocioinfra.MigrateInvitacionSucursal(db); err != nil {
+		return err
+	}
 
 	// Compatibilidad con bases creadas antes de agregar el SKU interno al vínculo negocio-producto.
 	// IF NOT EXISTS hace que esta migración sea segura al reiniciar la API.

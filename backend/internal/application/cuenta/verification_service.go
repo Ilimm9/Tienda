@@ -75,14 +75,24 @@ func NewVerificationService(users VerificationUserRepository, challenges Verific
 }
 
 func (s *VerificationService) Register(ctx context.Context, fullName, email, phone, password, ip string) (RegistrationResult, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return RegistrationResult{}, err
-	}
 	parts := strings.Fields(strings.TrimSpace(fullName))
 	if len(parts) == 0 {
 		return RegistrationResult{}, errors.New("el nombre completo es obligatorio")
+	}
+	return s.RegisterWithNames(ctx, parts[0], strings.Join(parts[1:], " "), email, phone, password, ip)
+}
+
+// RegisterWithNames recibe nombres y apellidos ya separados, sin adivinar dónde termina el nombre.
+func (s *VerificationService) RegisterWithNames(ctx context.Context, names, lastNames, email, phone, password, ip string) (RegistrationResult, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	names = strings.TrimSpace(names)
+	lastNames = strings.TrimSpace(lastNames)
+	if names == "" {
+		return RegistrationResult{}, errors.New("el nombre completo es obligatorio")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return RegistrationResult{}, err
 	}
 
 	user, findErr := s.users.FindByEmail(email)
@@ -91,7 +101,7 @@ func (s *VerificationService) Register(ctx context.Context, fullName, email, pho
 	}
 	if findErr != nil {
 		user = &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "pendiente_verificacion"}
-		profile := &cuentadomain.PerfilUsuario{Nombres: parts[0], Apellidos: strings.Join(parts[1:], " ")}
+		profile := &cuentadomain.PerfilUsuario{Nombres: names, Apellidos: lastNames}
 		if cleanPhone := strings.TrimSpace(phone); cleanPhone != "" {
 			profile.Telefono = &cleanPhone
 		}
@@ -101,7 +111,7 @@ func (s *VerificationService) Register(ctx context.Context, fullName, email, pho
 		return s.issueAndSend(ctx, user, ip, false)
 	}
 	user.HashContrasena = string(hash)
-	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: parts[0], Apellidos: strings.Join(parts[1:], " ")}
+	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: lastNames}
 	if cleanPhone := strings.TrimSpace(phone); cleanPhone != "" {
 		profile.Telefono = &cleanPhone
 	}

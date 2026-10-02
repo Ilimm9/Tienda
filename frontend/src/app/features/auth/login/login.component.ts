@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { consumirRetornoInvitacion } from '../../invitacion/retorno-invitacion';
 import { AuthService } from '../auth.service';
 import { AuthTransitionService } from '../auth-transition.service';
 
@@ -48,7 +49,11 @@ export class LoginComponent {
       .login(this.form.getRawValue())
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => void this.router.navigate(['/inicio']),
+        // Quien llegó desde un enlace de invitación vuelve a él para confirmar su acceso.
+        next: () => {
+          const retorno = consumirRetornoInvitacion();
+          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate(['/inicio']));
+        },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible iniciar sesión.'),
       });

@@ -40,6 +40,15 @@ Este archivo registra el orden, dependencia y estado de las capabilities del pro
 | 12 | [Validación de costos y precios por sucursal](capabilities/12-validacion-costos-precios-sucursal/CAPABILITY.md) | En implementación | Compras, productos, sucursales y RBAC | Aprobada explícitamente el 2026-09-30 | Recepción crea propuestas; administrador de sucursal edita y autoriza por renglón |
 | 13 | [Acceso animado Stockion](capabilities/13-acceso-animado-stockion/CAPABILITY.md) | Verificada | Rutas y formularios de autenticación actuales | Aprobada explícitamente el 2026-10-01 | Shell compartido y mosaico animado con GSAP FLIP |
 
+## Borradores solicitados en `capabilities/thrs`
+
+Ubicación directa autorizada por el usuario el 2026-10-01 para planeación, sin carpetas adicionales ni implementación. Antes de implementar deben contar con capability aprobada conforme a `AGENTS.md`; estos borradores no autorizan cambios de código.
+
+| Orden | Plan | Estado | Dependencias |
+| --- | --- | --- | --- |
+| 1 | [Alta inicial de empresa y sucursal](capabilities/thrs/01-alta-inicial-empresa-sucursal.md) | Borrador | Identidad/contexto 01, seguridad 06 y acceso visual 13 |
+| 2 | [Invitaciones de empleados por sucursal](capabilities/thrs/02-invitaciones-empleados-sucursal.md) | Borrador | Plan 1, empleados/RBAC/invitaciones 01 y correo 07 |
+
 ## Restricciones vigentes
 
 - Git solo lectura hasta confirmación final del usuario.
