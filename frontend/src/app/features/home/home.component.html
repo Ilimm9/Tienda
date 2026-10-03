@@ -1,33 +1,43 @@
 <section class="home-page">
-  <header>
-    <p class="eyebrow">Panel principal</p>
-    <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
-    <p class="description">
-      @if (contexto.sucursal(); as sucursal) { Contexto activo: {{ sucursal.codigo }} · {{ sucursal.nombre }}. } @else { Registra una sucursal para operar módulos que la requieren. }
-    </p>
+  <header class="contexto tarjeta">
+    <div class="contexto__texto">
+      <p class="eyebrow">Panel principal</p>
+      <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
+      @if (contexto.sucursal(); as sucursal) {
+        <p class="etiquetas">
+          <span class="pastilla">{{ sucursal.codigo }}</span>
+          <span class="pastilla pastilla--aceptada">Sucursal {{ sucursal.nombre }} · activa</span>
+        </p>
+      } @else {
+        <p class="description">Registra una sucursal para operar módulos que la requieren.</p>
+      }
+    </div>
   </header>
 
   <div class="summary-grid">
-    <article>
-      <span class="summary-icon blue"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
-      <div>
+    <a class="resumen-tarjeta" routerLink="/negocios">
+      <span class="summary-icon lavanda"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+      <span class="resumen-tarjeta__texto">
         <strong>Negocios</strong>
-        <p>Gestiona la información general de tus negocios.</p>
-      </div>
-    </article>
-    <article>
-      <span class="summary-icon green"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
-      <div>
+        <span>Gestiona la información general de tus negocios.</span>
+      </span>
+      <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+    </a>
+    <a class="resumen-tarjeta" routerLink="/sucursales">
+      <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+      <span class="resumen-tarjeta__texto">
         <strong>Sucursales</strong>
-        <p>Organiza ubicaciones, equipos y operaciones.</p>
-      </div>
-    </article>
-    <article>
-      <span class="summary-icon orange"><i class="pi pi-users" aria-hidden="true"></i></span>
-      <div>
+        <span>Organiza ubicaciones, equipos y operaciones.</span>
+      </span>
+      <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+    </a>
+    <a class="resumen-tarjeta" routerLink="/equipo/empleados">
+      <span class="summary-icon lavanda"><i class="pi pi-users" aria-hidden="true"></i></span>
+      <span class="resumen-tarjeta__texto">
         <strong>Equipo</strong>
-        <p>Consulta empleados, invitaciones y permisos.</p>
-      </div>
-    </article>
+        <span>Consulta empleados, invitaciones y permisos.</span>
+      </span>
+      <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+    </a>
   </div>
 </section>

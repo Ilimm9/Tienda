@@ -59,6 +59,11 @@ export class InvitacionNueva {
   );
   readonly rol = computed(() => this.roles().find((item) => item.id === this.rolId()) ?? null);
   readonly completa = computed(() => Boolean(this.empleado() && this.sucursal() && this.rol()));
+  /** Iniciales del empleado elegido para el resumen; sin elección, un signo neutro. */
+  readonly inicialesEmpleado = computed(() => {
+    const partes = (this.empleado()?.nombre_completo ?? '').trim().split(/\s+/).filter(Boolean);
+    return partes.length ? partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase() : '?';
+  });
 
   constructor() {
     this.load();

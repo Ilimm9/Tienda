@@ -29,34 +29,7 @@
   font: inherit;
 }
 
-.status-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.status-tabs button {
-  min-height: 40px;
-  padding: 0 16px;
-  color: var(--text-muted);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface-raised);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.status-tabs button:hover {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.status-tabs button.active {
-  color: #fff;
-  border-color: var(--primary);
-  background: var(--primary);
-}
+/* .status-tabs: estilo segmentado global en styles.css. */
 
 .business-grid {
   display: grid;

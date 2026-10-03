@@ -1,13 +1,21 @@
+<header class="barra">
+  <a class="barra__marca" href="/" aria-label="Stockion">
+    <img src="stockion-logo.svg" alt="" width="34" height="34" />
+    <span>Stockion</span>
+  </a>
+  <span class="barra__titulo">Invitación al equipo</span>
+</header>
+
 <main class="invitacion">
   <aside class="mosaico" aria-label="Tu invitación">
-    <div class="pieza pieza--durazno pieza--a" aria-hidden="true"></div>
-    <div class="pieza pieza--salvia pieza--empresa">
+    <div class="pieza pieza--lavanda-2 pieza--a" aria-hidden="true"></div>
+    <div class="pieza pieza--lavanda pieza--empresa">
       <span class="pieza__rotulo">Te invita</span>
       <span class="pieza__valor pieza__valor--grande">{{ invitacion()?.nombre_negocio || 'Stockion' }}</span>
     </div>
-    <div class="pieza pieza--verde pieza--b" aria-hidden="true"></div>
-    <div class="pieza pieza--amarillo pieza--c" aria-hidden="true"></div>
-    <div class="pieza pieza--arena pieza--sucursal">
+    <div class="pieza pieza--violeta pieza--b" aria-hidden="true"></div>
+    <div class="pieza pieza--salvia-2 pieza--c" aria-hidden="true"></div>
+    <div class="pieza pieza--salvia pieza--sucursal">
       <span class="pieza__rotulo">Sucursal</span>
       <i class="pi pi-shop" aria-hidden="true"></i>
       <span class="pieza__valor">{{ invitacion()?.nombre_sucursal || '—' }}</span>
@@ -16,28 +24,18 @@
       <span class="pieza__rotulo">Rol</span>
       <span class="pieza__valor">{{ invitacion()?.nombre_rol || '—' }}</span>
     </div>
-    <div class="pieza pieza--salvia-2 pieza--vigencia">
+    <div class="pieza pieza--salvia-oscura pieza--vigencia">
       <i class="pi pi-clock" aria-hidden="true"></i>
       @if (invitacion(); as datos) {
         <span class="pieza__valor pieza__valor--chico">Vence en {{ horasRestantes() }} h</span>
         <span class="pieza__nota">{{ datos.expira_en | fechaMexico: 'd MMM, HH:mm' }}</span>
       }
     </div>
-    <div class="pieza pieza--amarillo pieza--d" aria-hidden="true"></div>
+    <div class="pieza pieza--lavanda-2 pieza--d" aria-hidden="true"></div>
   </aside>
 
   <section class="contenido">
     <div class="columna">
-      <span class="marca">
-        <span class="marca__icono" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="m4 8 8-4 8 4-8 4-8-4Z" fill="currentColor" />
-            <path d="M4 8v8l8 4v-8L4 8Zm16 0v8l-8 4v-8l8-4Z" fill="currentColor" opacity=".72" />
-          </svg>
-        </span>
-        Stockion
-      </span>
-
       @if (loading()) {
         <p class="estado-vacio" role="status">Validando invitación…</p>
       } @else if (bloqueo()) {
@@ -55,13 +53,17 @@
         </dl>
 
         <ol class="pasos" aria-label="Progreso">
-          <li [class.paso--activo]="paso() === 'cuenta'" [class.paso--hecho]="paso() !== 'cuenta'">
-            <span class="paso__numero">1</span>Cuenta
+          <li class="paso" [class.paso--activo]="paso() === 'cuenta'" [class.paso--hecho]="paso() !== 'cuenta'" [attr.aria-current]="paso() === 'cuenta' ? 'step' : null">
+            <span class="paso__numero">@if (paso() !== 'cuenta') { <i class="pi pi-check" aria-hidden="true"></i> } @else { 1 }</span>Cuenta
           </li>
-          <li [class.paso--activo]="paso() === 'verificacion'" [class.paso--hecho]="paso() === 'acceso'">
-            <span class="paso__numero">2</span>Verificación
+          <li class="paso__linea" [class.paso__linea--hecha]="paso() !== 'cuenta'" aria-hidden="true"></li>
+          <li class="paso" [class.paso--activo]="paso() === 'verificacion'" [class.paso--hecho]="paso() === 'acceso'" [attr.aria-current]="paso() === 'verificacion' ? 'step' : null">
+            <span class="paso__numero">@if (paso() === 'acceso') { <i class="pi pi-check" aria-hidden="true"></i> } @else { 2 }</span>Verificación
           </li>
-          <li [class.paso--activo]="paso() === 'acceso'"><span class="paso__numero">3</span>Acceso</li>
+          <li class="paso__linea" [class.paso__linea--hecha]="paso() === 'acceso'" aria-hidden="true"></li>
+          <li class="paso" [class.paso--activo]="paso() === 'acceso'" [attr.aria-current]="paso() === 'acceso' ? 'step' : null">
+            <span class="paso__numero">3</span>Acceso
+          </li>
         </ol>
 
         @if (correoDistinto()) {
@@ -70,7 +72,7 @@
             <i class="pi pi-envelope" aria-hidden="true"></i>
             <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
           </p>
-          <p class="aviso aviso--arena">
+          <p class="aviso aviso--atencion">
             <i class="pi pi-info-circle" aria-hidden="true"></i>La sesión abierta pertenece a otro
             correo. Cambia de sesión para entrar con el correo invitado.
           </p>
@@ -83,8 +85,8 @@
             <i class="pi pi-envelope" aria-hidden="true"></i>
             <span>Enviamos un código de 6 dígitos a <strong>{{ datos.correo_enmascarado }}</strong></span>
           </p>
-          <form class="formulario" [formGroup]="codigoForm" (ngSubmit)="verificar()" novalidate>
-            <div>
+          <form class="formulario tarjeta" [formGroup]="codigoForm" (ngSubmit)="verificar()" novalidate>
+            <div class="campo-bloque">
               <label class="etiqueta" for="codigo">Código de verificación</label>
               <input
                 id="codigo"
@@ -97,7 +99,7 @@
                 placeholder="000000"
               />
               @if (codigoForm.controls.codigo.touched && codigoForm.controls.codigo.invalid) {
-                <small class="error-campo">Ingresa exactamente 6 números.</small>
+                <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa exactamente 6 números.</small>
               }
             </div>
             @if (error()) {
@@ -105,14 +107,14 @@
                 <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
               </p>
             }
-            <button type="submit" class="boton ancho" [disabled]="processing()" [attr.aria-busy]="processing()">
+            <button type="submit" class="boton ancho boton--alto" [disabled]="processing()" [attr.aria-busy]="processing()">
               @if (processing()) { <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> }
               Verificar y entrar
             </button>
           </form>
           <button
             type="button"
-            class="enlace-boton"
+            class="boton-enlace enlace-boton"
             [disabled]="secondsUntilResend() > 0 || resending()"
             (click)="reenviarCodigo()"
           >
@@ -148,48 +150,51 @@
             <i class="pi pi-envelope" aria-hidden="true"></i>
             <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
           </p>
-          <form class="formulario" [formGroup]="cuentaForm" (ngSubmit)="registrar()" novalidate>
+          <form class="formulario tarjeta" [formGroup]="cuentaForm" (ngSubmit)="registrar()" novalidate>
             <div class="par">
-              <div>
+              <div class="campo-bloque">
                 <label class="etiqueta" for="nombres">Nombre</label>
                 <input id="nombres" class="campo" type="text" formControlName="nombres" autocomplete="given-name" />
                 @if (cuentaForm.controls.nombres.touched && cuentaForm.controls.nombres.invalid) {
-                  <small class="error-campo">Ingresa tu nombre.</small>
+                  <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tu nombre.</small>
                 }
               </div>
-              <div>
+              <div class="campo-bloque">
                 <label class="etiqueta" for="apellidos">Apellidos</label>
                 <input id="apellidos" class="campo" type="text" formControlName="apellidos" autocomplete="family-name" />
                 @if (cuentaForm.controls.apellidos.touched && cuentaForm.controls.apellidos.invalid) {
-                  <small class="error-campo">Ingresa tus apellidos.</small>
+                  <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tus apellidos.</small>
                 }
               </div>
             </div>
-            <div>
+            <div class="campo-bloque">
               <label class="etiqueta" for="telefono">Teléfono <span class="opcional">(opcional)</span></label>
-              <input
-                id="telefono"
-                class="campo"
-                type="tel"
-                formControlName="telefono"
-                autocomplete="tel"
-                placeholder="55 1234 5678"
-              />
+              <span class="campo-grupo">
+                <i class="pi pi-phone" aria-hidden="true"></i>
+                <input
+                  id="telefono"
+                  type="tel"
+                  formControlName="telefono"
+                  autocomplete="tel"
+                  placeholder="55 1234 5678"
+                />
+              </span>
             </div>
-            <div>
+            <div class="campo-bloque">
               <label class="etiqueta" for="contrasena">Contraseña</label>
-              <span class="campo-clave">
+              <span class="campo-grupo">
+                <i class="pi pi-lock" aria-hidden="true"></i>
                 <input
                   id="contrasena"
-                  class="campo"
                   [type]="passwordVisible() ? 'text' : 'password'"
                   formControlName="contrasena"
                   autocomplete="new-password"
                   placeholder="Mínimo 8 caracteres"
+                  aria-describedby="contrasena-ayuda"
                 />
                 <button
                   type="button"
-                  class="campo-clave__ver"
+                  class="campo-grupo__accion"
                   (click)="togglePassword()"
                   [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
                   [attr.aria-pressed]="passwordVisible()"
@@ -198,21 +203,27 @@
                 </button>
               </span>
               @if (cuentaForm.controls.contrasena.touched && cuentaForm.controls.contrasena.invalid) {
-                <small class="error-campo">Usa entre 8 y 72 caracteres.</small>
+                <small class="error-campo" id="contrasena-ayuda"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Usa entre 8 y 72 caracteres.</small>
+              } @else if (cuentaForm.controls.contrasena.valid) {
+                <small class="correcto-campo" id="contrasena-ayuda"><i class="pi pi-check" aria-hidden="true"></i>Al menos 8 caracteres</small>
+              } @else {
+                <small class="ayuda" id="contrasena-ayuda">Entre 8 y 72 caracteres.</small>
               }
             </div>
-            <div>
+            <div class="campo-bloque">
               <label class="etiqueta" for="confirmacion">Confirmar contraseña</label>
-              <input
-                id="confirmacion"
-                class="campo"
-                [type]="passwordVisible() ? 'text' : 'password'"
-                formControlName="confirmacion"
-                autocomplete="new-password"
-                placeholder="Repite tu contraseña"
-              />
+              <span class="campo-grupo" [class.campo-grupo--error]="cuentaForm.controls.confirmacion.touched && contrasenasDistintas">
+                <i class="pi pi-lock" aria-hidden="true"></i>
+                <input
+                  id="confirmacion"
+                  [type]="passwordVisible() ? 'text' : 'password'"
+                  formControlName="confirmacion"
+                  autocomplete="new-password"
+                  placeholder="Repite tu contraseña"
+                />
+              </span>
               @if (cuentaForm.controls.confirmacion.touched && contrasenasDistintas) {
-                <small class="error-campo">Las contraseñas no coinciden.</small>
+                <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Las contraseñas no coinciden.</small>
               }
             </div>
             @if (error()) {
@@ -220,7 +231,7 @@
                 <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
               </p>
             }
-            <button type="submit" class="boton ancho" [disabled]="processing()" [attr.aria-busy]="processing()">
+            <button type="submit" class="boton ancho boton--alto" [disabled]="processing()" [attr.aria-busy]="processing()">
               @if (processing()) { <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> }
               Crear cuenta y verificar correo
             </button>
@@ -241,7 +252,7 @@
             <button type="button" class="boton ancho" [disabled]="processing()" (click)="aceptar()">
               Aceptar invitación
             </button>
-            <button type="button" class="enlace-boton" [disabled]="processing()" (click)="cambiarSesion()">
+            <button type="button" class="boton-enlace enlace-boton" [disabled]="processing()" (click)="cambiarSesion()">
               Entrar con otra cuenta
             </button>
           } @else {

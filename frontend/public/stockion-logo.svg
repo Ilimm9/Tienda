@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Stockion">
+  <title>Stockion</title>
+  <!-- Logo temporal: hexágono índigo con una caja isométrica en lavanda, blanco y salvia. -->
+  <path d="M32 4.5 55.8 18.25v27.5L32 59.5 8.2 45.75v-27.5Z" fill="#2c2e6a" stroke="#2c2e6a" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M32 15.5 46.5 23.75 32 32 17.5 23.75Z" fill="#bdb6ef"/>
+  <path d="M17.5 23.75 32 32v16.5l-14.5-8.25Z" fill="#ffffff"/>
+  <path d="M46.5 23.75 32 32v16.5l14.5-8.25Z" fill="#dfe5c8"/>
+  <path d="M32 15.5 46.5 23.75v16.5L32 48.5 17.5 40.25v-16.5ZM17.5 23.75 32 32l14.5-8.25M32 32v16.5" fill="none" stroke="#2c2e6a" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M24.75 19.6 39.25 27.9v5.2" fill="none" stroke="#4f46c8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

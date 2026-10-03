@@ -3,46 +3,68 @@
 @import 'primeicons/primeicons.css';
 @import './styles/tables.css';
 @import './styles/uploads.css';
+@import './styles/componentes.css';
 
 :root {
-  /* Paleta clara: crema e índigo del acceso. Ver capabilities/thrs/03-paleta-tipografia-global.md. */
+  /* Opción G: base crema de A, topbar índigo y violeta para las acciones.
+     Ver capabilities/thrs/04-adaptacion-opcion-g.md. */
   --text: #172554;
+  --text-body: #3b4566;
   --text-muted: #5b6478;
   --text-subtle: #6f7785;
   --background: #faf8f3;
   --surface-raised: #ffffff;
   --surface-sidebar: #faf8f3;
   --surface-hover: #f3efe6;
+  --surface-row-hover: #fcfbf8;
   --border: #e6e0d2;
+  --border-soft: #efeae0;
   --border-strong: #cfc8b8;
-  --primary: #2c2e6a;
-  --primary-hover: #20224e;
-  --primary-soft: #ececf4;
-  --primary-border: #c9cae0;
-  --accent: #2c2e6a;
+  --primary: #4f46c8;
+  --primary-hover: #3f37a8;
+  --primary-soft: #eceafb;
+  --primary-border: #dcd8f6;
+  --primary-tint: #f5f3fd;
+  --accent: #4f46c8;
   --danger: #bd2525;
   --danger-soft: #fff1f1;
+  --danger-border: #f5c9c9;
   --success: #3f5147;
   --success-soft: #dfe5c8;
   --warning: #6b4a00;
   --warning-soft: #f8eac1;
+  --warning-border: #eed9a0;
+  /* Topbar: único bloque oscuro de la app. */
+  --brand-ink: #2c2e6a;
+  --brand-ink-raised: #34367a;
+  --brand-ink-hover: #3a3c7e;
+  --brand-ink-line: #45478a;
+  --brand-ink-muted: #b9badf;
+  --brand-ink-text: #d6d7ec;
   /* Bloques suaves del mosaico, cada uno con su texto legible. */
   --tone-sage: #dfe5c8;
   --tone-sage-strong: #cfd9bd;
   --tone-sage-text: #2f4034;
+  --tone-violet: #4f46c8;
+  --tone-lavender: #eceafb;
+  --tone-lavender-strong: #dcd8f6;
+  --tone-butter: #f8eac1;
+  --tone-butter-text: #6b4a00;
+  --tone-neutral: #efebe2;
+  /* Durazno y arena ya no se usan en el panel; el mosaico del acceso todavía los usa. */
   --tone-peach: #f4d3c1;
   --tone-peach-text: #7a2e12;
   --tone-sand: #f5e6c5;
   --tone-sand-text: #4a3608;
-  --tone-butter: #f8eac1;
-  --tone-butter-text: #6b4a00;
-  --tone-neutral: #ece8dd;
   --shadow-card: none;
   --shadow-menu: 0 14px 38px rgb(23 37 84 / 14%);
   --shadow-drawer: 12px 0 36px rgb(23 37 84 / 16%);
+  --shadow-dialog: 0 24px 60px rgb(23 37 84 / 22%);
+  --focus-ring: 0 0 0 3px var(--primary-border);
   --section-max-width: 1440px;
   --section-padding-inline: clamp(1rem, 2vw, 2rem);
   --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Tema oscuro desactivado: ThemeService aplica siempre el claro, así que este bloque no se usa.
@@ -374,7 +396,7 @@ a:focus-visible {
 
 .search-field:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 16%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .search-field input {
@@ -394,31 +416,47 @@ a:focus-visible {
   cursor: pointer;
 }
 
+/* Filtro por estado con el mismo aspecto segmentado de Invitaciones. */
 .status-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--background);
+  scrollbar-width: none;
 }
 
 .status-tabs button {
-  min-height: 40px;
-  padding: 0 16px;
-  color: var(--text-muted);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface-raised);
+  min-height: 36px;
+  padding: 0 14px;
+  color: var(--text-body);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   font: inherit;
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .status-tabs button:hover {
-  color: var(--primary);
-  border-color: var(--primary);
+  color: var(--text);
 }
 
 .status-tabs button.active {
-  color: #fff;
-  border-color: var(--primary);
-  background: var(--primary);
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow:
+    0 1px 2px rgb(23 37 84 / 10%),
+    0 0 0 1px var(--border);
+}
+
+.status-tabs button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-border);
 }

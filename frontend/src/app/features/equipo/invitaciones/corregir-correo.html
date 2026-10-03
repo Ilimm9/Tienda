@@ -1,83 +1,138 @@
-<section class="pagina">
+<section class="pagina pagina--centrada">
   @if (loading()) {
-    <p class="estado-vacio">Cargando invitación…</p>
+    <p class="estado-vacio" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando invitación…
+    </p>
   } @else if (enlaceEmitido(); as emitido) {
-    <section class="tarjeta panel enlace-emitido" aria-label="Enlace emitido">
-      <h1>Correo corregido</h1>
-      @if (emitido.correoEnviado) {
-        <p class="aviso aviso--salvia">
-          <i class="pi pi-check" aria-hidden="true"></i>Enviamos el enlace nuevo a {{ emitido.correo }}.
-        </p>
-      } @else {
-        <p class="aviso aviso--error" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>No pudimos enviar el correo a
-          {{ emitido.correo }}. Copia el enlace y compártelo.
-        </p>
-      }
-      <label class="etiqueta" for="enlace">Enlace de invitación</label>
-      <div class="enlace-emitido__fila">
-        <input id="enlace" class="campo" type="text" readonly [value]="emitido.enlace" />
-        <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
-          <i class="pi pi-copy" aria-hidden="true"></i>Copiar
-        </button>
+    <section class="dialogo" aria-labelledby="titulo-corregido">
+      <header class="dialogo__cabeza">
+        <span class="avatar avatar--grande avatar--salvia" aria-hidden="true"><i class="pi pi-check"></i></span>
+        <div class="dialogo__titulos">
+          <h1 id="titulo-corregido">Correo corregido</h1>
+          <p>El enlace anterior ya no funciona.</p>
+        </div>
+        <a class="icono-accion" routerLink="../.." aria-label="Volver a invitaciones" title="Volver a invitaciones">
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </a>
+      </header>
+      <div class="dialogo__cuerpo">
+        @if (emitido.correoEnviado) {
+          <p class="aviso aviso--salvia">
+            <i class="pi pi-check" aria-hidden="true"></i>Enviamos el enlace nuevo a {{ emitido.correo }}.
+          </p>
+        } @else {
+          <p class="aviso aviso--error" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            <span><strong>No pudimos enviar el correo a {{ emitido.correo }}</strong>Copia el enlace y compártelo.</span>
+          </p>
+        }
+        <div class="campo-bloque">
+          <label class="etiqueta" for="enlace">Enlace de invitación</label>
+          <div class="enlace-emitido__fila">
+            <span class="campo-grupo campo-grupo--lectura campo-grupo--monoespacio">
+              <i class="pi pi-link" aria-hidden="true"></i>
+              <input id="enlace" type="text" readonly [value]="emitido.enlace" />
+            </span>
+            <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
+              <i class="pi pi-copy" aria-hidden="true"></i>Copiar
+            </button>
+          </div>
+          <small class="ayuda">Se muestra una sola vez. Vence en 72 horas.</small>
+        </div>
       </div>
-      <small class="ayuda">Se muestra una sola vez. Vence en 72 horas.</small>
-      <a class="boton boton--secundario volver" routerLink="../..">Volver a invitaciones</a>
+      <footer class="dialogo__pie">
+        <a class="boton" routerLink="../..">Volver a invitaciones</a>
+      </footer>
     </section>
   } @else if (invitacion(); as datos) {
-    <form class="tarjeta panel" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
-      <div>
-        <h1>Corregir correo y reenviar</h1>
-        <p class="detalle">
-          {{ datos.nombre_empleado }} · {{ datos.nombre_sucursal }} · {{ datos.nombre_rol }}
-        </p>
-      </div>
+    <form class="dialogo" [formGroup]="form" (ngSubmit)="guardar()" novalidate aria-labelledby="titulo-corregir">
+      <header class="dialogo__cabeza">
+        <span class="avatar avatar--grande avatar--neutro" aria-hidden="true">{{ iniciales() }}</span>
+        <div class="dialogo__titulos">
+          <h1 id="titulo-corregir">Corregir correo y reenviar</h1>
+          <p>{{ datos.nombre_empleado }} · {{ datos.nombre_sucursal }} · {{ datos.nombre_rol }}</p>
+        </div>
+        <a class="icono-accion" routerLink="../.." aria-label="Cancelar y volver" title="Cancelar">
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </a>
+      </header>
 
-      <div>
-        <label class="etiqueta" for="actual">Correo actual</label>
-        <input id="actual" class="campo" type="email" readonly [value]="datos.correo" />
-      </div>
-      <div>
-        <label class="etiqueta" for="nuevo">Correo nuevo</label>
-        <input id="nuevo" class="campo" type="email" formControlName="correo" autocomplete="off" />
-        @if (form.controls.correo.touched && form.controls.correo.invalid) {
-          <small class="error-campo">Ingresa un correo válido.</small>
-        } @else if (form.controls.correo.touched && sinCambio) {
-          <small class="error-campo">Es el mismo correo. Para conservarlo usa «Reenviar».</small>
+      <div class="dialogo__cuerpo">
+        <div class="campo-bloque">
+          <label class="etiqueta" for="actual">Correo actual</label>
+          <span class="campo-grupo campo-grupo--lectura">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <input id="actual" type="email" readonly [value]="datos.correo" />
+            <i class="pi pi-lock candado" aria-hidden="true"></i>
+          </span>
+        </div>
+
+        <div class="campo-bloque">
+          <label class="etiqueta" for="nuevo">Correo nuevo</label>
+          <span class="campo-grupo" [class.campo-grupo--error]="correoConError">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <input
+              id="nuevo"
+              type="email"
+              formControlName="correo"
+              autocomplete="off"
+              placeholder="nombre@correo.mx"
+              [attr.aria-invalid]="correoConError"
+              [attr.aria-describedby]="correoConError ? 'nuevo-error' : null"
+            />
+          </span>
+          @if (form.controls.correo.touched && form.controls.correo.invalid) {
+            <small class="error-campo" id="nuevo-error">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa un correo válido.
+            </small>
+          } @else if (form.controls.correo.touched && sinCambio) {
+            <small class="error-campo" id="nuevo-error">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Es el mismo correo. Para conservarlo usa «Reenviar».
+            </small>
+          }
+        </div>
+
+        <div class="campo-bloque">
+          <label class="etiqueta" for="confirmacion">Confirmar correo nuevo</label>
+          <span class="campo-grupo" [class.campo-grupo--error]="confirmacionConError">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <input
+              id="confirmacion"
+              type="email"
+              formControlName="confirmacion"
+              autocomplete="off"
+              placeholder="Escríbelo otra vez"
+              [attr.aria-invalid]="confirmacionConError"
+              [attr.aria-describedby]="confirmacionConError ? 'confirmacion-error' : null"
+            />
+          </span>
+          @if (confirmacionConError) {
+            <small class="error-campo" id="confirmacion-error">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Los correos no coinciden.
+            </small>
+          } @else if (form.controls.confirmacion.dirty && form.controls.confirmacion.value && !noCoincide) {
+            <small class="correcto-campo"><i class="pi pi-check" aria-hidden="true"></i>Coinciden.</small>
+          }
+        </div>
+
+        <p class="aviso aviso--atencion">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>El enlace anterior deja de funcionar. El
+          nuevo vence en 72 horas y conserva sucursal y rol.
+        </p>
+        @if (error()) {
+          <p class="aviso aviso--error" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+          </p>
         }
       </div>
-      <div>
-        <label class="etiqueta" for="confirmacion">Confirmar correo nuevo</label>
-        <input
-          id="confirmacion"
-          class="campo"
-          type="email"
-          formControlName="confirmacion"
-          autocomplete="off"
-          placeholder="Escríbelo otra vez"
-        />
-        @if (form.controls.confirmacion.touched && noCoincide) {
-          <small class="error-campo">Los correos no coinciden.</small>
-        }
-      </div>
 
-      <p class="aviso aviso--arena">
-        <i class="pi pi-info-circle" aria-hidden="true"></i>El enlace anterior deja de funcionar. El
-        nuevo vence en 72 horas y conserva sucursal y rol.
-      </p>
-      @if (error()) {
-        <p class="aviso aviso--error" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
-        </p>
-      }
-
-      <div class="botones">
+      <footer class="dialogo__pie">
         <a class="boton boton--secundario" routerLink="../..">Cancelar</a>
         <button type="submit" class="boton" [disabled]="saving() || datos.estado === 'aceptada'" [attr.aria-busy]="saving()">
           <i class="pi" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
           Guardar y reenviar
         </button>
-      </div>
+      </footer>
     </form>
   } @else {
     <p class="aviso aviso--error" role="alert">

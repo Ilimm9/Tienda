@@ -1,6 +1,9 @@
 <section class="pagina">
-  <header class="encabezado">
-    <h1>Invitar a un empleado</h1>
+  <header class="encabezado-pagina">
+    <div>
+      <h1>Invitar a un empleado</h1>
+      <p class="descripcion">Le llegará un correo con un enlace para crear su acceso.</p>
+    </div>
   </header>
 
   @if (error()) {
@@ -8,105 +11,135 @@
       <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
     </p>
   } @else if (loading()) {
-    <p class="estado-vacio">Cargando empleados y roles…</p>
+    <p class="estado-vacio" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleados y roles…
+    </p>
   } @else {
     <div class="columnas">
-      <form class="tarjeta formulario" (ngSubmit)="emitir()" novalidate>
-        <div>
-          <label class="etiqueta" for="empleado">Empleado</label>
-          <select
-            id="empleado"
-            class="campo"
-            name="empleado"
-            [ngModel]="empleadoId()"
-            (ngModelChange)="empleadoId.set($event)"
-            [disabled]="!invitables().length"
-          >
-            <option value="">Selecciona…</option>
-            @for (item of invitables(); track item.id) {
-              <option [value]="item.id">{{ item.nombre_completo }}</option>
-            }
-          </select>
-          <small class="ayuda">
-            Solo aparecen empleados con correo y sin cuenta.
-            <a routerLink="/equipo/empleados/nuevo">Dar de alta un empleado</a>
-          </small>
-        </div>
-
-        <div>
-          <label class="etiqueta" for="correo">Correo del empleado</label>
-          <input
-            id="correo"
-            class="campo"
-            type="email"
-            readonly
-            [value]="empleado()?.correo ?? ''"
-            placeholder="Se toma del empleado"
-          />
-        </div>
-
-        <div class="par">
-          <div>
-            <label class="etiqueta" for="sucursal">Sucursal</label>
-            <select
-              id="sucursal"
-              class="campo"
-              name="sucursal"
-              [ngModel]="sucursalId()"
-              (ngModelChange)="sucursalId.set($event)"
-            >
-              <option value="">Selecciona…</option>
-              @for (item of sucursales(); track item.id) {
-                <option [value]="item.id">{{ item.nombre }}</option>
-              }
-            </select>
+      <form class="formulario-g" (ngSubmit)="emitir()" novalidate>
+        <div class="formulario-g__seccion">
+          <div class="formulario-g__titulo">
+            <h2>Quién</h2>
+            <p>Elige a un empleado que todavía no tenga cuenta.</p>
           </div>
-          <div>
-            <label class="etiqueta" for="rol">Rol</label>
-            <select
-              id="rol"
-              class="campo"
-              name="rol"
-              [ngModel]="rolId()"
-              (ngModelChange)="rolId.set($event)"
-            >
-              <option value="">Selecciona…</option>
-              @for (item of roles(); track item.id) {
-                <option [value]="item.id">{{ item.nombre }}</option>
-              }
-            </select>
+
+          <div class="campo-bloque">
+            <label class="etiqueta" for="empleado">Empleado</label>
+            <span class="campo-grupo campo-grupo--select">
+              <i class="pi pi-user" aria-hidden="true"></i>
+              <select
+                id="empleado"
+                name="empleado"
+                aria-describedby="empleado-ayuda"
+                [ngModel]="empleadoId()"
+                (ngModelChange)="empleadoId.set($event)"
+                [disabled]="!invitables().length"
+              >
+                <option value="">{{ invitables().length ? 'Selecciona…' : 'No hay empleados por invitar' }}</option>
+                @for (item of invitables(); track item.id) {
+                  <option [value]="item.id">{{ item.nombre_completo }}</option>
+                }
+              </select>
+            </span>
+            <small class="ayuda" id="empleado-ayuda">
+              Solo aparecen empleados con correo y sin cuenta.
+              <a routerLink="/equipo/empleados/nuevo">Dar de alta un empleado</a>
+            </small>
+          </div>
+
+          <div class="campo-bloque">
+            <label class="etiqueta" for="correo">Correo del empleado</label>
+            <span class="campo-grupo campo-grupo--lectura">
+              <i class="pi pi-envelope" aria-hidden="true"></i>
+              <input
+                id="correo"
+                type="email"
+                readonly
+                aria-describedby="correo-ayuda"
+                [value]="empleado()?.correo ?? ''"
+                placeholder="Se toma del empleado"
+              />
+              <i class="pi pi-lock candado" aria-hidden="true"></i>
+            </span>
+            <small class="ayuda" id="correo-ayuda">Se toma de la ficha del empleado.</small>
           </div>
         </div>
-        <small class="ayuda">
-          Una sucursal por invitación. Después puedes asignarle más desde Empleados. El rol
-          propietario no se delega.
-        </small>
-        @if (!roles().length) {
-          <p class="aviso aviso--arena">
-            <i class="pi pi-info-circle" aria-hidden="true"></i>
-            <span>Todavía no hay roles para delegar. <a routerLink="/roles-permisos">Crear un rol</a></span>
-          </p>
-        }
 
-        <div class="botones">
+        <div class="formulario-g__seccion">
+          <div class="formulario-g__titulo">
+            <h2>Dónde y con qué permisos</h2>
+            <p>Una sucursal por invitación. Después puedes asignarle más desde Empleados.</p>
+          </div>
+
+          <div class="par">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="sucursal">Sucursal</label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <select
+                  id="sucursal"
+                  name="sucursal"
+                  [ngModel]="sucursalId()"
+                  (ngModelChange)="sucursalId.set($event)"
+                >
+                  <option value="">Selecciona…</option>
+                  @for (item of sucursales(); track item.id) {
+                    <option [value]="item.id">{{ item.nombre }} · {{ item.codigo }}</option>
+                  }
+                </select>
+              </span>
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="rol">Rol</label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-lock" aria-hidden="true"></i>
+                <select
+                  id="rol"
+                  name="rol"
+                  aria-describedby="rol-ayuda"
+                  [ngModel]="rolId()"
+                  (ngModelChange)="rolId.set($event)"
+                >
+                  <option value="">Selecciona…</option>
+                  @for (item of roles(); track item.id) {
+                    <option [value]="item.id">{{ item.nombre }}</option>
+                  }
+                </select>
+              </span>
+            </div>
+          </div>
+          <small class="ayuda" id="rol-ayuda">El rol propietario no se delega.</small>
+
+          @if (!roles().length) {
+            <p class="aviso aviso--atencion">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>Todavía no hay roles para delegar. <a routerLink="/roles-permisos">Crear un rol</a></span>
+            </p>
+          }
+        </div>
+
+        <div class="formulario-g__acciones">
+          <a class="boton boton--fantasma" routerLink="..">{{ enlaceEmitido() ? 'Volver a invitaciones' : 'Cancelar' }}</a>
           <button type="submit" class="boton" [disabled]="!completa() || saving()" [attr.aria-busy]="saving()">
             <i class="pi" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
             {{ enlaceEmitido() ? 'Emitir otro enlace' : 'Emitir invitación' }}
           </button>
-          <a class="enlace-cancelar" routerLink="..">{{ enlaceEmitido() ? 'Volver a invitaciones' : 'Cancelar' }}</a>
         </div>
       </form>
 
       <div class="lateral">
         <section class="resumen" aria-label="Resumen">
-          <h2>Resumen</h2>
-          @if (completa()) {
-            <p class="resumen__frase">
-              {{ empleado()?.nombre_completo }} entra a {{ sucursal()?.nombre }} como {{ rol()?.nombre }}
-            </p>
-          } @else {
-            <p class="resumen__frase resumen__frase--pendiente">Elige empleado, sucursal y rol</p>
-          }
+          <h2 class="rotulo">Resumen</h2>
+          <div class="resumen__cabeza">
+            <span class="avatar avatar--grande" aria-hidden="true">{{ inicialesEmpleado() }}</span>
+            @if (completa()) {
+              <p class="resumen__frase">
+                {{ empleado()?.nombre_completo }} entra a {{ sucursal()?.nombre }} como {{ rol()?.nombre }}
+              </p>
+            } @else {
+              <p class="resumen__frase resumen__frase--pendiente">Elige empleado, sucursal y rol</p>
+            }
+          </div>
           <dl>
             <dt>Empresa</dt>
             <dd>{{ negocio()?.nombre_comercial }}</dd>
@@ -133,13 +166,16 @@
               </p>
             } @else {
               <p class="aviso aviso--error" role="alert">
-                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>No pudimos enviar el correo.
-                La invitación sigue activa: copia el enlace y compártelo.
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                <span><strong>No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
               </p>
             }
             <label class="etiqueta" for="enlace">Enlace de invitación</label>
             <div class="enlace-emitido__fila">
-              <input id="enlace" class="campo" type="text" readonly [value]="emitido.enlace" />
+              <span class="campo-grupo campo-grupo--lectura campo-grupo--monoespacio">
+                <i class="pi pi-link" aria-hidden="true"></i>
+                <input id="enlace" type="text" readonly [value]="emitido.enlace" />
+              </span>
               <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
                 <i class="pi pi-copy" aria-hidden="true"></i>Copiar
               </button>

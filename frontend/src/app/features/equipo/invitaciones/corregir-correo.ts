@@ -50,6 +50,23 @@ export class CorregirCorreo {
     return this.normalizar(correo) !== this.normalizar(confirmacion);
   }
 
+  get correoConError(): boolean {
+    const control = this.form.controls.correo;
+    return control.touched && (control.invalid || this.sinCambio);
+  }
+
+  get confirmacionConError(): boolean {
+    return this.form.controls.confirmacion.touched && this.noCoincide;
+  }
+
+  /** Iniciales del empleado invitado para la cabecera del diálogo. */
+  iniciales(): string {
+    const datos = this.invitacion();
+    const partes = (datos?.nombre_empleado ?? '').trim().split(/\s+/).filter(Boolean);
+    if (partes.length) return partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase();
+    return (datos?.correo ?? '?').charAt(0).toUpperCase();
+  }
+
   get sinCambio(): boolean {
     return this.normalizar(this.form.controls.correo.value) === this.invitacion()?.correo;
   }

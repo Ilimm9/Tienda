@@ -1,14 +1,16 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../features/auth/auth.service';
 import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { BreadcrumbsComponent } from '../breadcrumbs/breadcrumbs.component';
 import { LayoutStateService } from '../layout-state.service';
 
 @Component({
   selector: 'app-topbar',
+  imports: [BreadcrumbsComponent, RouterLink],
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.css',
 })
@@ -23,6 +25,8 @@ export class TopbarComponent {
   readonly accountOpen = signal(false);
   readonly notificationsOpen = signal(false);
   readonly contextOpen = signal(false);
+  /** Inicial del correo para el avatar de la cuenta; la sesión no expone nombre. */
+  readonly inicial = computed(() => this.auth.currentUser()?.correo?.trim().charAt(0).toUpperCase() || '');
 
   toggleAccount(): void {
     this.notificationsOpen.set(false);

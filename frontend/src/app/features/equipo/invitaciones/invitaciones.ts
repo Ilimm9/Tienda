@@ -11,6 +11,7 @@ import { FiltroInvitaciones, InvitacionResumen } from '../invitacion.models';
 import { InvitacionService } from '../invitacion.service';
 
 type Vista = 'sin_aceptar' | 'todas' | 'aceptada' | 'cancelada';
+type TonoAvatar = 'lavanda' | 'salvia' | 'neutro';
 
 interface EnlaceEmitido {
   enlace: string;
@@ -73,6 +74,36 @@ export class Invitaciones {
   /** Solo la invitación más reciente de un empleado sin cuenta puede reemitirse. */
   puedeReemitir(invitacion: InvitacionResumen): boolean {
     return this.puedeEnviar() && invitacion.estado !== 'aceptada' && Boolean(invitacion.sucursal_id);
+  }
+
+  /** Iniciales del nombre del empleado; sin nombre, la primera letra del correo. */
+  iniciales(invitacion: InvitacionResumen): string {
+    const partes = (invitacion.nombre_empleado ?? '').trim().split(/\s+/).filter(Boolean);
+    if (partes.length) return partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase();
+    return invitacion.correo.charAt(0).toUpperCase();
+  }
+
+  /** Lavanda para pendientes, salvia para aceptadas y neutro para las cerradas sin aceptar. */
+  tonoAvatar(invitacion: InvitacionResumen): TonoAvatar {
+    if (invitacion.estado === 'aceptada') return 'salvia';
+    if (invitacion.estado === 'pendiente') return 'lavanda';
+    return 'neutro';
+  }
+
+  /** Texto del pie de la tabla con el total de la vista activa. */
+  resumenLista(): string {
+    if (this.loading()) return 'Cargando…';
+    const total = this.invitaciones().length;
+    const vista = this.vista();
+    const sufijo =
+      vista === 'sin_aceptar'
+        ? 'sin aceptar'
+        : vista === 'aceptada'
+          ? total === 1 ? 'aceptada' : 'aceptadas'
+          : vista === 'cancelada'
+            ? total === 1 ? 'cancelada' : 'canceladas'
+            : 'en total';
+    return `${total} ${total === 1 ? 'invitación' : 'invitaciones'} ${sufijo}`;
   }
 
   horasRestantes(invitacion: InvitacionResumen): number {

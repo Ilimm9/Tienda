@@ -1,32 +1,57 @@
-.panel {
+/* Página con aspecto de diálogo: conserva la ruta propia y la navegación actual. */
+.pagina--centrada {
+  align-items: center;
+  padding-top: clamp(24px, 6vh, 64px);
+}
+
+.dialogo {
+  width: min(100%, 540px);
+  overflow: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-dialog);
+}
+
+.dialogo__cabeza {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 20px 16px 24px;
+}
+
+.dialogo__titulos {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialogo__titulos h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.dialogo__titulos p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dialogo__cuerpo {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  width: min(100%, 500px);
-  padding: 28px;
-  box-shadow: 0 8px 24px rgb(23 37 84 / 6%);
+  gap: 16px;
+  padding: 4px 24px 22px;
 }
 
-.panel h1 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-}
-
-.detalle {
-  margin: 8px 0 0;
-  color: var(--inv-apagado);
-}
-
-.botones {
+.dialogo__pie {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.volver {
-  align-self: flex-start;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--background);
 }

@@ -1,56 +1,105 @@
+/* Las migas viven dentro de la topbar índigo (opción G). */
 :host {
   display: block;
   min-width: 0;
-  background: var(--surface-raised);
-  border-bottom: 1px solid var(--border);
 }
 
 .breadcrumbs {
   display: flex;
-  min-height: 54px;
+  min-width: 0;
   align-items: center;
-  gap: 10px;
-  padding: 0 32px;
-  overflow-x: auto;
-  color: var(--text-muted);
-  font-size: 13px;
-  scrollbar-width: none;
+  gap: 8px;
+  color: var(--brand-ink-muted);
+  font-size: 13.5px;
   white-space: nowrap;
 }
 
-.breadcrumbs::-webkit-scrollbar {
-  display: none;
+.trail {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.breadcrumbs a {
-  color: var(--text-muted);
+.crumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
-.breadcrumbs a:hover {
-  color: var(--primary);
+/* Los niveles intermedios ceden espacio primero; el actual es el último en recortarse. */
+.crumb:not(.crumb--current) {
+  flex-shrink: 4;
+}
+
+.crumb a,
+.current,
+.group {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crumb a {
+  color: var(--brand-ink-muted);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.crumb a:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.group {
+  color: var(--brand-ink-muted);
+}
+
+.current {
+  color: #fff;
+  font-weight: 600;
+}
+
+.separator {
+  color: var(--brand-ink-line);
+  font-weight: 500;
 }
 
 .home-link {
   display: grid;
-  min-width: 32px;
-  min-height: 32px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
   place-items: center;
-  border-radius: 6px;
+  color: var(--brand-ink-muted);
+  border-radius: 8px;
+  font-size: 14px;
 }
 
-.separator {
-  color: var(--text-subtle);
-  font-size: 9px;
+.home-link:hover {
+  color: #fff;
+  background: var(--brand-ink-hover);
 }
 
-.current {
-  color: var(--text);
-  font-weight: 600;
+.home-link:focus-visible,
+.crumb a:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 70%);
+  outline-offset: 2px;
 }
 
-@media (max-width: 599px) {
-  .breadcrumbs {
-    min-height: 48px;
-    padding-inline: 16px;
+/* En móvil solo se muestra el nivel actual. */
+@media (max-width: 767px) {
+  .home-link,
+  .crumb:not(.crumb--current) {
+    display: none;
+  }
+
+  .crumb--current .separator {
+    display: none;
   }
 }

@@ -1,265 +1,25 @@
-/* Alias de las vistas de invitación sobre la paleta global de styles.css. */
+/* Base de las vistas de invitación. Botones, campos, avisos, pastillas y tablas vienen del kit global
+   (styles/componentes.css); aquí solo queda lo propio del contenedor. */
 :host {
-  --inv-fondo: var(--background);
-  --inv-superficie: var(--surface-raised);
-  --inv-tinta: var(--text);
-  --inv-tinta-suave: #3b4566;
-  --inv-apagado: var(--text-muted);
-  --inv-borde: var(--border);
-  --inv-borde-suave: #efeae0;
-  --inv-borde-fuerte: var(--border-strong);
-  --inv-accion: var(--primary);
-  --inv-accion-hover: var(--primary-hover);
-  --inv-verde: var(--success);
-  --inv-verde-texto: var(--tone-sage-text);
-  --inv-salvia: var(--tone-sage);
-  --inv-salvia-2: var(--tone-sage-strong);
-  --inv-durazno: var(--tone-peach);
-  --inv-durazno-texto: var(--tone-peach-text);
-  --inv-arena: var(--tone-sand);
-  --inv-arena-texto: var(--tone-sand-text);
-  --inv-amarillo: var(--tone-butter);
-  --inv-amarillo-texto: var(--tone-butter-text);
-  --inv-neutro: var(--tone-neutral);
-  --inv-peligro: var(--danger);
-  --inv-peligro-suave: var(--danger-soft);
-
   display: block;
   min-height: 100%;
-  color: var(--inv-tinta);
-  background: var(--inv-fondo);
+  color: var(--text);
+  background: var(--background);
   font-size: 14px;
   line-height: 1.45;
 }
 
-.pagina {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  width: min(100%, var(--section-max-width, 1440px));
-  margin: 0 auto;
-  padding: 32px clamp(16px, 3vw, 44px) 44px;
-}
-
-.encabezado {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.encabezado .ruta {
-  margin: 0 0 6px;
-  color: var(--inv-apagado);
-  font-size: 13px;
-}
-
-.encabezado h1 {
-  margin: 0;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-}
-
-a {
-  color: var(--inv-accion);
+/* Solo enlaces de texto: botones y acciones con icono traen su color del kit global. */
+a:not(.boton):not(.icono-accion) {
+  color: var(--primary);
   font-weight: 600;
   text-decoration: none;
 }
 
-a:hover {
-  color: var(--inv-accion-hover);
+a:not(.boton):not(.icono-accion):hover {
+  color: var(--primary-hover);
   text-decoration: underline;
-}
-
-.boton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 22px;
-  color: #fff;
-  border: 1px solid var(--inv-accion);
-  border-radius: 10px;
-  background: var(--inv-accion);
-  font: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
-}
-
-.boton:hover:not(:disabled) {
-  color: #fff;
-  border-color: var(--inv-accion-hover);
-  background: var(--inv-accion-hover);
-  text-decoration: none;
-}
-
-.boton--secundario {
-  color: var(--inv-accion);
-  border-color: var(--inv-borde-fuerte);
-  background: var(--inv-superficie);
-}
-
-.boton--secundario:hover:not(:disabled) {
-  color: var(--inv-accion-hover);
-  border-color: var(--inv-accion);
-  background: var(--inv-superficie);
-}
-
-.boton--verde {
-  border-color: var(--inv-verde);
-  background: var(--inv-verde);
-}
-
-.boton--verde:hover:not(:disabled) {
-  border-color: var(--inv-verde-texto);
-  background: var(--inv-verde-texto);
-}
-
-.boton--compacto {
-  min-height: 44px;
-  padding: 0 14px;
-}
-
-.boton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.boton:focus-visible,
-.icono-accion:focus-visible,
-.campo:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--inv-accion);
-  outline-offset: 2px;
-}
-
-.icono-accion {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  color: var(--inv-tinta-suave);
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  place-items: center;
-}
-
-.icono-accion:hover:not(:disabled) {
-  background: var(--inv-neutro);
-  text-decoration: none;
-}
-
-.icono-accion--peligro {
-  color: var(--inv-peligro);
-}
-
-.tarjeta {
-  background: var(--inv-superficie);
-  border: 1px solid var(--inv-borde);
-  border-radius: 16px;
-}
-
-.etiqueta {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--inv-tinta);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.etiqueta .opcional {
-  color: var(--inv-apagado);
-  font-weight: 400;
-}
-
-.campo {
-  width: 100%;
-  height: 48px;
-  padding: 0 14px;
-  color: var(--inv-tinta);
-  border: 1px solid var(--inv-borde-fuerte);
-  border-radius: 10px;
-  background: var(--inv-superficie);
-  font: inherit;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.campo:hover {
-  border-color: var(--inv-apagado);
-}
-
-.campo:focus {
-  border-color: var(--inv-accion);
-  box-shadow: 0 0 0 2px rgb(44 46 106 / 16%);
-  outline: none;
-}
-
-.campo[readonly] {
-  color: var(--inv-tinta-suave);
-  border-color: var(--inv-borde);
-  background: var(--inv-fondo);
-}
-
-.campo.ng-invalid.ng-touched {
-  border-color: var(--inv-peligro);
-}
-
-.ayuda {
-  display: block;
-  margin-top: 6px;
-  color: var(--inv-apagado);
-  font-size: 12px;
-}
-
-.error-campo {
-  display: block;
-  margin-top: 6px;
-  color: var(--inv-peligro);
-  font-size: 12px;
-}
-
-.aviso {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-}
-
-.aviso--error {
-  color: var(--inv-peligro);
-  background: var(--inv-peligro-suave);
-}
-
-.aviso--arena {
-  color: var(--inv-arena-texto);
-  background: var(--inv-arena);
-}
-
-.aviso--salvia {
-  color: var(--inv-verde-texto);
-  background: var(--inv-salvia);
-}
-
-.estado-vacio {
-  margin: 0;
-  padding: 28px;
-  color: var(--inv-apagado);
-  text-align: center;
+  text-underline-offset: 3px;
 }
 
 /* Enlace recién emitido: se muestra una sola vez. */
@@ -275,21 +35,13 @@ a:focus-visible {
   gap: 8px;
 }
 
-.enlace-emitido__fila .campo {
+.enlace-emitido__fila .campo-grupo {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
 }
 
 @media (max-width: 520px) {
   .enlace-emitido__fila {
     flex-direction: column;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .boton,
-  .campo {
-    transition: none;
   }
 }
