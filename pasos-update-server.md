@@ -73,6 +73,65 @@ Si falla, revisa logs del backend y el detalle del envío en Resend. Comprueba d
 
 Referencia: [SMTP de Resend](https://resend.com/docs/send-with-smtp).
 
+deshacer. Si hay alguna duda, saca respaldo primero (comando al final).
+
+Te dejo los dos casos; el orden importa: primero se detiene el backend, porque Postgres no deja borrar una base con conexiones abiertas.
+
+En el servidor (producción)
+
+Define un atajo para no repetir rutas:
+
+C="sudo docker compose --env-file /opt/stockion/.env.production -f /opt/stockion/compose.production.yaml"
+
+1. Detener backend:
+   $C stop backend
+
+2. Borrar y volver a crear la base (usa usuario y nombre que ya tiene el contenedor):
+   $C exec postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+
+3. Levantar backend; al arrancar crea tablas, permisos y migraciones sobre la base vacía:
+   $C up -d backend
+$C logs -f backend
+   Busca la línea API escuchando. Ctrl+C para salir del log.
+
+En tu máquina (local)
+
+1. Detén tu go run (Ctrl+C) y el contenedor de backend:
+   docker stop tienda-backend-1
+
+2. Borrar y crear:
+   docker exec tienda-postgres-1 sh -c 'dropdb -U postgres --if-exists tienda && createdb -U postgres tienda'
+
+3. Arranca de nuevo:
+   docker start tienda-backend-1 # o: go run ./cmd/api
+
+Si quieres entrar a mano
+
+docker exec -it tienda-postgres-1 psql -U postgres # local
+$C exec postgres sh -c 'psql -U "$POSTGRES_USER" postgres' # servidor
+
+Dentro de psql:
+\l -- lista bases
+DROP DATABASE tienda; -- nombre real según \l
+CREATE DATABASE tienda;
+\q
+Conéctate a la base postgres, no a la que vas a borrar. Si dice «is being accessed by other users», falta detener backend, o usa DROP DATABASE tienda WITH (FORCE);.
+
+Respaldo opcional antes de borrar
+
+$C exec postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > respaldo-$(date +%F).sql
+
+Qué resuelve y qué no
+
+Con base limpia desaparecen dos pendientes: ya no hay miembros sin sucursal asignada ni correos duplicados que revisar; todas las migraciones corren sobre tablas vacías.
+
+Siguen en pie:
+
+- Intentos de OTP (código 10, prueba 5).
+- Probar un correo real en Gmail/Outlook.
+- En producción la base queda sin ningún usuario: la primera cuenta se crea desde «Registrarse» y pasa por el asistente de empresa y sucursal.
+- Sesiones abiertas dejan de servir; todos vuelven a iniciar sesión.
+
 ## 2. Actualizar código desde production
 
 Sólo aplica cuando los cambios de código ya estén publicados en `origin/production`. Para cambiar únicamente SMTP, basta la sección anterior.
