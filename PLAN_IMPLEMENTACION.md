@@ -52,6 +52,7 @@ Ubicación directa autorizada por el usuario el 2026-10-01 para planeación, sin
 | 4 | [Adaptar la app a la opción G](capabilities/thrs/04-adaptacion-opcion-g.md) | Verificada; pendiente de revisión final | Plan 3 |
 | 5 | [Nombres, correos únicos, permisos en frontend y cierre de Equipo y Roles](capabilities/thrs/05-permisos-frontend-formularios-equipo.md) | Verificada; aprobada el 2026-10-04, pendiente de aceptación final | Plan 2, plan 4, RBAC 01, registro 06 y precios 12 |
 | 6 | [Equipo y Roles con el kit visual](capabilities/thrs/06-equipo-roles-con-kit.md) | Verificada; aprobada el 2026-10-04, pendiente de aceptación final | Kit del plan 4, Tailwind 05 y plan 5 |
+| 7 | [Marca Stockion, correos y envío a producción](capabilities/thrs/07-marca-stockion-correos-produccion.md) | Aprobada el 2026-10-05; código implementado, envío a `production` pendiente | Correo 07, plan 4 y capability 06 |
 
 ## Restricciones vigentes
 

@@ -11,7 +11,7 @@ import { routes } from './app.routes';
 
 // Aura con la escala primaria en violeta (opción G): tablas, paginador, selects y foco coinciden con styles.css.
 // El resaltado es lavanda suave para que la página activa y las filas elegidas no sean bloques sólidos.
-const TemaTienda = definePreset(Aura, {
+const TemaStockion = definePreset(Aura, {
   semantic: {
     primary: {
       50: '#f5f3fd',
@@ -77,7 +77,7 @@ export const appConfig: ApplicationConfig = {
       license: 'eyJpZCI6IjljM2JjZWRmLWZmYjMtNDVhMC04NzNhLTRjMTRjNzUwOTYyYSIsInByb2R1Y3QiOiJwcmltZXVpIiwidGllciI6ImNvbW11bml0eSIsInR5cGUiOiJkZXYiLCJpYXQiOjE3ODkwNzIzNjYsImV4cCI6MTgyMDYwODM2Nn0.SlEtFpXk4FXnlfVrdQ4myvNICX4ix5crMKr29h6W2duqf9hMMb-31XJAlPyaAiAmsp2wkWLehCHb0YjETE8zAA',
       overlayAppendTo: 'body',
       theme: {
-        preset: TemaTienda,
+        preset: TemaStockion,
         options: {
           darkModeSelector: '[data-theme="dark"]',
         },

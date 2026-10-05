@@ -144,7 +144,7 @@ func SeedDevelopment(db *gorm.DB) error {
 
 		var branch negociodomain.Sucursal
 		return tx.Where("id = ?", branchID).Attrs(negociodomain.Sucursal{
-			ID: branchID, NegocioID: businessID, Codigo: "SUC-001", Nombre: "Tienda prueba",
+			ID: branchID, NegocioID: businessID, Codigo: "SUC-001", Nombre: "Sucursal de prueba",
 			EsPrincipal: true, Activo: true,
 		}).FirstOrCreate(&branch).Error
 	})

@@ -8,7 +8,7 @@ import (
 )
 
 func base() application.Base {
-	return application.Base{NombreApp: "Tienda", URLApp: "https://tienda.mergemakers.com", Anio: 2026}
+	return application.Base{NombreApp: "Stockion", URLApp: "https://tienda.mergemakers.com", Anio: 2026}
 }
 
 func TestAllTemplatesRenderSubjectHTMLAndText(t *testing.T) {
@@ -23,19 +23,19 @@ func TestAllTemplatesRenderSubjectHTMLAndText(t *testing.T) {
 	}{
 		application.PlantillaVerificacion: {
 			application.DatosVerificacion{Base: base(), Codigo: "042917", Minutos: 10},
-			"Tu código de verificación de Tienda", []string{"042917", "10 minutos"},
+			"Tu código de verificación de Stockion", []string{"042917", "10 minutos"},
 		},
 		application.PlantillaInvitacion: {
 			application.DatosInvitacion{Base: base(), NombreNegocio: "Abarrotes Luna", NombreInvitado: "Luis", Enlace: "https://tienda.mergemakers.com/invitacion/abc", Horas: 72},
-			"Abarrotes Luna te invitó a Tienda", []string{"https://tienda.mergemakers.com/invitacion/abc", "72 horas"},
+			"Abarrotes Luna te invitó a Stockion", []string{"https://tienda.mergemakers.com/invitacion/abc", "72 horas"},
 		},
 		application.PlantillaRecuperacion: {
 			application.DatosRecuperacion{Base: base(), Enlace: "https://tienda.mergemakers.com/restablecer-contrasena#desafio=1&token=x", Minutos: 30},
-			"Restablece tu contraseña de Tienda", []string{"restablecer-contrasena#desafio=1", "30 minutos"},
+			"Restablece tu contraseña de Stockion", []string{"restablecer-contrasena#desafio=1", "30 minutos"},
 		},
 		application.PlantillaContrasenaCambiada: {
 			application.DatosContrasenaCambiada{Base: base(), EnlaceRecuperacion: "https://tienda.mergemakers.com/recuperar-contrasena"},
-			"Tu contraseña de Tienda cambió", []string{"https://tienda.mergemakers.com/recuperar-contrasena"},
+			"Tu contraseña de Stockion cambió", []string{"https://tienda.mergemakers.com/recuperar-contrasena"},
 		},
 	}
 	for nombre, caso := range casos {

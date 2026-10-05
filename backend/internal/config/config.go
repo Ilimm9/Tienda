@@ -113,7 +113,7 @@ func Load() (Config, error) {
 		username: os.Getenv("SMTP_USERNAME"),
 		password: os.Getenv("SMTP_PASSWORD"),
 		from:     mailFrom(),
-		fromName: get("MAIL_FROM_NAME", "Tienda"),
+		fromName: get("MAIL_FROM_NAME", "Stockion"),
 		replyTo:  os.Getenv("MAIL_REPLY_TO"),
 	}
 	frontendURL := get("FRONTEND_URL", "http://localhost:4200")

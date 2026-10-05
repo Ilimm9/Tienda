@@ -39,7 +39,7 @@ func (r *renderizadorFalso) Render(plantilla string, datos any) (Contenido, erro
 }
 
 func nuevoServicio(t *transporteFalso, r *renderizadorFalso) *Servicio {
-	s := NewServicio(t, r, Config{NombreApp: "Tienda", FrontendURL: "https://tienda.mergemakers.com/"})
+	s := NewServicio(t, r, Config{NombreApp: "Stockion", FrontendURL: "https://tienda.mergemakers.com/"})
 	s.now = func() time.Time { return time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC) }
 	return s
 }
@@ -53,7 +53,7 @@ func TestSendVerificationOTPRendersCodeAndMinutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	datos, ok := plantillas.datos.(DatosVerificacion)
-	if plantillas.plantilla != PlantillaVerificacion || !ok || datos.Codigo != "123456" || datos.Minutos != 10 || datos.NombreApp != "Tienda" || datos.Anio != 2026 {
+	if plantillas.plantilla != PlantillaVerificacion || !ok || datos.Codigo != "123456" || datos.Minutos != 10 || datos.NombreApp != "Stockion" || datos.Anio != 2026 {
 		t.Fatalf("datos de verificación inesperados: %s %#v", plantillas.plantilla, plantillas.datos)
 	}
 	if len(transporte.enviados) != 1 || transporte.enviados[0].Para != "ana@ejemplo.com" || transporte.enviados[0].Texto != "texto" {

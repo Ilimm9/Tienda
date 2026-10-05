@@ -108,7 +108,7 @@ func transporteDePrueba(t *testing.T, puerto int, ajustes func(*SMTPConfig)) *SM
 	t.Helper()
 	cfg := SMTPConfig{
 		Host: "127.0.0.1", Port: puerto, TLS: TLSNinguno, Timeout: time.Second,
-		Remitente: "no-reply@mergemakers.com", NombreRemitente: "Tienda",
+		Remitente: "no-reply@mergemakers.com", NombreRemitente: "Stockion",
 	}
 	if ajustes != nil {
 		ajustes(&cfg)
@@ -126,7 +126,7 @@ func transporteDePrueba(t *testing.T, puerto int, ajustes func(*SMTPConfig)) *SM
 
 func mensajeDePrueba() application.Mensaje {
 	return application.Mensaje{
-		Para: "ana@ejemplo.com", Asunto: "Tu código de verificación de Tienda",
+		Para: "ana@ejemplo.com", Asunto: "Tu código de verificación de Stockion",
 		HTML: `<img src="cid:` + LogoCID + `"><p>Código 123456</p>`, Texto: "Código 123456\n",
 	}
 }
@@ -151,7 +151,7 @@ func TestSMTPTransportSendsMultipartMessageWithInlineLogo(t *testing.T) {
 		t.Fatalf("sobre SMTP inesperado:\n%s", unidos)
 	}
 	for _, esperado := range []string{
-		`From: "Tienda" <no-reply@mergemakers.com>`,
+		`From: "Stockion" <no-reply@mergemakers.com>`,
 		"To: <ana@ejemplo.com>",
 		"Reply-To: <soporte@mergemakers.com>",
 		"X-SES-CONFIGURATION-SET: tienda-transaccional",
