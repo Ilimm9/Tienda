@@ -13,6 +13,7 @@ import {
   NegocioDetalle,
 } from './negocio.models';
 import { NegocioService } from './negocio.service';
+import { ContextoService } from '../../contexto/contexto.service';
 
 @Component({
   selector: 'app-negocio-form',
@@ -26,6 +27,7 @@ export class NegocioFormComponent {
   private readonly feedback = inject(FeedbackService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly contexto = inject(ContextoService);
 
   readonly negocioId = this.route.snapshot.paramMap.get('negocioId');
   readonly editing = this.negocioId !== null;
@@ -98,7 +100,9 @@ export class NegocioFormComponent {
       next: (business: NegocioDetalle) => {
         this.saving.set(false);
         this.feedback.success(this.editing ? 'Cambios guardados' : 'Negocio registrado');
-        void this.router.navigate(['/negocios', business.id]);
+        // El negocio nuevo trae el rol propietario: se recarga el contexto para que menú y permisos lo reflejen.
+        const abrir = () => void this.router.navigate(['/negocios', business.id]);
+        this.contexto.recargar().subscribe({ next: abrir, error: abrir });
       },
       error: (response: HttpErrorResponse) => {
         this.saving.set(false);

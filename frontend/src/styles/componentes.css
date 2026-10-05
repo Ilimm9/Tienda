@@ -216,6 +216,18 @@
   font-weight: 600;
 }
 
+/* Marca de campo obligatorio; el control lleva además aria-required. */
+.etiqueta .obligatorio,
+.leyenda-obligatorios .obligatorio {
+  color: var(--danger);
+}
+
+.leyenda-obligatorios {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
 .etiqueta .opcional {
   color: var(--text-muted);
   font-weight: 400;

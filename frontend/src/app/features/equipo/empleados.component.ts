@@ -7,7 +7,6 @@ import { TableModule } from 'primeng/table';
 import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
-import { RolService } from '../roles-permisos/rol.service';
 import { EmpleadoResumen, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
 import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
@@ -19,11 +18,11 @@ import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
 })
 export class EmpleadosComponent {
   private readonly empleadoService = inject(EmpleadoService);
-  private readonly rolService = inject(RolService);
   readonly contexto = inject(ContextoService);
+  /** Permisos del negocio activo, resueltos una sola vez en el contexto. */
+  readonly misPermisos = computed(() => [...this.contexto.permisos()]);
 
   readonly empleados = signal<EmpleadoResumen[]>([]);
-  readonly misPermisos = signal<string[]>([]);
   readonly estado = signal<EstadoEmpleado | ''>('');
   readonly buscar = signal('');
   readonly loading = signal(true);
@@ -81,11 +80,9 @@ export class EmpleadosComponent {
     this.error.set(null);
     forkJoin({
       empleados: this.empleadoService.listar(negocioId, this.estado(), this.buscar()),
-      permisos: this.rolService.misPermisos(negocioId),
     }).subscribe({
-      next: ({ empleados, permisos }) => {
+      next: ({ empleados }) => {
         this.empleados.set(empleados.items);
-        this.misPermisos.set(permisos.items);
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {

@@ -4,9 +4,9 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../../contexto/contexto.service';
+import { PERMISOS } from '../../../contexto/permisos';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../../shared/fecha-mexico.pipe';
-import { RolService } from '../../roles-permisos/rol.service';
 import { FiltroInvitaciones, InvitacionResumen } from '../invitacion.models';
 import { InvitacionService } from '../invitacion.service';
 import { iniciales } from '../presentacion';
@@ -29,12 +29,12 @@ const HORA_MS = 60 * 60 * 1000;
 })
 export class Invitaciones {
   private readonly invitacionService = inject(InvitacionService);
-  private readonly rolService = inject(RolService);
   private readonly feedback = inject(FeedbackService);
   readonly contexto = inject(ContextoService);
+  /** Permisos del negocio activo, resueltos una sola vez en el contexto. */
+  readonly misPermisos = computed(() => [...this.contexto.permisos()]);
 
   readonly invitaciones = signal<InvitacionResumen[]>([]);
-  readonly misPermisos = signal<string[]>([]);
   readonly vista = signal<Vista>('sin_aceptar');
   readonly sucursalId = signal('');
   readonly loading = signal(true);
@@ -45,6 +45,10 @@ export class Invitaciones {
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
   readonly sucursales = computed(() => this.contexto.negocio()?.sucursales ?? []);
   readonly puedeEnviar = computed(() => this.misPermisos().includes('equipo.invitaciones.enviar'));
+  /** Emitir una nueva también lee empleados y roles. */
+  readonly puedeCrear = computed(() =>
+    this.contexto.puede([PERMISOS.invitacionEnviar, PERMISOS.empleadoVer, PERMISOS.rolVer]),
+  );
   readonly puedeCorregir = computed(
     () => this.puedeEnviar() && this.misPermisos().includes('equipo.empleados.gestionar'),
   );
@@ -184,11 +188,9 @@ export class Invitaciones {
     this.error.set(null);
     forkJoin({
       invitaciones: this.invitacionService.listar(negocioId, this.filtro()),
-      permisos: this.rolService.misPermisos(negocioId),
     }).subscribe({
-      next: ({ invitaciones, permisos }) => {
+      next: ({ invitaciones }) => {
         this.invitaciones.set(invitaciones.items);
-        this.misPermisos.set(permisos.items);
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {

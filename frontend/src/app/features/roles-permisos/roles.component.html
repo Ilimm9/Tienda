@@ -1,144 +1,231 @@
-<section class="role-page">
-  <header class="page-heading">
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
+  <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <span class="eyebrow">Control de acceso</span>
-      <h1>Roles y permisos</h1>
-      <p>
+      <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">Roles y permisos</h1>
+      <p class="m-0 mt-1.5 text-muted">
         Define qué puede hacer cada persona en
-        <strong>{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong
-        >.
+        <strong class="font-semibold text-ink">{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong>.
       </p>
     </div>
     @if (puedeGestionar()) {
-      <a class="primary-button" [routerLink]="['nuevo']">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        Nuevo rol
+      <a
+        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white no-underline transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+        [routerLink]="['nuevo']"
+      >
+        <i class="pi pi-plus text-xs" aria-hidden="true"></i>Nuevo rol
       </a>
     }
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+    </p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando roles…</p>
+    <p class="m-0 rounded-2xl border border-line bg-surface p-10 text-center text-muted" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…
+    </p>
   } @else if (!error()) {
-    <h2 class="section-title">Roles del negocio</h2>
-    <div class="data-table-card">
+    <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-labelledby="titulo-roles">
+      <header class="flex flex-wrap items-center gap-3 border-b border-line-soft px-5 py-4">
+        <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-lock"></i></span>
+        <div class="min-w-0 flex-1">
+          <h2 id="titulo-roles" class="m-0 text-[15px] font-bold text-ink">Roles del negocio</h2>
+          <p class="m-0 text-[13px] text-muted">Cada rol agrupa permisos. Una persona puede tener varios.</p>
+        </div>
+        <span class="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary-hover">{{ roles().length }}</span>
+      </header>
       <p-table
         [value]="roles()"
-        [paginator]="true"
+        [paginator]="roles().length > 10"
         [rows]="10"
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} roles"
-        class="app-table app-table--roles"
+        class="app-table"
         responsiveLayout="scroll"
       >
         <ng-template #header>
           <tr>
-            <th>Nombre</th>
+            <th>Rol</th>
             <th>Descripción</th>
             <th>Permisos</th>
             <th>Miembros</th>
             <th>Estado</th>
-            <th class="actions-column">Acciones</th>
+            <th class="text-right!">Acciones</th>
           </tr>
         </ng-template>
         <ng-template #body let-rol>
-          <tr [class.inactive-row]="!rol.activo">
-            <td class="role-name">
-              {{ rol.nombre }}
-              <code>{{ rol.codigo }}</code>
-            </td>
-            <td>{{ rol.descripcion || '—' }}</td>
-            <td>{{ rol.total_permisos }}</td>
-            <td>{{ rol.total_miembros }}</td>
+          <tr [class.opacity-70]="!rol.activo">
             <td>
-              @if (rol.es_rol_sistema) {
-                <span class="status-pill system">Sistema</span>
-              } @else {
-                <span class="status-pill" [class.active]="rol.activo" [class.archived]="!rol.activo">
-                  {{ rol.activo ? 'Activo' : 'Inactivo' }}
-                </span>
-              }
+              <span class="block font-semibold text-ink">{{ rol.nombre }}</span>
+              <span class="font-mono text-xs text-muted">{{ rol.codigo }}</span>
             </td>
-            <td class="actions-column">
-              @if (!rol.es_rol_sistema && puedeGestionar()) {
-                <a class="text-button" [routerLink]="[rol.id]">Editar</a>
-                <button
-                  type="button"
-                  class="text-button danger-text"
-                  [disabled]="processingId() === rol.id"
-                  (click)="eliminar(rol)"
-                >
-                  Eliminar
-                </button>
+            <td class="max-w-[360px] text-body">{{ rol.descripcion || '—' }}</td>
+            <td>
+              <span class="font-semibold text-ink">{{ rol.total_permisos }}</span>
+              <span class="text-[13px] text-muted"> de {{ totalPermisos() }}</span>
+            </td>
+            <td class="text-body">{{ rol.total_miembros }}</td>
+            <td>
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+                [class.bg-primary-soft]="rol.es_rol_sistema"
+                [class.text-primary-hover]="rol.es_rol_sistema"
+                [class.bg-sage]="!rol.es_rol_sistema && rol.activo"
+                [class.text-sage-text]="!rol.es_rol_sistema && rol.activo"
+                [class.bg-neutral]="!rol.es_rol_sistema && !rol.activo"
+                [class.text-body]="!rol.es_rol_sistema && !rol.activo"
+              >
+                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                {{ rol.es_rol_sistema ? 'Sistema' : rol.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="text-right!">
+              @if (rol.es_rol_sistema) {
+                <span class="inline-flex items-center gap-1.5 text-[13px] text-muted" title="El rol de sistema conserva todos los permisos">
+                  <i class="pi pi-lock text-xs" aria-hidden="true"></i>No editable
+                </span>
+              } @else if (puedeGestionar()) {
+                <span class="inline-flex items-center justify-end gap-1">
+                  <a
+                    class="inline-grid size-10 place-items-center rounded-[10px] text-body no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+                    [routerLink]="[rol.id]"
+                    [attr.aria-label]="'Editar el rol ' + rol.nombre"
+                    title="Editar"
+                  >
+                    <i class="pi pi-pencil text-sm" aria-hidden="true"></i>
+                  </a>
+                  <button
+                    type="button"
+                    class="inline-grid size-10 cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent text-body transition-colors hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-line disabled:cursor-not-allowed disabled:opacity-55"
+                    [disabled]="processingId() === rol.id"
+                    [attr.aria-label]="'Eliminar el rol ' + rol.nombre"
+                    title="Eliminar"
+                    (click)="eliminar(rol)"
+                  >
+                    <i class="pi text-sm" [class.pi-trash]="processingId() !== rol.id" [class.pi-spinner]="processingId() === rol.id" [class.pi-spin]="processingId() === rol.id" aria-hidden="true"></i>
+                  </button>
+                </span>
+              } @else {
+                <span class="text-[13px] text-muted">Solo lectura</span>
               }
             </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="6" class="empty-message">Aún no hay roles personalizados en este negocio.</td>
+            <td colspan="6">
+              <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-lock text-lg"></i></span>
+                <p class="m-0 font-semibold text-ink">Aún no hay roles en este negocio</p>
+                @if (puedeGestionar()) {
+                  <p class="m-0 text-[13px] text-muted">Crea el primero con «Nuevo rol».</p>
+                }
+              </div>
+            </td>
           </tr>
         </ng-template>
       </p-table>
-    </div>
+    </section>
 
-    <h2 class="section-title">Miembros</h2>
-    <div class="data-table-card">
+    <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-labelledby="titulo-miembros">
+      <header class="flex flex-wrap items-center gap-3 border-b border-line-soft px-5 py-4">
+        <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-sage text-success" aria-hidden="true"><i class="pi pi-users"></i></span>
+        <div class="min-w-0 flex-1">
+          <h2 id="titulo-miembros" class="m-0 text-[15px] font-bold text-ink">Miembros</h2>
+          <p class="m-0 text-[13px] text-muted">Personas con cuenta en este negocio y los roles que tienen.</p>
+        </div>
+        <span class="rounded-full bg-sage px-2.5 py-0.5 text-xs font-semibold text-sage-text">{{ miembros().length }}</span>
+      </header>
       <p-table
         [value]="miembros()"
-        [paginator]="true"
+        [paginator]="miembros().length > 10"
         [rows]="10"
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} miembros"
-        class="app-table app-table--miembros"
+        class="app-table"
         responsiveLayout="scroll"
       >
         <ng-template #header>
           <tr>
-            <th>Correo</th>
+            <th>Persona</th>
             <th>Tipo</th>
             <th>Roles asignados</th>
             <th>Estado</th>
-            <th class="actions-column">Acciones</th>
+            <th class="text-right!">Acciones</th>
           </tr>
         </ng-template>
         <ng-template #body let-miembro>
           <tr>
-            <td>{{ miembro.correo }}</td>
-            <td class="capitalize">{{ miembro.tipo_miembro }}</td>
             <td>
-              @if (miembro.roles.length) {
-                @for (rolId of miembro.roles; track rolId) {
-                  <span class="role-chip">{{ nombreDeRol(rolId) }}</span>
-                }
-              } @else {
-                <span class="empty-hint">Sin roles asignados</span>
-              }
-            </td>
-            <td>
-              <span class="status-pill" [class.active]="miembro.estado === 'activo'" [class.archived]="miembro.estado !== 'activo'">
-                {{ miembro.estado }}
+              <span class="flex min-w-0 items-center gap-3">
+                <span
+                  class="grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold"
+                  [class.bg-primary-soft]="miembro.tipo_miembro === 'propietario'"
+                  [class.text-primary-hover]="miembro.tipo_miembro === 'propietario'"
+                  [class.bg-sage]="miembro.tipo_miembro !== 'propietario'"
+                  [class.text-sage-text]="miembro.tipo_miembro !== 'propietario'"
+                  aria-hidden="true"
+                >{{ iniciales(miembro.nombre, miembro.correo) }}</span>
+                <span class="min-w-0">
+                  <span class="block truncate font-semibold text-ink">{{ miembro.nombre || miembro.correo }}</span>
+                  @if (miembro.nombre) {
+                    <span class="block truncate text-[13px] text-muted">{{ miembro.correo }}</span>
+                  }
+                </span>
               </span>
             </td>
-            <td class="actions-column">
+            <td class="text-body">{{ miembro.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro' }}</td>
+            <td>
+              <span class="flex flex-wrap gap-1.5">
+                @for (rolId of miembro.roles; track rolId) {
+                  <span class="rounded-full border border-primary-line bg-primary-tint px-2.5 py-0.5 text-xs font-semibold text-primary-hover">{{ nombreDeRol(rolId) }}</span>
+                } @empty {
+                  <span class="text-[13px] text-muted">Sin roles asignados</span>
+                }
+              </span>
+            </td>
+            <td>
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+                [class.bg-sage]="miembro.estado === 'activo'"
+                [class.text-sage-text]="miembro.estado === 'activo'"
+                [class.bg-warning-soft]="miembro.estado !== 'activo'"
+                [class.text-warning]="miembro.estado !== 'activo'"
+              >
+                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                {{ etiquetaEstado(miembro.estado) }}
+              </span>
+            </td>
+            <td class="text-right!">
               @if (puedeAsignar()) {
-                <a class="text-button" [routerLink]="['miembros', miembro.membresia_id]">Asignar</a>
+                <a
+                  class="inline-flex min-h-[38px] items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-[13px] font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+                  [routerLink]="['miembros', miembro.membresia_id]"
+                  [attr.aria-label]="'Asignar roles a ' + (miembro.nombre || miembro.correo)"
+                >
+                  <i class="pi pi-user-edit text-xs" aria-hidden="true"></i>Asignar roles
+                </a>
               }
             </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="5" class="empty-message">Este negocio todavía no tiene miembros registrados.</td>
+            <td colspan="5">
+              <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-sage text-success" aria-hidden="true"><i class="pi pi-users text-lg"></i></span>
+                <p class="m-0 font-semibold text-ink">Este negocio todavía no tiene miembros</p>
+                <p class="m-0 text-[13px] text-muted">Aparecen aquí cuando aceptan una invitación.</p>
+              </div>
+            </td>
           </tr>
         </ng-template>
       </p-table>
-    </div>
+    </section>
   }
 </section>

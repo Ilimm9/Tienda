@@ -47,7 +47,8 @@ export interface FiltroInvitaciones {
 /** El correo no viaja: el servidor lo toma de la invitación. */
 export interface RegistroInvitacionPayload {
   nombres: string;
-  apellidos: string;
+  primer_apellido: string;
+  segundo_apellido: string;
   telefono: string;
   contrasena: string;
 }

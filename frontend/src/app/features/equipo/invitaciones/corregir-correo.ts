@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -8,6 +8,7 @@ import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { InvitacionResumen } from '../invitacion.models';
 import { InvitacionService } from '../invitacion.service';
 import { iniciales } from '../presentacion';
+import { enfocarPrimerInvalido } from '../../../shared/formularios/formulario';
 
 interface EnlaceEmitido {
   enlace: string;
@@ -35,6 +36,8 @@ export class CorregirCorreo {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly enlaceEmitido = signal<EnlaceEmitido | null>(null);
+  readonly rechazo = signal<{ correo: string; mensaje: string } | null>(null);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly form = this.formBuilder.group({
     correo: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
@@ -52,7 +55,13 @@ export class CorregirCorreo {
 
   get correoConError(): boolean {
     const control = this.form.controls.correo;
-    return control.touched && (control.invalid || this.sinCambio);
+    return (control.touched && (control.invalid || this.sinCambio)) || this.correoRechazado;
+  }
+
+  /** El servidor rechazó este correo (por ejemplo, ya lo usa otra persona del negocio). */
+  get correoRechazado(): boolean {
+    const rechazado = this.rechazo();
+    return !!rechazado && rechazado.correo === this.normalizar(this.form.controls.correo.value);
   }
 
   get confirmacionConError(): boolean {
@@ -71,8 +80,9 @@ export class CorregirCorreo {
 
   guardar(): void {
     this.error.set(null);
-    if (this.form.invalid || this.noCoincide || this.sinCambio) {
+    if (this.form.invalid || this.noCoincide || this.sinCambio || this.correoRechazado) {
       this.form.markAllAsTouched();
+      enfocarPrimerInvalido(this.host.nativeElement);
       return;
     }
     if (this.saving()) return;
@@ -92,10 +102,16 @@ export class CorregirCorreo {
         error: (response: HttpErrorResponse) => {
           this.saving.set(false);
           // El formulario se conserva: un reintento no vuelve a pedir los datos.
-          this.error.set(
-            (response.error as { mensaje?: string } | null)?.mensaje ??
-              'No fue posible corregir el correo. Intenta nuevamente.',
-          );
+          const cuerpo = response.error as { mensaje?: string; campos?: Record<string, string> } | null;
+          if (cuerpo?.campos?.['correo']) {
+            this.rechazo.set({
+              correo: this.normalizar(this.form.controls.correo.value),
+              mensaje: cuerpo.mensaje ?? 'Ese correo no puede usarse.',
+            });
+            enfocarPrimerInvalido(this.host.nativeElement);
+            return;
+          }
+          this.error.set(cuerpo?.mensaje ?? 'No fue posible corregir el correo. Intenta nuevamente.');
         },
       });
   }

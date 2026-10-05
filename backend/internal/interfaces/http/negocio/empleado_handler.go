@@ -120,6 +120,11 @@ func responderErrorEmpleado(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"codigo": "SIN_CAMBIOS", "mensaje": err.Error(), "campos": gin.H{},
 		})
+	case errors.Is(err, application.ErrEmpleadoCorreoDuplicado):
+		c.JSON(http.StatusConflict, gin.H{
+			"codigo": "CORREO_EMPLEADO_DUPLICADO", "mensaje": "Ese correo ya está registrado en este negocio.",
+			"campos": gin.H{"correo": "ya está registrado en este negocio"},
+		})
 	case errors.Is(err, application.ErrEmpleadoConflicto), errors.Is(err, application.ErrEstadoNegocio):
 		c.JSON(http.StatusConflict, gin.H{
 			"codigo": "CONFLICTO_EMPLEADO", "mensaje": err.Error(), "campos": gin.H{},

@@ -59,10 +59,11 @@ type ReenviarInvitacionInput struct {
 
 // RegistroInvitacionInput no incluye correo: el servidor lo toma de la invitación.
 type RegistroInvitacionInput struct {
-	Nombres    string `json:"nombres"`
-	Apellidos  string `json:"apellidos"`
-	Telefono   string `json:"telefono"`
-	Contrasena string `json:"contrasena"`
+	Nombres         string `json:"nombres"`
+	PrimerApellido  string `json:"primer_apellido"`
+	SegundoApellido string `json:"segundo_apellido"`
+	Telefono        string `json:"telefono"`
+	Contrasena      string `json:"contrasena"`
 }
 
 type FiltroInvitaciones struct {

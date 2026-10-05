@@ -2,6 +2,7 @@ package negocio
 
 import (
 	"context"
+	"sort"
 
 	domain "tienda/backend/internal/domain/negocio"
 
@@ -34,7 +35,7 @@ func (r *ContextoRepository) ListarOpcionesContexto(ctx context.Context, usuario
 			s.id AS sucursal_id, s.codigo AS sucursal_codigo, s.nombre AS sucursal_nombre,
 			s.es_principal AS sucursal_principal`).
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
-		Joins("LEFT JOIN sucursales s ON s.negocio_id = n.id AND s.activo = TRUE AND s.eliminado_en IS NULL").
+		Joins("LEFT JOIN sucursales s ON s.negocio_id = n.id AND s.activo = TRUE AND s.eliminado_en IS NULL AND " + sucursalAsignada).
 		Where("n.estado = 'activo'").
 		Order("n.nombre_comercial ASC, n.id ASC, s.es_principal DESC, s.nombre ASC, s.id ASC").
 		Scan(&rows).Error
@@ -60,6 +61,14 @@ func (r *ContextoRepository) ListarOpcionesContexto(ctx context.Context, usuario
 			})
 		}
 	}
+	for index := range items {
+		permisos, err := permisosEfectivos(ctx, r.db, usuarioID, items[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		sort.Strings(permisos)
+		items[index].Permisos = permisos
+	}
 	return items, nil
 }
 
@@ -72,12 +81,31 @@ func (r *ContextoRepository) NegocioActivoAccesible(ctx context.Context, usuario
 	return total == 1, err
 }
 
-func (r *ContextoRepository) SucursalActivaDelNegocio(ctx context.Context, negocioID, sucursalID uuid.UUID) (bool, error) {
+// sucursalAsignada limita las sucursales de un miembro a sus asignaciones vigentes.
+// Espera los alias `m` (membresía) y `s` (sucursal). El propietario opera todas.
+const sucursalAsignada = `(m.tipo_miembro = 'propietario' OR EXISTS (
+	SELECT 1 FROM empleados e
+	JOIN asignaciones_empleado_sucursal a ON a.empleado_id = e.id
+	WHERE e.membresia_id = m.id AND e.estado = 'activo'
+		AND a.sucursal_id = s.id AND a.activo = TRUE AND a.finalizado_en IS NULL))`
+
+func (r *ContextoRepository) sucursalesAccesibles(ctx context.Context, usuarioID, negocioID uuid.UUID) *gorm.DB {
+	return r.db.WithContext(ctx).Table("sucursales AS s").
+		Joins("JOIN negocios n ON n.id = s.negocio_id AND n.estado = 'activo'").
+		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where("s.negocio_id = ? AND s.activo = TRUE AND s.eliminado_en IS NULL AND "+sucursalAsignada, negocioID)
+}
+
+func (r *ContextoRepository) SucursalActivaAccesible(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) (bool, error) {
 	var total int64
-	err := r.db.WithContext(ctx).Table("sucursales").
-		Where("id = ? AND negocio_id = ? AND activo = TRUE AND eliminado_en IS NULL", sucursalID, negocioID).
-		Count(&total).Error
+	err := r.sucursalesAccesibles(ctx, usuarioID, negocioID).Where("s.id = ?", sucursalID).Count(&total).Error
 	return total == 1, err
+}
+
+func (r *ContextoRepository) SucursalesAccesibles(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]uuid.UUID, error) {
+	ids := make([]uuid.UUID, 0)
+	err := r.sucursalesAccesibles(ctx, usuarioID, negocioID).Pluck("s.id", &ids).Error
+	return ids, err
 }
 
 func derefString(value *string) string {

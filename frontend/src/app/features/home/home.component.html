@@ -23,7 +23,7 @@
       </span>
       <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
     </a>
-    <a class="resumen-tarjeta" routerLink="/sucursales">
+    <a *appPuede="P.sucursalVer" class="resumen-tarjeta" routerLink="/sucursales">
       <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
       <span class="resumen-tarjeta__texto">
         <strong>Sucursales</strong>
@@ -31,7 +31,7 @@
       </span>
       <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
     </a>
-    <a class="resumen-tarjeta" routerLink="/equipo/empleados">
+    <a *appPuede="P.empleadoVer" class="resumen-tarjeta" routerLink="/equipo/empleados">
       <span class="summary-icon lavanda"><i class="pi pi-users" aria-hidden="true"></i></span>
       <span class="resumen-tarjeta__texto">
         <strong>Equipo</strong>

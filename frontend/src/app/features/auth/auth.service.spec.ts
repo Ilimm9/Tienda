@@ -33,7 +33,9 @@ describe('AuthService', () => {
 
   it('keeps registration, verification, session and logout endpoint contracts', () => {
     const registration = {
-      nombre_completo: 'Juan Pérez',
+      nombres: 'Juan',
+      primer_apellido: 'Pérez',
+      segundo_apellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
       contrasena: '12345678',

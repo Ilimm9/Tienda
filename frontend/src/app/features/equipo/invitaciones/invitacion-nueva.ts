@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -12,6 +12,7 @@ import { EmpleadoResumen } from '../empleado.models';
 import { EmpleadoService } from '../empleado.service';
 import { InvitacionService } from '../invitacion.service';
 import { iniciales } from '../presentacion';
+import { enfocarPrimerInvalido } from '../../../shared/formularios/formulario';
 
 // El rol propietario nunca se delega por invitación; el servidor también lo rechaza.
 const CODIGO_ROL_PROPIETARIO = 'PROPIETARIO';
@@ -21,6 +22,20 @@ interface EnlaceEmitido {
   correo: string;
   correoEnviado: boolean;
 }
+
+type CampoInvitacion = 'empleado' | 'sucursal' | 'rol';
+
+const CAMPO_API: Record<CampoInvitacion, string> = {
+  empleado: 'empleado_id',
+  sucursal: 'sucursal_id',
+  rol: 'rol_predeterminado_id',
+};
+
+const MENSAJES: Record<CampoInvitacion, string> = {
+  empleado: 'Elige a quién invitas.',
+  sucursal: 'Elige la sucursal donde trabajará.',
+  rol: 'Elige el rol que tendrá.',
+};
 
 @Component({
   selector: 'app-invitacion-nueva',
@@ -41,6 +56,9 @@ export class InvitacionNueva {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly enlaceEmitido = signal<EnlaceEmitido | null>(null);
+  readonly intentado = signal(false);
+  readonly camposServidor = signal<Record<string, string>>({});
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   // Permite llegar con el empleado o la sucursal ya elegidos desde sus pantallas.
   readonly empleadoId = signal(this.route.snapshot.queryParamMap.get('empleado') ?? '');
@@ -66,9 +84,26 @@ export class InvitacionNueva {
     this.load();
   }
 
+  /** Un campo obligatorio muestra su error tras intentar emitir, o cuando el servidor lo rechaza. */
+  falta(campo: CampoInvitacion): boolean {
+    if (this.camposServidor()[CAMPO_API[campo]]) return true;
+    const valor = campo === 'empleado' ? this.empleadoId() : campo === 'sucursal' ? this.sucursalId() : this.rolId();
+    return this.intentado() && !valor;
+  }
+
+  mensaje(campo: CampoInvitacion): string {
+    return this.camposServidor()[CAMPO_API[campo]] || MENSAJES[campo];
+  }
+
   emitir(): void {
     const negocio = this.negocio();
-    if (!negocio || !this.completa() || this.saving()) return;
+    this.intentado.set(true);
+    this.camposServidor.set({});
+    if (!negocio || !this.completa()) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
+    if (this.saving()) return;
     this.saving.set(true);
     this.enlaceEmitido.set(null);
     this.invitacionService
@@ -80,6 +115,7 @@ export class InvitacionNueva {
       .subscribe({
         next: (creada) => {
           this.saving.set(false);
+          this.intentado.set(false);
           this.enlaceEmitido.set({
             enlace: this.invitacionService.enlaceDeToken(creada.token),
             correo: creada.invitacion.correo,
@@ -93,10 +129,10 @@ export class InvitacionNueva {
         },
         error: (response: HttpErrorResponse) => {
           this.saving.set(false);
-          this.feedback.error(
-            'No fue posible emitir la invitación',
-            (response.error as { mensaje?: string } | null)?.mensaje ?? 'Intenta nuevamente.',
-          );
+          const cuerpo = response.error as { mensaje?: string; campos?: Record<string, string> } | null;
+          this.camposServidor.set(cuerpo?.campos ?? {});
+          enfocarPrimerInvalido(this.host.nativeElement);
+          this.feedback.error('No fue posible emitir la invitación', cuerpo?.mensaje ?? 'Intenta nuevamente.');
         },
       });
   }

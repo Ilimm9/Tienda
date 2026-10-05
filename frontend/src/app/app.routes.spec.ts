@@ -1,4 +1,6 @@
 import { contextoGuard } from './contexto/contexto.guard';
+import { permisoGuard } from './contexto/permiso.guard';
+import { PERMISOS } from './contexto/permisos';
 import { CATALOGO_ROUTES } from './features/catalogo/catalogo.routes';
 import { routes } from './app.routes';
 
@@ -19,8 +21,8 @@ describe('rutas principales', () => {
 
     expect(proveedores).toMatchObject({
       path: 'proveedores',
-      canActivate: [contextoGuard],
-      data: { breadcrumb: 'Proveedores', section: 'proveedores' },
+      canActivate: [contextoGuard, permisoGuard],
+      data: { breadcrumb: 'Proveedores', section: 'proveedores', permiso: PERMISOS.catalogoVer },
     });
     expect(proveedores?.loadComponent).toBeDefined();
   });

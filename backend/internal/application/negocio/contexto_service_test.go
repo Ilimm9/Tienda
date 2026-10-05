@@ -27,8 +27,12 @@ func (r *contextoRepositoryStub) NegocioActivoAccesible(context.Context, uuid.UU
 	return r.negocioOK, r.errorNegocio
 }
 
-func (r *contextoRepositoryStub) SucursalActivaDelNegocio(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+func (r *contextoRepositoryStub) SucursalActivaAccesible(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
 	return r.sucursalOK, r.errorSucursal
+}
+
+func (r *contextoRepositoryStub) SucursalesAccesibles(context.Context, uuid.UUID, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
 }
 
 func TestContextoServiceListarOpcionesDevuelveListaVacia(t *testing.T) {
@@ -81,17 +85,17 @@ func TestContextoServiceValidarNegocioAjenoNoDisponible(t *testing.T) {
 func TestContextoServiceValidarSucursalAjenaNoDisponible(t *testing.T) {
 	service := NewContextoService(&contextoRepositoryStub{sucursalOK: false})
 
-	err := service.ValidarSucursalActiva(context.Background(), uuid.New(), uuid.New())
+	err := service.ValidarSucursalActiva(context.Background(), uuid.New(), uuid.New(), uuid.New())
 
 	if !errors.Is(err, ErrContextoSucursalNoDisponible) {
-		t.Fatalf("sucursal ajena o archivada debe rechazarse: %v", err)
+		t.Fatalf("sucursal ajena, archivada o no asignada debe rechazarse: %v", err)
 	}
 }
 
 func TestContextoServiceValidarSucursalActiva(t *testing.T) {
 	service := NewContextoService(&contextoRepositoryStub{sucursalOK: true})
 
-	if err := service.ValidarSucursalActiva(context.Background(), uuid.New(), uuid.New()); err != nil {
+	if err := service.ValidarSucursalActiva(context.Background(), uuid.New(), uuid.New(), uuid.New()); err != nil {
 		t.Fatalf("sucursal activa del negocio no debe fallar: %v", err)
 	}
 }

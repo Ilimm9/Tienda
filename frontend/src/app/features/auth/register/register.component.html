@@ -1,23 +1,61 @@
 <main class="register-page">
   <section class="register-panel" aria-label="Crear cuenta">
     <form class="register-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="nombreCompleto">Nombre completo</label>
+      <p class="required-note">Los campos con <span class="required" aria-hidden="true">*</span> son obligatorios.</p>
+
+      <label for="nombres">Nombre(s) <span class="required" aria-hidden="true">*</span></label>
       <span class="field-wrap">
         <i class="pi pi-user" aria-hidden="true"></i>
         <input
-          id="nombreCompleto"
+          id="nombres"
           class="register-input"
           type="text"
-          formControlName="nombreCompleto"
-          placeholder="Ej. Juan Pérez"
-          autocomplete="name"
+          formControlName="nombres"
+          placeholder="Ej. Juan Carlos"
+          autocomplete="given-name"
+          aria-required="true"
+          [attr.aria-invalid]="form.controls.nombres.touched && form.controls.nombres.invalid"
         />
       </span>
-      @if (form.controls.nombreCompleto.touched && form.controls.nombreCompleto.invalid) {
-        <small class="field-error">Ingresa tu nombre completo.</small>
+      @if (form.controls.nombres.touched && form.controls.nombres.invalid) {
+        <small class="field-error">Ingresa tu nombre.</small>
       }
 
-      <label for="correo">Correo electrónico</label>
+      <div class="name-row">
+        <div>
+          <label for="primerApellido">Primer apellido <span class="required" aria-hidden="true">*</span></label>
+          <span class="field-wrap field-wrap--plain">
+            <input
+              id="primerApellido"
+              class="register-input"
+              type="text"
+              formControlName="primerApellido"
+              placeholder="Ej. Pérez"
+              autocomplete="family-name"
+              aria-required="true"
+              [attr.aria-invalid]="form.controls.primerApellido.touched && form.controls.primerApellido.invalid"
+            />
+          </span>
+          @if (form.controls.primerApellido.touched && form.controls.primerApellido.invalid) {
+            <small class="field-error">Ingresa tu primer apellido.</small>
+          }
+        </div>
+        <div>
+          <label for="segundoApellido">Segundo apellido</label>
+          <span class="field-wrap field-wrap--plain">
+            <input
+              id="segundoApellido"
+              class="register-input"
+              type="text"
+              formControlName="segundoApellido"
+              placeholder="Ej. López"
+              autocomplete="additional-name"
+            />
+          </span>
+        </div>
+      </div>
+
+      <label for="correo">Correo electrónico <span class="required" aria-hidden="true">*</span></label>
       <span class="field-wrap">
         <i class="pi pi-envelope" aria-hidden="true"></i>
         <input
@@ -27,13 +65,22 @@
           formControlName="correo"
           placeholder="correo@empresa.com"
           autocomplete="email"
+          aria-required="true"
+          [attr.aria-invalid]="form.controls.correo.touched && (form.controls.correo.invalid || correoYaRegistrado())"
         />
       </span>
       @if (form.controls.correo.touched && form.controls.correo.invalid) {
         <small class="field-error">Ingresa un correo válido.</small>
+      } @else if (correoYaRegistrado()) {
+        <small class="field-error" role="alert">
+          Este correo ya está registrado.
+          <button type="button" class="inline-link" (click)="switchToLogin()">Inicia sesión</button>
+          o
+          <button type="button" class="inline-link" (click)="recoverPassword()">recupera tu contraseña</button>.
+        </small>
       }
 
-      <label for="telefono">Teléfono <span class="optional">(opcional)</span></label>
+      <label for="telefono">Teléfono</label>
       <span class="field-wrap">
         <i class="pi pi-phone" aria-hidden="true"></i>
         <input
@@ -46,7 +93,7 @@
         />
       </span>
 
-      <label for="contrasena">Contraseña</label>
+      <label for="contrasena">Contraseña <span class="required" aria-hidden="true">*</span></label>
       <span class="password-field">
         <i class="pi pi-lock" aria-hidden="true"></i>
         <input
@@ -76,7 +123,7 @@
         <small class="field-error">Usa al menos 8 caracteres.</small>
       }
 
-      <label for="confirmarContrasena">Confirmar contraseña</label>
+      <label for="confirmarContrasena">Confirmar contraseña <span class="required" aria-hidden="true">*</span></label>
       <span class="password-field">
         <i class="pi pi-lock" aria-hidden="true"></i>
         <input

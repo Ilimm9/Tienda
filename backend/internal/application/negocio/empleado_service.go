@@ -17,6 +17,8 @@ var (
 	ErrEmpleadoProhibido    = errors.New("no tienes permiso para realizar esta acción")
 	ErrEmpleadoSinCambios   = errors.New("no se recibieron campos para actualizar")
 	ErrEmpleadoConflicto    = errors.New("ya existe un empleado con ese número")
+	// ErrEmpleadoCorreoDuplicado cubre a otro empleado del negocio y a un miembro que ya usa ese correo.
+	ErrEmpleadoCorreoDuplicado = errors.New("ese correo ya está registrado en este negocio")
 )
 
 var (
@@ -37,6 +39,8 @@ type EmpleadoRepository interface {
 	Listar(ctx context.Context, negocioID uuid.UUID, estado, buscar string) ([]domain.EmpleadoResumen, error)
 	Obtener(ctx context.Context, negocioID, empleadoID uuid.UUID) (domain.EmpleadoDetalle, error)
 	ExisteNumero(ctx context.Context, negocioID uuid.UUID, numero string, excluir *uuid.UUID) (bool, error)
+	// CorreoEnUso indica si otro empleado o un miembro del negocio ya usa el correo; `excluir` es el empleado que se edita.
+	CorreoEnUso(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) (bool, error)
 	Crear(ctx context.Context, negocioID, creadoPor uuid.UUID, input domain.CrearEmpleadoInput) (uuid.UUID, error)
 	Actualizar(ctx context.Context, negocioID, empleadoID uuid.UUID, input domain.ActualizarEmpleadoInput) error
 }
@@ -86,6 +90,11 @@ func (s *EmpleadoService) Crear(ctx context.Context, usuarioID, negocioID uuid.U
 			return domain.EmpleadoDetalle{}, ErrEmpleadoConflicto
 		}
 	}
+	if input.Correo != nil {
+		if err := s.correoDisponible(ctx, negocioID, *input.Correo, nil); err != nil {
+			return domain.EmpleadoDetalle{}, err
+		}
+	}
 	id, err := s.empleados.Crear(ctx, negocioID, usuarioID, input)
 	if err != nil {
 		return domain.EmpleadoDetalle{}, err
@@ -115,10 +124,26 @@ func (s *EmpleadoService) Actualizar(ctx context.Context, usuarioID, negocioID, 
 			return domain.EmpleadoDetalle{}, ErrEmpleadoConflicto
 		}
 	}
+	if input.Correo.Set && input.Correo.Value != nil {
+		if err := s.correoDisponible(ctx, negocioID, *input.Correo.Value, &empleadoID); err != nil {
+			return domain.EmpleadoDetalle{}, err
+		}
+	}
 	if err := s.empleados.Actualizar(ctx, negocioID, empleadoID, input); err != nil {
 		return domain.EmpleadoDetalle{}, err
 	}
 	return s.empleados.Obtener(ctx, negocioID, empleadoID)
+}
+
+func (s *EmpleadoService) correoDisponible(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) error {
+	enUso, err := s.empleados.CorreoEnUso(ctx, negocioID, correo, excluir)
+	if err != nil {
+		return err
+	}
+	if enUso {
+		return ErrEmpleadoCorreoDuplicado
+	}
+	return nil
 }
 
 func (s *EmpleadoService) autorizar(ctx context.Context, usuarioID, negocioID uuid.UUID, permiso string, escritura bool) error {

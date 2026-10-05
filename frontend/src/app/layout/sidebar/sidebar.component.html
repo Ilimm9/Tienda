@@ -2,7 +2,7 @@
   <p class="section-label">Administración</p>
 
   <ul class="navigation-list">
-    @for (item of navigationItems; track item.label) {
+    @for (item of navigationItems(); track item.label) {
       <li>
         @if (item.children?.length) {
           <button

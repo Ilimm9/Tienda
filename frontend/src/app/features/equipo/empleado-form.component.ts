@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,8 +8,25 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { enfocarPrimerInvalido, fechaNoFutura, sinSoloEspacios } from '../../shared/formularios/formulario';
 import { EmpleadoApiError, EmpleadoDetalle } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
+
+type CampoEmpleado =
+  | 'nombre' | 'segundo_nombre' | 'primer_apellido' | 'segundo_apellido'
+  | 'correo' | 'telefono' | 'puesto' | 'numero_empleado' | 'contratado_en';
+
+const MENSAJES: Record<CampoEmpleado, string> = {
+  nombre: 'Usa entre 2 y 100 caracteres.',
+  segundo_nombre: 'Usa hasta 100 caracteres.',
+  primer_apellido: 'Usa entre 2 y 100 caracteres.',
+  segundo_apellido: 'Usa hasta 100 caracteres.',
+  correo: 'Escribe un correo válido, como nombre@correo.mx.',
+  telefono: 'Usa de 7 a 30 dígitos; se permiten espacios, guiones, paréntesis y +.',
+  puesto: 'Usa hasta 120 caracteres.',
+  numero_empleado: 'Usa hasta 40 caracteres: letras, números, guion o guion bajo.',
+  contratado_en: 'La fecha no puede ser posterior a hoy.',
+};
 
 @Component({
   selector: 'app-empleado-form',
@@ -24,6 +41,7 @@ export class EmpleadoFormComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly empleadoId = this.route.snapshot.paramMap.get('empleadoId') ?? '';
   readonly editing = Boolean(this.empleadoId);
@@ -34,15 +52,16 @@ export class EmpleadoFormComponent {
   readonly fieldErrors = signal<Record<string, string>>({});
 
   readonly form = this.fb.nonNullable.group({
-    numero_empleado: [''],
-    nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-    segundo_nombre: [''],
-    primer_apellido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-    segundo_apellido: [''],
-    correo: [''],
-    telefono: [''],
-    puesto: [''],
-    contratado_en: [''],
+    // Los límites repiten los del backend (`empleado_service.go`) para avisar antes de enviar.
+    numero_empleado: ['', Validators.pattern(/^\s*[A-Za-z0-9][A-Za-z0-9_-]{0,39}\s*$/)],
+    nombre: ['', [Validators.required, sinSoloEspacios, Validators.minLength(2), Validators.maxLength(100)]],
+    segundo_nombre: ['', Validators.maxLength(100)],
+    primer_apellido: ['', [Validators.required, sinSoloEspacios, Validators.minLength(2), Validators.maxLength(100)]],
+    segundo_apellido: ['', Validators.maxLength(100)],
+    correo: ['', [Validators.email, Validators.maxLength(254)]],
+    telefono: ['', Validators.pattern(/^\s*[0-9+()\s-]{7,30}\s*$/)],
+    puesto: ['', Validators.maxLength(120)],
+    contratado_en: ['', fechaNoFutura],
   });
 
   /** Valores en vivo para la vista previa de la tarjeta lateral. */
@@ -74,16 +93,25 @@ export class EmpleadoFormComponent {
     return this.contexto.negocio()?.id ?? '';
   }
 
-  hasError(control: 'nombre' | 'primer_apellido' | 'numero_empleado' | 'correo'): boolean {
+  hasError(control: CampoEmpleado): boolean {
     const field = this.form.controls[control];
     return (field.touched && field.invalid) || Boolean(this.fieldErrors()[control]);
+  }
+
+  /** El mensaje del servidor tiene prioridad: describe un rechazo que el formulario no puede anticipar. */
+  mensaje(control: CampoEmpleado): string {
+    return this.fieldErrors()[control] || MENSAJES[control];
   }
 
   submit(): void {
     this.form.markAllAsTouched();
     this.error.set(null);
     this.fieldErrors.set({});
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
+    if (this.saving()) return;
 
     const value = this.form.getRawValue();
     this.saving.set(true);
@@ -123,6 +151,7 @@ export class EmpleadoFormComponent {
         const apiError = response.error as EmpleadoApiError | null;
         this.error.set(apiError?.mensaje ?? 'No fue posible guardar el empleado.');
         this.fieldErrors.set(apiError?.campos ?? {});
+        enfocarPrimerInvalido(this.host.nativeElement);
       },
     });
   }

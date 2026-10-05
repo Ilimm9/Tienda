@@ -39,7 +39,7 @@
         @if (disponibles().length) {
           <div class="flex flex-wrap items-end gap-4 p-5 sm:p-6">
             <div class="flex min-w-[240px] flex-1 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="sucursal">Sucursal</label>
+              <label class="text-[13px] font-semibold text-ink" for="sucursal">Sucursal <span class="text-danger" aria-hidden="true">*</span></label>
               <span class="relative flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface pr-9 pl-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
                 <i class="pi pi-map-marker text-[15px]" aria-hidden="true"></i>
                 <select

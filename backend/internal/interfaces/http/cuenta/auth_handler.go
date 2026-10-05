@@ -29,10 +29,12 @@ type loginRequest struct {
 }
 
 type registerRequest struct {
-	NombreCompleto string `json:"nombre_completo" binding:"required"`
-	Correo         string `json:"correo" binding:"required,email"`
-	Telefono       string `json:"telefono"`
-	Contrasena     string `json:"contrasena" binding:"required,min=8"`
+	Nombres         string `json:"nombres" binding:"required,max=120"`
+	PrimerApellido  string `json:"primer_apellido" binding:"required,max=120"`
+	SegundoApellido string `json:"segundo_apellido" binding:"max=120"`
+	Correo          string `json:"correo" binding:"required,email,max=254"`
+	Telefono        string `json:"telefono" binding:"max=30"`
+	Contrasena      string `json:"contrasena" binding:"required,min=8,max=72"`
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -41,8 +43,25 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los datos del formulario"})
 		return
 	}
-	result, err := h.verification.Register(c.Request.Context(), input.NombreCompleto, input.Correo, input.Telefono, input.Contrasena, clientIP(c))
+	result, err := h.verification.RegisterWithNames(c.Request.Context(), input.Nombres, input.PrimerApellido, input.SegundoApellido, input.Correo, input.Telefono, input.Contrasena, clientIP(c))
 	if err != nil {
+		if errors.Is(err, application.ErrEmailRegistered) {
+			c.JSON(http.StatusConflict, gin.H{
+				"codigo": "CORREO_YA_REGISTRADO", "mensaje": "Este correo ya está registrado. Inicia sesión o recupera tu contraseña.",
+				"campos": gin.H{"correo": "ya está registrado"},
+			})
+			return
+		}
+		if errors.Is(err, application.ErrNamesRequired) || errors.Is(err, application.ErrFirstLastNameRequired) {
+			campo := "nombres"
+			if errors.Is(err, application.ErrFirstLastNameRequired) {
+				campo = "primer_apellido"
+			}
+			c.JSON(http.StatusBadRequest, gin.H{
+				"codigo": "DATOS_INVALIDOS", "mensaje": "Revisa los datos del formulario", "campos": gin.H{campo: "es obligatorio"},
+			})
+			return
+		}
 		if errors.Is(err, application.ErrVerificationTooSoon) || errors.Is(err, application.ErrVerificationLimited) {
 			c.JSON(http.StatusTooManyRequests, gin.H{"mensaje": err.Error()})
 			return
@@ -54,7 +73,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible crear la cuenta"})
 		return
 	}
-	c.JSON(http.StatusAccepted, registrationResponse(result, "Si el correo puede registrarse, enviaremos un código de verificación."))
+	c.JSON(http.StatusAccepted, registrationResponse(result, "Enviamos un código de verificación a tu correo."))
 }
 
 type verifyRequest struct {

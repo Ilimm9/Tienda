@@ -183,9 +183,18 @@ func responderErrorInvitacion(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"codigo": "INVITACION_NO_ENCONTRADA", "mensaje": "No fue posible encontrar la invitación solicitada.", "campos": gin.H{},
 		})
+	case errors.Is(err, application.ErrRolNoDelegable):
+		c.JSON(http.StatusForbidden, gin.H{
+			"codigo": "ROL_NO_DELEGABLE", "mensaje": err.Error(), "campos": gin.H{},
+		})
 	case errors.Is(err, application.ErrInvitacionProhibida):
 		c.JSON(http.StatusForbidden, gin.H{
 			"codigo": "ACCESO_DENEGADO", "mensaje": err.Error(), "campos": gin.H{},
+		})
+	case errors.Is(err, application.ErrEmpleadoCorreoDuplicado):
+		c.JSON(http.StatusConflict, gin.H{
+			"codigo": "CORREO_EMPLEADO_DUPLICADO", "mensaje": "Ese correo ya está registrado en este negocio.",
+			"campos": gin.H{"correo": "ya está registrado en este negocio"},
 		})
 	case errors.Is(err, application.ErrInvitacionCorreoDistinto):
 		c.JSON(http.StatusForbidden, gin.H{

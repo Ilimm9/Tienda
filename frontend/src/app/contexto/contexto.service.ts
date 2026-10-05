@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { ContextoNegocio, ContextoOpcionesResponse, ContextoSucursal, EstadoContexto } from './contexto.models';
+import { comoLista, PermisoRequerido } from './permisos';
 
 const negocioKey = 'tienda.contexto.negocio_id';
 const sucursalKey = 'tienda.contexto.sucursal_id';
@@ -18,6 +19,8 @@ export class ContextoService {
   readonly negocio = signal<ContextoNegocio | null>(null);
   readonly sucursal = signal<ContextoSucursal | null>(null);
   readonly inicializado = signal(false);
+  /** Permisos efectivos en el negocio activo. */
+  readonly permisos = computed(() => new Set<string>(this.negocio()?.permisos ?? []));
 
   // Deduplica inicializaciones concurrentes: varios guards pueden resolverse en la misma navegación.
   private enVuelo: Observable<EstadoContexto> | null = null;
@@ -64,6 +67,27 @@ export class ContextoService {
   recargar(): Observable<EstadoContexto> {
     this.inicializado.set(false);
     return this.inicializar();
+  }
+
+  /** Indica si el negocio activo otorga todos los permisos pedidos. Sin permisos pedidos, siempre permite. */
+  puede(requerido: PermisoRequerido | null | undefined): boolean {
+    const otorgados = this.permisos();
+    return comoLista(requerido).every((codigo) => otorgados.has(codigo));
+  }
+
+  /** Basta con uno de los permisos indicados. */
+  puedeAlguno(...codigos: PermisoRequerido[]): boolean {
+    return codigos.some((codigo) => this.puede(codigo));
+  }
+
+  /**
+   * Igual que `puede`, pero sobre un negocio concreto (listas y pantallas `/negocios/:negocioId`).
+   * El contexto solo conoce negocios activos: para uno archivado decide `siDesconocido`.
+   */
+  puedeEn(negocioId: string, requerido: PermisoRequerido, siDesconocido = false): boolean {
+    const negocio = this.negocios().find((item) => item.id === negocioId);
+    if (!negocio) return siDesconocido;
+    return comoLista(requerido).every((codigo) => negocio.permisos.includes(codigo));
   }
 
   seleccionarNegocio(id: string): void {

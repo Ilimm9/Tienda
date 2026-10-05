@@ -75,15 +75,15 @@ func TestPasswordResetLinkUsesFragmentAndFrontendURL(t *testing.T) {
 	}
 }
 
-func TestInvitationLinkAndDays(t *testing.T) {
+func TestInvitationLinkAndHours(t *testing.T) {
 	plantillas := &renderizadorFalso{}
 	s := nuevoServicio(&transporteFalso{}, plantillas)
 
-	if err := s.EnviarInvitacion(context.Background(), "luis@ejemplo.com", "Abarrotes Luna", "Luis Pérez", "abc_DEF-123", s.now().Add(7*24*time.Hour-time.Second)); err != nil {
+	if err := s.EnviarInvitacion(context.Background(), "luis@ejemplo.com", "Abarrotes Luna", "Luis Pérez", "abc_DEF-123", s.now().Add(72*time.Hour-time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	datos := plantillas.datos.(DatosInvitacion)
-	if datos.Enlace != "https://tienda.mergemakers.com/invitacion/abc_DEF-123" || datos.Dias != 7 || datos.NombreNegocio != "Abarrotes Luna" || datos.NombreInvitado != "Luis Pérez" {
+	if datos.Enlace != "https://tienda.mergemakers.com/invitacion/abc_DEF-123" || datos.Horas != 72 || datos.NombreNegocio != "Abarrotes Luna" || datos.NombreInvitado != "Luis Pérez" {
 		t.Fatalf("datos de invitación inesperados: %#v", datos)
 	}
 }

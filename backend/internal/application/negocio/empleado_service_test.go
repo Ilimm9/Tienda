@@ -11,13 +11,15 @@ import (
 )
 
 type empleadoRepositoryStub struct {
-	access       domain.ContextoNegocioSucursal
-	permisos     []string
-	detalle      domain.EmpleadoDetalle
-	existeNumero bool
-	creado       domain.CrearEmpleadoInput
-	actualizado  domain.ActualizarEmpleadoInput
-	creoLlamado  bool
+	access         domain.ContextoNegocioSucursal
+	permisos       []string
+	detalle        domain.EmpleadoDetalle
+	existeNumero   bool
+	correoEnUso    bool
+	correoExcluido *uuid.UUID
+	creado         domain.CrearEmpleadoInput
+	actualizado    domain.ActualizarEmpleadoInput
+	creoLlamado    bool
 }
 
 func (r *empleadoRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UUID, uuid.UUID) (domain.ContextoNegocioSucursal, error) {
@@ -37,6 +39,10 @@ func (r *empleadoRepositoryStub) Obtener(context.Context, uuid.UUID, uuid.UUID) 
 }
 func (r *empleadoRepositoryStub) ExisteNumero(context.Context, uuid.UUID, string, *uuid.UUID) (bool, error) {
 	return r.existeNumero, nil
+}
+func (r *empleadoRepositoryStub) CorreoEnUso(_ context.Context, _ uuid.UUID, _ string, excluir *uuid.UUID) (bool, error) {
+	r.correoExcluido = excluir
+	return r.correoEnUso, nil
 }
 func (r *empleadoRepositoryStub) Crear(_ context.Context, _, _ uuid.UUID, input domain.CrearEmpleadoInput) (uuid.UUID, error) {
 	r.creoLlamado = true
@@ -226,5 +232,37 @@ func TestNombreCompletoEmpleadoOmiteOpcionalesVacios(t *testing.T) {
 
 	if completo != "Ana López García" {
 		t.Fatalf("nombre completo inesperado: %q", completo)
+	}
+}
+
+func TestEmpleadoServiceCrearRechazaCorreoDuplicado(t *testing.T) {
+	repository := empleadoStub(domain.PermisoEmpleadoGestionar)
+	repository.correoEnUso = true
+	service := NewEmpleadoService(repository)
+
+	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearEmpleadoInput{
+		Nombre: "Ana", PrimerApellido: "López", Correo: texto("ana@tienda.mx"),
+	})
+
+	if !errors.Is(err, ErrEmpleadoCorreoDuplicado) || repository.creoLlamado {
+		t.Fatalf("un correo ya usado en el negocio no debe crear al empleado: %v", err)
+	}
+}
+
+func TestEmpleadoServiceActualizarRechazaCorreoDuplicadoExcluyendoAlEmpleado(t *testing.T) {
+	repository := empleadoStub(domain.PermisoEmpleadoGestionar)
+	repository.correoEnUso = true
+	service := NewEmpleadoService(repository)
+	empleadoID := repository.detalle.ID
+
+	_, err := service.Actualizar(context.Background(), uuid.New(), uuid.New(), empleadoID, domain.ActualizarEmpleadoInput{
+		Correo: domain.Optional[string]{Set: true, Value: texto("otro@tienda.mx")},
+	})
+
+	if !errors.Is(err, ErrEmpleadoCorreoDuplicado) {
+		t.Fatalf("se esperaba correo duplicado: %v", err)
+	}
+	if repository.correoExcluido == nil || *repository.correoExcluido != empleadoID {
+		t.Fatal("la búsqueda debe excluir al empleado que se edita")
 	}
 }

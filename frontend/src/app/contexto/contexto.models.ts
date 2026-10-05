@@ -10,6 +10,8 @@ export interface ContextoNegocio {
   slug: string;
   nombre_comercial: string;
   tipo_miembro: 'propietario' | 'miembro';
+  /** Códigos efectivos de la membresía. Solo ocultan o deshabilitan en la interfaz; la API autoriza. */
+  permisos: string[];
   sucursales: ContextoSucursal[];
 }
 

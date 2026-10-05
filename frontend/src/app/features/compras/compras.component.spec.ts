@@ -23,7 +23,7 @@ describe('ComprasComponent', () => {
       imports: [ComprasComponent],
       providers: [
         { provide: ComprasService, useValue: service },
-        { provide: ContextoService, useValue: { negocio: signal({ id: 'negocio-1' }), sucursal: signal({ id: 'sucursal-1' }) } },
+        { provide: ContextoService, useValue: { puede: () => true, negocio: signal({ id: 'negocio-1' }), sucursal: signal({ id: 'sucursal-1' }) } },
         { provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'create' } } } },
         { provide: Router, useValue: { navigate: vi.fn() } },
       ],

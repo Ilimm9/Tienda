@@ -44,7 +44,10 @@ func (r *VerificationRepository) IssueChallengeForPendingAccount(user *cuentadom
 			return err
 		}
 		if err := tx.Model(&cuentadomain.PerfilUsuario{}).Where("usuario_id = ?", user.ID).
-			Updates(map[string]any{"nombres": profile.Nombres, "apellidos": profile.Apellidos, "telefono": profile.Telefono}).Error; err != nil {
+			Updates(map[string]any{
+				"nombres": profile.Nombres, "primer_apellido": profile.PrimerApellido,
+				"segundo_apellido": profile.SegundoApellido, "telefono": profile.Telefono,
+			}).Error; err != nil {
 			return err
 		}
 		return issueChallenge(tx, challenge)

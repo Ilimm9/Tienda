@@ -81,7 +81,7 @@ describe('InvitacionService', () => {
   });
 
   it('registra la cuenta del invitado sin enviar correo', () => {
-    const payload = { nombres: 'Ana', apellidos: 'Ruiz', telefono: '', contrasena: 'contrasena-segura' };
+    const payload = { nombres: 'Ana', primer_apellido: 'Ruiz', segundo_apellido: '', telefono: '', contrasena: 'contrasena-segura' };
     service.registrar('token-publico', payload).subscribe();
 
     const request = http.expectOne(`${environment.apiUrl}/invitaciones/token-publico/registro`);

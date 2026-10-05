@@ -20,10 +20,13 @@ import (
 )
 
 var (
-	ErrVerificationInvalid = errors.New("el código no es válido o expiró")
-	ErrVerificationTooSoon = errors.New("debes esperar antes de solicitar otro código")
-	ErrVerificationLimited = errors.New("se alcanzó el límite temporal de envíos")
-	ErrEmailDelivery       = errors.New("no fue posible enviar el correo de verificación")
+	ErrVerificationInvalid   = errors.New("el código no es válido o expiró")
+	ErrVerificationTooSoon   = errors.New("debes esperar antes de solicitar otro código")
+	ErrVerificationLimited   = errors.New("se alcanzó el límite temporal de envíos")
+	ErrEmailDelivery         = errors.New("no fue posible enviar el correo de verificación")
+	ErrEmailRegistered       = errors.New("este correo ya está registrado")
+	ErrNamesRequired         = errors.New("el nombre es obligatorio")
+	ErrFirstLastNameRequired = errors.New("el primer apellido es obligatorio")
 )
 
 type VerificationRepository interface {
@@ -74,21 +77,19 @@ func NewVerificationService(users VerificationUserRepository, challenges Verific
 	return &VerificationService{users: users, challenges: challenges, mailer: mailer, config: cfg, now: time.Now}
 }
 
-func (s *VerificationService) Register(ctx context.Context, fullName, email, phone, password, ip string) (RegistrationResult, error) {
-	parts := strings.Fields(strings.TrimSpace(fullName))
-	if len(parts) == 0 {
-		return RegistrationResult{}, errors.New("el nombre completo es obligatorio")
-	}
-	return s.RegisterWithNames(ctx, parts[0], strings.Join(parts[1:], " "), email, phone, password, ip)
-}
-
 // RegisterWithNames recibe nombres y apellidos ya separados, sin adivinar dónde termina el nombre.
-func (s *VerificationService) RegisterWithNames(ctx context.Context, names, lastNames, email, phone, password, ip string) (RegistrationResult, error) {
+//
+// Un correo que ya pertenece a una cuenta verificada se rechaza de forma explícita;
+// una cuenta todavía pendiente reemplaza sus datos y recibe otro código.
+func (s *VerificationService) RegisterWithNames(ctx context.Context, names, firstLastName, secondLastName, email, phone, password, ip string) (RegistrationResult, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	names = strings.TrimSpace(names)
-	lastNames = strings.TrimSpace(lastNames)
+	firstLastName = strings.TrimSpace(firstLastName)
 	if names == "" {
-		return RegistrationResult{}, errors.New("el nombre completo es obligatorio")
+		return RegistrationResult{}, ErrNamesRequired
+	}
+	if firstLastName == "" {
+		return RegistrationResult{}, ErrFirstLastNameRequired
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -97,24 +98,24 @@ func (s *VerificationService) RegisterWithNames(ctx context.Context, names, last
 
 	user, findErr := s.users.FindByEmail(email)
 	if findErr == nil && (user.Estado != "pendiente_verificacion" || user.CorreoVerificadoEn != nil) {
-		return RegistrationResult{ChallengeID: uuid.New(), MaskedEmail: maskEmail(email), ResendAfter: s.config.ResendWait}, nil
+		return RegistrationResult{}, ErrEmailRegistered
+	}
+	profile := &cuentadomain.PerfilUsuario{Nombres: names, PrimerApellido: firstLastName}
+	if clean := strings.TrimSpace(secondLastName); clean != "" {
+		profile.SegundoApellido = &clean
+	}
+	if cleanPhone := strings.TrimSpace(phone); cleanPhone != "" {
+		profile.Telefono = &cleanPhone
 	}
 	if findErr != nil {
 		user = &cuentadomain.Usuario{Correo: email, HashContrasena: string(hash), Estado: "pendiente_verificacion"}
-		profile := &cuentadomain.PerfilUsuario{Nombres: names, Apellidos: lastNames}
-		if cleanPhone := strings.TrimSpace(phone); cleanPhone != "" {
-			profile.Telefono = &cleanPhone
-		}
 		if err := s.users.CreateAccount(user, profile); err != nil {
 			return RegistrationResult{}, err
 		}
 		return s.issueAndSend(ctx, user, ip, false)
 	}
 	user.HashContrasena = string(hash)
-	profile := &cuentadomain.PerfilUsuario{UsuarioID: user.ID, Nombres: names, Apellidos: lastNames}
-	if cleanPhone := strings.TrimSpace(phone); cleanPhone != "" {
-		profile.Telefono = &cleanPhone
-	}
+	profile.UsuarioID = user.ID
 	return s.issueAndSendForPendingAccount(ctx, user, profile, ip)
 }
 

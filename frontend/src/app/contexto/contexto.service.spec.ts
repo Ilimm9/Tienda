@@ -15,8 +15,8 @@ const negocioB = '33333333-3333-4333-8333-333333333333';
 const sucursalPrincipal = '22222222-2222-4222-8222-222222222222';
 const sucursalSecundaria = '44444444-4444-4444-8444-444444444444';
 
-function negocio(id: string, sucursales: ContextoNegocio['sucursales']): ContextoNegocio {
-  return { id, slug: `negocio-${id.slice(0, 4)}`, nombre_comercial: `Negocio ${id.slice(0, 4)}`, tipo_miembro: 'propietario', sucursales };
+function negocio(id: string, sucursales: ContextoNegocio['sucursales'], permisos: string[] = []): ContextoNegocio {
+  return { id, slug: `negocio-${id.slice(0, 4)}`, nombre_comercial: `Negocio ${id.slice(0, 4)}`, tipo_miembro: 'propietario', permisos, sucursales };
 }
 
 const sucursales = [
@@ -199,6 +199,31 @@ describe('ContextoService', () => {
 
     responder([negocio(negocioB, sucursales)]);
     expect(service.negocio()?.id).toBe(negocioB);
+  });
+
+  it('expone los permisos del negocio activo y los evalúa por negocio', () => {
+    localStorage.setItem(negocioKey, negocioA);
+    service.inicializar().subscribe();
+    responder([
+      negocio(negocioA, sucursales, ['catalogo.ver', 'compras.ver']),
+      negocio(negocioB, [], ['roles.gestionar']),
+    ]);
+
+    expect(service.puede('catalogo.ver')).toBe(true);
+    expect(service.puede(['catalogo.ver', 'compras.ver'])).toBe(true);
+    expect(service.puede(['catalogo.ver', 'roles.gestionar'])).toBe(false);
+    expect(service.puede(undefined)).toBe(true);
+    expect(service.puedeAlguno('roles.ver', 'compras.ver')).toBe(true);
+    expect(service.puedeEn(negocioB, 'roles.gestionar')).toBe(true);
+    expect(service.puedeEn(negocioB, 'catalogo.ver')).toBe(false);
+  });
+
+  it('deja decidir al llamador cuando el negocio no está en el contexto', () => {
+    service.inicializar().subscribe();
+    responder([negocio(negocioA, sucursales, [])]);
+
+    expect(service.puedeEn(negocioB, 'negocios.archivar')).toBe(false);
+    expect(service.puedeEn(negocioB, 'negocios.archivar', true)).toBe(true);
   });
 });
 

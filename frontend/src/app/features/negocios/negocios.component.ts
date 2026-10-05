@@ -8,6 +8,8 @@ import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { ApiErrorResponse, NegocioResumen } from './negocio.models';
 import { NegocioService } from './negocio.service';
+import { ContextoService } from '../../contexto/contexto.service';
+import { CodigoPermiso, PERMISOS } from '../../contexto/permisos';
 
 @Component({
   selector: 'app-negocios',
@@ -34,6 +36,14 @@ export class NegociosComponent {
         business.rfc?.toLocaleLowerCase('es-MX').includes(query),
     );
   });
+
+  private readonly contexto = inject(ContextoService);
+  readonly P = PERMISOS;
+
+  /** Un negocio archivado no está en el contexto: ahí decide ser propietario. */
+  puedeEn(business: NegocioResumen, codigo: CodigoPermiso): boolean {
+    return this.contexto.puedeEn(business.id, codigo, business.tipo_miembro === 'propietario');
+  }
 
   constructor() {
     this.load();
@@ -63,6 +73,7 @@ export class NegociosComponent {
     this.negocioService.archivar(business.id).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Negocio archivado');
         this.load();
       },
@@ -82,6 +93,7 @@ export class NegociosComponent {
     this.negocioService.restaurar(business.id).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Negocio restaurado');
         this.load();
       },

@@ -16,11 +16,13 @@ import { forkJoin } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogOption, PackagingUnit, PurchaseProduct, PurchaseRow } from './compras.models';
 import { ComprasService } from './compras.service';
+import { PERMISOS } from '../../contexto/permisos';
+import { PuedeDirective } from '../../contexto/puede.directive';
 
 @Component({
   selector: 'app-compras',
   standalone: true,
-  imports: [
+  imports: [PuedeDirective, 
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -34,6 +36,7 @@ import { ComprasService } from './compras.service';
   styleUrl: './compras.component.css',
 })
 export class ComprasComponent {
+  readonly P = PERMISOS;
   private readonly service = inject(ComprasService);
   private readonly context = inject(ContextoService);
   private readonly fb = inject(FormBuilder);

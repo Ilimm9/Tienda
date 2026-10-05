@@ -14,8 +14,8 @@ type registroInvitacion struct {
 	verificacion *cuentaapplication.VerificationService
 }
 
-func (r registroInvitacion) RegistrarCuentaPendiente(ctx context.Context, nombres, apellidos, correo, telefono, contrasena, ip string) (negocioapplication.DesafioRegistro, error) {
-	resultado, err := r.verificacion.RegisterWithNames(ctx, nombres, apellidos, correo, telefono, contrasena, ip)
+func (r registroInvitacion) RegistrarCuentaPendiente(ctx context.Context, nombres, primerApellido, segundoApellido, correo, telefono, contrasena, ip string) (negocioapplication.DesafioRegistro, error) {
+	resultado, err := r.verificacion.RegisterWithNames(ctx, nombres, primerApellido, segundoApellido, correo, telefono, contrasena, ip)
 	desafio := negocioapplication.DesafioRegistro{
 		DesafioID: resultado.ChallengeID, CorreoEnmascarado: resultado.MaskedEmail,
 		ReenviarEnSegundos: int(resultado.ResendAfter.Seconds()),
@@ -25,6 +25,8 @@ func (r registroInvitacion) RegistrarCuentaPendiente(ctx context.Context, nombre
 		return desafio, nil
 	case errors.Is(err, cuentaapplication.ErrVerificationTooSoon), errors.Is(err, cuentaapplication.ErrVerificationLimited):
 		return negocioapplication.DesafioRegistro{}, negocioapplication.ErrInvitacionLimite
+	case errors.Is(err, cuentaapplication.ErrEmailRegistered):
+		return negocioapplication.DesafioRegistro{}, negocioapplication.ErrInvitacionCuentaExistente
 	case errors.Is(err, cuentaapplication.ErrEmailDelivery):
 		return desafio, negocioapplication.ErrInvitacionEnvioCodigo
 	default:

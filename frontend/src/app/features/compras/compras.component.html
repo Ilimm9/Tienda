@@ -8,7 +8,7 @@
       </div>
       @if (purchases().length > 0) {
         <div class="purchase-actions">
-          <button class="primary-button" type="button" routerLink="/compras/nueva">
+          <button *appPuede="P.compraRegistrar" class="primary-button" type="button" routerLink="/compras/nueva">
             <i class="pi pi-plus" aria-hidden="true"></i> Registrar compra
           </button>
         </div>
@@ -25,7 +25,7 @@
         <p>
           Registra la primera recepción de mercancía para actualizar el inventario de tu sucursal.
         </p>
-        <button class="primary-button" type="button" routerLink="/compras/nueva">
+        <button *appPuede="P.compraRegistrar" class="primary-button" type="button" routerLink="/compras/nueva">
           <i class="pi pi-plus" aria-hidden="true"></i> Registrar nueva compra
         </button>
       </section>

@@ -12,11 +12,13 @@
         <p>{{ current.razon_social || 'Sin razón social registrada' }}</p>
       </div>
       <div class="heading-actions">
-        <a class="secondary-button" [routerLink]="['/negocios', current.id, 'sucursales']">
-          <i class="pi pi-map-marker" aria-hidden="true"></i>
-          Administrar sucursales
-        </a>
-        @if (current.tipo_miembro === 'propietario') {
+        @if (puede(P.sucursalVer)) {
+          <a class="secondary-button" [routerLink]="['/negocios', current.id, 'sucursales']">
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            Administrar sucursales
+          </a>
+        }
+        @if (puede(P.negocioEditar)) {
           <a class="primary-button" [routerLink]="['/negocios', current.id, 'editar']">
             <i class="pi pi-pencil" aria-hidden="true"></i>
             Editar datos
@@ -138,7 +140,7 @@
               <h2>Crea tu sucursal principal</h2>
               <p>Registra la primera ubicación operativa de este negocio.</p>
             </div>
-            @if (current.tipo_miembro === 'propietario') {
+            @if (puede(P.sucursalCrear)) {
               <a
                 class="secondary-button"
                 [routerLink]="['/negocios', current.id, 'sucursales', 'nueva']"
@@ -149,7 +151,7 @@
           </section>
         }
 
-        @if (current.tipo_miembro === 'propietario') {
+        @if (puede(P.negocioArchivar)) {
           <section class="danger-zone surface-card">
             <div>
               <h2>{{ current.estado === 'activo' ? 'Archivar negocio' : 'Restaurar negocio' }}</h2>

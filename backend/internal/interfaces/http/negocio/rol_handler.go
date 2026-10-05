@@ -196,6 +196,10 @@ func responderErrorRol(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"codigo": "MEMBRESIA_NO_ENCONTRADA", "mensaje": "No fue posible encontrar la membresía solicitada.", "campos": gin.H{},
 		})
+	case errors.Is(err, application.ErrRolNoDelegable):
+		c.JSON(http.StatusForbidden, gin.H{
+			"codigo": "ROL_NO_DELEGABLE", "mensaje": err.Error(), "campos": gin.H{},
+		})
 	case errors.Is(err, application.ErrRolProhibido):
 		c.JSON(http.StatusForbidden, gin.H{
 			"codigo": "ACCESO_DENEGADO", "mensaje": err.Error(), "campos": gin.H{},

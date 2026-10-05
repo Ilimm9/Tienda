@@ -41,6 +41,7 @@ type InvitacionRepository interface {
 	PermisosEfectivos(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]string, error)
 	ObtenerEmpleado(ctx context.Context, negocioID, empleadoID uuid.UUID) (domain.EmpleadoDetalle, error)
 	CodigoRolActivo(ctx context.Context, negocioID, rolID uuid.UUID) (string, bool, error)
+	RolesDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error)
 	SucursalActivaDelNegocio(ctx context.Context, negocioID, sucursalID uuid.UUID) (bool, error)
 	Listar(ctx context.Context, negocioID uuid.UUID, filtro domain.FiltroInvitaciones) ([]domain.InvitacionResumen, error)
 	Emitir(ctx context.Context, invitacion domain.InvitacionNegocio) (domain.InvitacionResumen, error)
@@ -68,7 +69,7 @@ type DesafioRegistro struct {
 
 // RegistroCuentaInvitacion es el contrato hacia `cuenta`: crea la cuenta pendiente y envía el OTP.
 type RegistroCuentaInvitacion interface {
-	RegistrarCuentaPendiente(ctx context.Context, nombres, apellidos, correo, telefono, contrasena, ip string) (DesafioRegistro, error)
+	RegistrarCuentaPendiente(ctx context.Context, nombres, primerApellido, segundoApellido, correo, telefono, contrasena, ip string) (DesafioRegistro, error)
 }
 
 type InvitacionService struct {
@@ -139,6 +140,13 @@ func (s *InvitacionService) Crear(ctx context.Context, usuarioID, negocioID uuid
 	}
 	if !existe || strings.EqualFold(codigoRol, domain.CodigoRolPropietario) {
 		return domain.InvitacionCreada{}, ErrInvitacionRolNoDisponible
+	}
+	delegable, err := s.invitaciones.RolesDelegables(ctx, usuarioID, negocioID, []uuid.UUID{input.RolPredeterminadoID}, nil)
+	if err != nil {
+		return domain.InvitacionCreada{}, err
+	}
+	if !delegable {
+		return domain.InvitacionCreada{}, ErrRolNoDelegable
 	}
 
 	token, hash, err := generarTokenInvitacion()
@@ -233,13 +241,17 @@ func (s *InvitacionService) Registrar(ctx context.Context, token string, input d
 		return DesafioRegistro{}, err
 	}
 	nombres := strings.TrimSpace(input.Nombres)
-	apellidos := strings.TrimSpace(input.Apellidos)
+	primerApellido := strings.TrimSpace(input.PrimerApellido)
+	segundoApellido := strings.TrimSpace(input.SegundoApellido)
 	campos := map[string]string{}
 	if nombres == "" || len([]rune(nombres)) > 120 {
 		campos["nombres"] = "es obligatorio y admite hasta 120 caracteres"
 	}
-	if apellidos == "" || len([]rune(apellidos)) > 120 {
-		campos["apellidos"] = "es obligatorio y admite hasta 120 caracteres"
+	if primerApellido == "" || len([]rune(primerApellido)) > 120 {
+		campos["primer_apellido"] = "es obligatorio y admite hasta 120 caracteres"
+	}
+	if len([]rune(segundoApellido)) > 120 {
+		campos["segundo_apellido"] = "admite hasta 120 caracteres"
 	}
 	if len(input.Contrasena) < 8 || len(input.Contrasena) > 72 {
 		campos["contrasena"] = "debe tener entre 8 y 72 caracteres"
@@ -260,7 +272,7 @@ func (s *InvitacionService) Registrar(ctx context.Context, token string, input d
 	if s.registro == nil {
 		return DesafioRegistro{}, errors.New("registro de cuenta no configurado")
 	}
-	return s.registro.RegistrarCuentaPendiente(ctx, nombres, apellidos, invitacion.Correo, strings.TrimSpace(input.Telefono), input.Contrasena, ip)
+	return s.registro.RegistrarCuentaPendiente(ctx, nombres, primerApellido, segundoApellido, invitacion.Correo, strings.TrimSpace(input.Telefono), input.Contrasena, ip)
 }
 
 // Aceptar exige sesión iniciada con el mismo correo invitado; el repositorio revalida bajo bloqueo.

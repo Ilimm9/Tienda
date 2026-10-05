@@ -9,6 +9,8 @@ import { SelectModule } from 'primeng/select';
 import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogoService } from './catalogo.service';
 import { CatalogImportResult, CatalogRecord, Categoria } from './catalogo.models';
+import { PERMISOS } from '../../contexto/permisos';
+import { PuedeDirective } from '../../contexto/puede.directive';
 
 interface SelectOption {
   label: string;
@@ -18,7 +20,7 @@ interface SelectOption {
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [
+  imports: [PuedeDirective, 
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,
@@ -30,6 +32,7 @@ interface SelectOption {
   styleUrl: './catalogo.component.css',
 })
 export class CatalogoComponent {
+  readonly P = PERMISOS;
   private readonly service = inject(CatalogoService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);

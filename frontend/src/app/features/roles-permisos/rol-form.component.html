@@ -1,98 +1,186 @@
-<section class="role-page">
-  <header class="page-heading">
+<section class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8">
+  <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <span class="eyebrow">Control de acceso</span>
-      <h1>{{ editing ? 'Editar rol' : 'Nuevo rol' }}</h1>
-      <p>Elige qué acciones permite este rol dentro del negocio.</p>
+      <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">{{ editing ? 'Editar rol' : 'Nuevo rol' }}</h1>
+      <p class="m-0 mt-1.5 text-muted">Elige qué acciones permite este rol dentro del negocio.</p>
     </div>
-    <a class="secondary-button" routerLink="/roles-permisos">Volver</a>
+    <a
+      class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+      routerLink="/roles-permisos"
+    >
+      <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>Roles y permisos
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+    </p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando permisos…</p>
-  } @else if (rol()?.es_rol_sistema) {
-    <p class="status-message error" role="alert">
-      El rol de sistema conserva todos los permisos y no puede editarse.
+    <p class="m-0 rounded-2xl border border-line bg-surface p-10 text-center text-muted" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando permisos…
     </p>
-  } @else {
-    <form class="role-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field-row">
-        <div class="field">
-          <label for="codigo">Código</label>
-          <input
-            id="codigo"
-            type="text"
-            formControlName="codigo"
-            autocomplete="off"
-            [attr.aria-invalid]="hasError('codigo')"
-          />
-          @if (editing) {
-            <small>El código no cambia después de crear el rol.</small>
-          } @else if (hasError('codigo')) {
-            <small class="error">{{
-              fieldErrors()['codigo'] || 'Usa entre 2 y 60 caracteres.'
-            }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="nombre">Nombre</label>
-          <input
-            id="nombre"
-            type="text"
-            formControlName="nombre"
-            [attr.aria-invalid]="hasError('nombre')"
-          />
-          @if (hasError('nombre')) {
-            <small class="error">{{
-              fieldErrors()['nombre'] || 'Usa entre 2 y 120 caracteres.'
-            }}</small>
-          }
-        </div>
-      </div>
+  } @else if (rol()?.es_rol_sistema) {
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-primary-line bg-primary-tint px-3.5 py-3 text-[13px] text-primary-hover" role="status">
+      <i class="pi pi-lock mt-0.5" aria-hidden="true"></i>El rol de sistema conserva todos los permisos y no puede editarse.
+    </p>
+  } @else if (modulos().length) {
+    <form class="overflow-hidden rounded-2xl border border-line bg-surface" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 px-5 py-6 sm:px-7">
+        <legend class="contents">
+          <span class="flex items-start gap-3">
+            <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-id-card"></i></span>
+            <span>
+              <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Datos del rol</span>
+              <span class="mt-0.5 block text-[13px] text-muted">Cómo lo verá tu equipo al asignarlo.</span>
+            </span>
+          </span>
+        </legend>
 
-      <div class="field">
-        <label for="descripcion">Descripción</label>
-        <textarea id="descripcion" rows="2" formControlName="descripcion"></textarea>
-      </div>
-
-      @if (editing) {
-        <label class="checkbox-field">
-          <input type="checkbox" formControlName="activo" />
-          <span>Rol activo</span>
-        </label>
-      }
-
-      <h2 class="section-title">Permisos</h2>
-      @for (modulo of modulos(); track modulo.codigo) {
-        <fieldset class="permission-group">
-          <legend>{{ modulo.nombre }}</legend>
-          <button type="button" class="text-button small" (click)="alternarModulo(modulo)">
-            {{ moduloCompleto(modulo) ? 'Quitar todos' : 'Seleccionar todos' }}
-          </button>
-          <div class="permission-list">
-            @for (permiso of modulo.permisos; track permiso.id) {
-              <label class="checkbox-field">
-                <input
-                  type="checkbox"
-                  [checked]="estaSeleccionado(permiso.id)"
-                  (change)="alternarPermiso(permiso.id)"
-                />
-                <span>{{ permiso.nombre }}<code>{{ permiso.codigo }}</code></span>
-              </label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-ink" for="nombre">Nombre <span class="text-danger" aria-hidden="true">*</span></label>
+            <input
+              id="nombre"
+              type="text"
+              formControlName="nombre"
+              placeholder="Cajero"
+              aria-required="true"
+              [attr.aria-invalid]="hasError('nombre')"
+              [attr.aria-describedby]="hasError('nombre') ? 'nombre-error' : null"
+              class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
+            />
+            @if (hasError('nombre')) {
+              <small id="nombre-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['nombre'] || 'Usa entre 2 y 120 caracteres.' }}
+              </small>
             }
           </div>
-        </fieldset>
-      }
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-ink" for="codigo">Código <span class="text-danger" aria-hidden="true">*</span></label>
+            <input
+              id="codigo"
+              type="text"
+              formControlName="codigo"
+              autocomplete="off"
+              placeholder="CAJERO"
+              aria-required="true"
+              aria-describedby="codigo-ayuda"
+              [attr.aria-invalid]="hasError('codigo')"
+              class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 font-mono text-sm text-ink uppercase outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line disabled:cursor-not-allowed disabled:border-line disabled:bg-ground disabled:text-body aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
+            />
+            @if (hasError('codigo')) {
+              <small id="codigo-ayuda" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['codigo'] || 'Usa de 2 a 60 caracteres: letras, números, guion o guion bajo.' }}
+              </small>
+            } @else {
+              <small id="codigo-ayuda" class="text-[12.5px] text-muted">
+                {{ editing ? 'El código no cambia después de crear el rol.' : 'Identificador corto y único. No podrá cambiarse después.' }}
+              </small>
+            }
+          </div>
+        </div>
 
-      <footer class="form-actions">
-        <a class="secondary-button" routerLink="/roles-permisos">Cancelar</a>
-        <button type="submit" class="primary-button" [disabled]="saving()">
-          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar rol' }}
-        </button>
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <label class="text-[13px] font-semibold text-ink" for="descripcion">Descripción</label>
+          <textarea
+            id="descripcion"
+            rows="2"
+            formControlName="descripcion"
+            placeholder="Para qué sirve este rol"
+            class="w-full resize-y rounded-[10px] border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line"
+          ></textarea>
+        </div>
+
+        @if (editing) {
+          <label class="flex min-h-11 w-fit cursor-pointer items-center gap-2.5 rounded-[10px] border border-line px-3.5 text-sm text-body transition hover:border-line-strong has-checked:border-primary-line has-checked:bg-primary-tint">
+            <input type="checkbox" class="size-4 accent-[var(--primary)]" formControlName="activo" />
+            <span class="font-medium">Rol activo</span>
+          </label>
+        }
+      </fieldset>
+
+      <fieldset
+        class="m-0 flex min-w-0 flex-col gap-5 border-0 border-t border-solid border-line-soft px-5 py-6 sm:px-7"
+        [attr.aria-invalid]="sinPermisos()"
+        [attr.aria-describedby]="sinPermisos() ? 'permisos-error' : null"
+        tabindex="-1"
+      >
+        <legend class="contents">
+          <span class="flex flex-wrap items-start gap-3">
+            <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-sage text-success" aria-hidden="true"><i class="pi pi-shield"></i></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Permisos <span class="text-danger" aria-hidden="true">*</span></span>
+              <span class="mt-0.5 block text-[13px] text-muted">Marca al menos uno. «Ver» permite entrar a la sección; los demás permiten cambiarla.</span>
+            </span>
+            <span class="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary-hover">{{ seleccionados().size }} de {{ totalPermisos() }}</span>
+          </span>
+        </legend>
+
+        @if (sinPermisos()) {
+          <p id="permisos-error" class="m-0 flex items-center gap-1.5 text-[12.5px] font-medium text-danger" role="alert">
+            <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>Selecciona al menos un permiso.
+          </p>
+        }
+
+        <div class="grid gap-4 md:grid-cols-2">
+          @for (modulo of modulos(); track modulo.codigo) {
+            <section class="rounded-xl border border-line" [class.border-primary-line]="seleccionadosDe(modulo) > 0" [attr.aria-label]="'Permisos de ' + modulo.nombre">
+              <header class="flex items-center gap-2.5 border-b border-line-soft bg-ground px-4 py-2.5">
+                <h3 class="m-0 min-w-0 flex-1 truncate text-sm font-bold text-ink">{{ modulo.nombre }}</h3>
+                <span class="text-xs font-semibold text-muted">{{ seleccionadosDe(modulo) }} de {{ modulo.permisos.length }}</span>
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+                  (click)="alternarModulo(modulo)"
+                >
+                  {{ moduloCompleto(modulo) ? 'Quitar todos' : 'Seleccionar todos' }}
+                </button>
+              </header>
+              <ul class="m-0 flex list-none flex-col p-2">
+                @for (permiso of modulo.permisos; track permiso.id) {
+                  <li>
+                    <label class="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-primary-tint">
+                      <input
+                        type="checkbox"
+                        class="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+                        [checked]="estaSeleccionado(permiso.id)"
+                        (change)="alternarPermiso(permiso.id)"
+                      />
+                      <span class="min-w-0">
+                        <span class="block text-sm text-ink">{{ permiso.nombre }}</span>
+                        <span class="block truncate font-mono text-[11.5px] text-muted">{{ permiso.codigo }}</span>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      </fieldset>
+
+      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ground px-5 py-3.5 sm:px-7">
+        <span class="text-[12.5px] text-muted">Los campos con <span class="text-danger" aria-hidden="true">*</span> son obligatorios.</span>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <a
+            class="inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+            routerLink="/roles-permisos"
+          >
+            Cancelar
+          </a>
+          <button
+            type="submit"
+            class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
+            [disabled]="saving()"
+            [attr.aria-busy]="saving()"
+          >
+            <i class="pi text-xs" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar rol' }}
+          </button>
+        </div>
       </footer>
     </form>
   }

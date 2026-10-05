@@ -7,23 +7,31 @@ import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { iniciales } from '../equipo/presentacion';
 import { MiembroRoles, RolApiError, RolResumen } from './rol.models';
 import { RolService } from './rol.service';
+
+const ESTADOS_MEMBRESIA: Record<string, string> = {
+  activo: 'Activo',
+  suspendido: 'Suspendido',
+  revocado: 'Revocado',
+  invitado: 'Invitado',
+};
 
 @Component({
   selector: 'app-roles',
   imports: [CommonModule, RouterLink, TableModule],
   templateUrl: './roles.component.html',
-  styleUrl: './roles.component.css',
 })
 export class RolesComponent {
   private readonly rolService = inject(RolService);
   private readonly feedback = inject(FeedbackService);
   readonly contexto = inject(ContextoService);
+  /** Permisos del negocio activo, resueltos una sola vez en el contexto. */
+  readonly misPermisos = computed(() => [...this.contexto.permisos()]);
 
   readonly roles = signal<RolResumen[]>([]);
   readonly miembros = signal<MiembroRoles[]>([]);
-  readonly misPermisos = signal<string[]>([]);
   readonly loading = signal(true);
   readonly processingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -34,6 +42,14 @@ export class RolesComponent {
 
   constructor() {
     this.load();
+  }
+
+  readonly iniciales = iniciales;
+  /** Tamaño del catálogo: el rol de sistema los concentra todos. */
+  readonly totalPermisos = computed(() => Math.max(0, ...this.roles().map((rol) => rol.total_permisos)));
+
+  etiquetaEstado(estado: string): string {
+    return ESTADOS_MEMBRESIA[estado] ?? estado;
   }
 
   nombreDeRol(rolId: string): string {
@@ -75,12 +91,10 @@ export class RolesComponent {
     forkJoin({
       roles: this.rolService.listar(negocioId, true),
       miembros: this.rolService.miembros(negocioId),
-      permisos: this.rolService.misPermisos(negocioId),
     }).subscribe({
-      next: ({ roles, miembros, permisos }) => {
+      next: ({ roles, miembros }) => {
         this.roles.set(roles.items);
         this.miembros.set(miembros.items);
-        this.misPermisos.set(permisos.items);
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {

@@ -48,6 +48,10 @@ func (r *InvitacionRepository) CodigoRolActivo(ctx context.Context, negocioID, r
 	return codigoRolActivo(r.db.WithContext(ctx), negocioID, rolID)
 }
 
+func (r *InvitacionRepository) RolesDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error) {
+	return rolesDelegables(ctx, r.db, usuarioID, negocioID, roles, membresiaDestino)
+}
+
 func codigoRolActivo(db *gorm.DB, negocioID, rolID uuid.UUID) (string, bool, error) {
 	var codigos []string
 	err := db.Table("roles").
@@ -233,9 +237,14 @@ func (r *InvitacionRepository) Reemitir(ctx context.Context, negocioID, invitaci
 		destinatario := anterior.Correo
 		if correo != nil {
 			destinatario = *correo
+			if enUso, err := correoEnUsoEnNegocio(tx, negocioID, destinatario, &empleado.ID); err != nil {
+				return err
+			} else if enUso {
+				return application.ErrEmpleadoCorreoDuplicado
+			}
 			if err := tx.Table("empleados").Where("id = ?", empleado.ID).
 				Updates(map[string]any{"correo": destinatario, "actualizado_en": ahora}).Error; err != nil {
-				return err
+				return errorCorreoDuplicado(err)
 			}
 		}
 		if err := retirarPendientes(tx, negocioID, empleado.ID, ahora); err != nil {
@@ -449,11 +458,12 @@ func membresiaParaAceptar(tx *gorm.DB, negocioID, usuarioID uuid.UUID, ahora tim
 // Número, puesto, fechas laborales y roles siguen bajo control administrativo.
 func datosPersonalesConfirmados(tx *gorm.DB, usuarioID uuid.UUID, cambios map[string]any) error {
 	var perfil struct {
-		Nombres   string
-		Apellidos string
-		Telefono  *string
+		Nombres         string
+		PrimerApellido  string
+		SegundoApellido *string
+		Telefono        *string
 	}
-	err := tx.Table("perfil_usuarios").Select("nombres, apellidos, telefono").
+	err := tx.Table("perfil_usuarios").Select("nombres, primer_apellido, segundo_apellido, telefono").
 		Where("usuario_id = ?", usuarioID).Take(&perfil).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
@@ -461,16 +471,21 @@ func datosPersonalesConfirmados(tx *gorm.DB, usuarioID uuid.UUID, cambios map[st
 	if err != nil {
 		return err
 	}
-	apellidos := strings.Fields(perfil.Apellidos)
-	if strings.TrimSpace(perfil.Nombres) == "" || len(apellidos) == 0 {
+	nombres := strings.Fields(perfil.Nombres)
+	primerApellido := strings.TrimSpace(perfil.PrimerApellido)
+	if len(nombres) == 0 || primerApellido == "" {
 		return nil
 	}
-	cambios["nombre"] = recortar(strings.TrimSpace(perfil.Nombres), 100)
+	// El empleado separa nombre y segundo nombre; el perfil los guarda juntos.
+	cambios["nombre"] = recortar(nombres[0], 100)
 	cambios["segundo_nombre"] = nil
-	cambios["primer_apellido"] = recortar(apellidos[0], 100)
+	if len(nombres) > 1 {
+		cambios["segundo_nombre"] = recortar(strings.Join(nombres[1:], " "), 100)
+	}
+	cambios["primer_apellido"] = recortar(primerApellido, 100)
 	cambios["segundo_apellido"] = nil
-	if len(apellidos) > 1 {
-		cambios["segundo_apellido"] = recortar(strings.Join(apellidos[1:], " "), 100)
+	if perfil.SegundoApellido != nil && strings.TrimSpace(*perfil.SegundoApellido) != "" {
+		cambios["segundo_apellido"] = recortar(strings.TrimSpace(*perfil.SegundoApellido), 100)
 	}
 	if perfil.Telefono != nil && strings.TrimSpace(*perfil.Telefono) != "" {
 		cambios["telefono"] = strings.TrimSpace(*perfil.Telefono)

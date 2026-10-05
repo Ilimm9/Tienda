@@ -17,7 +17,9 @@ var (
 type ContextoRepository interface {
 	ListarOpcionesContexto(context.Context, uuid.UUID) ([]domain.ContextoNegocio, error)
 	NegocioActivoAccesible(context.Context, uuid.UUID, uuid.UUID) (bool, error)
-	SucursalActivaDelNegocio(context.Context, uuid.UUID, uuid.UUID) (bool, error)
+	// SucursalActivaAccesible exige además asignación vigente cuando el usuario no es propietario.
+	SucursalActivaAccesible(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) (bool, error)
+	SucursalesAccesibles(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type ContextoService struct {
@@ -43,8 +45,9 @@ func (s *ContextoService) ValidarNegocioActivo(ctx context.Context, usuarioID, n
 	return nil
 }
 
-func (s *ContextoService) ValidarSucursalActiva(ctx context.Context, negocioID, sucursalID uuid.UUID) error {
-	ok, err := s.contexto.SucursalActivaDelNegocio(ctx, negocioID, sucursalID)
+// ValidarSucursalActiva responde igual para una sucursal inexistente, ajena o no asignada: no revela cuál es el caso.
+func (s *ContextoService) ValidarSucursalActiva(ctx context.Context, usuarioID, negocioID, sucursalID uuid.UUID) error {
+	ok, err := s.contexto.SucursalActivaAccesible(ctx, usuarioID, negocioID, sucursalID)
 	if err != nil {
 		return err
 	}
@@ -52,4 +55,9 @@ func (s *ContextoService) ValidarSucursalActiva(ctx context.Context, negocioID, 
 		return ErrContextoSucursalNoDisponible
 	}
 	return nil
+}
+
+// SucursalesAccesibles devuelve las sucursales activas donde el usuario puede operar en el negocio.
+func (s *ContextoService) SucursalesAccesibles(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]uuid.UUID, error) {
+	return s.contexto.SucursalesAccesibles(ctx, usuarioID, negocioID)
 }

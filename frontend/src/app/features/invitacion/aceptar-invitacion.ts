@@ -55,8 +55,9 @@ export class AceptarInvitacion implements OnDestroy {
   });
 
   readonly cuentaForm = this.formBuilder.group({
-    nombres: ['', [Validators.required, Validators.maxLength(120)]],
-    apellidos: ['', [Validators.required, Validators.maxLength(120)]],
+    nombres: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
+    primerApellido: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
+    segundoApellido: ['', Validators.maxLength(120)],
     telefono: ['', Validators.maxLength(30)],
     contrasena: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]],
     confirmacion: ['', Validators.required],
@@ -90,11 +91,12 @@ export class AceptarInvitacion implements OnDestroy {
     }
     if (this.processing()) return;
     this.processing.set(true);
-    const { nombres, apellidos, telefono, contrasena } = this.cuentaForm.getRawValue();
+    const { nombres, primerApellido, segundoApellido, telefono, contrasena } = this.cuentaForm.getRawValue();
     this.invitacionService
       .registrar(this.token, {
         nombres: nombres.trim(),
-        apellidos: apellidos.trim(),
+        primer_apellido: primerApellido.trim(),
+        segundo_apellido: segundoApellido.trim(),
         telefono: telefono.trim(),
         contrasena,
       })

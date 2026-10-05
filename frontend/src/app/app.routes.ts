@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './features/auth/auth.guard';
 import { contextoGuard } from './contexto/contexto.guard';
+import { permisoGuard } from './contexto/permiso.guard';
+import { PERMISOS } from './contexto/permisos';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
@@ -103,8 +105,8 @@ export const routes: Routes = [
       },
       {
         path: 'proveedores',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Proveedores', section: 'proveedores' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Proveedores', section: 'proveedores', permiso: PERMISOS.catalogoVer },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -112,8 +114,8 @@ export const routes: Routes = [
       },
       {
         path: 'proveedores/nuevo',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Agregar proveedor', section: 'proveedores', mode: 'create' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Agregar proveedor', section: 'proveedores', mode: 'create', permiso: PERMISOS.catalogoGestionar },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -121,8 +123,8 @@ export const routes: Routes = [
       },
       {
         path: 'proveedores/importar',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Importar proveedores', section: 'proveedores', mode: 'import' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Importar proveedores', section: 'proveedores', mode: 'import', permiso: PERMISOS.catalogoGestionar },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -130,8 +132,8 @@ export const routes: Routes = [
       },
       {
         path: 'proveedores/:id/editar',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Editar proveedor', section: 'proveedores', mode: 'edit' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Editar proveedor', section: 'proveedores', mode: 'edit', permiso: PERMISOS.catalogoGestionar },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -139,21 +141,26 @@ export const routes: Routes = [
       },
       {
         path: 'compras',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Compras' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Compras', permiso: PERMISOS.compraVer },
         loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
       },
       {
         path: 'compras/nueva',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Registrar compra', mode: 'create' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Registrar compra', mode: 'create', permiso: PERMISOS.compraRegistrar },
         loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
       },
       {
         path: 'precios/validaciones',
-        canActivate: [contextoGuard],
-        data: { breadcrumb: 'Validar costos y precios' },
+        canActivate: [contextoGuard, permisoGuard],
+        data: { breadcrumb: 'Validar costos y precios', permiso: PERMISOS.precioVer },
         loadComponent: () => import('./features/precios/precios.component').then((module) => module.PreciosComponent),
+      },
+      {
+        path: 'sin-acceso',
+        data: { breadcrumb: 'Sin acceso' },
+        loadComponent: () => import('./contexto/sin-acceso').then((module) => module.SinAcceso),
       },
       {
         path: 'equipo',

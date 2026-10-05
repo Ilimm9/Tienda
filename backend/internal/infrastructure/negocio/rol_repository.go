@@ -52,6 +52,51 @@ func permisosEfectivos(ctx context.Context, db *gorm.DB, usuarioID, negocioID uu
 	return codigos, err
 }
 
+func (r *RolRepository) RolesDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error) {
+	return rolesDelegables(ctx, r.db, usuarioID, negocioID, roles, membresiaDestino)
+}
+
+// rolesDelegables comprueba que ningún permiso de `roles` quede fuera de los que posee el usuario.
+// Los roles que la membresía destino ya tiene no cuentan: conservarlos no otorga nada nuevo.
+func rolesDelegables(ctx context.Context, db *gorm.DB, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error) {
+	if len(roles) == 0 {
+		return true, nil
+	}
+	query := db.WithContext(ctx).Table("permisos_rol AS pr").
+		Joins("JOIN roles r ON r.id = pr.rol_id AND r.negocio_id = ?", negocioID).
+		Where("pr.rol_id IN ?", roles).
+		Where(`pr.permiso_id NOT IN (
+			SELECT pr2.permiso_id FROM membresias_negocio m
+			JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id
+			JOIN roles r2 ON r2.id = rm.rol_id AND r2.activo = TRUE AND r2.negocio_id = m.negocio_id
+			JOIN permisos_rol pr2 ON pr2.rol_id = r2.id
+			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo')`, usuarioID, negocioID)
+	if membresiaDestino != nil {
+		query = query.Where(`NOT EXISTS (SELECT 1 FROM roles_membresia actual
+			WHERE actual.membresia_negocio_id = ? AND actual.rol_id = pr.rol_id)`, *membresiaDestino)
+	}
+	var fuera int64
+	err := query.Count(&fuera).Error
+	return fuera == 0, err
+}
+
+func (r *RolRepository) PermisosOtorgables(ctx context.Context, usuarioID, negocioID uuid.UUID, permisos []uuid.UUID) (bool, error) {
+	if len(permisos) == 0 {
+		return true, nil
+	}
+	var fuera int64
+	err := r.db.WithContext(ctx).Table("permisos AS p").
+		Where("p.id IN ?", permisos).
+		Where(`p.id NOT IN (
+			SELECT pr.permiso_id FROM membresias_negocio m
+			JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id
+			JOIN roles r ON r.id = rm.rol_id AND r.activo = TRUE AND r.negocio_id = m.negocio_id
+			JOIN permisos_rol pr ON pr.rol_id = r.id
+			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo')`, usuarioID, negocioID).
+		Count(&fuera).Error
+	return fuera == 0, err
+}
+
 func (r *RolRepository) ListarPermisos(ctx context.Context) ([]domain.Permiso, error) {
 	permisos := make([]domain.Permiso, 0)
 	err := r.db.WithContext(ctx).Order("codigo_modulo ASC, codigo ASC").Find(&permisos).Error
@@ -166,14 +211,18 @@ func (r *RolRepository) ListarMiembros(ctx context.Context, negocioID uuid.UUID)
 		MembresiaID uuid.UUID
 		UsuarioID   uuid.UUID
 		Correo      string
+		Nombre      string
 		TipoMiembro string
 		Estado      string
 		RolID       *uuid.UUID
 	}
 	filas := make([]fila, 0)
 	err := r.db.WithContext(ctx).Table("membresias_negocio AS m").
-		Select("m.id AS membresia_id, m.usuario_id, u.correo, m.tipo_miembro, m.estado, rm.rol_id").
+		Select(`m.id AS membresia_id, m.usuario_id, u.correo, m.tipo_miembro, m.estado, rm.rol_id,
+			btrim(COALESCE(e.nombre || ' ' || e.primer_apellido, p.nombres || ' ' || p.primer_apellido, '')) AS nombre`).
 		Joins("JOIN usuarios u ON u.id = m.usuario_id").
+		Joins("LEFT JOIN empleados e ON e.membresia_id = m.id").
+		Joins("LEFT JOIN perfil_usuarios p ON p.usuario_id = m.usuario_id").
 		Joins("LEFT JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id").
 		Where("m.negocio_id = ?", negocioID).
 		Order("m.tipo_miembro ASC, u.correo ASC, m.id ASC").
@@ -189,7 +238,7 @@ func (r *RolRepository) ListarMiembros(ctx context.Context, negocioID uuid.UUID)
 			indice = len(items)
 			indices[actual.MembresiaID] = indice
 			items = append(items, domain.MiembroRoles{
-				MembresiaID: actual.MembresiaID, UsuarioID: actual.UsuarioID, Correo: actual.Correo,
+				MembresiaID: actual.MembresiaID, UsuarioID: actual.UsuarioID, Correo: actual.Correo, Nombre: actual.Nombre,
 				TipoMiembro: actual.TipoMiembro, Estado: actual.Estado, Roles: make([]uuid.UUID, 0),
 			})
 		}

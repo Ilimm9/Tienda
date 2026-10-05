@@ -151,24 +151,31 @@
             <span>Invitación para <strong>{{ datos.correo_enmascarado }}</strong></span>
           </p>
           <form class="formulario tarjeta" [formGroup]="cuentaForm" (ngSubmit)="registrar()" novalidate>
+            <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="nombres">Nombre(s) <span class="obligatorio" aria-hidden="true">*</span></label>
+              <input id="nombres" class="campo" type="text" formControlName="nombres" autocomplete="given-name" aria-required="true"
+                [attr.aria-invalid]="cuentaForm.controls.nombres.touched && cuentaForm.controls.nombres.invalid" />
+              @if (cuentaForm.controls.nombres.touched && cuentaForm.controls.nombres.invalid) {
+                <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tu nombre.</small>
+              }
+            </div>
             <div class="par">
               <div class="campo-bloque">
-                <label class="etiqueta" for="nombres">Nombre</label>
-                <input id="nombres" class="campo" type="text" formControlName="nombres" autocomplete="given-name" />
-                @if (cuentaForm.controls.nombres.touched && cuentaForm.controls.nombres.invalid) {
-                  <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tu nombre.</small>
+                <label class="etiqueta" for="primerApellido">Primer apellido <span class="obligatorio" aria-hidden="true">*</span></label>
+                <input id="primerApellido" class="campo" type="text" formControlName="primerApellido" autocomplete="family-name" aria-required="true"
+                  [attr.aria-invalid]="cuentaForm.controls.primerApellido.touched && cuentaForm.controls.primerApellido.invalid" />
+                @if (cuentaForm.controls.primerApellido.touched && cuentaForm.controls.primerApellido.invalid) {
+                  <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tu primer apellido.</small>
                 }
               </div>
               <div class="campo-bloque">
-                <label class="etiqueta" for="apellidos">Apellidos</label>
-                <input id="apellidos" class="campo" type="text" formControlName="apellidos" autocomplete="family-name" />
-                @if (cuentaForm.controls.apellidos.touched && cuentaForm.controls.apellidos.invalid) {
-                  <small class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ingresa tus apellidos.</small>
-                }
+                <label class="etiqueta" for="segundoApellido">Segundo apellido</label>
+                <input id="segundoApellido" class="campo" type="text" formControlName="segundoApellido" autocomplete="additional-name" />
               </div>
             </div>
             <div class="campo-bloque">
-              <label class="etiqueta" for="telefono">Teléfono <span class="opcional">(opcional)</span></label>
+              <label class="etiqueta" for="telefono">Teléfono</label>
               <span class="campo-grupo">
                 <i class="pi pi-phone" aria-hidden="true"></i>
                 <input
@@ -181,7 +188,7 @@
               </span>
             </div>
             <div class="campo-bloque">
-              <label class="etiqueta" for="contrasena">Contraseña</label>
+              <label class="etiqueta" for="contrasena">Contraseña <span class="obligatorio" aria-hidden="true">*</span></label>
               <span class="campo-grupo">
                 <i class="pi pi-lock" aria-hidden="true"></i>
                 <input
@@ -211,7 +218,7 @@
               }
             </div>
             <div class="campo-bloque">
-              <label class="etiqueta" for="confirmacion">Confirmar contraseña</label>
+              <label class="etiqueta" for="confirmacion">Confirmar contraseña <span class="obligatorio" aria-hidden="true">*</span></label>
               <span class="campo-grupo" [class.campo-grupo--error]="cuentaForm.controls.confirmacion.touched && contrasenasDistintas">
                 <i class="pi pi-lock" aria-hidden="true"></i>
                 <input

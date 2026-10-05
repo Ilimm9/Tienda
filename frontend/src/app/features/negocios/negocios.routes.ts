@@ -1,8 +1,12 @@
 import { Routes } from '@angular/router';
 
+import { permisoChildGuard } from '../../contexto/permiso.guard';
+import { PERMISOS } from '../../contexto/permisos';
+
 export const NEGOCIOS_ROUTES: Routes = [
   {
     path: '',
+    canActivateChild: [permisoChildGuard],
     data: { breadcrumb: 'Negocios' },
     children: [
       {
@@ -20,13 +24,13 @@ export const NEGOCIOS_ROUTES: Routes = [
       },
       {
         path: ':negocioId/editar',
-        data: { breadcrumb: 'Editar', title: 'Editar negocio' },
+        data: { breadcrumb: 'Editar', title: 'Editar negocio', permiso: PERMISOS.negocioEditar },
         loadComponent: () =>
           import('./negocio-form.component').then((module) => module.NegocioFormComponent),
       },
       {
         path: ':negocioId/sucursales',
-        data: { breadcrumb: 'Sucursales', title: 'Sucursales' },
+        data: { breadcrumb: 'Sucursales', title: 'Sucursales', permiso: PERMISOS.sucursalVer },
         children: [
           {
             path: '',
@@ -38,7 +42,7 @@ export const NEGOCIOS_ROUTES: Routes = [
           },
           {
             path: 'nueva',
-            data: { breadcrumb: 'Nueva', title: 'Nueva sucursal' },
+            data: { breadcrumb: 'Nueva', title: 'Nueva sucursal', permiso: PERMISOS.sucursalCrear },
             loadComponent: () =>
               import('../sucursales/sucursal-form.component').then(
                 (module) => module.SucursalFormComponent,
@@ -46,7 +50,7 @@ export const NEGOCIOS_ROUTES: Routes = [
           },
           {
             path: ':sucursalId/editar',
-            data: { breadcrumb: 'Editar', title: 'Editar sucursal' },
+            data: { breadcrumb: 'Editar', title: 'Editar sucursal', permiso: PERMISOS.sucursalEditar },
             loadComponent: () =>
               import('../sucursales/sucursal-form.component').then(
                 (module) => module.SucursalFormComponent,
@@ -64,7 +68,7 @@ export const NEGOCIOS_ROUTES: Routes = [
       },
       {
         path: ':negocioId',
-        data: { breadcrumb: 'Detalle', title: 'Datos del negocio' },
+        data: { breadcrumb: 'Detalle', title: 'Datos del negocio', permiso: PERMISOS.negocioVer },
         loadComponent: () =>
           import('./negocio-detalle.component').then((module) => module.NegocioDetalleComponent),
       },

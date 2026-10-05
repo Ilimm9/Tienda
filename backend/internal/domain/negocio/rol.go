@@ -46,11 +46,11 @@ func (p *PermisoRol) BeforeCreate(*gorm.DB) error {
 }
 
 type RolMembresia struct {
-	ID                  uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	MembresiaNegocioID  uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_roles_membresia_unico" json:"membresia_negocio_id"`
-	RolID               uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_roles_membresia_unico" json:"rol_id"`
+	ID                   uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	MembresiaNegocioID   uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_roles_membresia_unico" json:"membresia_negocio_id"`
+	RolID                uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_roles_membresia_unico" json:"rol_id"`
 	AsignadoPorUsuarioID *uuid.UUID `gorm:"type:uuid" json:"asignado_por_usuario_id,omitempty"`
-	AsignadoEn          time.Time  `gorm:"autoCreateTime" json:"asignado_en"`
+	AsignadoEn           time.Time  `gorm:"autoCreateTime" json:"asignado_en"`
 }
 
 func (RolMembresia) TableName() string { return "roles_membresia" }
@@ -104,9 +104,11 @@ type RolDetalle struct {
 
 // MiembroRoles describe los roles asignados a una membresía del negocio.
 type MiembroRoles struct {
-	MembresiaID uuid.UUID   `json:"membresia_id"`
-	UsuarioID   uuid.UUID   `json:"usuario_id"`
-	Correo      string      `json:"correo"`
+	MembresiaID uuid.UUID `json:"membresia_id"`
+	UsuarioID   uuid.UUID `json:"usuario_id"`
+	Correo      string    `json:"correo"`
+	// Nombre viene del empleado vinculado o, si no hay (propietario), del perfil de la cuenta; puede ir vacío.
+	Nombre      string      `json:"nombre"`
 	TipoMiembro string      `json:"tipo_miembro"`
 	Estado      string      `json:"estado"`
 	Roles       []uuid.UUID `json:"roles"`

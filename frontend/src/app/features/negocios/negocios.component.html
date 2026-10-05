@@ -103,7 +103,7 @@
           </dl>
           <div class="card-actions">
             <a class="primary-button" [routerLink]="['/negocios', business.id]">Ver negocio</a>
-            @if (business.tipo_miembro === 'propietario') {
+            @if (puedeEn(business, P.negocioArchivar)) {
               @if (business.estado === 'activo') {
                 <button
                   class="text-button danger-text"

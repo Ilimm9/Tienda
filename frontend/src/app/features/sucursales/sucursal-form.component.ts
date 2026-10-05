@@ -18,6 +18,7 @@ import {
   SucursalDetalle,
 } from './sucursal.models';
 import { SucursalService } from './sucursal.service';
+import { PERMISOS } from '../../contexto/permisos';
 
 @Component({
   selector: 'app-sucursal-form',
@@ -82,7 +83,7 @@ export class SucursalFormComponent {
     this.error.set(null);
     this.fieldErrors.set({});
     if (this.form.invalid || this.saving()) return;
-    if (this.business()?.tipo_miembro !== 'propietario') {
+    if (!this.contexto.puedeEn(this.negocioId, this.editing ? PERMISOS.sucursalEditar : PERMISOS.sucursalCrear, true)) {
       this.error.set('No tienes permiso para modificar sucursales.');
       return;
     }

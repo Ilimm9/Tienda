@@ -29,6 +29,11 @@ type invitacionRepositoryStub struct {
 	errorReemitir   error
 	errorEmpleado   error
 	errorHash       error
+	rolNoDelegable  bool
+}
+
+func (r *invitacionRepositoryStub) RolesDelegables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID, *uuid.UUID) (bool, error) {
+	return !r.rolNoDelegable, nil
 }
 
 func (r *invitacionRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UUID, uuid.UUID) (domain.ContextoNegocioSucursal, error) {
@@ -108,14 +113,14 @@ func entradaInvitacion(repository *invitacionRepositoryStub) domain.CrearInvitac
 }
 
 type registroCuentaStub struct {
-	nombres, apellidos, correo string
-	llamadas                   int
-	err                        error
+	nombres, primerApellido, segundoApellido, correo string
+	llamadas                                         int
+	err                                              error
 }
 
-func (r *registroCuentaStub) RegistrarCuentaPendiente(_ context.Context, nombres, apellidos, correo, _, _, _ string) (DesafioRegistro, error) {
+func (r *registroCuentaStub) RegistrarCuentaPendiente(_ context.Context, nombres, primerApellido, segundoApellido, correo, _, _, _ string) (DesafioRegistro, error) {
 	r.llamadas++
-	r.nombres, r.apellidos, r.correo = nombres, apellidos, correo
+	r.nombres, r.primerApellido, r.segundoApellido, r.correo = nombres, primerApellido, segundoApellido, correo
 	return DesafioRegistro{DesafioID: uuid.New(), CorreoEnmascarado: "a***@tienda.mx", ReenviarEnSegundos: 60}, r.err
 }
 
@@ -477,12 +482,12 @@ func TestInvitacionServiceRegistrarUsaElCorreoDeLaInvitacion(t *testing.T) {
 	service := NewInvitacionService(repository, nil, registro)
 
 	desafio, err := service.Registrar(context.Background(), "token-en-claro",
-		domain.RegistroInvitacionInput{Nombres: " María José ", Apellidos: "Ruiz Luna", Contrasena: "contrasena-segura"}, "127.0.0.1")
+		domain.RegistroInvitacionInput{Nombres: " María José ", PrimerApellido: " Ruiz ", SegundoApellido: "Luna", Contrasena: "contrasena-segura"}, "127.0.0.1")
 
 	if err != nil {
 		t.Fatalf("error inesperado: %v", err)
 	}
-	if registro.correo != "ana@tienda.mx" || registro.nombres != "María José" || registro.apellidos != "Ruiz Luna" {
+	if registro.correo != "ana@tienda.mx" || registro.nombres != "María José" || registro.primerApellido != "Ruiz" || registro.segundoApellido != "Luna" {
 		t.Fatalf("el registro debe tomar el correo de la invitación: %#v", registro)
 	}
 	if desafio.DesafioID == uuid.Nil || repository.aceptoLlamado {
@@ -500,7 +505,7 @@ func TestInvitacionServiceRegistrarValidaDatos(t *testing.T) {
 		domain.RegistroInvitacionInput{Nombres: "Ana", Contrasena: "corta"}, "127.0.0.1")
 
 	var validacion *ErrorValidacion
-	if !errors.As(err, &validacion) || validacion.Campos["apellidos"] == "" || validacion.Campos["contrasena"] == "" || registro.llamadas != 0 {
+	if !errors.As(err, &validacion) || validacion.Campos["primer_apellido"] == "" || validacion.Campos["contrasena"] == "" || registro.llamadas != 0 {
 		t.Fatalf("apellidos y contraseña deben validarse antes de crear la cuenta: %v", err)
 	}
 }
@@ -513,7 +518,7 @@ func TestInvitacionServiceRegistrarRechazaCuentaExistente(t *testing.T) {
 	service := NewInvitacionService(repository, nil, registro)
 
 	_, err := service.Registrar(context.Background(), "token-en-claro",
-		domain.RegistroInvitacionInput{Nombres: "Ana", Apellidos: "Ruiz", Contrasena: "contrasena-segura"}, "127.0.0.1")
+		domain.RegistroInvitacionInput{Nombres: "Ana", PrimerApellido: "Ruiz", Contrasena: "contrasena-segura"}, "127.0.0.1")
 
 	if !errors.Is(err, ErrInvitacionCuentaExistente) || registro.llamadas != 0 {
 		t.Fatalf("una cuenta verificada inicia sesión, no se registra de nuevo: %v", err)
@@ -528,9 +533,21 @@ func TestInvitacionServiceRegistrarRechazaTokenVencido(t *testing.T) {
 	service := NewInvitacionService(repository, nil, registro)
 
 	_, err := service.Registrar(context.Background(), "token-en-claro",
-		domain.RegistroInvitacionInput{Nombres: "Ana", Apellidos: "Ruiz", Contrasena: "contrasena-segura"}, "127.0.0.1")
+		domain.RegistroInvitacionInput{Nombres: "Ana", PrimerApellido: "Ruiz", Contrasena: "contrasena-segura"}, "127.0.0.1")
 
 	if !errors.Is(err, ErrInvitacionNoVigente) || registro.llamadas != 0 {
 		t.Fatalf("un enlace vencido no crea cuentas: %v", err)
+	}
+}
+
+func TestInvitacionServiceCrearRechazaRolConPermisosQueElEmisorNoTiene(t *testing.T) {
+	repository := invitacionStub(domain.PermisoInvitacionEnviar)
+	repository.rolNoDelegable = true
+	service := NewInvitacionService(repository, nil, nil)
+
+	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), entradaInvitacion(repository))
+
+	if !errors.Is(err, ErrRolNoDelegable) || repository.creada.HashToken != "" {
+		t.Fatalf("no debe emitirse una invitación con un rol que el emisor no puede otorgar: %v", err)
 	}
 }

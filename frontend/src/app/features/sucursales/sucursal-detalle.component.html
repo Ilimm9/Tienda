@@ -21,7 +21,7 @@
         @if (
           current.estado === 'activo' &&
           business()?.estado === 'activo' &&
-          current.tipo_miembro === 'propietario'
+          puede(P.sucursalEditar)
         ) {
           <a class="primary-button" [routerLink]="['editar']">
             <i class="pi pi-pencil" aria-hidden="true"></i>
@@ -114,7 +114,7 @@
           }
         </section>
 
-        @if (current.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
+        @if (puede(P.sucursalArchivar) && business()?.estado === 'activo') {
           <section class="danger-zone surface-card">
             <div>
               <h2>

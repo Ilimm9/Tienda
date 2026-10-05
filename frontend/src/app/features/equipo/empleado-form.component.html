@@ -51,11 +51,12 @@
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="nombre">Nombre</label>
+              <label class="text-[13px] font-semibold text-ink" for="nombre">Nombre <span class="text-danger" aria-hidden="true">*</span></label>
               <input
                 id="nombre"
                 type="text"
                 formControlName="nombre"
+                aria-required="true"
                 autocomplete="given-name"
                 placeholder="Laura"
                 [attr.aria-invalid]="hasError('nombre')"
@@ -64,28 +65,34 @@
               />
               @if (hasError('nombre')) {
                 <small id="nombre-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['nombre'] || 'Usa entre 2 y 100 caracteres.' }}
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('nombre') }}
                 </small>
               }
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="segundo_nombre">
-                Segundo nombre <span class="font-normal text-muted">(opcional)</span>
-              </label>
+              <label class="text-[13px] font-semibold text-ink" for="segundo_nombre">Segundo nombre</label>
               <input
                 id="segundo_nombre"
                 type="text"
                 formControlName="segundo_nombre"
+                [attr.aria-invalid]="hasError('segundo_nombre')"
+                [attr.aria-describedby]="hasError('segundo_nombre') ? 'segundo-nombre-error' : null"
                 autocomplete="additional-name"
-                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
               />
+              @if (hasError('segundo_nombre')) {
+                <small id="segundo-nombre-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('segundo_nombre') }}
+                </small>
+              }
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="primer_apellido">Primer apellido</label>
+              <label class="text-[13px] font-semibold text-ink" for="primer_apellido">Primer apellido <span class="text-danger" aria-hidden="true">*</span></label>
               <input
                 id="primer_apellido"
                 type="text"
                 formControlName="primer_apellido"
+                aria-required="true"
                 autocomplete="family-name"
                 placeholder="Ortega"
                 [attr.aria-invalid]="hasError('primer_apellido')"
@@ -94,20 +101,25 @@
               />
               @if (hasError('primer_apellido')) {
                 <small id="primer-apellido-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['primer_apellido'] || 'Usa entre 2 y 100 caracteres.' }}
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('primer_apellido') }}
                 </small>
               }
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="segundo_apellido">
-                Segundo apellido <span class="font-normal text-muted">(opcional)</span>
-              </label>
+              <label class="text-[13px] font-semibold text-ink" for="segundo_apellido">Segundo apellido</label>
               <input
                 id="segundo_apellido"
                 type="text"
                 formControlName="segundo_apellido"
-                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line"
+                [attr.aria-invalid]="hasError('segundo_apellido')"
+                [attr.aria-describedby]="hasError('segundo_apellido') ? 'segundo-apellido-error' : null"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
               />
+              @if (hasError('segundo_apellido')) {
+                <small id="segundo-apellido-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('segundo_apellido') }}
+                </small>
+              }
             </div>
           </div>
         </fieldset>
@@ -128,9 +140,7 @@
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="correo">
-                Correo <span class="font-normal text-muted">(opcional)</span>
-              </label>
+              <label class="text-[13px] font-semibold text-ink" for="correo">Correo</label>
               <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
                 <i class="pi pi-envelope text-[15px]" aria-hidden="true"></i>
                 <input
@@ -144,29 +154,34 @@
                   class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
                 />
               </span>
-              @if (fieldErrors()['correo']) {
+              @if (hasError('correo')) {
                 <small id="correo-ayuda" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['correo'] }}
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('correo') }}
                 </small>
               } @else {
                 <small id="correo-ayuda" class="text-[12.5px] text-muted">Sin correo no se le puede invitar.</small>
               }
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label class="text-[13px] font-semibold text-ink" for="telefono">
-                Teléfono <span class="font-normal text-muted">(opcional)</span>
-              </label>
-              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+              <label class="text-[13px] font-semibold text-ink" for="telefono">Teléfono</label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
                 <i class="pi pi-phone text-[15px]" aria-hidden="true"></i>
                 <input
                   id="telefono"
                   type="tel"
                   formControlName="telefono"
+                  [attr.aria-invalid]="hasError('telefono')"
+                  [attr.aria-describedby]="hasError('telefono') ? 'telefono-error' : null"
                   autocomplete="tel"
                   placeholder="55 1234 5678"
                   class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
                 />
               </span>
+              @if (hasError('telefono')) {
+                <small id="telefono-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('telefono') }}
+                </small>
+              }
             </div>
           </div>
         </fieldset>
@@ -180,7 +195,7 @@
               </span>
               <span>
                 <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Datos laborales</span>
-                <span class="mt-0.5 block text-[13px] text-muted">Todo es opcional y se puede completar después.</span>
+                <span class="mt-0.5 block text-[13px] text-muted">Se puede completar después.</span>
               </span>
             </span>
           </legend>
@@ -188,17 +203,24 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-1.5">
               <label class="text-[13px] font-semibold text-ink" for="puesto">Puesto</label>
-              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
                 <i class="pi pi-id-card text-[15px]" aria-hidden="true"></i>
                 <input
                   id="puesto"
                   type="text"
                   formControlName="puesto"
+                  [attr.aria-invalid]="hasError('puesto')"
+                  [attr.aria-describedby]="hasError('puesto') ? 'puesto-error' : null"
                   autocomplete="organization-title"
                   placeholder="Cajera, almacenista…"
                   class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
                 />
               </span>
+              @if (hasError('puesto')) {
+                <small id="puesto-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('puesto') }}
+                </small>
+              }
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
               <label class="text-[13px] font-semibold text-ink" for="numero_empleado">Número interno</label>
@@ -215,9 +237,9 @@
                   class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
                 />
               </span>
-              @if (fieldErrors()['numero_empleado']) {
+              @if (hasError('numero_empleado')) {
                 <small id="numero-ayuda" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['numero_empleado'] }}
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('numero_empleado') }}
                 </small>
               } @else {
                 <small id="numero-ayuda" class="text-[12.5px] text-muted">Único dentro del negocio.</small>
@@ -225,18 +247,20 @@
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
               <label class="text-[13px] font-semibold text-ink" for="contratado_en">Fecha de contratación</label>
-              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
                 <i class="pi pi-calendar text-[15px]" aria-hidden="true"></i>
                 <input
                   id="contratado_en"
                   type="date"
                   formControlName="contratado_en"
+                  [attr.aria-invalid]="hasError('contratado_en')"
+                  [attr.aria-describedby]="hasError('contratado_en') ? 'contratado-error' : null"
                   class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none"
                 />
               </span>
-              @if (fieldErrors()['contratado_en']) {
-                <small class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['contratado_en'] }}
+              @if (hasError('contratado_en')) {
+                <small id="contratado-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ mensaje('contratado_en') }}
                 </small>
               }
             </div>
@@ -244,7 +268,7 @@
         </fieldset>
 
         <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ground px-5 py-3.5 sm:px-7">
-          <span class="text-[12.5px] text-muted">Los campos sin «(opcional)» son obligatorios.</span>
+          <span class="text-[12.5px] text-muted">Los campos con <span class="text-danger" aria-hidden="true">*</span> son obligatorios.</span>
           <div class="flex flex-wrap items-center gap-2.5">
             <a
               class="inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"

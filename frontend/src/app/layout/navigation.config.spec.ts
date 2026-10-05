@@ -1,4 +1,4 @@
-import { NAVIGATION_ITEMS } from './navigation.config';
+import { filtrarNavegacion, NAVIGATION_ITEMS } from './navigation.config';
 
 describe('NAVIGATION_ITEMS', () => {
   it('contains every administrative destination', () => {
@@ -17,6 +17,8 @@ describe('NAVIGATION_ITEMS', () => {
       '/catalogo/categorias',
       '/catalogo/unidades-medida',
       '/proveedores',
+      '/compras',
+      '/precios/validaciones',
       '/equipo/empleados',
       '/equipo/invitaciones',
       '/roles-permisos',
@@ -29,5 +31,21 @@ describe('NAVIGATION_ITEMS', () => {
 
     expect(catalogo?.children?.some((item) => item.label === 'Proveedores')).toBe(false);
     expect(proveedores).toMatchObject({ route: '/proveedores', icon: 'pi pi-truck' });
+  });
+
+  it('oculta lo que el rol no permite y retira los grupos vacíos', () => {
+    const otorgados = ['catalogo.ver', 'equipo.invitaciones.ver'];
+    const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (permiso) =>
+      [permiso ?? []].flat().every((codigo) => otorgados.includes(codigo)),
+    );
+
+    expect(visibles.map((item) => item.label)).toEqual([
+      'Inicio', 'Negocios', 'Ventas', 'Catálogo', 'Proveedores', 'Equipo',
+    ]);
+    expect(visibles.find((item) => item.label === 'Equipo')?.children?.map((item) => item.label)).toEqual(['Invitaciones']);
+  });
+
+  it('muestra todo el menú con todos los permisos', () => {
+    expect(filtrarNavegacion(NAVIGATION_ITEMS, () => true)).toHaveLength(NAVIGATION_ITEMS.length);
   });
 });

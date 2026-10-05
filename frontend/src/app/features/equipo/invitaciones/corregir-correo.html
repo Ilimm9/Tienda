@@ -83,7 +83,7 @@
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-semibold text-ink" for="nuevo">Correo nuevo</label>
+          <label class="text-[13px] font-semibold text-ink" for="nuevo">Correo nuevo <span class="text-danger" aria-hidden="true">*</span></label>
           <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
             <i class="pi pi-envelope text-[15px]" aria-hidden="true"></i>
             <input
@@ -93,6 +93,7 @@
               autocomplete="off"
               placeholder="nombre@correo.mx"
               class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+              aria-required="true"
               [attr.aria-invalid]="correoConError"
               [attr.aria-describedby]="correoConError ? 'nuevo-error' : null"
             />
@@ -105,11 +106,15 @@
             <small id="nuevo-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
               <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>Es el mismo correo. Para conservarlo usa «Reenviar».
             </small>
+          } @else if (correoRechazado) {
+            <small id="nuevo-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger" role="alert">
+              <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ rechazo()?.mensaje }}
+            </small>
           }
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-semibold text-ink" for="confirmacion">Confirmar correo nuevo</label>
+          <label class="text-[13px] font-semibold text-ink" for="confirmacion">Confirmar correo nuevo <span class="text-danger" aria-hidden="true">*</span></label>
           <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
             <i class="pi pi-envelope text-[15px]" aria-hidden="true"></i>
             <input
@@ -119,6 +124,7 @@
               autocomplete="off"
               placeholder="Escríbelo otra vez"
               class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+              aria-required="true"
               [attr.aria-invalid]="confirmacionConError"
               [attr.aria-describedby]="confirmacionConError ? 'confirmacion-error' : null"
             />

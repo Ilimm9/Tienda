@@ -95,12 +95,33 @@ func (h *ProductHandler) Branches(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El negocioId no es válido"})
 		return
 	}
+	usuarioID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
 	items, err := h.products.ListBranches(businessID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las sucursales"})
 		return
 	}
-	c.JSON(http.StatusOK, items)
+	// Un miembro solo recibe las sucursales donde tiene asignación vigente.
+	accesibles, err := h.contexto.SucursalesAccesibles(c.Request.Context(), usuarioID, businessID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las sucursales"})
+		return
+	}
+	permitidas := make(map[uuid.UUID]struct{}, len(accesibles))
+	for _, id := range accesibles {
+		permitidas[id] = struct{}{}
+	}
+	visibles := make([]domain.CatalogOption, 0, len(items))
+	for _, item := range items {
+		if _, ok := permitidas[item.ID]; ok {
+			visibles = append(visibles, item)
+		}
+	}
+	c.JSON(http.StatusOK, visibles)
 }
 
 func (h *ProductHandler) Create(c *gin.Context) {
@@ -173,7 +194,12 @@ func parseID(c *gin.Context, name string) (uuid.UUID, bool) {
 }
 
 func (h *ProductHandler) sucursalActiva(c *gin.Context, negocioID, sucursalID uuid.UUID) bool {
-	if err := h.contexto.ValidarSucursalActiva(c.Request.Context(), negocioID, sucursalID); err != nil {
+	usuarioID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return false
+	}
+	if err := h.contexto.ValidarSucursalActiva(c.Request.Context(), usuarioID, negocioID, sucursalID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"mensaje": "No fue posible encontrar la sucursal solicitada"})
 		return false
 	}

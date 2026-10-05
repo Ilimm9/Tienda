@@ -28,6 +28,8 @@ export interface MiembroRoles {
   membresia_id: string;
   usuario_id: string;
   correo: string;
+  /** Nombre del empleado vinculado o del perfil; vacío si no hay ninguno. */
+  nombre: string;
   tipo_miembro: 'propietario' | 'miembro';
   estado: string;
   roles: string[];

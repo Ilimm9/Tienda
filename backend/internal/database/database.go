@@ -44,6 +44,9 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseFive(db); err != nil {
 		return err
 	}
+	if err := cuentainfra.MigratePerfilApellidos(db); err != nil {
+		return err
+	}
 
 	models := []interface{}{
 		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &cuentadomain.SesionUsuario{}, &cuentadomain.DesafioAutenticacion{},
@@ -89,6 +92,9 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := negocioinfra.MigrateInvitacionSucursal(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigrateEmpleadoCorreoUnico(db); err != nil {
 		return err
 	}
 

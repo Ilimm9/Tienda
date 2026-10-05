@@ -26,9 +26,42 @@ label {
   font-weight: 600;
 }
 
-.optional {
-  color: var(--text-subtle);
-  font-weight: 400;
+.required {
+  color: var(--danger);
+}
+
+.required-note {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 420px) {
+  .name-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.field-wrap--plain .register-input {
+  padding-left: 14px;
+}
+
+.inline-link {
+  padding: 0;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .field-wrap,
