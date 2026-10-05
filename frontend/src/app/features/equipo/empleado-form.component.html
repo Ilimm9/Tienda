@@ -1,102 +1,328 @@
-<section class="team-page">
-  <header class="page-heading">
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
+  <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <span class="eyebrow">Equipo</span>
-      <h1>{{ editing ? 'Editar empleado' : 'Nuevo empleado' }}</h1>
-      <p>Un empleado puede registrarse antes de tener cuenta en la plataforma.</p>
+      <p class="m-0 text-[13px] text-muted">Equipo · Empleados</p>
+      <h1 class="m-0 mt-1 text-3xl font-bold tracking-[-0.035em] text-ink">
+        {{ editing ? 'Editar empleado' : 'Nuevo empleado' }}
+      </h1>
+      <p class="m-0 mt-1.5 text-muted">
+        Un empleado puede registrarse antes de tener cuenta en la plataforma.
+      </p>
     </div>
-    <a class="secondary-button" routerLink="/equipo/empleados">Volver</a>
+    <a
+      class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+      routerLink="/equipo/empleados"
+    >
+      <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>Volver a empleados
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+    </p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando empleado…</p>
+    <p class="m-0 p-8 text-center text-muted" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleado…
+    </p>
   } @else {
-    <form class="team-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field-row">
-        <div class="field">
-          <label for="numero_empleado">Número interno</label>
-          <input id="numero_empleado" type="text" formControlName="numero_empleado" autocomplete="off" />
-          @if (fieldErrors()['numero_empleado']) {
-            <small class="error">{{ fieldErrors()['numero_empleado'] }}</small>
-          } @else {
-            <small>Opcional. Debe ser único dentro del negocio.</small>
-          }
-        </div>
-        <div class="field">
-          <label for="puesto">Puesto</label>
-          <input id="puesto" type="text" formControlName="puesto" />
-        </div>
-      </div>
+    <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+      <form
+        class="overflow-hidden rounded-2xl border border-line bg-surface"
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        novalidate
+      >
+        <!-- Datos personales -->
+        <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 px-5 py-6 sm:px-7">
+          <legend class="contents">
+            <span class="flex items-start gap-3">
+              <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true">
+                <i class="pi pi-user"></i>
+              </span>
+              <span>
+                <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Datos personales</span>
+                <span class="mt-0.5 block text-[13px] text-muted">Como aparece en su identificación.</span>
+              </span>
+            </span>
+          </legend>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="nombre">Nombre</label>
-          <input id="nombre" type="text" formControlName="nombre" [attr.aria-invalid]="hasError('nombre')" />
-          @if (hasError('nombre')) {
-            <small class="error">{{ fieldErrors()['nombre'] || 'Usa entre 2 y 100 caracteres.' }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="segundo_nombre">Segundo nombre</label>
-          <input id="segundo_nombre" type="text" formControlName="segundo_nombre" />
-        </div>
-      </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="nombre">Nombre</label>
+              <input
+                id="nombre"
+                type="text"
+                formControlName="nombre"
+                autocomplete="given-name"
+                placeholder="Laura"
+                [attr.aria-invalid]="hasError('nombre')"
+                [attr.aria-describedby]="hasError('nombre') ? 'nombre-error' : null"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
+              />
+              @if (hasError('nombre')) {
+                <small id="nombre-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['nombre'] || 'Usa entre 2 y 100 caracteres.' }}
+                </small>
+              }
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="segundo_nombre">
+                Segundo nombre <span class="font-normal text-muted">(opcional)</span>
+              </label>
+              <input
+                id="segundo_nombre"
+                type="text"
+                formControlName="segundo_nombre"
+                autocomplete="additional-name"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line"
+              />
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="primer_apellido">Primer apellido</label>
+              <input
+                id="primer_apellido"
+                type="text"
+                formControlName="primer_apellido"
+                autocomplete="family-name"
+                placeholder="Ortega"
+                [attr.aria-invalid]="hasError('primer_apellido')"
+                [attr.aria-describedby]="hasError('primer_apellido') ? 'primer-apellido-error' : null"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line aria-[invalid=true]:border-danger aria-[invalid=true]:ring-3 aria-[invalid=true]:ring-danger-soft"
+              />
+              @if (hasError('primer_apellido')) {
+                <small id="primer-apellido-error" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['primer_apellido'] || 'Usa entre 2 y 100 caracteres.' }}
+                </small>
+              }
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="segundo_apellido">
+                Segundo apellido <span class="font-normal text-muted">(opcional)</span>
+              </label>
+              <input
+                id="segundo_apellido"
+                type="text"
+                formControlName="segundo_apellido"
+                class="h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-subtle hover:border-muted focus:border-primary focus:ring-3 focus:ring-primary-line"
+              />
+            </div>
+          </div>
+        </fieldset>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="primer_apellido">Primer apellido</label>
-          <input
-            id="primer_apellido"
-            type="text"
-            formControlName="primer_apellido"
-            [attr.aria-invalid]="hasError('primer_apellido')"
-          />
-          @if (hasError('primer_apellido')) {
-            <small class="error">{{
-              fieldErrors()['primer_apellido'] || 'Usa entre 2 y 100 caracteres.'
-            }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="segundo_apellido">Segundo apellido</label>
-          <input id="segundo_apellido" type="text" formControlName="segundo_apellido" />
-        </div>
-      </div>
+        <!-- Contacto -->
+        <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 border-t border-solid border-line-soft px-5 py-6 sm:px-7">
+          <legend class="contents">
+            <span class="flex items-start gap-3">
+              <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true">
+                <i class="pi pi-envelope"></i>
+              </span>
+              <span>
+                <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Contacto</span>
+                <span class="mt-0.5 block text-[13px] text-muted">El correo se usa para invitarlo a crear su acceso.</span>
+              </span>
+            </span>
+          </legend>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="correo">Correo</label>
-          <input id="correo" type="email" formControlName="correo" [attr.aria-invalid]="hasError('correo')" />
-          @if (fieldErrors()['correo']) {
-            <small class="error">{{ fieldErrors()['correo'] }}</small>
-          } @else {
-            <small>Se usará para invitarlo cuando corresponda.</small>
-          }
-        </div>
-        <div class="field">
-          <label for="telefono">Teléfono</label>
-          <input id="telefono" type="tel" formControlName="telefono" />
-        </div>
-      </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="correo">
+                Correo <span class="font-normal text-muted">(opcional)</span>
+              </label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
+                <i class="pi pi-envelope text-[15px]" aria-hidden="true"></i>
+                <input
+                  id="correo"
+                  type="email"
+                  formControlName="correo"
+                  autocomplete="email"
+                  placeholder="nombre@correo.mx"
+                  aria-describedby="correo-ayuda"
+                  [attr.aria-invalid]="hasError('correo')"
+                  class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+                />
+              </span>
+              @if (fieldErrors()['correo']) {
+                <small id="correo-ayuda" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['correo'] }}
+                </small>
+              } @else {
+                <small id="correo-ayuda" class="text-[12.5px] text-muted">Sin correo no se le puede invitar.</small>
+              }
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="telefono">
+                Teléfono <span class="font-normal text-muted">(opcional)</span>
+              </label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+                <i class="pi pi-phone text-[15px]" aria-hidden="true"></i>
+                <input
+                  id="telefono"
+                  type="tel"
+                  formControlName="telefono"
+                  autocomplete="tel"
+                  placeholder="55 1234 5678"
+                  class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+                />
+              </span>
+            </div>
+          </div>
+        </fieldset>
 
-      <div class="field">
-        <label for="contratado_en">Fecha de contratación</label>
-        <input id="contratado_en" type="date" formControlName="contratado_en" />
-        @if (fieldErrors()['contratado_en']) {
-          <small class="error">{{ fieldErrors()['contratado_en'] }}</small>
-        }
-      </div>
+        <!-- Datos laborales -->
+        <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 border-t border-solid border-line-soft px-5 py-6 sm:px-7">
+          <legend class="contents">
+            <span class="flex items-start gap-3">
+              <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-sage text-success" aria-hidden="true">
+                <i class="pi pi-briefcase"></i>
+              </span>
+              <span>
+                <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Datos laborales</span>
+                <span class="mt-0.5 block text-[13px] text-muted">Todo es opcional y se puede completar después.</span>
+              </span>
+            </span>
+          </legend>
 
-      <footer class="form-actions">
-        <a class="secondary-button" routerLink="/equipo/empleados">Cancelar</a>
-        <button type="submit" class="primary-button" [disabled]="saving()">
-          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar empleado' }}
-        </button>
-      </footer>
-    </form>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="puesto">Puesto</label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+                <i class="pi pi-id-card text-[15px]" aria-hidden="true"></i>
+                <input
+                  id="puesto"
+                  type="text"
+                  formControlName="puesto"
+                  autocomplete="organization-title"
+                  placeholder="Cajera, almacenista…"
+                  class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+                />
+              </span>
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="numero_empleado">Número interno</label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-danger-soft">
+                <i class="pi pi-hashtag text-[15px]" aria-hidden="true"></i>
+                <input
+                  id="numero_empleado"
+                  type="text"
+                  formControlName="numero_empleado"
+                  autocomplete="off"
+                  placeholder="EMP-001"
+                  aria-describedby="numero-ayuda"
+                  [attr.aria-invalid]="hasError('numero_empleado')"
+                  class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-subtle"
+                />
+              </span>
+              @if (fieldErrors()['numero_empleado']) {
+                <small id="numero-ayuda" class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['numero_empleado'] }}
+                </small>
+              } @else {
+                <small id="numero-ayuda" class="text-[12.5px] text-muted">Único dentro del negocio.</small>
+              }
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="contratado_en">Fecha de contratación</label>
+              <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface px-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+                <i class="pi pi-calendar text-[15px]" aria-hidden="true"></i>
+                <input
+                  id="contratado_en"
+                  type="date"
+                  formControlName="contratado_en"
+                  class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink outline-none"
+                />
+              </span>
+              @if (fieldErrors()['contratado_en']) {
+                <small class="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
+                  <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>{{ fieldErrors()['contratado_en'] }}
+                </small>
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ground px-5 py-3.5 sm:px-7">
+          <span class="text-[12.5px] text-muted">Los campos sin «(opcional)» son obligatorios.</span>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <a
+              class="inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+              routerLink="/equipo/empleados"
+            >
+              Cancelar
+            </a>
+            <button
+              type="submit"
+              class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
+              [disabled]="saving()"
+              [attr.aria-busy]="saving()"
+            >
+              <i
+                class="pi"
+                [class.pi-check]="!saving()"
+                [class.pi-spinner]="saving()"
+                [class.pi-spin]="saving()"
+                aria-hidden="true"
+              ></i>
+              {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar empleado' }}
+            </button>
+          </div>
+        </footer>
+      </form>
+
+      <aside class="flex flex-col gap-3.5 lg:sticky lg:top-6" aria-label="Vista previa">
+        <section class="rounded-2xl border border-primary-line bg-primary-tint p-5.5">
+          <p class="m-0 text-[11.5px] font-bold tracking-[0.07em] text-primary-hover uppercase">Vista previa</p>
+          <div class="mt-4 flex items-center gap-3.5">
+            <span class="grid size-14 shrink-0 place-items-center rounded-full bg-primary text-lg font-bold text-white" aria-hidden="true">
+              {{ inicialesVista() }}
+            </span>
+            <div class="min-w-0">
+              <p class="m-0 truncate text-lg font-bold tracking-[-0.02em] text-ink">
+                {{ nombreVista() || 'Nombre del empleado' }}
+              </p>
+              <p class="m-0 truncate text-[13px] text-muted">{{ puestoVista() || 'Sin puesto' }}</p>
+            </div>
+          </div>
+          <dl class="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-primary-line pt-3.5 text-[13px]">
+            <dt class="text-muted">Correo</dt>
+            <dd class="m-0 truncate font-semibold text-ink">{{ correoVista() || '—' }}</dd>
+            <dt class="text-muted">Teléfono</dt>
+            <dd class="m-0 truncate font-semibold text-ink">{{ telefonoVista() || '—' }}</dd>
+            <dt class="text-muted">Número</dt>
+            <dd class="m-0 truncate font-semibold text-ink">{{ numeroVista() || '—' }}</dd>
+          </dl>
+          <p class="m-0 mt-4 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-body">
+            <span class="size-1.5 rounded-full bg-subtle" aria-hidden="true"></span>
+            {{ empleado()?.tiene_cuenta ? 'Cuenta vinculada' : 'Sin cuenta todavía' }}
+          </p>
+        </section>
+
+        <section class="rounded-2xl border border-line bg-surface p-5.5">
+          <h2 class="m-0 text-[15px] font-bold tracking-[-0.01em] text-ink">Qué sigue</h2>
+          <ol class="m-0 mt-3.5 flex list-none flex-col gap-3 p-0">
+            <li class="flex gap-3">
+              <span class="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary-hover">1</span>
+              <span class="text-[13px] text-body">
+                <strong class="block text-ink">Asigna sucursales</strong>Define dónde trabaja desde su ficha.
+              </span>
+            </li>
+            <li class="flex gap-3">
+              <span class="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary-hover">2</span>
+              <span class="text-[13px] text-body">
+                <strong class="block text-ink">Invítalo a la plataforma</strong>Con correo registrado, le llega un enlace válido 72 horas.
+              </span>
+            </li>
+            <li class="flex gap-3">
+              <span class="grid size-6 shrink-0 place-items-center rounded-full bg-sage text-xs font-bold text-sage-text">3</span>
+              <span class="text-[13px] text-body">
+                <strong class="block text-ink">Ajusta sus permisos</strong>Desde Roles y permisos, cuando ya tenga cuenta.
+              </span>
+            </li>
+          </ol>
+        </section>
+      </aside>
+    </div>
   }
 </section>

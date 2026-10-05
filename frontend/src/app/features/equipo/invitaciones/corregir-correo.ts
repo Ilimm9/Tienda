@@ -7,6 +7,7 @@ import { ContextoService } from '../../../contexto/contexto.service';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { InvitacionResumen } from '../invitacion.models';
 import { InvitacionService } from '../invitacion.service';
+import { iniciales } from '../presentacion';
 
 interface EnlaceEmitido {
   enlace: string;
@@ -18,7 +19,6 @@ interface EnlaceEmitido {
   selector: 'app-corregir-correo',
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './corregir-correo.html',
-  styleUrls: ['./invitaciones-tema.css', './corregir-correo.css'],
 })
 export class CorregirCorreo {
   private readonly invitacionService = inject(InvitacionService);
@@ -62,9 +62,7 @@ export class CorregirCorreo {
   /** Iniciales del empleado invitado para la cabecera del diálogo. */
   iniciales(): string {
     const datos = this.invitacion();
-    const partes = (datos?.nombre_empleado ?? '').trim().split(/\s+/).filter(Boolean);
-    if (partes.length) return partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase();
-    return (datos?.correo ?? '?').charAt(0).toUpperCase();
+    return iniciales(datos?.nombre_empleado, datos?.correo ?? '');
   }
 
   get sinCambio(): boolean {

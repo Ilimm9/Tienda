@@ -9,6 +9,7 @@ import { FechaMexicoPipe } from '../../../shared/fecha-mexico.pipe';
 import { RolService } from '../../roles-permisos/rol.service';
 import { FiltroInvitaciones, InvitacionResumen } from '../invitacion.models';
 import { InvitacionService } from '../invitacion.service';
+import { iniciales } from '../presentacion';
 
 type Vista = 'sin_aceptar' | 'todas' | 'aceptada' | 'cancelada';
 type TonoAvatar = 'lavanda' | 'salvia' | 'neutro';
@@ -25,7 +26,6 @@ const HORA_MS = 60 * 60 * 1000;
   selector: 'app-invitaciones',
   imports: [FechaMexicoPipe, RouterLink],
   templateUrl: './invitaciones.html',
-  styleUrls: ['./invitaciones-tema.css', './invitaciones.css'],
 })
 export class Invitaciones {
   private readonly invitacionService = inject(InvitacionService);
@@ -78,9 +78,7 @@ export class Invitaciones {
 
   /** Iniciales del nombre del empleado; sin nombre, la primera letra del correo. */
   iniciales(invitacion: InvitacionResumen): string {
-    const partes = (invitacion.nombre_empleado ?? '').trim().split(/\s+/).filter(Boolean);
-    if (partes.length) return partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase();
-    return invitacion.correo.charAt(0).toUpperCase();
+    return iniciales(invitacion.nombre_empleado, invitacion.correo);
   }
 
   /** Lavanda para pendientes, salvia para aceptadas y neutro para las cerradas sin aceptar. */

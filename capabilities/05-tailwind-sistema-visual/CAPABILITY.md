@@ -1,4 +1,4 @@
-# Capability 05: Tailwind y sistema visual
+si # Capability 05: Tailwind y sistema visual
 
 ## Estado
 
@@ -108,4 +108,3 @@ Integrar Tailwind CSS 4 en el frontend Angular como capa de utilidades, conserva
 - 2026-09-18: se conserva `data-theme` porque ya coordina CSS propio, `ThemeService` y PrimeNG.
 - 2026-09-18: se propone adopción incremental, no reescritura completa de casi 5,000 líneas CSS.
 - 2026-09-18: implementación detenida hasta aprobación explícita.
-

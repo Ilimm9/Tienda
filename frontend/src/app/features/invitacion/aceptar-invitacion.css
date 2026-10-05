@@ -2,6 +2,21 @@
   display: flex;
   min-height: 100dvh;
   flex-direction: column;
+  color: var(--text);
+  background: var(--background);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+a:not(.boton):not(.barra__marca) {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a:not(.boton):not(.barra__marca):hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
 }
 
 /* Topbar mínima: misma marca índigo del panel, sin menú ni cuenta. */

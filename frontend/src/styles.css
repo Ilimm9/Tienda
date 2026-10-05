@@ -1,3 +1,6 @@
+/* Tailwind 4 sin Preflight: solo variables de tema (en capa) y utilities al final del archivo.
+   El reset de Preflight rompería PrimeNG, SweetAlert2 y los estilos base. Ver capability 05. */
+@import 'tailwindcss/theme.css' layer(theme);
 @import '@fontsource-variable/inter';
 @import 'sweetalert2/dist/sweetalert2.min.css';
 @import 'primeicons/primeicons.css';
@@ -460,3 +463,40 @@ a:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--primary-border);
 }
+
+/* Colores, sombras y radios de la opción G expuestos a Tailwind con nombres semánticos.
+   `inline` hace que cada utility lea la variable de :root, así un cambio de token llega a todo. */
+@theme inline {
+  --color-ink: var(--text);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-ground: var(--background);
+  --color-surface: var(--surface-raised);
+  --color-hover: var(--surface-hover);
+  --color-row-hover: var(--surface-row-hover);
+  --color-line: var(--border);
+  --color-line-soft: var(--border-soft);
+  --color-line-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-line: var(--primary-border);
+  --color-primary-tint: var(--primary-tint);
+  --color-brand: var(--brand-ink);
+  --color-sage: var(--tone-sage);
+  --color-sage-strong: var(--tone-sage-strong);
+  --color-sage-text: var(--tone-sage-text);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-border);
+  --color-neutral: var(--tone-neutral);
+  --shadow-panel: var(--shadow-dialog);
+}
+
+/* Utilities al final y sin capa: ganan a reglas de elemento como `a { color }` y a estilos previos. */
+@tailwind utilities;

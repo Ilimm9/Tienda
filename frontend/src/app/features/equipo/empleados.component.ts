@@ -10,12 +10,12 @@ import { ContextoService } from '../../contexto/contexto.service';
 import { RolService } from '../roles-permisos/rol.service';
 import { EmpleadoResumen, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
+import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
 
 @Component({
   selector: 'app-empleados',
   imports: [CommonModule, FormsModule, RouterLink, TableModule],
   templateUrl: './empleados.component.html',
-  styleUrl: './empleados.component.css',
 })
 export class EmpleadosComponent {
   private readonly empleadoService = inject(EmpleadoService);
@@ -31,6 +31,12 @@ export class EmpleadosComponent {
 
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
   readonly puedeGestionar = computed(() => this.misPermisos().includes('equipo.empleados.gestionar'));
+
+  readonly iniciales = iniciales;
+  /** Etiqueta legible del estado; la fila de p-table llega sin tipo. */
+  etiquetaEstado(estado: EstadoEmpleado): string {
+    return ETIQUETA_ESTADO_EMPLEADO[estado] ?? estado;
+  }
 
   readonly estados: { valor: EstadoEmpleado | ''; etiqueta: string }[] = [
     { valor: '', etiqueta: 'Todos' },

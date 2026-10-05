@@ -11,6 +11,7 @@ import { RolService } from '../../roles-permisos/rol.service';
 import { EmpleadoResumen } from '../empleado.models';
 import { EmpleadoService } from '../empleado.service';
 import { InvitacionService } from '../invitacion.service';
+import { iniciales } from '../presentacion';
 
 // El rol propietario nunca se delega por invitación; el servidor también lo rechaza.
 const CODIGO_ROL_PROPIETARIO = 'PROPIETARIO';
@@ -25,7 +26,6 @@ interface EnlaceEmitido {
   selector: 'app-invitacion-nueva',
   imports: [FormsModule, RouterLink],
   templateUrl: './invitacion-nueva.html',
-  styleUrls: ['./invitaciones-tema.css', './invitacion-nueva.css'],
 })
 export class InvitacionNueva {
   private readonly invitacionService = inject(InvitacionService);
@@ -60,10 +60,7 @@ export class InvitacionNueva {
   readonly rol = computed(() => this.roles().find((item) => item.id === this.rolId()) ?? null);
   readonly completa = computed(() => Boolean(this.empleado() && this.sucursal() && this.rol()));
   /** Iniciales del empleado elegido para el resumen; sin elección, un signo neutro. */
-  readonly inicialesEmpleado = computed(() => {
-    const partes = (this.empleado()?.nombre_completo ?? '').trim().split(/\s+/).filter(Boolean);
-    return partes.length ? partes.slice(0, 2).map((parte) => parte.charAt(0)).join('').toUpperCase() : '?';
-  });
+  readonly inicialesEmpleado = computed(() => iniciales(this.empleado()?.nombre_completo));
 
   constructor() {
     this.load();

@@ -18,7 +18,6 @@ import { EmpleadoService } from './empleado.service';
   selector: 'app-empleado-sucursales',
   imports: [CommonModule, FechaMexicoPipe, FormsModule, RouterLink],
   templateUrl: './empleado-sucursales.component.html',
-  styleUrl: './empleado-sucursales.component.css',
 })
 export class EmpleadoSucursalesComponent {
   private readonly asignacionService = inject(AsignacionService);

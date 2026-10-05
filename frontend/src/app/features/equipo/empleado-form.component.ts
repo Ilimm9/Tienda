@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -14,7 +15,6 @@ import { EmpleadoService } from './empleado.service';
   selector: 'app-empleado-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './empleado-form.component.html',
-  styleUrl: './empleado-form.component.css',
 })
 export class EmpleadoFormComponent {
   private readonly empleadoService = inject(EmpleadoService);
@@ -44,6 +44,25 @@ export class EmpleadoFormComponent {
     puesto: [''],
     contratado_en: [''],
   });
+
+  /** Valores en vivo para la vista previa de la tarjeta lateral. */
+  private readonly valores = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+  readonly nombreVista = computed(() => {
+    const v = this.valores();
+    const partes = [v.nombre, v.segundo_nombre, v.primer_apellido, v.segundo_apellido]
+      .map((parte) => (parte ?? '').trim())
+      .filter(Boolean);
+    return partes.join(' ');
+  });
+  readonly inicialesVista = computed(() => {
+    const v = this.valores();
+    const letras = [v.nombre, v.primer_apellido].map((parte) => (parte ?? '').trim().charAt(0)).join('');
+    return letras.toUpperCase() || '?';
+  });
+  readonly puestoVista = computed(() => (this.valores().puesto ?? '').trim());
+  readonly correoVista = computed(() => (this.valores().correo ?? '').trim());
+  readonly telefonoVista = computed(() => (this.valores().telefono ?? '').trim());
+  readonly numeroVista = computed(() => (this.valores().numero_empleado ?? '').trim());
 
   constructor() {
     if (this.editing) this.load();

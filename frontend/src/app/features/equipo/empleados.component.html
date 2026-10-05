@@ -1,60 +1,85 @@
-<section class="team-page">
-  <header class="page-heading">
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
+  <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <span class="eyebrow">Equipo</span>
-      <h1>Empleados</h1>
-      <p>
-        Registra a las personas que colaboran en
-        <strong>{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong
-        >, tengan cuenta o no.
+      <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">Empleados</h1>
+      <p class="m-0 mt-1.5 text-muted">
+        Personas que colaboran en
+        <strong class="font-semibold text-ink">{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong>, tengan
+        cuenta o no.
       </p>
     </div>
     @if (puedeGestionar()) {
-      <a class="primary-button" [routerLink]="['nuevo']">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        Nuevo empleado
+      <a
+        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white no-underline transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+        [routerLink]="['nuevo']"
+      >
+        <i class="pi pi-plus text-xs" aria-hidden="true"></i>Nuevo empleado
       </a>
     }
   </header>
 
-  <div class="team-toolbar surface-card">
-    <form class="search-field" (ngSubmit)="search()">
-      <i class="pi pi-search" aria-hidden="true"></i>
-      <label class="visually-hidden" for="employee-search">Buscar por nombre, número o correo</label>
-      <input
-        id="employee-search"
-        type="search"
-        name="buscar"
-        placeholder="Buscar por nombre, número o correo"
-        [ngModel]="buscar()"
-        (ngModelChange)="updateSearch($event)"
-      />
-      @if (buscar()) {
-        <button type="button" class="clear-search" aria-label="Limpiar búsqueda" (click)="clearSearch()">
-          <i class="pi pi-times" aria-hidden="true"></i>
-        </button>
-      }
-    </form>
-    <div class="status-tabs" aria-label="Filtrar empleados por estado">
-      @for (opcion of estados; track opcion.valor) {
-        <button type="button" [class.active]="estado() === opcion.valor" (click)="setEstado(opcion.valor)">
-          {{ opcion.etiqueta }}
-        </button>
-      }
-    </div>
-  </div>
-
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+    </p>
   }
 
-  @if (loading()) {
-    <p class="status-message">Cargando empleados…</p>
-  } @else if (!error()) {
-    <div class="data-table-card">
+  <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Lista de empleados" [attr.aria-busy]="loading()">
+    <div class="flex flex-wrap items-center gap-3 border-b border-line-soft px-4 py-3.5">
+      <form
+        class="flex h-[42px] w-full max-w-[380px] items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-3 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line"
+        role="search"
+        (ngSubmit)="search()"
+      >
+        <i class="pi pi-search text-sm" aria-hidden="true"></i>
+        <label class="sr-only" for="employee-search">Buscar por nombre, número o correo</label>
+        <input
+          id="employee-search"
+          type="search"
+          name="buscar"
+          placeholder="Buscar por nombre, número o correo"
+          class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-ink outline-none placeholder:text-subtle"
+          [ngModel]="buscar()"
+          (ngModelChange)="updateSearch($event)"
+        />
+        @if (buscar()) {
+          <button
+            type="button"
+            class="grid size-7 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-hover hover:text-ink"
+            aria-label="Limpiar búsqueda"
+            (click)="clearSearch()"
+          >
+            <i class="pi pi-times text-xs" aria-hidden="true"></i>
+          </button>
+        }
+      </form>
+
+      <div
+        class="ml-auto inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[11px] border border-line bg-ground p-1 [scrollbar-width:none]"
+        role="group"
+        aria-label="Filtrar empleados por estado"
+      >
+        @for (opcion of estados; track opcion.valor) {
+          <button
+            type="button"
+            class="min-h-9 cursor-pointer rounded-lg border-0 bg-transparent px-3.5 text-[13px] font-semibold whitespace-nowrap text-body transition hover:text-ink focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line aria-pressed:bg-surface aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_37_84/10%),0_0_0_1px_var(--border)]"
+            [attr.aria-pressed]="estado() === opcion.valor"
+            (click)="setEstado(opcion.valor)"
+          >
+            {{ opcion.etiqueta }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p class="m-0 p-10 text-center text-muted" role="status">
+        <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleados…
+      </p>
+    } @else if (!error()) {
       <p-table
         [value]="empleados()"
-        [paginator]="true"
+        [paginator]="empleados().length > 10"
         [rows]="10"
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
@@ -66,57 +91,93 @@
           <tr>
             <th>Empleado</th>
             <th>Puesto</th>
-            <th>Correo</th>
-            <th>Teléfono</th>
+            <th>Contacto</th>
             <th>Estado</th>
             <th>Acceso</th>
-            <th class="actions-column">Acciones</th>
+            <th class="text-right!">Acciones</th>
           </tr>
         </ng-template>
         <ng-template #body let-empleado>
           <tr>
-            <td class="employee-name">
-              {{ empleado.nombre_completo }}
-              @if (empleado.numero_empleado) {
-                <code>{{ empleado.numero_empleado }}</code>
-              }
+            <td>
+              <span class="flex min-w-0 items-center gap-3">
+                <span
+                  class="grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold"
+                  [class.bg-primary-soft]="empleado.estado === 'activo' || empleado.estado === 'pendiente'"
+                  [class.text-primary-hover]="empleado.estado === 'activo' || empleado.estado === 'pendiente'"
+                  [class.bg-neutral]="empleado.estado === 'suspendido' || empleado.estado === 'terminado'"
+                  [class.text-body]="empleado.estado === 'suspendido' || empleado.estado === 'terminado'"
+                  aria-hidden="true"
+                >
+                  {{ iniciales(empleado.nombre_completo) }}
+                </span>
+                <span class="min-w-0">
+                  <a
+                    class="block truncate font-semibold text-ink no-underline hover:text-primary-hover hover:underline"
+                    [routerLink]="[empleado.id]"
+                  >{{ empleado.nombre_completo }}</a>
+                  @if (empleado.numero_empleado) {
+                    <span class="font-mono text-xs text-muted">{{ empleado.numero_empleado }}</span>
+                  }
+                </span>
+              </span>
             </td>
-            <td>{{ empleado.puesto || '—' }}</td>
-            <td>{{ empleado.correo || '—' }}</td>
-            <td>{{ empleado.telefono || '—' }}</td>
+            <td class="text-body">{{ empleado.puesto || '—' }}</td>
+            <td>
+              <span class="block truncate text-ink">{{ empleado.correo || 'Sin correo' }}</span>
+              <span class="text-[13px] text-muted">{{ empleado.telefono || 'Sin teléfono' }}</span>
+            </td>
             <td>
               <span
-                class="status-pill"
-                [class.active]="empleado.estado === 'activo'"
-                [class.archived]="empleado.estado !== 'activo'"
+                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+                [class.bg-sage]="empleado.estado === 'activo'"
+                [class.text-sage-text]="empleado.estado === 'activo'"
+                [class.bg-primary-soft]="empleado.estado === 'pendiente'"
+                [class.text-primary-hover]="empleado.estado === 'pendiente'"
+                [class.bg-warning-soft]="empleado.estado === 'suspendido'"
+                [class.text-warning]="empleado.estado === 'suspendido'"
+                [class.bg-neutral]="empleado.estado === 'terminado'"
+                [class.text-body]="empleado.estado === 'terminado'"
               >
-                {{ empleado.estado }}
+                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                {{ etiquetaEstado(empleado.estado) }}
               </span>
             </td>
             <td>
-              <span class="account-state" [class.linked]="empleado.tiene_cuenta">
-                {{ empleado.tiene_cuenta ? 'Cuenta vinculada' : 'Sin cuenta' }}
-              </span>
+              @if (empleado.tiene_cuenta) {
+                <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-success">
+                  <i class="pi pi-check-circle text-xs" aria-hidden="true"></i>Cuenta vinculada
+                </span>
+              } @else {
+                <span class="text-[13px] text-muted">Sin cuenta</span>
+              }
             </td>
-            <td class="actions-column">
+            <td class="text-right!">
               <a
-                class="secondary-button table-action"
+                class="inline-grid size-10 place-items-center rounded-[10px] text-body no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
                 [routerLink]="[empleado.id]"
                 aria-label="Ver detalle del empleado"
+                title="Ver detalle"
               >
-                <i class="pi pi-eye" aria-hidden="true"></i>
+                <i class="pi pi-chevron-right text-sm" aria-hidden="true"></i>
               </a>
             </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="7" class="empty-message">
-              Aún no hay empleados registrados con este filtro.
+            <td colspan="6">
+              <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-primary-soft text-primary" aria-hidden="true">
+                  <i class="pi pi-users text-lg"></i>
+                </span>
+                <p class="m-0 font-semibold text-ink">Sin empleados con este filtro</p>
+                <p class="m-0 text-[13px] text-muted">Cambia el estado o la búsqueda, o registra a alguien nuevo.</p>
+              </div>
             </td>
           </tr>
         </ng-template>
       </p-table>
-    </div>
-  }
+    }
+  </section>
 </section>

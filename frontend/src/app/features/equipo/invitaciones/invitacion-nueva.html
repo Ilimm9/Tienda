@@ -1,36 +1,40 @@
-<section class="pagina">
-  <header class="encabezado-pagina">
-    <div>
-      <h1>Invitar a un empleado</h1>
-      <p class="descripcion">Le llegará un correo con un enlace para crear su acceso.</p>
-    </div>
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
+  <header>
+    <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">Invitar a un empleado</h1>
+    <p class="m-0 mt-1.5 text-muted">Le llegará un correo con un enlace para crear su acceso.</p>
   </header>
 
   @if (error()) {
-    <p class="aviso aviso--error" role="alert">
-      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
     </p>
   } @else if (loading()) {
-    <p class="estado-vacio" role="status">
+    <p class="m-0 p-10 text-center text-muted" role="status">
       <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleados y roles…
     </p>
   } @else {
-    <div class="columnas">
-      <form class="formulario-g" (ngSubmit)="emitir()" novalidate>
-        <div class="formulario-g__seccion">
-          <div class="formulario-g__titulo">
-            <h2>Quién</h2>
-            <p>Elige a un empleado que todavía no tenga cuenta.</p>
-          </div>
+    <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+      <form class="overflow-hidden rounded-2xl border border-line bg-surface" (ngSubmit)="emitir()" novalidate>
+        <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 px-5 py-6 sm:px-7">
+          <legend class="contents">
+            <span class="flex items-start gap-3">
+              <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-user"></i></span>
+              <span>
+                <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Quién</span>
+                <span class="mt-0.5 block text-[13px] text-muted">Elige a un empleado que todavía no tenga cuenta.</span>
+              </span>
+            </span>
+          </legend>
 
-          <div class="campo-bloque">
-            <label class="etiqueta" for="empleado">Empleado</label>
-            <span class="campo-grupo campo-grupo--select">
-              <i class="pi pi-user" aria-hidden="true"></i>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-ink" for="empleado">Empleado</label>
+            <span class="relative flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface pr-9 pl-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line has-disabled:opacity-60">
+              <i class="pi pi-user text-[15px]" aria-hidden="true"></i>
               <select
                 id="empleado"
                 name="empleado"
                 aria-describedby="empleado-ayuda"
+                class="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm text-ink outline-none disabled:cursor-not-allowed"
                 [ngModel]="empleadoId()"
                 (ngModelChange)="empleadoId.set($event)"
                 [disabled]="!invitables().length"
@@ -40,45 +44,53 @@
                   <option [value]="item.id">{{ item.nombre_completo }}</option>
                 }
               </select>
+              <i class="pi pi-chevron-down pointer-events-none absolute right-3.5 text-xs text-muted" aria-hidden="true"></i>
             </span>
-            <small class="ayuda" id="empleado-ayuda">
+            <small id="empleado-ayuda" class="text-[12.5px] text-muted">
               Solo aparecen empleados con correo y sin cuenta.
-              <a routerLink="/equipo/empleados/nuevo">Dar de alta un empleado</a>
+              <a class="font-semibold text-primary no-underline hover:text-primary-hover hover:underline" routerLink="/equipo/empleados/nuevo">Dar de alta un empleado</a>
             </small>
           </div>
 
-          <div class="campo-bloque">
-            <label class="etiqueta" for="correo">Correo del empleado</label>
-            <span class="campo-grupo campo-grupo--lectura">
-              <i class="pi pi-envelope" aria-hidden="true"></i>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-ink" for="correo">Correo del empleado</label>
+            <span class="flex h-11 items-center gap-2.5 rounded-[10px] border border-line bg-ground px-3.5 text-subtle">
+              <i class="pi pi-envelope text-[15px]" aria-hidden="true"></i>
               <input
                 id="correo"
                 type="email"
                 readonly
                 aria-describedby="correo-ayuda"
-                [value]="empleado()?.correo ?? ''"
                 placeholder="Se toma del empleado"
+                class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-body outline-none placeholder:text-subtle"
+                [value]="empleado()?.correo ?? ''"
               />
-              <i class="pi pi-lock candado" aria-hidden="true"></i>
+              <i class="pi pi-lock text-xs" aria-hidden="true"></i>
             </span>
-            <small class="ayuda" id="correo-ayuda">Se toma de la ficha del empleado.</small>
+            <small id="correo-ayuda" class="text-[12.5px] text-muted">Se toma de la ficha del empleado.</small>
           </div>
-        </div>
+        </fieldset>
 
-        <div class="formulario-g__seccion">
-          <div class="formulario-g__titulo">
-            <h2>Dónde y con qué permisos</h2>
-            <p>Una sucursal por invitación. Después puedes asignarle más desde Empleados.</p>
-          </div>
+        <fieldset class="m-0 flex min-w-0 flex-col gap-5 border-0 border-t border-solid border-line-soft px-5 py-6 sm:px-7">
+          <legend class="contents">
+            <span class="flex items-start gap-3">
+              <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-sage text-success" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+              <span>
+                <span class="block text-[15px] font-bold tracking-[-0.01em] text-ink">Dónde y con qué permisos</span>
+                <span class="mt-0.5 block text-[13px] text-muted">Una sucursal por invitación. Después puedes asignarle más desde Empleados.</span>
+              </span>
+            </span>
+          </legend>
 
-          <div class="par">
-            <div class="campo-bloque">
-              <label class="etiqueta" for="sucursal">Sucursal</label>
-              <span class="campo-grupo campo-grupo--select">
-                <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="sucursal">Sucursal</label>
+              <span class="relative flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface pr-9 pl-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+                <i class="pi pi-map-marker text-[15px]" aria-hidden="true"></i>
                 <select
                   id="sucursal"
                   name="sucursal"
+                  class="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm text-ink outline-none"
                   [ngModel]="sucursalId()"
                   (ngModelChange)="sucursalId.set($event)"
                 >
@@ -87,16 +99,18 @@
                     <option [value]="item.id">{{ item.nombre }} · {{ item.codigo }}</option>
                   }
                 </select>
+                <i class="pi pi-chevron-down pointer-events-none absolute right-3.5 text-xs text-muted" aria-hidden="true"></i>
               </span>
             </div>
-            <div class="campo-bloque">
-              <label class="etiqueta" for="rol">Rol</label>
-              <span class="campo-grupo campo-grupo--select">
-                <i class="pi pi-lock" aria-hidden="true"></i>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <label class="text-[13px] font-semibold text-ink" for="rol">Rol</label>
+              <span class="relative flex h-11 items-center gap-2.5 rounded-[10px] border border-line-strong bg-surface pr-9 pl-3.5 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+                <i class="pi pi-lock text-[15px]" aria-hidden="true"></i>
                 <select
                   id="rol"
                   name="rol"
                   aria-describedby="rol-ayuda"
+                  class="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm text-ink outline-none"
                   [ngModel]="rolId()"
                   (ngModelChange)="rolId.set($event)"
                 >
@@ -105,84 +119,97 @@
                     <option [value]="item.id">{{ item.nombre }}</option>
                   }
                 </select>
+                <i class="pi pi-chevron-down pointer-events-none absolute right-3.5 text-xs text-muted" aria-hidden="true"></i>
               </span>
             </div>
           </div>
-          <small class="ayuda" id="rol-ayuda">El rol propietario no se delega.</small>
+          <small id="rol-ayuda" class="-mt-2 text-[12.5px] text-muted">El rol propietario no se delega.</small>
 
           @if (!roles().length) {
-            <p class="aviso aviso--atencion">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <span>Todavía no hay roles para delegar. <a routerLink="/roles-permisos">Crear un rol</a></span>
+            <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-warning-line bg-warning-soft px-3.5 py-3 text-[13px] text-warning">
+              <i class="pi pi-info-circle mt-0.5" aria-hidden="true"></i>
+              <span>Todavía no hay roles para delegar. <a class="font-bold text-warning underline" routerLink="/roles-permisos">Crear un rol</a></span>
             </p>
           }
-        </div>
+        </fieldset>
 
-        <div class="formulario-g__acciones">
-          <a class="boton boton--fantasma" routerLink="..">{{ enlaceEmitido() ? 'Volver a invitaciones' : 'Cancelar' }}</a>
-          <button type="submit" class="boton" [disabled]="!completa() || saving()" [attr.aria-busy]="saving()">
-            <i class="pi" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+        <footer class="flex flex-wrap items-center justify-end gap-2.5 border-t border-line bg-ground px-5 py-3.5 sm:px-7">
+          <a
+            class="inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+            routerLink=".."
+          >
+            {{ enlaceEmitido() ? 'Volver a invitaciones' : 'Cancelar' }}
+          </a>
+          <button
+            type="submit"
+            class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
+            [disabled]="!completa() || saving()"
+            [attr.aria-busy]="saving()"
+          >
+            <i class="pi text-xs" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
             {{ enlaceEmitido() ? 'Emitir otro enlace' : 'Emitir invitación' }}
           </button>
-        </div>
+        </footer>
       </form>
 
-      <div class="lateral">
-        <section class="resumen" aria-label="Resumen">
-          <h2 class="rotulo">Resumen</h2>
-          <div class="resumen__cabeza">
-            <span class="avatar avatar--grande" aria-hidden="true">{{ inicialesEmpleado() }}</span>
+      <div class="flex flex-col gap-3.5 xl:sticky xl:top-6">
+        <section class="flex flex-col gap-4 rounded-2xl border border-primary-line bg-primary-tint p-5.5" aria-label="Resumen">
+          <h2 class="m-0 text-[11.5px] font-bold tracking-[0.07em] text-primary-hover uppercase">Resumen</h2>
+          <div class="flex items-center gap-3.5">
+            <span class="grid size-12 shrink-0 place-items-center rounded-full bg-primary text-base font-bold text-white" aria-hidden="true">{{ inicialesEmpleado() }}</span>
             @if (completa()) {
-              <p class="resumen__frase">
+              <p class="m-0 text-xl leading-tight font-bold tracking-[-0.03em] text-ink">
                 {{ empleado()?.nombre_completo }} entra a {{ sucursal()?.nombre }} como {{ rol()?.nombre }}
               </p>
             } @else {
-              <p class="resumen__frase resumen__frase--pendiente">Elige empleado, sucursal y rol</p>
+              <p class="m-0 text-lg leading-tight font-semibold text-muted">Elige empleado, sucursal y rol</p>
             }
           </div>
-          <dl>
-            <dt>Empresa</dt>
-            <dd>{{ negocio()?.nombre_comercial }}</dd>
-            <dt>Sucursal</dt>
-            <dd>
+          <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-primary-line pt-3.5 text-[13px]">
+            <dt class="text-muted">Empresa</dt>
+            <dd class="m-0 font-semibold text-ink">{{ negocio()?.nombre_comercial }}</dd>
+            <dt class="text-muted">Sucursal</dt>
+            <dd class="m-0 font-semibold text-ink">
               @if (sucursal(); as elegida) {
                 {{ elegida.nombre }} · {{ elegida.codigo }}
               } @else {
                 —
               }
             </dd>
-            <dt>Rol</dt>
-            <dd>{{ rol()?.nombre ?? '—' }}</dd>
-            <dt>Vigencia</dt>
-            <dd>72 horas desde la emisión</dd>
+            <dt class="text-muted">Rol</dt>
+            <dd class="m-0 font-semibold text-ink">{{ rol()?.nombre ?? '—' }}</dd>
+            <dt class="text-muted">Vigencia</dt>
+            <dd class="m-0 font-semibold text-ink">72 horas desde la emisión</dd>
           </dl>
         </section>
 
         @if (enlaceEmitido(); as emitido) {
-          <section class="tarjeta enlace-emitido" aria-label="Enlace emitido">
+          <section class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5" aria-label="Enlace emitido">
             @if (emitido.correoEnviado) {
-              <p class="aviso aviso--salvia">
-                <i class="pi pi-check" aria-hidden="true"></i>Enviamos el enlace a {{ emitido.correo }}.
+              <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-sage-strong bg-sage px-3.5 py-3 text-[13px] text-sage-text">
+                <i class="pi pi-check mt-0.5" aria-hidden="true"></i>Enviamos el enlace a {{ emitido.correo }}.
               </p>
             } @else {
-              <p class="aviso aviso--error" role="alert">
-                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                <span><strong>No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
+              <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+                <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>
+                <span><strong class="block">No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
               </p>
             }
-            <label class="etiqueta" for="enlace">Enlace de invitación</label>
-            <div class="enlace-emitido__fila">
-              <span class="campo-grupo campo-grupo--lectura campo-grupo--monoespacio">
-                <i class="pi pi-link" aria-hidden="true"></i>
-                <input id="enlace" type="text" readonly [value]="emitido.enlace" />
+            <label class="text-[13px] font-semibold text-ink" for="enlace">Enlace de invitación</label>
+            <div class="flex flex-col gap-2 sm:flex-row">
+              <span class="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border border-line bg-ground px-3.5 text-subtle">
+                <i class="pi pi-link text-[15px]" aria-hidden="true"></i>
+                <input id="enlace" type="text" readonly [value]="emitido.enlace" class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[13px] text-body outline-none" />
               </span>
-              <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
-                <i class="pi pi-copy" aria-hidden="true"></i>Copiar
+              <button
+                type="button"
+                class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-success bg-success px-5 text-sm font-semibold text-white transition-colors hover:bg-sage-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+                (click)="copiar(emitido.enlace)"
+              >
+                <i class="pi pi-copy text-xs" aria-hidden="true"></i>Copiar
               </button>
             </div>
-            <small class="ayuda">
-              Se muestra una sola vez. Si lo pierdes, reenvía la invitación para generar otro.
-            </small>
+            <small class="text-[12.5px] text-muted">Se muestra una sola vez. Si lo pierdes, reenvía la invitación para generar otro.</small>
           </section>
         }
       </div>

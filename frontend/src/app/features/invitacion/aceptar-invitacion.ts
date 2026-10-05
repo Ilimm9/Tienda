@@ -21,7 +21,7 @@ const HORA_MS = 60 * 60 * 1000;
   selector: 'app-aceptar-invitacion',
   imports: [FechaMexicoPipe, ReactiveFormsModule],
   templateUrl: './aceptar-invitacion.html',
-  styleUrls: ['../equipo/invitaciones/invitaciones-tema.css', './aceptar-invitacion.css'],
+  styleUrl: './aceptar-invitacion.css',
 })
 export class AceptarInvitacion implements OnDestroy {
   private readonly invitacionService = inject(InvitacionService);

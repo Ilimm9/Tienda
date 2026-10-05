@@ -10,12 +10,12 @@ import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { RolService } from '../roles-permisos/rol.service';
 import { EmpleadoApiError, EmpleadoDetalle, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
+import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
 
 @Component({
   selector: 'app-empleado-detalle',
   imports: [CommonModule, FechaMexicoPipe, RouterLink],
   templateUrl: './empleado-detalle.component.html',
-  styleUrl: './empleado-detalle.component.css',
 })
 export class EmpleadoDetalleComponent {
   private readonly empleadoService = inject(EmpleadoService);
@@ -30,6 +30,9 @@ export class EmpleadoDetalleComponent {
   readonly loading = signal(true);
   readonly processing = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly iniciales = iniciales;
+  readonly etiquetaEstado = ETIQUETA_ESTADO_EMPLEADO;
 
   readonly puedeGestionar = computed(() => this.misPermisos().includes('equipo.empleados.gestionar'));
   readonly puedeInvitar = computed(() => this.misPermisos().includes('equipo.invitaciones.enviar'));

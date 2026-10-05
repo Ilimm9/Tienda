@@ -1,152 +1,245 @@
-<section class="team-page">
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
   @if (loading()) {
-    <p class="status-message" role="status">Cargando empleado…</p>
+    <p class="m-0 p-10 text-center text-muted" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleado…
+    </p>
   } @else if (error() && !empleado()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
-    <a class="secondary-button back-button" routerLink="/equipo/empleados">Volver a empleados</a>
+    <div class="flex flex-col items-start gap-4">
+      <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+        <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+      </p>
+      <a
+        class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover"
+        routerLink="/equipo/empleados"
+      >
+        <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>Volver a empleados
+      </a>
+    </div>
   } @else if (empleado(); as persona) {
-    <header class="page-heading">
-      <div>
-        <span class="eyebrow">{{ persona.numero_empleado || 'Sin número' }}</span>
-        <h1>{{ persona.nombre_completo }}</h1>
-        <p>{{ persona.puesto || 'Sin puesto asignado' }}</p>
+    <header class="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-7">
+      <div class="flex min-w-0 items-center gap-4">
+        <span
+          class="grid size-16 shrink-0 place-items-center rounded-full text-xl font-bold"
+          [class.bg-primary]="persona.estado === 'activo' || persona.estado === 'pendiente'"
+          [class.text-white]="persona.estado === 'activo' || persona.estado === 'pendiente'"
+          [class.bg-neutral]="persona.estado === 'suspendido' || persona.estado === 'terminado'"
+          [class.text-body]="persona.estado === 'suspendido' || persona.estado === 'terminado'"
+          aria-hidden="true"
+        >
+          {{ iniciales(persona.nombre_completo) }}
+        </span>
+        <div class="min-w-0">
+          <h1 class="m-0 truncate text-[28px] leading-tight font-bold tracking-[-0.035em] text-ink">{{ persona.nombre_completo }}</h1>
+          <p class="m-0 mt-0.5 text-muted">
+            {{ persona.puesto || 'Sin puesto asignado' }}
+            @if (persona.numero_empleado) {
+              · <span class="font-mono text-[13px]">{{ persona.numero_empleado }}</span>
+            }
+          </p>
+          <p class="m-0 mt-2.5 flex flex-wrap gap-2">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              [class.bg-sage]="persona.estado === 'activo'"
+              [class.text-sage-text]="persona.estado === 'activo'"
+              [class.bg-primary-soft]="persona.estado === 'pendiente'"
+              [class.text-primary-hover]="persona.estado === 'pendiente'"
+              [class.bg-warning-soft]="persona.estado === 'suspendido'"
+              [class.text-warning]="persona.estado === 'suspendido'"
+              [class.bg-neutral]="persona.estado === 'terminado'"
+              [class.text-body]="persona.estado === 'terminado'"
+            >
+              <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ etiquetaEstado[persona.estado] }}
+            </span>
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              [class.bg-sage]="persona.tiene_cuenta"
+              [class.text-sage-text]="persona.tiene_cuenta"
+              [class.bg-neutral]="!persona.tiene_cuenta"
+              [class.text-body]="!persona.tiene_cuenta"
+            >
+              <i class="pi text-[10px]" [class.pi-check]="persona.tiene_cuenta" [class.pi-minus]="!persona.tiene_cuenta" aria-hidden="true"></i>
+              {{ persona.tiene_cuenta ? 'Con cuenta' : 'Sin cuenta' }}
+            </span>
+          </p>
+        </div>
       </div>
-      <div class="heading-actions">
-        <a class="secondary-button" routerLink="/equipo/empleados">
-          <i class="pi pi-arrow-left" aria-hidden="true"></i>
-          Empleados
+      <div class="flex flex-wrap gap-2.5">
+        <a
+          class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+          routerLink="/equipo/empleados"
+        >
+          <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>Empleados
         </a>
         @if (puedeGestionar()) {
-          <a class="primary-button" [routerLink]="['/equipo/empleados', persona.id, 'editar']">
-            <i class="pi pi-pencil" aria-hidden="true"></i>
-            Editar
+          <a
+            class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white no-underline transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+            [routerLink]="['/equipo/empleados', persona.id, 'editar']"
+          >
+            <i class="pi pi-pencil text-xs" aria-hidden="true"></i>Editar
           </a>
         }
       </div>
     </header>
 
     @if (error()) {
-      <p class="status-message error" role="alert">{{ error() }}</p>
+      <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+        <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
+      </p>
     }
 
-    <div class="detail-layout">
-      <div class="detail-main">
-        <section class="detail-card surface-card">
-          <header>
-            <i class="pi pi-id-card" aria-hidden="true"></i>
-            <h2>Identificación y contacto</h2>
+    <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
+      <div class="flex min-w-0 flex-col gap-5">
+        <section class="rounded-2xl border border-line bg-surface" aria-labelledby="titulo-contacto">
+          <header class="flex items-center gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
+            <span class="grid size-9 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-id-card"></i></span>
+            <h2 id="titulo-contacto" class="m-0 text-[15px] font-bold text-ink">Identificación y contacto</h2>
           </header>
-          <dl class="detail-grid">
-            <div>
-              <dt>Correo</dt>
-              <dd>{{ persona.correo || 'Sin correo' }}</dd>
+          <dl class="m-0 grid gap-x-6 gap-y-5 p-5 text-sm sm:grid-cols-2 sm:p-6">
+            <div class="flex gap-3">
+              <i class="pi pi-envelope mt-0.5 text-subtle" aria-hidden="true"></i>
+              <div class="min-w-0">
+                <dt class="text-xs text-muted">Correo</dt>
+                <dd class="m-0 truncate font-semibold text-ink">{{ persona.correo || 'Sin correo' }}</dd>
+              </div>
             </div>
-            <div>
-              <dt>Teléfono</dt>
-              <dd>{{ persona.telefono || 'Sin teléfono' }}</dd>
+            <div class="flex gap-3">
+              <i class="pi pi-phone mt-0.5 text-subtle" aria-hidden="true"></i>
+              <div>
+                <dt class="text-xs text-muted">Teléfono</dt>
+                <dd class="m-0 font-semibold text-ink">{{ persona.telefono || 'Sin teléfono' }}</dd>
+              </div>
             </div>
-            <div>
-              <dt>Contratación</dt>
-              <dd>{{ persona.contratado_en ? (persona.contratado_en | date: 'longDate') : 'Sin registrar' }}</dd>
+            <div class="flex gap-3">
+              <i class="pi pi-calendar mt-0.5 text-subtle" aria-hidden="true"></i>
+              <div>
+                <dt class="text-xs text-muted">Contratación</dt>
+                <dd class="m-0 font-semibold text-ink">
+                  {{ persona.contratado_en ? (persona.contratado_en | date: 'longDate' : 'UTC' : 'es-MX') : 'Sin registrar' }}
+                </dd>
+              </div>
             </div>
             @if (persona.terminado_en) {
-              <div>
-                <dt>Terminación</dt>
-                <dd>{{ persona.terminado_en | date: 'longDate' }}</dd>
+              <div class="flex gap-3">
+                <i class="pi pi-calendar-times mt-0.5 text-subtle" aria-hidden="true"></i>
+                <div>
+                  <dt class="text-xs text-muted">Baja</dt>
+                  <dd class="m-0 font-semibold text-ink">{{ persona.terminado_en | date: 'longDate' : 'UTC' : 'es-MX' }}</dd>
+                </div>
               </div>
             }
-            <div class="wide">
-              <dt>Cuenta</dt>
-              <dd>{{ persona.tiene_cuenta ? 'Vinculada a una membresía' : 'Todavía sin cuenta' }}</dd>
+            <div class="flex gap-3">
+              <i class="pi pi-user mt-0.5 text-subtle" aria-hidden="true"></i>
+              <div>
+                <dt class="text-xs text-muted">Cuenta</dt>
+                <dd class="m-0 font-semibold text-ink">{{ persona.tiene_cuenta ? 'Vinculada a una membresía' : 'Todavía sin cuenta' }}</dd>
+              </div>
             </div>
           </dl>
         </section>
 
         @if (puedeGestionar()) {
-          <section class="detail-card surface-card">
-            <header>
-              <i class="pi pi-shield" aria-hidden="true"></i>
-              <h2>Acceso</h2>
+          <section class="rounded-2xl border border-line bg-surface" aria-labelledby="titulo-acceso">
+            <header class="flex items-center gap-3 border-b border-line-soft px-5 py-4 sm:px-6">
+              <span class="grid size-9 place-items-center rounded-[10px] bg-sage text-success" aria-hidden="true"><i class="pi pi-shield"></i></span>
+              <div>
+                <h2 id="titulo-acceso" class="m-0 text-[15px] font-bold text-ink">Acceso</h2>
+                <p class="m-0 text-[13px] text-muted">Dónde trabaja y cómo entra al sistema.</p>
+              </div>
             </header>
-            <p class="section-hint">Sucursales asignadas y acceso al sistema.</p>
-            <div class="access-actions">
-              <a class="secondary-button" [routerLink]="['/equipo/empleados', persona.id, 'sucursales']">
-                Sucursales asignadas
+            <div class="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
+              <a
+                class="group flex items-center gap-3 rounded-xl border border-line p-4 text-ink no-underline transition hover:border-primary-line hover:bg-primary-tint focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+                [routerLink]="['/equipo/empleados', persona.id, 'sucursales']"
+              >
+                <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+                <span class="min-w-0 flex-1">
+                  <strong class="block text-sm">Sucursales asignadas</strong>
+                  <span class="text-[13px] text-muted">Agrega, retira o cambia la principal.</span>
+                </span>
+                <i class="pi pi-chevron-right text-xs text-subtle transition group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true"></i>
               </a>
               @if (!persona.tiene_cuenta && puedeInvitar()) {
                 <a
-                  class="secondary-button"
+                  class="group flex items-center gap-3 rounded-xl border border-line p-4 text-ink no-underline transition hover:border-primary-line hover:bg-primary-tint focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
                   [routerLink]="['/equipo/invitaciones/nueva']"
-                  [queryParams]="{ empleadoId: persona.id }"
+                  [queryParams]="{ empleado: persona.id }"
                 >
-                  Invitar
+                  <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-send"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <strong class="block text-sm">Invitar a la plataforma</strong>
+                    <span class="text-[13px] text-muted">Enlace válido por 72 horas.</span>
+                  </span>
+                  <i class="pi pi-chevron-right text-xs text-subtle transition group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true"></i>
                 </a>
+              } @else if (persona.tiene_cuenta) {
+                <div class="flex items-center gap-3 rounded-xl border border-sage-strong bg-sage p-4 text-sage-text">
+                  <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-surface text-success" aria-hidden="true"><i class="pi pi-check"></i></span>
+                  <span>
+                    <strong class="block text-sm">Ya tiene cuenta</strong>
+                    <span class="text-[13px]">Ajusta sus permisos en Roles y permisos.</span>
+                  </span>
+                </div>
               }
             </div>
           </section>
 
-          <section class="danger-zone surface-card">
-            <div>
-              <h2>Estado del empleado</h2>
-              <p>Cambia el estado según su situación laboral actual.</p>
-            </div>
-            <div class="state-actions">
-              @if (persona.estado !== 'activo') {
-                <button
-                  type="button"
-                  class="secondary-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('activo')"
-                >
-                  Marcar activo
-                </button>
-              }
-              @if (persona.estado !== 'suspendido') {
-                <button
-                  type="button"
-                  class="secondary-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('suspendido')"
-                >
-                  Suspender
-                </button>
-              }
-              @if (persona.estado !== 'terminado') {
-                <button
-                  type="button"
-                  class="danger-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('terminado')"
-                >
-                  Dar de baja
-                </button>
-              }
+          <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="titulo-estado">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 id="titulo-estado" class="m-0 text-[15px] font-bold text-ink">Estado del empleado</h2>
+                <p class="m-0 mt-0.5 text-[13px] text-muted">Cámbialo según su situación laboral actual.</p>
+              </div>
+              <div class="flex flex-wrap gap-2.5">
+                @if (persona.estado !== 'activo') {
+                  <button
+                    type="button"
+                    class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand transition-colors hover:border-primary hover:bg-primary-tint focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
+                    [disabled]="processing()"
+                    (click)="cambiarEstado('activo')"
+                  >
+                    <i class="pi pi-check-circle text-xs" aria-hidden="true"></i>Marcar activo
+                  </button>
+                }
+                @if (persona.estado !== 'suspendido') {
+                  <button
+                    type="button"
+                    class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand transition-colors hover:border-warning hover:bg-warning-soft hover:text-warning focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
+                    [disabled]="processing()"
+                    (click)="cambiarEstado('suspendido')"
+                  >
+                    <i class="pi pi-pause-circle text-xs" aria-hidden="true"></i>Suspender
+                  </button>
+                }
+                @if (persona.estado !== 'terminado') {
+                  <button
+                    type="button"
+                    class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[10px] border border-danger-line bg-danger-soft px-4 text-sm font-semibold text-danger transition-colors hover:border-danger hover:bg-danger hover:text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-line disabled:cursor-not-allowed disabled:opacity-55"
+                    [disabled]="processing()"
+                    (click)="cambiarEstado('terminado')"
+                  >
+                    <i class="pi pi-user-minus text-xs" aria-hidden="true"></i>Dar de baja
+                  </button>
+                }
+              </div>
             </div>
           </section>
         }
       </div>
 
-      <aside class="employee-summary surface-card">
-        <div class="summary-title">
-          <span class="status-pill" [class.active]="persona.estado === 'activo'" [class.archived]="persona.estado !== 'activo'">
-            {{ persona.estado }}
-          </span>
-          <span class="relation-pill" [class.linked]="persona.tiene_cuenta">
-            {{ persona.tiene_cuenta ? 'Con cuenta' : 'Sin cuenta' }}
-          </span>
-        </div>
-        <dl>
+      <aside class="rounded-2xl border border-line bg-surface p-5 sm:p-6 lg:sticky lg:top-6" aria-label="Registro">
+        <p class="m-0 text-[11.5px] font-bold tracking-[0.07em] text-muted uppercase">Registro</p>
+        <dl class="m-0 mt-4 flex flex-col gap-4 text-sm">
           <div>
-            <dt>Fecha de registro</dt>
-            <dd>{{ persona.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
+            <dt class="text-xs text-muted">Fecha de registro</dt>
+            <dd class="m-0 font-semibold text-ink">{{ persona.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
           </div>
           <div>
-            <dt>Última modificación</dt>
-            <dd>{{ persona.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dt class="text-xs text-muted">Última modificación</dt>
+            <dd class="m-0 font-semibold text-ink">{{ persona.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
           </div>
           <div>
-            <dt>ID de empleado</dt>
-            <dd><code>{{ persona.id }}</code></dd>
+            <dt class="text-xs text-muted">ID de empleado</dt>
+            <dd class="m-0 mt-1 rounded-lg bg-ground px-2.5 py-1.5 font-mono text-xs break-all text-body">{{ persona.id }}</dd>
           </div>
         </dl>
       </aside>

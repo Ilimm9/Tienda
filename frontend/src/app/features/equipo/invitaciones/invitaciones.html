@@ -1,71 +1,83 @@
-<section class="pagina">
-  <header class="encabezado-pagina">
+<section class="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8 xl:px-11">
+  <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1>Invitaciones</h1>
-      <p class="descripcion">Enlaces para que tu equipo cree su acceso. Cada uno vence en 72 horas.</p>
+      <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">Invitaciones</h1>
+      <p class="m-0 mt-1.5 text-muted">Enlaces para que tu equipo cree su acceso. Cada uno vence en 72 horas.</p>
     </div>
     @if (puedeEnviar()) {
-      <a class="boton" routerLink="nueva">
-        <i class="pi pi-plus" aria-hidden="true"></i>Nueva invitación
+      <a
+        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white no-underline transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+        routerLink="nueva"
+      >
+        <i class="pi pi-plus text-xs" aria-hidden="true"></i>Nueva invitación
       </a>
     }
   </header>
 
   @if (enlaceEmitido(); as emitido) {
-    <section class="tarjeta enlace-emitido" aria-label="Enlace emitido">
+    <section class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5" aria-label="Enlace emitido">
       @if (emitido.correoEnviado) {
-        <p class="aviso aviso--salvia">
-          <i class="pi pi-check" aria-hidden="true"></i>Enviamos el enlace nuevo a {{ emitido.correo }}.
+        <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-sage-strong bg-sage px-3.5 py-3 text-[13px] text-sage-text">
+          <i class="pi pi-check mt-0.5" aria-hidden="true"></i>Enviamos el enlace nuevo a {{ emitido.correo }}.
         </p>
       } @else {
-        <p class="aviso aviso--error" role="alert">
-          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-          <span><strong>No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
+        <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+          <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>
+          <span><strong class="block">No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
         </p>
       }
-      <label class="etiqueta" for="enlace-emitido">Enlace de invitación</label>
-      <div class="enlace-emitido__fila">
-        <span class="campo-grupo campo-grupo--lectura campo-grupo--monoespacio">
-          <i class="pi pi-link" aria-hidden="true"></i>
-          <input id="enlace-emitido" type="text" readonly [value]="emitido.enlace" />
+      <label class="text-[13px] font-semibold text-ink" for="enlace-emitido">Enlace de invitación</label>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <span class="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border border-line bg-ground px-3.5 text-subtle">
+          <i class="pi pi-link text-[15px]" aria-hidden="true"></i>
+          <input id="enlace-emitido" type="text" readonly [value]="emitido.enlace" class="h-full min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[13px] text-body outline-none" />
         </span>
-        <button type="button" class="boton boton--verde" (click)="copiar(emitido.enlace)">
-          <i class="pi pi-copy" aria-hidden="true"></i>Copiar
+        <button
+          type="button"
+          class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-success bg-success px-5 text-sm font-semibold text-white transition-colors hover:bg-sage-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
+          (click)="copiar(emitido.enlace)"
+        >
+          <i class="pi pi-copy text-xs" aria-hidden="true"></i>Copiar
         </button>
       </div>
-      <small class="ayuda">Se muestra una sola vez. Si lo pierdes, reenvía la invitación.</small>
+      <small class="text-[12.5px] text-muted">Se muestra una sola vez. Si lo pierdes, reenvía la invitación.</small>
     </section>
   }
 
   @if (error()) {
-    <p class="aviso aviso--error" role="alert">
-      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
+      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
     </p>
   } @else {
-    <section class="tabla-tarjeta" aria-label="Lista de invitaciones" [attr.aria-busy]="loading()">
-      <div class="tabla-barra">
-        <div class="segmentado" role="group" aria-label="Filtrar por estado">
+    <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Lista de invitaciones" [attr.aria-busy]="loading()">
+      <div class="flex flex-wrap items-center gap-3 px-4 py-3.5">
+        <div
+          class="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[11px] border border-line bg-ground p-1 [scrollbar-width:none]"
+          role="group"
+          aria-label="Filtrar por estado"
+        >
           @for (opcion of vistas; track opcion.valor) {
             <button
               type="button"
-              class="segmentado__opcion"
+              class="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3.5 text-[13px] font-semibold whitespace-nowrap text-body transition hover:text-ink focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line aria-pressed:bg-surface aria-pressed:text-ink aria-pressed:shadow-[0_1px_2px_rgb(23_37_84/10%),0_0_0_1px_var(--border)]"
               [attr.aria-pressed]="vista() === opcion.valor"
               (click)="setVista(opcion.valor)"
             >
               {{ opcion.etiqueta }}
               @if (vista() === opcion.valor && !loading()) {
-                <span class="segmentado__contador">{{ invitaciones().length }}</span>
+                <span class="min-w-5 rounded-full bg-primary-soft px-1.5 text-center text-[11.5px] text-primary-hover">{{ invitaciones().length }}</span>
               }
             </button>
           }
         </div>
-        <div class="tabla-barra__fin">
-          <label class="etiqueta solo-lector" for="filtro-sucursal">Sucursal</label>
-          <span class="campo-grupo campo-grupo--select filtro-sucursal">
-            <i class="pi pi-map-marker" aria-hidden="true"></i>
+        <div class="ml-auto w-full sm:w-[230px]">
+          <label class="sr-only" for="filtro-sucursal">Sucursal</label>
+          <span class="relative flex h-[42px] items-center gap-2 rounded-[10px] border border-line-strong bg-surface pr-9 pl-3 text-subtle transition hover:border-muted focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-line">
+            <i class="pi pi-map-marker text-sm" aria-hidden="true"></i>
             <select
               #sucursal
               id="filtro-sucursal"
+              class="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-[13px] text-ink outline-none"
               [value]="sucursalId()"
               (change)="setSucursal(sucursal.value)"
             >
@@ -74,114 +86,149 @@
                 <option [value]="item.id">{{ item.nombre }}</option>
               }
             </select>
+            <i class="pi pi-chevron-down pointer-events-none absolute right-3 text-xs text-muted" aria-hidden="true"></i>
           </span>
         </div>
       </div>
 
-      <div class="tabla-desplazable">
-        <table class="tabla tabla-invitaciones">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[880px] border-collapse text-sm text-ink">
           <thead>
-            <tr>
-              <th scope="col">Empleado</th>
-              <th scope="col">Sucursal y rol</th>
-              <th scope="col">Estado</th>
-              <th scope="col">Emitida</th>
-              <th scope="col" class="derecha">Acciones</th>
+            <tr class="border-y border-line-soft bg-ground text-left text-[11.5px] font-semibold tracking-[0.05em] text-muted uppercase">
+              <th scope="col" class="py-2.5 pr-3 pl-5 font-semibold">Empleado</th>
+              <th scope="col" class="px-3 py-2.5 font-semibold">Sucursal y rol</th>
+              <th scope="col" class="px-3 py-2.5 font-semibold">Estado</th>
+              <th scope="col" class="px-3 py-2.5 font-semibold">Emitida</th>
+              <th scope="col" class="py-2.5 pr-5 pl-3 text-right font-semibold">Acciones</th>
             </tr>
           </thead>
           <tbody>
             @for (invitacion of invitaciones(); track invitacion.id) {
-              <tr>
-                <td>
-                  <span class="tabla-persona">
+              <tr class="border-b border-line-soft transition-colors last:border-b-0 hover:bg-row-hover">
+                <td class="min-w-[260px] py-3.5 pr-3 pl-5 align-middle">
+                  <span class="flex min-w-0 items-center gap-3">
                     <span
-                      class="avatar"
-                      [class.avatar--salvia]="tonoAvatar(invitacion) === 'salvia'"
-                      [class.avatar--neutro]="tonoAvatar(invitacion) === 'neutro'"
+                      class="grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold"
+                      [class.bg-primary-soft]="tonoAvatar(invitacion) === 'lavanda'"
+                      [class.text-primary-hover]="tonoAvatar(invitacion) === 'lavanda'"
+                      [class.bg-sage]="tonoAvatar(invitacion) === 'salvia'"
+                      [class.text-success]="tonoAvatar(invitacion) === 'salvia'"
+                      [class.bg-neutral]="tonoAvatar(invitacion) === 'neutro'"
+                      [class.text-body]="tonoAvatar(invitacion) === 'neutro'"
                       aria-hidden="true"
                     >
                       {{ iniciales(invitacion) }}
                     </span>
-                    <span class="persona-texto">
-                      <strong>{{ invitacion.nombre_empleado || 'Sin nombre' }}</strong>
-                      <span class="secundario">{{ invitacion.correo }}</span>
+                    <span class="min-w-0">
+                      <strong class="block truncate font-semibold">{{ invitacion.nombre_empleado || 'Sin nombre' }}</strong>
+                      <span class="block truncate text-[13px] text-muted">{{ invitacion.correo }}</span>
                     </span>
                   </span>
                 </td>
-                <td>
-                  <span class="tabla-principal tabla-principal--normal">{{ invitacion.nombre_sucursal || 'Sin sucursal' }}</span>
-                  <span class="secundario">{{ invitacion.nombre_rol || 'Sin rol' }}</span>
+                <td class="px-3 py-3.5 align-middle">
+                  <span class="block font-medium">{{ invitacion.nombre_sucursal || 'Sin sucursal' }}</span>
+                  <span class="block text-[13px] text-muted">{{ invitacion.nombre_rol || 'Sin rol' }}</span>
                 </td>
-                <td>
+                <td class="px-3 py-3.5 align-middle">
                   @switch (invitacion.estado) {
                     @case ('pendiente') {
-                      <span class="pastilla pastilla--pendiente">Aún no aceptada</span>
-                      <span class="vigencia" [class.vigencia--urgente]="horasRestantes(invitacion) <= 12">
-                        <i class="pi pi-clock" aria-hidden="true"></i>
-                        Vence en {{ horasRestantes(invitacion) }} h ·
-                        {{ invitacion.expira_en | fechaMexico: 'd MMM, HH:mm' }}
+                      <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-primary-hover">
+                        <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>Aún no aceptada
+                      </span>
+                      <span
+                        class="mt-1.5 flex items-center gap-1.5 text-xs"
+                        [class.text-warning]="horasRestantes(invitacion) <= 12"
+                        [class.font-semibold]="horasRestantes(invitacion) <= 12"
+                        [class.text-muted]="horasRestantes(invitacion) > 12"
+                      >
+                        <i class="pi pi-clock text-[11px]" aria-hidden="true"></i>
+                        Vence en {{ horasRestantes(invitacion) }} h · {{ invitacion.expira_en | fechaMexico: 'd MMM, HH:mm' }}
                       </span>
                     }
                     @case ('expirada') {
-                      <span class="pastilla pastilla--expirada">Expirada sin aceptar</span>
-                      <span class="vigencia">
-                        <i class="pi pi-clock" aria-hidden="true"></i>
+                      <span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-warning">
+                        <span class="size-1.5 rounded-full bg-[#c38a12]" aria-hidden="true"></span>Expirada sin aceptar
+                      </span>
+                      <span class="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                        <i class="pi pi-clock text-[11px]" aria-hidden="true"></i>
                         Venció el {{ invitacion.expira_en | fechaMexico: 'd MMM, HH:mm' }}
                       </span>
                     }
                     @case ('aceptada') {
-                      <span class="pastilla pastilla--aceptada">Aceptada</span>
-                      <span class="vigencia">
-                        <i class="pi pi-check" aria-hidden="true"></i>
+                      <span class="inline-flex items-center gap-1.5 rounded-full bg-sage px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-sage-text">
+                        <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>Aceptada
+                      </span>
+                      <span class="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                        <i class="pi pi-check text-[11px]" aria-hidden="true"></i>
                         {{ invitacion.aceptado_en | fechaMexico: 'd MMM, HH:mm' }}
                       </span>
                     }
                     @default {
-                      <span class="pastilla pastilla--cancelada">Cancelada</span>
+                      <span class="inline-flex items-center gap-1.5 rounded-full bg-neutral px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-body">
+                        <span class="size-1.5 rounded-full bg-subtle" aria-hidden="true"></span>Cancelada
+                      </span>
                     }
                   }
                 </td>
-                <td class="fecha">{{ invitacion.creado_en | fechaMexico: 'd MMM, HH:mm' }}</td>
-                <td>
-                  <div class="acciones">
+                <td class="px-3 py-3.5 align-middle whitespace-nowrap text-body">{{ invitacion.creado_en | fechaMexico: 'd MMM, HH:mm' }}</td>
+                <td class="py-3.5 pr-5 pl-3 align-middle">
+                  <div class="flex min-h-10 items-center justify-end gap-1">
                     @if (puedeReemitir(invitacion)) {
-                      <button
-                        type="button"
-                        class="boton boton--compacto"
-                        [class.boton--secundario]="invitacion.estado === 'pendiente'"
-                        [disabled]="processingId() !== null"
-                        (click)="reenviar(invitacion)"
-                      >
+                      <!-- Pendiente: reenvío discreto. Expirada o cancelada: es la acción principal de la fila. -->
+                      @if (invitacion.estado === 'pendiente') {
+                        <button
+                          type="button"
+                          class="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[9px] border px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55 border-line-strong bg-surface text-brand hover:border-primary hover:bg-primary-tint"
+                          [disabled]="processingId() !== null"
+                          (click)="reenviar(invitacion)"
+                        >
                         <i
-                          class="pi"
+                          class="pi text-xs"
                           [class.pi-send]="processingId() !== invitacion.id"
                           [class.pi-spinner]="processingId() === invitacion.id"
                           [class.pi-spin]="processingId() === invitacion.id"
                           aria-hidden="true"
                         ></i>
                         {{ processingId() === invitacion.id ? 'Reenviando…' : 'Reenviar' }}
-                      </button>
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[9px] border px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55 border-primary bg-primary text-white hover:bg-primary-hover"
+                          [disabled]="processingId() !== null"
+                          (click)="reenviar(invitacion)"
+                        >
+                        <i
+                          class="pi text-xs"
+                          [class.pi-send]="processingId() !== invitacion.id"
+                          [class.pi-spinner]="processingId() === invitacion.id"
+                          [class.pi-spin]="processingId() === invitacion.id"
+                          aria-hidden="true"
+                        ></i>
+                        {{ processingId() === invitacion.id ? 'Reenviando…' : 'Reenviar' }}
+                        </button>
+                      }
                       @if (puedeCorregir()) {
                         <a
-                          class="icono-accion"
+                          class="grid size-10 place-items-center rounded-[10px] text-body no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
                           [routerLink]="[invitacion.id, 'corregir-correo']"
                           aria-label="Corregir correo y reenviar"
                           title="Corregir correo y reenviar"
                         >
-                          <i class="pi pi-pencil" aria-hidden="true"></i>
+                          <i class="pi pi-pencil text-sm" aria-hidden="true"></i>
                         </a>
                       }
                     }
                     @if (puedeEnviar() && invitacion.estado === 'pendiente') {
                       <button
                         type="button"
-                        class="icono-accion icono-accion--peligro"
+                        class="grid size-10 cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent text-danger transition-colors hover:bg-danger-soft focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-danger-line disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label="Cancelar invitación"
                         title="Cancelar invitación"
                         [disabled]="processingId() !== null"
                         (click)="cancelar(invitacion)"
                       >
-                        <i class="pi pi-ban" aria-hidden="true"></i>
+                        <i class="pi pi-ban text-sm" aria-hidden="true"></i>
                       </button>
                     }
                   </div>
@@ -189,11 +236,14 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="5" class="estado-vacio">
+                <td colspan="5" class="p-10 text-center text-muted">
                   @if (loading()) {
                     <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando invitaciones…
                   } @else {
-                    No hay invitaciones con este filtro.
+                    <span class="flex flex-col items-center gap-2">
+                      <span class="grid size-12 place-items-center rounded-full bg-primary-soft text-primary" aria-hidden="true"><i class="pi pi-send text-lg"></i></span>
+                      <span class="font-semibold text-ink">Sin invitaciones con este filtro</span>
+                    </span>
                   }
                 </td>
               </tr>
@@ -202,25 +252,27 @@
         </table>
       </div>
 
-      <footer class="tabla-pie">
+      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft px-5 py-3 text-[13px] text-muted">
         <span>{{ resumenLista() }}</span>
-        <span><i class="pi pi-info-circle" aria-hidden="true"></i>Reenviar reinicia el plazo e invalida el enlace anterior.</span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="pi pi-info-circle text-xs" aria-hidden="true"></i>Reenviar reinicia el plazo e invalida el enlace anterior.
+        </span>
       </footer>
     </section>
   }
 
-  <div class="notas">
-    <p class="aviso">
-      <i class="pi pi-clock" aria-hidden="true"></i>
-      <span><strong>72 horas por enlace</strong>Cada emisión o reenvío reinicia el plazo.</span>
+  <div class="grid gap-3 md:grid-cols-3">
+    <p class="m-0 flex items-start gap-2.5 rounded-xl border border-primary-line bg-primary-tint px-4 py-3.5 text-[13px] text-primary-hover">
+      <i class="pi pi-clock mt-0.5" aria-hidden="true"></i>
+      <span><strong class="block text-[13.5px]">72 horas por enlace</strong>Cada emisión o reenvío reinicia el plazo.</span>
     </p>
-    <p class="aviso">
-      <i class="pi pi-send" aria-hidden="true"></i>
-      <span><strong>Reenviar invalida el anterior</strong>El enlace viejo deja de funcionar al instante.</span>
+    <p class="m-0 flex items-start gap-2.5 rounded-xl border border-primary-line bg-primary-tint px-4 py-3.5 text-[13px] text-primary-hover">
+      <i class="pi pi-send mt-0.5" aria-hidden="true"></i>
+      <span><strong class="block text-[13.5px]">Reenviar invalida el anterior</strong>El enlace viejo deja de funcionar al instante.</span>
     </p>
-    <p class="aviso aviso--salvia">
-      <i class="pi pi-check" aria-hidden="true"></i>
-      <span><strong>Aceptada no es enviada</strong>Solo cuenta cuando el empleado confirma su acceso.</span>
+    <p class="m-0 flex items-start gap-2.5 rounded-xl border border-sage-strong bg-sage px-4 py-3.5 text-[13px] text-sage-text">
+      <i class="pi pi-check mt-0.5" aria-hidden="true"></i>
+      <span><strong class="block text-[13.5px]">Aceptada no es enviada</strong>Solo cuenta cuando el empleado confirma su acceso.</span>
     </p>
   </div>
 </section>
