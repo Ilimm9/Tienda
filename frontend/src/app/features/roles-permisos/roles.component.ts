@@ -48,6 +48,12 @@ export class RolesComponent {
   /** Tamaño del catálogo: el rol de sistema los concentra todos. */
   readonly totalPermisos = computed(() => Math.max(0, ...this.roles().map((rol) => rol.total_permisos)));
 
+  /** Porcentaje del catálogo que cubre el rol, para la barra bajo el número de permisos. */
+  proporcion(rol: RolResumen): number {
+    const total = this.totalPermisos();
+    return total ? Math.round((rol.total_permisos / total) * 100) : 0;
+  }
+
   etiquetaEstado(estado: string): string {
     return ESTADOS_MEMBRESIA[estado] ?? estado;
   }

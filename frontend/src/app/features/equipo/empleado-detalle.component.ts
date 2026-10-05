@@ -10,7 +10,7 @@ import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { EmpleadoApiError, EmpleadoDetalle, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
-import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
+import { avatarDeEstado, ETIQUETA_ESTADO_EMPLEADO, iniciales, PASTILLA_ESTADO_EMPLEADO } from './presentacion';
 
 @Component({
   selector: 'app-empleado-detalle',
@@ -32,6 +32,8 @@ export class EmpleadoDetalleComponent {
   readonly error = signal<string | null>(null);
 
   readonly iniciales = iniciales;
+  readonly avatarDeEstado = avatarDeEstado;
+  readonly pastillaEstado = PASTILLA_ESTADO_EMPLEADO;
   readonly etiquetaEstado = ETIQUETA_ESTADO_EMPLEADO;
 
   readonly puedeGestionar = computed(() => this.misPermisos().includes('equipo.empleados.gestionar'));

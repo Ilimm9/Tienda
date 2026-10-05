@@ -1,112 +1,88 @@
-<section class="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pt-8 pb-12 sm:px-8">
-  <header class="flex flex-wrap items-end justify-between gap-4">
+<section class="pagina max-w-[760px]">
+  <header class="encabezado-pagina">
     <div>
-      <h1 class="m-0 text-3xl font-bold tracking-[-0.035em] text-ink">Asignar roles</h1>
-      <p class="m-0 mt-1.5 text-muted">Los permisos de una persona son la suma de sus roles.</p>
+      <h1>Asignar roles</h1>
+      <p class="descripcion">Los permisos de una persona son la suma de sus roles.</p>
     </div>
-    <a
-      class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-semibold text-brand no-underline transition-colors hover:border-primary hover:bg-primary-tint hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
-      routerLink="/roles-permisos"
-    >
-      <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>Roles y permisos
+    <a class="boton boton--secundario" routerLink="/roles-permisos">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>Roles y permisos
     </a>
   </header>
 
   @if (error()) {
-    <p class="m-0 flex items-start gap-2.5 rounded-[10px] border border-danger-line bg-danger-soft px-3.5 py-3 text-[13px] text-danger" role="alert">
-      <i class="pi pi-exclamation-circle mt-0.5" aria-hidden="true"></i>{{ error() }}
-    </p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="m-0 rounded-2xl border border-line bg-surface p-10 text-center text-muted" role="status">
-      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…
-    </p>
+    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
   } @else if (miembro(); as persona) {
-    <form class="overflow-hidden rounded-2xl border border-line bg-surface" (ngSubmit)="guardar()" novalidate>
-      <header class="flex items-center gap-3 border-b border-line-soft px-5 py-4 sm:px-7">
-        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-hover" aria-hidden="true">{{ iniciales(persona.nombre, persona.correo) }}</span>
+    <form class="formulario-g" (ngSubmit)="guardar()" novalidate>
+      <header class="tarjeta-encabezado">
+        <span class="avatar avatar--grande" aria-hidden="true">{{ iniciales(persona.nombre, persona.correo) }}</span>
         <div class="min-w-0 flex-1">
-          <p class="m-0 truncate text-[15px] font-bold text-ink">{{ persona.nombre || persona.correo }}</p>
-          <p class="m-0 truncate text-[13px] text-muted">
+          <strong class="tabla-principal truncate">{{ persona.nombre || persona.correo }}</strong>
+          <span class="secundario truncate">
             {{ persona.nombre ? persona.correo + ' · ' : '' }}{{ persona.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro' }}
-          </p>
+          </span>
         </div>
       </header>
 
       <fieldset
-        class="m-0 flex min-w-0 flex-col gap-4 border-0 px-5 py-6 sm:px-7"
+        class="formulario-g__seccion"
         [attr.aria-invalid]="sinRoles()"
         [attr.aria-describedby]="sinRoles() ? 'roles-error' : null"
         tabindex="-1"
       >
         <legend class="contents">
-          <span class="flex flex-wrap items-center gap-3">
-            <span class="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.01em] text-ink">Roles <span class="text-danger" aria-hidden="true">*</span></span>
-            <span class="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary-hover">{{ seleccionados().size }} de {{ roles().length }}</span>
+          <span class="seccion-encabezado items-center">
+            <span class="titulo flex-1">Roles <span class="obligatorio" aria-hidden="true">*</span></span>
+            <span class="contador">{{ seleccionados().size }} de {{ roles().length }}</span>
           </span>
         </legend>
 
         @if (sinRoles()) {
-          <p id="roles-error" class="m-0 flex items-center gap-1.5 text-[12.5px] font-medium text-danger" role="alert">
-            <i class="pi pi-exclamation-circle text-xs" aria-hidden="true"></i>Selecciona al menos un rol. Sin roles, la persona no puede hacer nada en el negocio.
+          <p id="roles-error" class="error-campo" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Selecciona al menos un rol. Sin roles, la persona no puede hacer nada en el negocio.
           </p>
         }
 
         <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
           @for (rol of roles(); track rol.id) {
             <li>
-              <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4 transition hover:border-line-strong has-checked:border-primary-line has-checked:bg-primary-tint">
-                <input
-                  type="checkbox"
-                  class="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
-                  [checked]="estaSeleccionado(rol.id)"
-                  (change)="alternar(rol.id)"
-                />
+              <label class="opcion">
+                <input type="checkbox" class="casilla" [checked]="estaSeleccionado(rol.id)" (change)="alternar(rol.id)" />
                 <span class="min-w-0 flex-1">
                   <span class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm font-semibold text-ink">{{ rol.nombre }}</span>
-                    <span class="font-mono text-[11.5px] text-muted">{{ rol.codigo }}</span>
+                    <strong>{{ rol.nombre }}</strong>
+                    <span class="codigo">{{ rol.codigo }}</span>
                     @if (rol.es_rol_sistema) {
-                      <span class="rounded-full bg-primary-soft px-2 py-px text-[11px] font-semibold text-primary-hover">Sistema</span>
+                      <span class="pastilla pastilla--plana">Sistema</span>
                     }
                   </span>
-                  <span class="mt-0.5 block text-[13px] text-muted">
+                  <span class="secundario">
                     {{ rol.es_rol_sistema ? 'Concentra todos los permisos del negocio.' : rol.descripcion || 'Sin descripción.' }}
                   </span>
                 </span>
-                <span class="shrink-0 text-xs font-semibold text-muted">{{ rol.total_permisos }} permisos</span>
+                <span class="ayuda">{{ rol.total_permisos === 1 ? '1 permiso' : rol.total_permisos + ' permisos' }}</span>
               </label>
             </li>
           } @empty {
-            <li class="rounded-xl border border-warning-line bg-warning-soft px-3.5 py-3 text-[13px] text-warning">
-              Este negocio todavía no tiene roles activos.
-              <a class="font-bold text-warning underline" routerLink="/roles-permisos/nuevo">Crear un rol</a>
+            <li class="aviso aviso--atencion">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>Este negocio todavía no tiene roles activos. <a routerLink="/roles-permisos/nuevo">Crear un rol</a></span>
             </li>
           }
         </ul>
-        <p class="m-0 text-[12.5px] text-muted">Solo puedes otorgar roles cuyos permisos tú también tienes.</p>
+        <p class="ayuda">Solo puedes otorgar roles cuyos permisos tú también tienes.</p>
       </fieldset>
 
-      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ground px-5 py-3.5 sm:px-7">
-        <span class="text-[12.5px] text-muted">Los campos con <span class="text-danger" aria-hidden="true">*</span> son obligatorios.</span>
-        <div class="flex flex-wrap items-center gap-2.5">
-          <a
-            class="inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand no-underline transition-colors hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line"
-            routerLink="/roles-permisos"
-          >
-            Cancelar
-          </a>
-          <button
-            type="submit"
-            class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-primary bg-primary px-5 text-sm font-semibold text-white transition-colors hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-line disabled:cursor-not-allowed disabled:opacity-55"
-            [disabled]="saving()"
-            [attr.aria-busy]="saving()"
-          >
-            <i class="pi text-xs" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
-            {{ saving() ? 'Guardando…' : 'Guardar roles' }}
-          </button>
-        </div>
+      <footer class="formulario-g__acciones">
+        <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+        <a class="boton boton--fantasma" routerLink="/roles-permisos">Cancelar</a>
+        <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
+          <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+          {{ saving() ? 'Guardando…' : 'Guardar roles' }}
+        </button>
       </footer>
     </form>
   }

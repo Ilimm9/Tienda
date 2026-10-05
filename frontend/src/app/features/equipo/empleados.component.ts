@@ -9,7 +9,7 @@ import { forkJoin } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
 import { EmpleadoResumen, EstadoEmpleado } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
-import { ETIQUETA_ESTADO_EMPLEADO, iniciales } from './presentacion';
+import { avatarDeEstado, ETIQUETA_ESTADO_EMPLEADO, iniciales, PASTILLA_ESTADO_EMPLEADO } from './presentacion';
 
 @Component({
   selector: 'app-empleados',
@@ -32,6 +32,11 @@ export class EmpleadosComponent {
   readonly puedeGestionar = computed(() => this.misPermisos().includes('equipo.empleados.gestionar'));
 
   readonly iniciales = iniciales;
+  readonly avatarDeEstado = avatarDeEstado;
+  /** La fila de `p-table` llega sin tipo: el método fija el del estado. */
+  pastillaDeEstado(estado: EstadoEmpleado): string {
+    return PASTILLA_ESTADO_EMPLEADO[estado];
+  }
   /** Etiqueta legible del estado; la fila de p-table llega sin tipo. */
   etiquetaEstado(estado: EstadoEmpleado): string {
     return ETIQUETA_ESTADO_EMPLEADO[estado] ?? estado;

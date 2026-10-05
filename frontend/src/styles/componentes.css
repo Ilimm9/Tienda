@@ -311,12 +311,6 @@ select.campo {
   background-image: none;
 }
 
-.campo-select {
-  position: relative;
-  display: block;
-}
-
-.campo-select::after,
 .campo-grupo--select::after {
   position: absolute;
   top: 50%;
@@ -456,20 +450,6 @@ select.campo {
   border-top: 1px solid var(--border-soft);
 }
 
-.formulario-g__titulo h2 {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.formulario-g__titulo p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 .formulario-g__acciones {
   display: flex;
   align-items: center;
@@ -528,8 +508,7 @@ select.campo {
   background: var(--tone-sage);
 }
 
-.aviso--atencion,
-.aviso--arena {
+.aviso--atencion {
   color: var(--warning);
   border-color: var(--warning-border);
   background: var(--warning-soft);
@@ -565,10 +544,6 @@ select.campo {
   content: '';
 }
 
-.pastilla--pendiente::before {
-  background: var(--primary);
-}
-
 .pastilla--aceptada {
   color: var(--tone-sage-text);
   background: var(--tone-sage);
@@ -576,24 +551,6 @@ select.campo {
 
 .pastilla--aceptada::before {
   background: var(--success);
-}
-
-.pastilla--expirada {
-  color: var(--warning);
-  background: var(--warning-soft);
-}
-
-.pastilla--expirada::before {
-  background: #c38a12;
-}
-
-.pastilla--cancelada {
-  color: var(--text-body);
-  background: var(--tone-neutral);
-}
-
-.pastilla--cancelada::before {
-  background: var(--text-subtle);
 }
 
 .avatar {
@@ -660,7 +617,6 @@ select.campo {
   color: var(--text);
 }
 
-.segmentado__opcion--activa,
 .segmentado__opcion[aria-pressed='true'] {
   color: var(--text);
   background: var(--surface-raised);
@@ -902,3 +858,123 @@ select.campo {
     transition: none;
   }
 }
+
+/* ---------- Ampliación del plan 6: piezas que Equipo y Roles armaban a mano ---------- */
+
+/* Pastillas por significado; `--aceptada` se conserva para la aceptación de invitación. */
+.pastilla--info::before { background: var(--primary); }
+.pastilla--exito { color: var(--tone-sage-text); background: var(--tone-sage); }
+.pastilla--exito::before { background: var(--success); }
+.pastilla--atencion { color: var(--warning); background: var(--warning-soft); }
+.pastilla--atencion::before { background: #c38a12; }
+.pastilla--neutra { color: var(--text-body); background: var(--tone-neutral); }
+.pastilla--neutra::before { background: var(--text-subtle); }
+.pastilla--peligro { color: var(--danger); background: var(--danger-soft); }
+/* Sin punto: etiquetas que no son un estado (nombre de rol, tipo de acceso). */
+.pastilla--plana::before { content: none; }
+.pastilla--contorno { border: 1px solid var(--primary-border); background: var(--primary-tint); }
+
+.contador { padding: 2px 10px; color: var(--primary-hover); border-radius: 999px; background: var(--primary-soft); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.contador--salvia { color: var(--tone-sage-text); background: var(--tone-sage); }
+
+.boton--peligro { color: var(--danger); border-color: var(--danger-border); background: var(--danger-soft); }
+.boton--peligro:hover:not(:disabled) { color: #fff; border-color: var(--danger); background: var(--danger); }
+
+/* El error también se marca con aria-invalid, que es lo que escriben los formularios reactivos. */
+.campo[aria-invalid='true'],
+.campo-grupo:has([aria-invalid='true']) { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
+textarea.campo { height: auto; min-height: 72px; padding: 10px 14px; resize: vertical; }
+.campo--mayusculas { text-transform: uppercase; }
+.casilla { width: 16px; height: 16px; flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--primary); }
+
+/* Encabezado de sección: icono, título y descripción. */
+.seccion-encabezado { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
+.seccion-encabezado h2,
+.seccion-encabezado .titulo { margin: 0; color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.seccion-encabezado p,
+.seccion-encabezado .descripcion { margin: 2px 0 0; color: var(--text-muted); font-size: 13px; font-weight: 400; }
+.seccion-icono { display: grid; width: 36px; height: 36px; flex: 0 0 auto; color: var(--primary); border-radius: 10px; background: var(--primary-soft); place-items: center; }
+.seccion-icono--salvia { color: var(--success); background: var(--tone-sage); }
+.seccion-icono--redondo { width: 48px; height: 48px; border-radius: 50%; font-size: 18px; }
+/* Encabezado de tarjeta con línea inferior. */
+.tarjeta-encabezado { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--border-soft); }
+/* Sección de formulario sobre <fieldset>: sin el borde ni el margen nativos. */
+fieldset.formulario-g__seccion { min-width: 0; margin: 0; border-right: 0; border-bottom: 0; border-left: 0; }
+fieldset.formulario-g__seccion:first-of-type { border-top: 0; }
+.formulario-g__acciones .leyenda-obligatorios { margin-right: auto; }
+
+/* Tarjeta de opción con casilla o radio: se resalta al marcarla. */
+.opcion { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.opcion:hover { border-color: var(--border-strong); }
+.opcion:has(:checked) { border-color: var(--primary-border); background: var(--primary-tint); }
+.opcion--compacta { align-items: center; min-height: 46px; padding: 0 14px; border-radius: 10px; }
+.opcion strong { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+
+/* Grupo de permisos de un módulo. */
+.grupo-permisos { overflow: hidden; border: 1px solid var(--border); border-radius: 12px; }
+.grupo-permisos:has(:checked) { border-color: var(--primary-border); }
+.grupo-permisos__encabezado { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--border-soft); background: var(--background); }
+.grupo-permisos__encabezado h3 { min-width: 0; flex: 1; margin: 0; overflow: hidden; color: var(--text); font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.grupo-permisos__lista { display: flex; flex-direction: column; margin: 0; padding: 8px; list-style: none; }
+.grupo-permisos__lista label { display: flex; align-items: flex-start; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.grupo-permisos__lista label:hover { background: var(--primary-tint); }
+.boton-enlace--chico { min-height: 30px; padding: 0 8px; font-size: 12px; }
+
+/* Ficha: pares rótulo y valor. */
+.dato__rotulo { display: block; color: var(--text-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.dato__valor { display: block; margin: 2px 0 0; color: var(--text); font-size: 15px; overflow-wrap: anywhere; }
+.dato__valor--vacio { color: var(--text-muted); }
+
+/* Acceso a otra pantalla presentado como tarjeta. */
+.enlace-tarjeta { display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--text); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; transition: border-color 150ms ease, background-color 150ms ease; }
+.enlace-tarjeta:hover { color: var(--text); border-color: var(--primary-border); background: var(--primary-tint); text-decoration: none; }
+.enlace-tarjeta:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--primary-border); }
+.enlace-tarjeta strong { display: block; font-size: 14px; }
+.enlace-tarjeta--hecho { color: var(--tone-sage-text); border-color: var(--tone-sage-strong); background: var(--tone-sage); }
+
+/* Textos de apoyo. */
+.tenue { color: var(--text-muted); }
+.codigo { color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; }
+.enlace-fila { color: var(--text); font-weight: 600; text-decoration: none; }
+.enlace-fila:hover { color: var(--primary-hover); text-decoration: underline; }
+.acciones-fila { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.titulo-pagina { margin: 0; color: var(--text); font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
+.proporcion { display: block; width: 96px; height: 6px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: var(--tone-neutral); }
+.proporcion > span { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+
+/* Estado vacío con icono, título y ayuda. */
+.estado-vacio--guiado { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 40px 24px; }
+.estado-vacio--guiado strong { color: var(--text); font-weight: 600; }
+.estado-vacio--guiado span { font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .opcion, .enlace-tarjeta { transition: none; }
+}
+.encabezado-pagina .descripcion strong { color: var(--text); font-weight: 600; }
+.avatar--ficha { width: 64px; height: 64px; font-size: 20px; }
+dd.dato__valor { margin-left: 0; }
+.dato__valor.codigo { font-size: 12px; }
+.tarjeta--tinte { border-color: var(--primary-border); background: var(--primary-tint); }
+.tarjeta--tinte .rotulo { color: var(--primary-hover); }
+.avatar--solido { color: #fff; background: var(--primary); }
+.tarjeta--destacada { border-color: var(--primary-border); }
+.tarjeta--punteada { border-style: dashed; border-color: var(--border-strong); }
+.tarjeta-pie { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--border-soft); }
+.boton-enlace--peligro { color: var(--danger); }
+.boton-enlace--peligro:hover:not(:disabled) { color: var(--danger); }
+.pastilla .pi { font-size: 9px; }
+.secundario.urgente { color: var(--warning); font-weight: 600; }
+.secundario .pi { font-size: 11px; }
+.resumen-frase { margin: 0; color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
+.resumen-frase--vacia { color: var(--text-muted); font-size: 18px; font-weight: 600; }
+
+/* Tarjeta centrada con aspecto de diálogo (corregir correo). */
+.dialogo { width: 100%; max-width: 540px; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised); box-shadow: var(--shadow-dialog); }
+.dialogo__encabezado { display: flex; align-items: flex-start; gap: 14px; padding: 22px 24px 16px; }
+.dialogo__encabezado h1 { margin: 0; color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
+.dialogo__encabezado p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.dialogo__cuerpo { display: flex; flex-direction: column; gap: 16px; padding: 0 24px 22px; }
+.opcion { font-size: 14px; }
+.tabla-principal { font-size: 14px; }
+.resumen-frase--chica { font-size: 17px; letter-spacing: -0.02em; }
+.obligatorio { color: var(--danger); }

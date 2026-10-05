@@ -13,3 +13,16 @@ export const ETIQUETA_ESTADO_EMPLEADO: Record<EstadoEmpleado, string> = {
   suspendido: 'Suspendido',
   terminado: 'Dado de baja',
 };
+
+/** Variante de `.pastilla` del kit para cada estado laboral. */
+export const PASTILLA_ESTADO_EMPLEADO: Record<EstadoEmpleado, string> = {
+  pendiente: 'pastilla--info',
+  activo: 'pastilla--exito',
+  suspendido: 'pastilla--atencion',
+  terminado: 'pastilla--neutra',
+};
+
+/** Variante de `.avatar`: neutro para quien ya no opera (suspendido o de baja). */
+export function avatarDeEstado(estado: EstadoEmpleado): string {
+  return estado === 'suspendido' || estado === 'terminado' ? 'avatar--neutro' : '';
+}
