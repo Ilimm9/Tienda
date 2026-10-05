@@ -21,3 +21,6 @@ export interface ContextoOpcionesResponse {
 }
 
 export type EstadoContexto = 'cargando' | 'requiere_negocio' | 'listo' | 'sin_sucursal' | 'error';
+
+/** Qué le falta a la cuenta para operar: decide si se ofrece el asistente de alta inicial. */
+export type EstadoAlta = 'requiere_empresa' | 'requiere_sucursal' | 'sin_asignacion' | 'listo';

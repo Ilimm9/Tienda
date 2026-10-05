@@ -46,7 +46,7 @@ Ubicación directa autorizada por el usuario el 2026-10-01 para planeación, sin
 
 | Orden | Plan | Estado | Dependencias |
 | --- | --- | --- | --- |
-| 1 | [Alta inicial de empresa y sucursal](capabilities/thrs/01-alta-inicial-empresa-sucursal.md) | Borrador | Identidad/contexto 01, seguridad 06 y acceso visual 13 |
+| 1 | [Alta inicial de empresa y sucursal](capabilities/thrs/01-alta-inicial-empresa-sucursal.md) | Verificada; aprobada el 2026-10-05, pendiente de aceptación final | Identidad/contexto 01, seguridad 06 y acceso visual 13 |
 | 2 | [Invitaciones de empleados por sucursal](capabilities/thrs/02-invitaciones-empleados-sucursal.md) | Aprobada el 2026-10-01; flujo de invitación implementado | Plan 1, empleados/RBAC/invitaciones 01 y correo 07 |
 | 3 | [Paleta clara y tipografía global](capabilities/thrs/03-paleta-tipografia-global.md) | Aprobada e implementada el 2026-10-02; colores sustituidos por el plan 4 | Opción A, plan 2 y acceso 13 |
 | 4 | [Adaptar la app a la opción G](capabilities/thrs/04-adaptacion-opcion-g.md) | Verificada; pendiente de revisión final | Plan 3 |

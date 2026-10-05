@@ -245,6 +245,32 @@ describe('ContextoService', () => {
     responder([invitado, negocio(negocioB, [], [])]);
     expect(service.puedeCrearNegocio()).toBe(true);
   });
+
+  it('calcula qué falta del alta inicial', () => {
+    service.inicializar().subscribe();
+    responder([]);
+    expect(service.estadoAlta()).toBe('requiere_empresa');
+
+    service.recargar().subscribe();
+    responder([negocio(negocioA, [], ['sucursales.crear'])]);
+    expect(service.estadoAlta()).toBe('requiere_sucursal');
+
+    service.recargar().subscribe();
+    responder([{ ...negocio(negocioA, [], ['catalogo.ver']), tipo_miembro: 'miembro' as const }]);
+    expect(service.estadoAlta()).toBe('sin_asignacion');
+
+    service.recargar().subscribe();
+    responder([negocio(negocioA, sucursales, [])]);
+    expect(service.estadoAlta()).toBe('listo');
+  });
+
+  it('recuerda «hacerlo después» solo hasta cerrar sesión', () => {
+    expect(service.altaPospuesta()).toBe(false);
+    service.posponerAlta();
+    expect(service.altaPospuesta()).toBe(true);
+    service.limpiar();
+    expect(service.altaPospuesta()).toBe(false);
+  });
 });
 
 function storage(): Storage {

@@ -3,11 +3,12 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { ContextoNegocio, ContextoOpcionesResponse, ContextoSucursal, EstadoContexto } from './contexto.models';
+import { ContextoNegocio, ContextoOpcionesResponse, ContextoSucursal, EstadoAlta, EstadoContexto } from './contexto.models';
 import { comoLista, PermisoRequerido, PERMISOS } from './permisos';
 
 const negocioKey = 'tienda.contexto.negocio_id';
 const sucursalKey = 'tienda.contexto.sucursal_id';
+const altaPospuestaKey = 'tienda.alta_inicial.pospuesta';
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +71,22 @@ export class ContextoService {
   }
 
   /**
+   * Alta inicial pendiente, calculada con lo que ya trae el contexto:
+   * sin negocios falta la empresa; con negocio propio y sin sucursales falta la sucursal;
+   * un invitado sin sucursal asignada no puede resolverlo y debe pedir una asignación.
+   */
+  readonly estadoAlta = computed<EstadoAlta>(() => {
+    const estado = this.estado();
+    if (estado === 'cargando' || estado === 'error') return 'listo';
+    if (!this.negocios().length) return 'requiere_empresa';
+    const negocio = this.negocio();
+    if (!negocio || negocio.sucursales.length) return 'listo';
+    return this.puede(PERMISOS.sucursalCrear) ? 'requiere_sucursal' : 'sin_asignacion';
+  });
+  /** «Hacerlo después» vale para esta sesión del navegador: en el siguiente inicio vuelve a ofrecerse. */
+  readonly altaPospuesta = signal(this.leerAltaPospuesta());
+
+  /**
    * Registra negocios una cuenta sin negocios o quien ya es propietario de alguno.
    * Quien solo fue invitado a un equipo opera el negocio de otro y no ve esa opción.
    */
@@ -103,6 +120,23 @@ export class ContextoService {
     return comoLista(requerido).every((codigo) => negocio.permisos.includes(codigo));
   }
 
+  posponerAlta(): void {
+    this.altaPospuesta.set(true);
+    try {
+      sessionStorage.setItem(altaPospuestaKey, '1');
+    } catch {
+      // Sin sessionStorage la marca vive solo en memoria.
+    }
+  }
+
+  private leerAltaPospuesta(): boolean {
+    try {
+      return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(altaPospuestaKey) === '1';
+    } catch {
+      return false;
+    }
+  }
+
   seleccionarNegocio(id: string): void {
     const negocio = this.negocios().find((item) => item.id === id);
     if (!negocio) return;
@@ -117,6 +151,12 @@ export class ContextoService {
   }
 
   limpiar(): void {
+    this.altaPospuesta.set(false);
+    try {
+      sessionStorage.removeItem(altaPospuestaKey);
+    } catch {
+      // Sin sessionStorage no hay nada que limpiar.
+    }
     this.limpiarSeleccion();
     this.negocios.set([]);
     this.negocio.set(null);

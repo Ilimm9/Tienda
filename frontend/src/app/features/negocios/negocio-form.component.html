@@ -1,155 +1,268 @@
-<section class="business-page">
-  <header class="page-heading">
+<section class="pagina max-w-[1100px]">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Configuración global</span>
       <h1>{{ editing ? 'Editar negocio' : 'Registrar nuevo negocio' }}</h1>
-      <p>Define identidad legal, contacto y ubicación principal.</p>
+      <p class="descripcion">Define identidad legal, contacto y ubicación principal.</p>
     </div>
-    <div class="heading-actions">
-      <a class="secondary-button" [routerLink]="cancelLink()">Cancelar</a>
-      <button
-        class="primary-button"
-        type="submit"
-        form="business-form"
-        [disabled]="saving() || loading()"
-      >
-        <i class="pi pi-check" aria-hidden="true"></i>
-        {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Finalizar registro' }}
-      </button>
-    </div>
+    <a class="boton boton--secundario" [routerLink]="cancelLink()"><i class="pi pi-arrow-left" aria-hidden="true"></i>Volver</a>
   </header>
 
   @if (loading()) {
-    <p class="status-message" role="status">Cargando negocio…</p>
+    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando negocio…</p>
   } @else {
     @if (error()) {
-      <p class="status-message error" role="alert">{{ error() }}</p>
+      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
     }
 
-    <form id="business-form" class="business-form" [formGroup]="form" (ngSubmit)="submit()">
-      <section class="form-section surface-card">
-        <header>
-          <span><i class="pi pi-building" aria-hidden="true"></i></span>
-          <div>
-            <h2>Datos generales</h2>
-            <p>Información constitutiva y contacto principal.</p>
-          </div>
-        </header>
-        <div class="form-grid">
-          <label>
-            <span>Nombre comercial *</span>
-            <input
-              formControlName="nombre_comercial"
-              autocomplete="organization"
-              placeholder="Ej. Corporativo Nova"
-            />
-            @if (hasError('nombre_comercial')) {
-              <small>Escribe entre 2 y 180 caracteres.</small>
-            }
-            @if (fieldErrors()['nombre_comercial']) {
-              <small>{{ fieldErrors()['nombre_comercial'] }}</small>
-            }
-          </label>
-          <label>
-            <span>Razón social</span>
-            <input formControlName="razon_social" placeholder="Nombre legal completo" />
-          </label>
-          <label>
-            <span>RFC</span>
-            <input formControlName="rfc" maxlength="13" placeholder="ABC123456XYZ" />
-            @if (hasError('rfc')) {
-              <small>Escribe un RFC válido de 12 o 13 caracteres.</small>
-            }
-          </label>
-          <label>
-            <span>Teléfono</span>
-            <input formControlName="telefono" autocomplete="tel" placeholder="+52 55 1234 5678" />
-          </label>
-          <label class="wide-field">
-            <span>Correo electrónico</span>
-            <input
-              type="email"
-              formControlName="correo"
-              autocomplete="email"
-              placeholder="admin@empresa.com"
-            />
-            @if (hasError('correo')) {
-              <small>Escribe un correo válido.</small>
-            }
-          </label>
-          @if (slug()) {
-            <div class="slug-preview wide-field">
-              <span>Slug generado</span><code>{{ slug() }}</code>
+    <form id="business-form" class="formulario-g" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <fieldset class="formulario-g__seccion">
+          <legend class="contents">
+            <span class="seccion-encabezado">
+              <span class="seccion-icono" aria-hidden="true"><i class="pi pi-building"></i></span>
+              <span>
+                <span class="titulo block">Datos generales</span>
+                <span class="descripcion block">Información constitutiva y contacto principal.</span>
+              </span>
+            </span>
+          </legend>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="nombre_comercial">Nombre comercial <span class="obligatorio" aria-hidden="true">*</span></label>
+              <input
+                id="nombre_comercial"
+                class="campo"
+                type="text"
+                formControlName="nombre_comercial"
+                autocomplete="organization"
+                placeholder="Ej. Corporativo Nova" aria-required="true"
+                [attr.aria-invalid]="invalido('nombre_comercial')"
+                [attr.aria-describedby]="invalido('nombre_comercial') ? 'nombre-comercial-error' : null"
+              />
+              @if (invalido('nombre_comercial')) {
+                <small id="nombre-comercial-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['nombre_comercial'] || 'Escribe entre 2 y 180 caracteres.' }}</small>
+              }
             </div>
-          }
-        </div>
-      </section>
-
-      <section class="form-section surface-card">
-        <header>
-          <span><i class="pi pi-map-marker" aria-hidden="true"></i></span>
-          <div>
-            <h2>Ubicación y domicilio fiscal</h2>
-            <p>Bloque opcional. País será obligatorio al capturar dirección.</p>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="razon_social">Razón social</label>
+              <input
+                id="razon_social"
+                class="campo"
+                type="text"
+                formControlName="razon_social"
+                placeholder="Nombre legal completo"
+                [attr.aria-invalid]="invalido('razon_social')"
+                [attr.aria-describedby]="invalido('razon_social') ? 'razon-social-error' : null"
+              />
+              @if (invalido('razon_social')) {
+                <small id="razon-social-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['razon_social'] || 'Usa hasta 220 caracteres.' }}</small>
+              }
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="rfc">RFC</label>
+              <input
+                id="rfc"
+                class="campo campo--monoespacio campo--mayusculas"
+                type="text"
+                formControlName="rfc"
+                maxlength="13"
+                placeholder="ABC123456XYZ"
+                [attr.aria-invalid]="invalido('rfc')"
+                [attr.aria-describedby]="invalido('rfc') ? 'rfc-error' : null"
+              />
+              @if (invalido('rfc')) {
+                <small id="rfc-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['rfc'] || 'Escribe un RFC válido de 12 o 13 caracteres.' }}</small>
+              }
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="telefono">Teléfono</label>
+              <input
+                id="telefono"
+                class="campo"
+                type="tel"
+                formControlName="telefono"
+                autocomplete="tel"
+                placeholder="+52 55 1234 5678"
+                [attr.aria-invalid]="invalido('telefono')"
+                [attr.aria-describedby]="invalido('telefono') ? 'telefono-error' : null"
+              />
+              @if (invalido('telefono')) {
+                <small id="telefono-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['telefono'] || 'Usa hasta 30 caracteres.' }}</small>
+              }
+            </div>
+            <div class="campo-bloque sm:col-span-2">
+              <label class="etiqueta" for="correo">Correo electrónico</label>
+              <input
+                id="correo"
+                class="campo"
+                type="email"
+                formControlName="correo"
+                autocomplete="email"
+                placeholder="admin@empresa.com"
+                [attr.aria-invalid]="invalido('correo')"
+                [attr.aria-describedby]="invalido('correo') ? 'correo-error' : null"
+              />
+              @if (invalido('correo')) {
+                <small id="correo-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['correo'] || 'Escribe un correo válido.' }}</small>
+              }
+            </div>
+            @if (slug()) {
+              <div class="sm:col-span-2">
+                <span class="dato__rotulo">Slug generado</span>
+                <span class="dato__valor codigo">{{ slug() }}</span>
+              </div>
+            }
           </div>
-        </header>
-        <div class="form-grid address-grid">
-          <label
-            ><span>País *</span
-            ><select formControlName="codigo_pais">
-              <option value="MX">México</option>
-            </select></label
-          >
-          <label><span>Estado / Entidad</span><input formControlName="estado" /></label>
-          <label><span>Municipio / Delegación</span><input formControlName="municipio" /></label>
-          <label><span>Ciudad</span><input formControlName="ciudad" /></label>
-          <label><span>Colonia</span><input formControlName="colonia" /></label>
-          <label
-            ><span>Código postal</span><input formControlName="codigo_postal" inputmode="numeric"
-          /></label>
-          <label class="street-field"><span>Calle</span><input formControlName="calle" /></label>
-          <label><span>Número exterior</span><input formControlName="numero_exterior" /></label>
-          <label><span>Número interior</span><input formControlName="numero_interior" /></label>
-          <label class="wide-field"
-            ><span>Referencias</span><textarea formControlName="referencias" rows="3"></textarea>
-          </label>
-        </div>
-      </section>
-
-      <section class="form-section surface-card">
-        <header>
-          <span><i class="pi pi-globe" aria-hidden="true"></i></span>
-          <div>
-            <h2>Configuración regional</h2>
-            <p>Parámetros usados por operaciones y reportes.</p>
+        </fieldset>
+        <fieldset class="formulario-g__seccion">
+          <legend class="contents">
+            <span class="seccion-encabezado">
+              <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+              <span>
+                <span class="titulo block">Ubicación y domicilio fiscal</span>
+                <span class="descripcion block">Opcional. Se guarda solo si capturas algún dato.</span>
+              </span>
+            </span>
+          </legend>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="codigo_pais">País</label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-globe" aria-hidden="true"></i>
+                <select id="codigo_pais" formControlName="codigo_pais">
+                  <option value="MX">México</option>
+                </select>
+              </span>
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="estado">Estado / Entidad</label>
+              <input
+                id="estado"
+                class="campo"
+                type="text"
+                formControlName="estado"
+                [attr.aria-invalid]="invalido('estado')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="municipio">Municipio / Delegación</label>
+              <input
+                id="municipio"
+                class="campo"
+                type="text"
+                formControlName="municipio"
+                [attr.aria-invalid]="invalido('municipio')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="ciudad">Ciudad</label>
+              <input
+                id="ciudad"
+                class="campo"
+                type="text"
+                formControlName="ciudad"
+                [attr.aria-invalid]="invalido('ciudad')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="colonia">Colonia</label>
+              <input
+                id="colonia"
+                class="campo"
+                type="text"
+                formControlName="colonia"
+                [attr.aria-invalid]="invalido('colonia')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="codigo_postal">Código postal</label>
+              <input
+                id="codigo_postal"
+                class="campo"
+                type="text"
+                formControlName="codigo_postal"
+                inputmode="numeric"
+                [attr.aria-invalid]="invalido('codigo_postal')"
+              />
+            </div>
+            <div class="campo-bloque sm:col-span-2">
+              <label class="etiqueta" for="calle">Calle</label>
+              <input
+                id="calle"
+                class="campo"
+                type="text"
+                formControlName="calle"
+                [attr.aria-invalid]="invalido('calle')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="numero_exterior">Número exterior</label>
+              <input
+                id="numero_exterior"
+                class="campo"
+                type="text"
+                formControlName="numero_exterior"
+                [attr.aria-invalid]="invalido('numero_exterior')"
+              />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="numero_interior">Número interior</label>
+              <input
+                id="numero_interior"
+                class="campo"
+                type="text"
+                formControlName="numero_interior"
+                [attr.aria-invalid]="invalido('numero_interior')"
+              />
+            </div>
+            <div class="campo-bloque sm:col-span-2">
+              <label class="etiqueta" for="referencias">Referencias</label>
+              <textarea id="referencias" class="campo" formControlName="referencias" rows="3"></textarea>
+            </div>
           </div>
-        </header>
-        <div class="form-grid">
-          <label
-            ><span>Moneda base *</span
-            ><select formControlName="codigo_moneda">
-              <option value="MXN">MXN — Peso mexicano</option>
-              <option value="USD">USD — Dólar estadounidense</option>
-            </select></label
-          >
-          <label
-            ><span>Zona horaria *</span
-            ><select formControlName="zona_horaria">
-              <option value="America/Mexico_City">Centro de México</option>
-              <option value="America/Cancun">Quintana Roo</option>
-              <option value="America/Chihuahua">Chihuahua</option>
-              <option value="America/Tijuana">Baja California</option>
-            </select></label
-          >
-        </div>
-      </section>
-
-      <div class="mobile-submit">
-        <a class="secondary-button" [routerLink]="cancelLink()">Cancelar</a>
-        <button class="primary-button" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Guardando…' : 'Guardar negocio' }}
-        </button>
-      </div>
+        </fieldset>
+        <fieldset class="formulario-g__seccion">
+          <legend class="contents">
+            <span class="seccion-encabezado">
+              <span class="seccion-icono" aria-hidden="true"><i class="pi pi-globe"></i></span>
+              <span>
+                <span class="titulo block">Configuración regional</span>
+                <span class="descripcion block">Parámetros usados por operaciones y reportes.</span>
+              </span>
+            </span>
+          </legend>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="codigo_moneda">Moneda base <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-dollar" aria-hidden="true"></i>
+                <select id="codigo_moneda" formControlName="codigo_moneda" aria-required="true">
+                  <option value="MXN">MXN — Peso mexicano</option>
+                  <option value="USD">USD — Dólar estadounidense</option>
+                </select>
+              </span>
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="zona_horaria">Zona horaria <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-clock" aria-hidden="true"></i>
+                <select id="zona_horaria" formControlName="zona_horaria" aria-required="true">
+                  <option value="America/Mexico_City">Centro de México</option>
+                  <option value="America/Cancun">Quintana Roo</option>
+                  <option value="America/Chihuahua">Chihuahua</option>
+                  <option value="America/Tijuana">Baja California</option>
+                </select>
+              </span>
+            </div>
+          </div>
+        </fieldset>
+        <footer class="formulario-g__acciones">
+          <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+          <a class="boton boton--fantasma" [routerLink]="cancelLink()">Cancelar</a>
+          <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
+            <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Finalizar registro' }}
+          </button>
+        </footer>
     </form>
   }
 </section>

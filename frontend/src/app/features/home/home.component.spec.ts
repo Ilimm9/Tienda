@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { ContextoService } from '../../contexto/contexto.service';
 import { HomeComponent } from './home.component';
 
-async function crear(otorgados: string[], verNegocios = true) {
+async function crear(otorgados: string[], verNegocios = true, alta = 'listo') {
   await TestBed.configureTestingModule({
     imports: [HomeComponent],
     providers: [
@@ -17,6 +17,7 @@ async function crear(otorgados: string[], verNegocios = true) {
           sucursal: signal(null),
           puede: (codigo: string) => otorgados.includes(codigo),
           puedeVerNegocios: signal(verNegocios),
+          estadoAlta: signal(alta),
         },
       },
     ],
@@ -50,5 +51,30 @@ describe('HomeComponent', () => {
     const fixture = await crear([], false);
 
     expect(fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')).toHaveLength(0);
+  });
+
+  it('ofrece el asistente cuando falta la empresa', async () => {
+    const fixture = await crear([], true, 'requiere_empresa');
+    const texto = fixture.nativeElement.textContent as string;
+
+    expect(texto).toContain('Falta tu empresa.');
+    expect(texto).toContain('0 de 2 pasos');
+    expect(fixture.nativeElement.querySelector('a.boton').getAttribute('href')).toBe('/configuracion-inicial');
+  });
+
+  it('retoma en la sucursal cuando la empresa ya existe', async () => {
+    const fixture = await crear([], true, 'requiere_sucursal');
+    const texto = fixture.nativeElement.textContent as string;
+
+    expect(texto).toContain('Falta tu primera sucursal.');
+    expect(texto).toContain('1 de 2 pasos');
+    expect(fixture.nativeElement.querySelector('a.boton').textContent).toContain('Crear sucursal');
+  });
+
+  it('a un invitado sin sucursal le pide solicitar una asignación, sin asistente', async () => {
+    const fixture = await crear([], false, 'sin_asignacion');
+
+    expect(fixture.nativeElement.textContent).toContain('Solicita una asignación al administrador');
+    expect(fixture.nativeElement.querySelector('a[href="/configuracion-inicial"]')).toBeNull();
   });
 });

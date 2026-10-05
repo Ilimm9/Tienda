@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -14,15 +14,16 @@ import {
 } from './negocio.models';
 import { NegocioService } from './negocio.service';
 import { ContextoService } from '../../contexto/contexto.service';
+import { enfocarPrimerInvalido } from '../../shared/formularios/formulario';
 
 @Component({
   selector: 'app-negocio-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './negocio-form.component.html',
-  styleUrl: './negocio-form.component.css',
 })
 export class NegocioFormComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
   private readonly route = inject(ActivatedRoute);
@@ -68,7 +69,11 @@ export class NegocioFormComponent {
     this.form.markAllAsTouched();
     this.error.set(null);
     this.fieldErrors.set({});
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
+    if (this.saving()) return;
 
     const value = this.form.getRawValue();
     const address = this.addressPayload(value);
@@ -111,6 +116,11 @@ export class NegocioFormComponent {
         this.fieldErrors.set(apiError?.campos ?? {});
       },
     });
+  }
+
+  /** Inválido por validación local o porque el servidor rechazó el campo. */
+  invalido(control: keyof typeof this.form.controls): boolean {
+    return this.hasError(control) || Boolean(this.fieldErrors()[control]);
   }
 
   hasError(control: keyof typeof this.form.controls): boolean {

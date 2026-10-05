@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './features/auth/auth.guard';
+import { altaInicialGuard, asistenteGuard } from './contexto/alta-inicial.guard';
 import { contextoGuard } from './contexto/contexto.guard';
 import { permisoGuard } from './contexto/permiso.guard';
 import { PERMISOS } from './contexto/permisos';
@@ -56,6 +57,12 @@ export const routes: Routes = [
       import('./features/invitacion/aceptar-invitacion').then((module) => module.AceptarInvitacion),
   },
   {
+    // El asistente de alta inicial es una pantalla enfocada: sin menú lateral ni selector de contexto.
+    path: 'configuracion-inicial',
+    canActivate: [authGuard, asistenteGuard],
+    loadComponent: () => import('./features/alta-inicial/alta-inicial').then((module) => module.AltaInicial),
+  },
+  {
     path: '',
     canActivateChild: [authGuard],
     loadComponent: () =>
@@ -63,7 +70,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'inicio',
-        canActivate: [contextoGuard],
+        canActivate: [altaInicialGuard],
         data: { breadcrumb: 'Inicio' },
         loadComponent: () =>
           import('./features/home/home.component').then((module) => module.HomeComponent),
