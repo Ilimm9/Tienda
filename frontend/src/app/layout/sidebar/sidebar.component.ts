@@ -20,7 +20,11 @@ export class SidebarComponent {
 
   /** El menú refleja los permisos del negocio activo; cambia al cambiar de negocio o recargar el contexto. */
   readonly navigationItems = computed(() =>
-    filtrarNavegacion(NAVIGATION_ITEMS, (permiso) => this.contexto.puede(permiso)),
+    filtrarNavegacion(
+      NAVIGATION_ITEMS,
+      (item) =>
+        this.contexto.puede(item.permiso) && (item.acceso !== 'ver-negocios' || this.contexto.puedeVerNegocios()),
+    ),
   );
 
   isGroupExpanded(item: NavigationItem): boolean {

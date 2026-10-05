@@ -19,9 +19,11 @@ import (
 var (
 	ErrNegocioNoEncontrado = errors.New("negocio no encontrado")
 	ErrNegocioProhibido    = errors.New("no tienes permiso para modificar este negocio")
-	ErrNegocioSinCambios   = errors.New("no se recibieron campos para actualizar")
-	ErrEstadoNegocio       = errors.New("el negocio ya se encuentra en ese estado")
-	ErrNegocioConflicto    = errors.New("ya existe un negocio con esos datos")
+	// ErrNegocioSoloPropietarios: quien llegó por invitación opera el negocio de otro; no registra negocios propios.
+	ErrNegocioSoloPropietarios = errors.New("tu cuenta fue invitada como parte de un equipo y no puede registrar negocios")
+	ErrNegocioSinCambios       = errors.New("no se recibieron campos para actualizar")
+	ErrEstadoNegocio           = errors.New("el negocio ya se encuentra en ese estado")
+	ErrNegocioConflicto        = errors.New("ya existe un negocio con esos datos")
 )
 
 type ErrorValidacion struct {
@@ -35,6 +37,8 @@ type NegocioRepository interface {
 	Listar(ctx context.Context, usuarioID uuid.UUID, estado string) ([]domain.NegocioResumen, error)
 	ObtenerAccesible(ctx context.Context, usuarioID, negocioID uuid.UUID) (domain.NegocioDetalle, error)
 	ExisteSlug(ctx context.Context, slug string) (bool, error)
+	// MembresiasActivas cuenta las membresías vigentes del usuario y cuántas son como propietario, sin importar el estado del negocio.
+	MembresiasActivas(ctx context.Context, usuarioID uuid.UUID) (total, comoPropietario int64, err error)
 	Crear(ctx context.Context, usuarioID uuid.UUID, slug string, input domain.CrearNegocioInput) (domain.NegocioDetalle, error)
 	Actualizar(ctx context.Context, usuarioID, negocioID uuid.UUID, input domain.ActualizarNegocioInput) error
 	Archivar(ctx context.Context, usuarioID, negocioID uuid.UUID) error
@@ -56,7 +60,23 @@ func (s *NegocioService) Listar(ctx context.Context, usuarioID uuid.UUID, estado
 	if estado != "activo" && estado != "archivado" {
 		return nil, &ErrorValidacion{Campos: map[string]string{"estado": "debe ser activo o archivado"}}
 	}
-	return s.negocios.Listar(ctx, usuarioID, estado)
+	todos, err := s.negocios.Listar(ctx, usuarioID, estado)
+	if err != nil {
+		return nil, err
+	}
+	// Un miembro solo ve en la lista los negocios donde su rol incluye `negocios.ver`.
+	visibles := make([]domain.NegocioResumen, 0, len(todos))
+	for _, negocio := range todos {
+		if negocio.TipoMiembro != "propietario" {
+			if err := s.autorizar(ctx, usuarioID, negocio.ID, domain.PermisoNegocioVer); errors.Is(err, ErrNegocioProhibido) {
+				continue
+			} else if err != nil {
+				return nil, err
+			}
+		}
+		visibles = append(visibles, negocio)
+	}
+	return visibles, nil
 }
 
 func (s *NegocioService) Obtener(ctx context.Context, usuarioID, negocioID uuid.UUID) (domain.NegocioDetalle, error) {
@@ -64,6 +84,14 @@ func (s *NegocioService) Obtener(ctx context.Context, usuarioID, negocioID uuid.
 }
 
 func (s *NegocioService) Crear(ctx context.Context, usuarioID uuid.UUID, input domain.CrearNegocioInput) (domain.NegocioDetalle, error) {
+	// Registra negocios una cuenta nueva o quien ya es propietario de alguno; un empleado invitado, no.
+	total, comoPropietario, err := s.negocios.MembresiasActivas(ctx, usuarioID)
+	if err != nil {
+		return domain.NegocioDetalle{}, err
+	}
+	if total > 0 && comoPropietario == 0 {
+		return domain.NegocioDetalle{}, ErrNegocioSoloPropietarios
+	}
 	validarCrearNegocio(&input)
 	if campos := validarNegocio(input.NombreComercial, input.RazonSocial, input.RFC, input.Telefono, input.Correo, input.CodigoMoneda, input.ZonaHoraria, input.Direccion); len(campos) > 0 {
 		return domain.NegocioDetalle{}, &ErrorValidacion{Campos: campos}

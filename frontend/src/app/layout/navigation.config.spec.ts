@@ -35,8 +35,8 @@ describe('NAVIGATION_ITEMS', () => {
 
   it('oculta lo que el rol no permite y retira los grupos vacíos', () => {
     const otorgados = ['catalogo.ver', 'equipo.invitaciones.ver'];
-    const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (permiso) =>
-      [permiso ?? []].flat().every((codigo) => otorgados.includes(codigo)),
+    const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (item) =>
+      [item.permiso ?? []].flat().every((codigo) => otorgados.includes(codigo)),
     );
 
     expect(visibles.map((item) => item.label)).toEqual([
@@ -47,5 +47,12 @@ describe('NAVIGATION_ITEMS', () => {
 
   it('muestra todo el menú con todos los permisos', () => {
     expect(filtrarNavegacion(NAVIGATION_ITEMS, () => true)).toHaveLength(NAVIGATION_ITEMS.length);
+  });
+
+  it('oculta Negocios a quien solo fue invitado y no tiene negocios.ver', () => {
+    const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (item) => item.acceso !== 'ver-negocios');
+
+    expect(visibles.some((item) => item.label === 'Negocios')).toBe(false);
+    expect(visibles.some((item) => item.label === 'Inicio')).toBe(true);
   });
 });

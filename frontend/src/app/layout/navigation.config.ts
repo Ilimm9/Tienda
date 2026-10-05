@@ -6,12 +6,14 @@ export interface NavigationItem {
   readonly route?: string;
   /** Permiso de lectura de la sección; sin él, el elemento no aparece en el menú. */
   readonly permiso?: PermisoRequerido;
+  /** Regla de cuenta, no de un negocio: la sección Negocios depende de ser propietario o tener `negocios.ver`. */
+  readonly acceso?: 'ver-negocios';
   readonly children?: readonly NavigationItem[];
 }
 
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Inicio', icon: 'pi pi-home', route: '/inicio' },
-  { label: 'Negocios', icon: 'pi pi-briefcase', route: '/negocios' },
+  { label: 'Negocios', icon: 'pi pi-briefcase', route: '/negocios', acceso: 'ver-negocios' },
   { label: 'Sucursales', icon: 'pi pi-map-marker', route: '/sucursales', permiso: PERMISOS.sucursalVer },
   { label: 'Ventas', icon: 'pi pi-shopping-cart', route: '/ventas' },
   {
@@ -38,15 +40,15 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { label: 'Roles y permisos', icon: 'pi pi-lock', route: '/roles-permisos', permiso: PERMISOS.rolVer },
 ];
 
-/** Deja solo lo que `puede` permite; un grupo sin hijos visibles desaparece. */
+/** Deja solo lo que `visible` permite; un grupo sin hijos visibles desaparece. */
 export function filtrarNavegacion(
   items: readonly NavigationItem[],
-  puede: (permiso: PermisoRequerido | undefined) => boolean,
+  visible: (item: NavigationItem) => boolean,
 ): NavigationItem[] {
   return items.flatMap((item) => {
-    if (!puede(item.permiso)) return [];
+    if (!visible(item)) return [];
     if (!item.children) return [item];
-    const children = item.children.filter((child) => puede(child.permiso));
+    const children = item.children.filter(visible);
     return children.length ? [{ ...item, children }] : [];
   });
 }

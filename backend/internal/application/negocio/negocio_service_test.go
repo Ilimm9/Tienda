@@ -24,6 +24,12 @@ type negocioRepositoryStub struct {
 	archiveCalled bool
 	restoreCalled bool
 	permisos      []string
+	membresias    int64
+	propietario   int64
+}
+
+func (r *negocioRepositoryStub) MembresiasActivas(context.Context, uuid.UUID) (int64, int64, error) {
+	return r.membresias, r.propietario, nil
 }
 
 // PermisosEfectivos devuelve el catálogo completo para un propietario, que es exactamente lo que
@@ -167,5 +173,43 @@ func TestNegocioServiceValidaEstadoDeListado(t *testing.T) {
 	var validation *ErrorValidacion
 	if !errors.As(err, &validation) || validation.Campos["estado"] == "" {
 		t.Fatalf("error = %#v, se esperaba validación de estado", err)
+	}
+}
+
+func TestNegocioServiceCrearRechazaCuentaSoloInvitada(t *testing.T) {
+	repository := &negocioRepositoryStub{detalle: domain.NegocioDetalle{ID: uuid.New()}, membresias: 1}
+	service := NewNegocioService(repository)
+
+	_, err := service.Crear(context.Background(), uuid.New(), domain.CrearNegocioInput{NombreComercial: "Mi tienda"})
+
+	if !errors.Is(err, ErrNegocioSoloPropietarios) || repository.createdSlug != "" {
+		t.Fatalf("un empleado invitado no debe registrar negocios: %v", err)
+	}
+}
+
+func TestNegocioServiceCrearPermitePropietarioConOtroNegocio(t *testing.T) {
+	repository := &negocioRepositoryStub{detalle: domain.NegocioDetalle{ID: uuid.New()}, membresias: 2, propietario: 1}
+	service := NewNegocioService(repository)
+
+	if _, err := service.Crear(context.Background(), uuid.New(), domain.CrearNegocioInput{NombreComercial: "Segunda tienda"}); err != nil {
+		t.Fatalf("quien ya es propietario puede registrar otro negocio: %v", err)
+	}
+}
+
+func TestNegocioServiceListarOcultaNegociosSinPermisoDeVer(t *testing.T) {
+	propio, ajeno := uuid.New(), uuid.New()
+	repository := &negocioRepositoryStub{
+		items: []domain.NegocioResumen{
+			{ID: propio, TipoMiembro: "propietario"},
+			{ID: ajeno, TipoMiembro: "miembro"},
+		},
+		permisos: []string{domain.PermisoCatalogoVer},
+	}
+	service := NewNegocioService(repository)
+
+	items, err := service.Listar(context.Background(), uuid.New(), "")
+
+	if err != nil || len(items) != 1 || items[0].ID != propio {
+		t.Fatalf("solo debe listarse el negocio propio: %v %+v", err, items)
 	}
 }

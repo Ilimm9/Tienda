@@ -12,13 +12,13 @@ export const NEGOCIOS_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        data: { title: 'Mis negocios' },
+        data: { title: 'Mis negocios', acceso: 'ver-negocios' },
         loadComponent: () =>
           import('./negocios.component').then((module) => module.NegociosComponent),
       },
       {
         path: 'nuevo',
-        data: { breadcrumb: 'Registrar negocio', title: 'Registrar nuevo negocio' },
+        data: { breadcrumb: 'Registrar negocio', title: 'Registrar nuevo negocio', acceso: 'crear-negocio' },
         loadComponent: () =>
           import('./negocio-form.component').then((module) => module.NegocioFormComponent),
       },

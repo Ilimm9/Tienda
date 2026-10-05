@@ -225,6 +225,26 @@ describe('ContextoService', () => {
     expect(service.puedeEn(negocioB, 'negocios.archivar')).toBe(false);
     expect(service.puedeEn(negocioB, 'negocios.archivar', true)).toBe(true);
   });
+
+  it('solo deja registrar negocios a una cuenta nueva o a quien ya es propietario', () => {
+    expect(service.puedeCrearNegocio()).toBe(true);
+
+    service.inicializar().subscribe();
+    const invitado = { ...negocio(negocioA, sucursales, ['catalogo.ver']), tipo_miembro: 'miembro' as const };
+    responder([invitado]);
+
+    expect(service.puedeCrearNegocio()).toBe(false);
+    expect(service.puedeVerNegocios()).toBe(false);
+
+    service.recargar().subscribe();
+    responder([{ ...invitado, permisos: ['negocios.ver'] }]);
+    expect(service.puedeVerNegocios()).toBe(true);
+    expect(service.puedeCrearNegocio()).toBe(false);
+
+    service.recargar().subscribe();
+    responder([invitado, negocio(negocioB, [], [])]);
+    expect(service.puedeCrearNegocio()).toBe(true);
+  });
 });
 
 function storage(): Storage {

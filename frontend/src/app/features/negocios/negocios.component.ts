@@ -39,6 +39,7 @@ export class NegociosComponent {
 
   private readonly contexto = inject(ContextoService);
   readonly P = PERMISOS;
+  readonly puedeCrear = this.contexto.puedeCrearNegocio;
 
   /** Un negocio archivado no está en el contexto: ahí decide ser propietario. */
   puedeEn(business: NegocioResumen, codigo: CodigoPermiso): boolean {

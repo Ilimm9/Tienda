@@ -4,7 +4,7 @@ import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxj
 
 import { environment } from '../../environments/environment';
 import { ContextoNegocio, ContextoOpcionesResponse, ContextoSucursal, EstadoContexto } from './contexto.models';
-import { comoLista, PermisoRequerido } from './permisos';
+import { comoLista, PermisoRequerido, PERMISOS } from './permisos';
 
 const negocioKey = 'tienda.contexto.negocio_id';
 const sucursalKey = 'tienda.contexto.sucursal_id';
@@ -68,6 +68,19 @@ export class ContextoService {
     this.inicializado.set(false);
     return this.inicializar();
   }
+
+  /**
+   * Registra negocios una cuenta sin negocios o quien ya es propietario de alguno.
+   * Quien solo fue invitado a un equipo opera el negocio de otro y no ve esa opción.
+   */
+  readonly puedeCrearNegocio = computed(() => {
+    const negocios = this.negocios();
+    return !negocios.length || negocios.some((item) => item.tipo_miembro === 'propietario');
+  });
+  /** La sección Negocios aparece si puede registrar uno o si algún rol suyo incluye `negocios.ver`. */
+  readonly puedeVerNegocios = computed(
+    () => this.puedeCrearNegocio() || this.negocios().some((item) => item.permisos.includes(PERMISOS.negocioVer)),
+  );
 
   /** Indica si el negocio activo otorga todos los permisos pedidos. Sin permisos pedidos, siempre permite. */
   puede(requerido: PermisoRequerido | null | undefined): boolean {

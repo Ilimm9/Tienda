@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { ContextoService } from '../../contexto/contexto.service';
 import { HomeComponent } from './home.component';
 
-async function crear(otorgados: string[]) {
+async function crear(otorgados: string[], verNegocios = true) {
   await TestBed.configureTestingModule({
     imports: [HomeComponent],
     providers: [
@@ -16,6 +16,7 @@ async function crear(otorgados: string[]) {
           negocio: signal(null),
           sucursal: signal(null),
           puede: (codigo: string) => otorgados.includes(codigo),
+          puedeVerNegocios: signal(verNegocios),
         },
       },
     ],
@@ -43,5 +44,11 @@ describe('HomeComponent', () => {
     const tarjetas = fixture.nativeElement.querySelectorAll('a.resumen-tarjeta');
     expect(tarjetas).toHaveLength(1);
     expect(tarjetas[0].getAttribute('href')).toBe('/negocios');
+  });
+
+  it('oculta Negocios a quien solo fue invitado', async () => {
+    const fixture = await crear([], false);
+
+    expect(fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')).toHaveLength(0);
   });
 });

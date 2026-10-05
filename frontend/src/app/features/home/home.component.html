@@ -15,14 +15,16 @@
   </header>
 
   <div class="summary-grid">
-    <a class="resumen-tarjeta" routerLink="/negocios">
-      <span class="summary-icon lavanda"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
-      <span class="resumen-tarjeta__texto">
-        <strong>Negocios</strong>
-        <span>Gestiona la información general de tus negocios.</span>
-      </span>
-      <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
-    </a>
+    @if (contexto.puedeVerNegocios()) {
+      <a class="resumen-tarjeta" routerLink="/negocios">
+        <span class="summary-icon lavanda"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+        <span class="resumen-tarjeta__texto">
+          <strong>Negocios</strong>
+          <span>Gestiona la información general de tus negocios.</span>
+        </span>
+        <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+      </a>
+    }
     <a *appPuede="P.sucursalVer" class="resumen-tarjeta" routerLink="/sucursales">
       <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
       <span class="resumen-tarjeta__texto">
