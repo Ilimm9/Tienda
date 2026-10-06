@@ -3,7 +3,15 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CatalogOption, CreateProductRequest, ProductImportJob, ProductImportPreview, ProductListResponse, ProductLookup, UpdateProductRequest } from './product.models';
+import {
+  CatalogOption,
+  CreateProductRequest,
+  ProductImportJob,
+  ProductImportPreview,
+  ProductListResponse,
+  ProductLookup,
+  UpdateProductRequest,
+} from './product.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
@@ -27,14 +35,26 @@ export class ProductosService {
     );
   }
 
+  createBrand(businessId: string, nombre: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/negocios/${businessId}/catalogo/marcas`, {
+      nombre,
+    });
+  }
+
   listBranches(businessId: string): Observable<CatalogOption[]> {
-    return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/sucursales`);
+    return this.http.get<CatalogOption[]>(
+      `${environment.apiUrl}/negocios/${businessId}/sucursales`,
+    );
   }
   listUnits(businessId: string): Observable<CatalogOption[]> {
-    return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/catalogo/unidades-medida`);
+    return this.http.get<CatalogOption[]>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/unidades-medida`,
+    );
   }
   listProviders(businessId: string): Observable<CatalogOption[]> {
-    return this.http.get<CatalogOption[]>(`${environment.apiUrl}/negocios/${businessId}/catalogo/proveedores`);
+    return this.http.get<CatalogOption[]>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/proveedores`,
+    );
   }
 
   lookupProduct(businessId: string, barcode: string): Observable<ProductLookup> {
@@ -72,20 +92,28 @@ export class ProductosService {
     data.append('archivo', file);
     data.append('sucursal_id', branchId);
     return this.http.post<ProductImportJob>(
-      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importar`, data,
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importar`,
+      data,
     );
   }
 
   productImportStatus(businessId: string, importId: string): Observable<ProductImportJob> {
-    return this.http.get<ProductImportJob>(`${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importaciones/${importId}`);
+    return this.http.get<ProductImportJob>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importaciones/${importId}`,
+    );
   }
 
-  previewProductImport(businessId: string, branchId: string, file: File): Observable<ProductImportPreview> {
+  previewProductImport(
+    businessId: string,
+    branchId: string,
+    file: File,
+  ): Observable<ProductImportPreview> {
     const data = new FormData();
     data.append('archivo', file);
     data.append('sucursal_id', branchId);
     return this.http.post<ProductImportPreview>(
-      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/validar-importacion`, data,
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/validar-importacion`,
+      data,
     );
   }
 }

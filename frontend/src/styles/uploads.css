@@ -52,7 +52,10 @@
   background: color-mix(in srgb, var(--primary-soft) 42%, transparent);
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
 }
 
 .file-dropzone:hover,
@@ -66,9 +69,9 @@
 
 .file-dropzone.has-file {
   border-style: solid;
-  border-color: var(--success);
+  border-color: #2c2e6a;
   color: var(--text);
-  background: var(--success-soft);
+  background: color-mix(in srgb, #2c2e6a 10%, var(--surface-raised));
 }
 
 .file-dropzone.is-disabled {
@@ -93,8 +96,8 @@
 }
 
 .has-file .dropzone-icon {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success-soft) 75%, white);
+  color: #2c2e6a;
+  background: color-mix(in srgb, #2c2e6a 14%, white);
 }
 
 .remove-file-button {

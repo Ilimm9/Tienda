@@ -34,17 +34,28 @@ describe('ProductosComponent', () => {
     component = TestBed.createComponent(ProductosComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
 
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos`)
+    http
+      .expectOne(
+        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos`,
+      )
       .flush({ items: [], total: 0 });
 
     component.openCreateDialog();
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/categorias`)
+    http
+      .expectOne(
+        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/categorias`,
+      )
       .flush([{ id: 'categoria-bebidas', nombre: 'Bebidas' }]);
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`)
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`)
       .flush([{ id: 'marca-coca-cola', nombre: 'Coca Cola' }]);
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/sucursales`)
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/sucursales`)
       .flush([{ id: 'sucursal-1', nombre: 'Tienda prueba' }]);
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/unidades-medida`)
+    http
+      .expectOne(
+        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/unidades-medida`,
+      )
       .flush([{ id: 'unidad-ml', nombre: 'Mililitro', codigo: 'ml', simbolo: 'ml' }]);
     router.navigate.mockClear();
   });
@@ -57,7 +68,10 @@ describe('ProductosComponent', () => {
     component.productForm.controls.codigo_barras.setValue('7501055303038');
     component.lookupProduct();
 
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501055303038`)
+    http
+      .expectOne(
+        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501055303038`,
+      )
       .flush({
         codigo_barras: '7501055303038',
         nombre: 'Coca-Cola 600 ml',
@@ -81,6 +95,65 @@ describe('ProductosComponent', () => {
     expect(component.previewImageURL()).toBe('https://cdn.example.com/coca-cola.jpg');
   });
 
+  it('offers and creates a brand without losing the product form', () => {
+    const controls = component.productForm.controls;
+    controls.nombre.setValue('Refresco de naranja');
+    controls.marca_id.setValue('marca-coca-cola');
+
+    component.onBrandSelected('__new_brand__');
+
+    expect(component.brandOptions().at(-1)).toEqual({
+      id: '__new_brand__',
+      nombre: 'Crear nueva…',
+    });
+    expect(component.brandCreationVisible()).toBe(true);
+    expect(controls.marca_id.value).toBe('');
+    expect(controls.nombre.value).toBe('Refresco de naranja');
+
+    component.brandForm.controls.nombre.setValue('Naranjax');
+    component.createBrand();
+
+    http
+      .expectOne({
+        method: 'POST',
+        url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`,
+      })
+      .flush(null);
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`)
+      .flush([
+        { id: 'marca-coca-cola', nombre: 'Coca Cola' },
+        { id: 'marca-naranjax', nombre: 'Naranjax' },
+      ]);
+
+    expect(controls.marca_id.value).toBe('marca-naranjax');
+    expect(component.brandCreationVisible()).toBe(false);
+  });
+
+  it('validates, cancels, and reports errors while creating a brand', () => {
+    component.onBrandSelected('__new_brand__');
+    component.createBrand();
+
+    expect(component.brandForm.controls.nombre.touched).toBe(true);
+    expect(component.brandCreating()).toBe(false);
+
+    component.cancelBrandCreation();
+    expect(component.brandCreationVisible()).toBe(false);
+
+    component.onBrandSelected('__new_brand__');
+    component.brandForm.controls.nombre.setValue('Duplicada');
+    component.createBrand();
+    http
+      .expectOne({
+        method: 'POST',
+        url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`,
+      })
+      .flush({ mensaje: 'La marca ya existe.' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(component.brandCreationVisible()).toBe(true);
+    expect(component.brandCreationError()).toBe('La marca ya existe.');
+  });
+
   it('preserves manually edited fields and leaves unmatched catalogs empty', () => {
     const controls = component.productForm.controls;
     controls.nombre.setValue('Nombre escrito por el usuario');
@@ -88,7 +161,10 @@ describe('ProductosComponent', () => {
     controls.codigo_barras.setValue('7501234567890');
     component.lookupProduct();
 
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501234567890`)
+    http
+      .expectOne(
+        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501234567890`,
+      )
       .flush({
         codigo_barras: '7501234567890',
         nombre: 'Nombre de PrecioCheck',
@@ -155,13 +231,22 @@ describe('ProductosComponent', () => {
       advertencias: [],
     });
 
-    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [firstFile] } } as unknown as DragEvent);
-    component.onImportDrop({ preventDefault: vi.fn(), dataTransfer: { files: [replacementFile] } } as unknown as DragEvent);
+    component.onImportDrop({
+      preventDefault: vi.fn(),
+      dataTransfer: { files: [firstFile] },
+    } as unknown as DragEvent);
+    component.onImportDrop({
+      preventDefault: vi.fn(),
+      dataTransfer: { files: [replacementFile] },
+    } as unknown as DragEvent);
 
     expect(component.importFile).toBe(replacementFile);
     expect(component.importPreview()).toBeNull();
 
-    component.removeImportFile({ stopPropagation: vi.fn() } as unknown as MouseEvent, document.createElement('input'));
+    component.removeImportFile(
+      { stopPropagation: vi.fn() } as unknown as MouseEvent,
+      document.createElement('input'),
+    );
 
     expect(component.importFile).toBeNull();
     expect(component.importResult()).toBeNull();
@@ -175,18 +260,49 @@ describe('ProductosComponent', () => {
 
     expect(router.navigate).toHaveBeenNthCalledWith(1, ['/catalogo/productos/nuevo']);
     expect(router.navigate).toHaveBeenNthCalledWith(2, ['/catalogo/productos/importar']);
-    expect(router.navigate).toHaveBeenNthCalledWith(3, ['/catalogo/productos', 'producto-1', 'editar']);
+    expect(router.navigate).toHaveBeenNthCalledWith(3, [
+      '/catalogo/productos',
+      'producto-1',
+      'editar',
+    ]);
   });
 
   it('filters a product base by attributes and identifiers of its variants', () => {
-    component.products.set([{
-      id: 'producto-1', nombre: 'Base de michelada', imagen_url: null, sku: null, precio: 0, stock: 0,
-      categoria: 'Botanas', categoria_id: 'categoria-1', marca: null, marca_id: null, proveedor: 'Distribuidora Norte', proveedor_id: 'proveedor-1',
-      descripcion: null, presentacion: '1 litro', contenido: null, unidad_contenido: null,
-      unidad_medida: 'Unidades', unidad_medida_id: 'unidad-1', codigo_barras: null,
-      inventario: [], estado: 'En stock',
-      variantes: [{ id: 'variante-1', sku: null, precio: 150, stock: 4, codigo_barras: '7503030374392', atributos: [{ nombre: 'Sabor', valor: 'Mango' }] }],
-    }]);
+    component.products.set([
+      {
+        id: 'producto-1',
+        nombre: 'Base de michelada',
+        imagen_url: null,
+        sku: null,
+        precio: 0,
+        stock: 0,
+        categoria: 'Botanas',
+        categoria_id: 'categoria-1',
+        marca: null,
+        marca_id: null,
+        proveedor: 'Distribuidora Norte',
+        proveedor_id: 'proveedor-1',
+        descripcion: null,
+        presentacion: '1 litro',
+        contenido: null,
+        unidad_contenido: null,
+        unidad_medida: 'Unidades',
+        unidad_medida_id: 'unidad-1',
+        codigo_barras: null,
+        inventario: [],
+        estado: 'En stock',
+        variantes: [
+          {
+            id: 'variante-1',
+            sku: null,
+            precio: 150,
+            stock: 4,
+            codigo_barras: '7503030374392',
+            atributos: [{ nombre: 'Sabor', valor: 'Mango' }],
+          },
+        ],
+      },
+    ]);
 
     component.setProductSearch('mángo');
     expect(component.filteredProducts()).toHaveLength(1);

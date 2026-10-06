@@ -11,7 +11,7 @@ Aprobada explícitamente por el usuario el 2026-09-14 mediante la instrucción: 
 ## Alcance
 
 - Aplicar una interacción consistente a las cargas masivas de Productos y Catálogo (marcas, categorías y unidades).
-- Mostrar inmediatamente el archivo elegido o soltado como listo: nombre visible y estado visual verde.
+- Mostrar inmediatamente el archivo elegido o soltado como listo: nombre visible y estado visual índigo `#2C2E6A`.
 - Permitir sustituir el archivo al elegir o soltar otro.
 - Incluir un botón accesible con icono para eliminar el archivo preparado localmente.
 - Restablecer archivo, selector nativo, error, resultado y vista previa al sustituir o eliminar el archivo.
@@ -40,6 +40,8 @@ Aprobada explícitamente por el usuario el 2026-09-14 mediante la instrucción: 
 
 - 2026-09-14: se aplica a todos los cargadores existentes, no solo a Productos.
 - 2026-09-14: al elegir o soltar otro archivo, este sustituye al anterior.
+- 2026-10-06: el estado de archivo preparado usa índigo Stockion; el verde queda reservado para resultados reales de éxito.
+- 2026-10-06: `tsc --noEmit`, Prettier y `git diff --check` correctos; `graphify update .` ejecutado sin cambios de topología.
 - 2026-09-14: se añadieron pruebas unitarias de `drop`, sustitución, limpieza y eliminación para ambos componentes.
 - 2026-09-14: `npm test -- --watch=false` y `npm run build` no iniciaron porque el entorno tiene Node.js `v14.15.0`; el proyecto requiere Node 24 según `.nvmrc` y Angular exige al menos Node 22.22.3.
 - Pendiente: ejecutar las verificaciones con Node 24 y cambiar el estado a `Verificada` al concluir.
