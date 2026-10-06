@@ -36,17 +36,18 @@ label {
   font-size: 12px;
 }
 
-.name-row {
+.register-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 16px;
 }
 
-@media (max-width: 420px) {
-  .name-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
+.register-field {
+  min-width: 0;
+}
+
+.register-field--full {
+  grid-column: 1 / -1;
 }
 
 .field-wrap--plain .register-input {
@@ -144,6 +145,53 @@ label {
   font-size: 12px;
 }
 
+.password-guidance {
+  margin: -10px 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.password-guidance > span {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.password-guidance ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.password-guidance li,
+.password-match {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.password-guidance li .pi {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.password-guidance li.is-met,
+.password-guidance li.is-met .pi,
+.password-match--success {
+  color: #287044;
+}
+
+.password-match {
+  margin: -10px 0 12px;
+  font-size: 12px;
+}
+
+.password-match--error {
+  color: #c62828;
+}
+
 .register-error {
   display: flex;
   align-items: center;
@@ -188,10 +236,12 @@ label {
 }
 
 .login-link {
-  margin: 24px 0 28px;
+  margin: 18px 0 8px;
+  padding-top: 14px;
   color: var(--text-muted);
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
+  border-top: 1px solid var(--border);
 }
 
 .login-link a {
@@ -218,9 +268,9 @@ footer a:hover {
   text-decoration: underline;
 }
 
-@media (max-width: 700px) {
-  .register-panel {
-    width: 100%;
+@media (min-width: 821px) {
+  .register-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -244,6 +294,11 @@ footer a:hover {
   .password-toggle {
     width: 30px;
     height: 30px;
+  }
+
+  .password-guidance,
+  .password-match {
+    font-size: 11px;
   }
 
   .submit-button {

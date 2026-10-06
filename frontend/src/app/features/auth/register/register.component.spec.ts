@@ -27,18 +27,20 @@ describe('RegisterComponent', () => {
 
   it('rejects mismatched passwords', () => {
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
-    component.form.patchValue({ contrasena: '12345678', confirmarContrasena: '87654321' });
+    component.form.patchValue({ contrasena: 'ClaveSegura1!', confirmarContrasena: 'OtraClave1!' });
 
     expect(component.form.hasError('passwordsMismatch')).toBe(true);
   });
 
   it('maps the form to the existing API contract', () => {
-    auth.register.mockReturnValue(of({
-      mensaje: 'Código enviado',
-      desafio_id: 'challenge-1',
-      correo_enmascarado: 'j***@ejemplo.com',
-      reenviar_en_segundos: 60,
-    }));
+    auth.register.mockReturnValue(
+      of({
+        mensaje: 'Código enviado',
+        desafio_id: 'challenge-1',
+        correo_enmascarado: 'j***@ejemplo.com',
+        reenviar_en_segundos: 60,
+      }),
+    );
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
     component.form.setValue({
       nombres: 'Juan',
@@ -46,8 +48,8 @@ describe('RegisterComponent', () => {
       segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
-      contrasena: '12345678',
-      confirmarContrasena: '12345678',
+      contrasena: 'ClaveSegura1!',
+      confirmarContrasena: 'ClaveSegura1!',
     });
 
     component.submit();
@@ -58,7 +60,7 @@ describe('RegisterComponent', () => {
       segundo_apellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
-      contrasena: '12345678',
+      contrasena: 'ClaveSegura1!',
     });
     expect(feedback.success).toHaveBeenCalledWith(
       'Código enviado',
@@ -82,8 +84,8 @@ describe('RegisterComponent', () => {
       segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '55 1234 5678',
-      contrasena: '12345678',
-      confirmarContrasena: '12345678',
+      contrasena: 'ClaveSegura1!',
+      confirmarContrasena: 'ClaveSegura1!',
     });
 
     component.togglePassword();
@@ -109,8 +111,8 @@ describe('RegisterComponent', () => {
       segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
-      contrasena: '12345678',
-      confirmarContrasena: '12345678',
+      contrasena: 'ClaveSegura1!',
+      confirmarContrasena: 'ClaveSegura1!',
     });
 
     component.submit();
@@ -132,8 +134,8 @@ describe('RegisterComponent', () => {
       segundoApellido: '',
       correo: 'Juan@ejemplo.com',
       telefono: '',
-      contrasena: '12345678',
-      confirmarContrasena: '12345678',
+      contrasena: 'ClaveSegura1!',
+      confirmarContrasena: 'ClaveSegura1!',
     });
 
     component.submit();
@@ -155,5 +157,23 @@ describe('RegisterComponent', () => {
     expect(component.form.controls.nombres.invalid).toBe(true);
     expect(component.form.controls.primerApellido.invalid).toBe(true);
     expect(component.form.controls.segundoApellido.valid).toBe(true);
+  });
+
+  it('requires uppercase, number and special character while exposing live progress', () => {
+    const component = TestBed.createComponent(RegisterComponent).componentInstance;
+    component.form.controls.contrasena.setValue('clavesegura');
+
+    expect(component.form.controls.contrasena.hasError('passwordInsecure')).toBe(true);
+    expect(component.passwordRequirementMet('length')).toBe(true);
+    expect(component.passwordRequirementMet('uppercase')).toBe(false);
+    expect(component.passwordRequirementMet('number')).toBe(false);
+    expect(component.passwordRequirementMet('special')).toBe(false);
+
+    component.form.patchValue({
+      contrasena: 'ClaveSegura1!',
+      confirmarContrasena: 'ClaveSegura1!',
+    });
+    expect(component.form.controls.contrasena.valid).toBe(true);
+    expect(component.passwordsMatch()).toBe(true);
   });
 });

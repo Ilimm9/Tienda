@@ -1,29 +1,35 @@
 <main class="register-page">
   <section class="register-panel" aria-label="Crear cuenta">
     <form class="register-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <p class="required-note">Los campos con <span class="required" aria-hidden="true">*</span> son obligatorios.</p>
+      <!-- <p class="required-note">
+        Los campos con <span class="required" aria-hidden="true">*</span> son obligatorios.
+      </p> -->
 
-      <label for="nombres">Nombre(s) <span class="required" aria-hidden="true">*</span></label>
-      <span class="field-wrap">
-        <i class="pi pi-user" aria-hidden="true"></i>
-        <input
-          id="nombres"
-          class="register-input"
-          type="text"
-          formControlName="nombres"
-          placeholder="Ej. Juan Carlos"
-          autocomplete="given-name"
-          aria-required="true"
-          [attr.aria-invalid]="form.controls.nombres.touched && form.controls.nombres.invalid"
-        />
-      </span>
-      @if (form.controls.nombres.touched && form.controls.nombres.invalid) {
-        <small class="field-error">Ingresa tu nombre.</small>
-      }
+      <div class="register-grid">
+        <div class="register-field register-field--full">
+          <label for="nombres">Nombre(s) <span class="required" aria-hidden="true">*</span></label>
+          <span class="field-wrap">
+            <i class="pi pi-user" aria-hidden="true"></i>
+            <input
+              id="nombres"
+              class="register-input"
+              type="text"
+              formControlName="nombres"
+              placeholder="Ej. Juan Carlos"
+              autocomplete="given-name"
+              aria-required="true"
+              [attr.aria-invalid]="form.controls.nombres.touched && form.controls.nombres.invalid"
+            />
+          </span>
+          @if (form.controls.nombres.touched && form.controls.nombres.invalid) {
+            <small class="field-error">Ingresa tu nombre.</small>
+          }
+        </div>
 
-      <div class="name-row">
-        <div>
-          <label for="primerApellido">Primer apellido <span class="required" aria-hidden="true">*</span></label>
+        <div class="register-field">
+          <label for="primerApellido"
+            >Primer apellido <span class="required" aria-hidden="true">*</span></label
+          >
           <span class="field-wrap field-wrap--plain">
             <input
               id="primerApellido"
@@ -33,14 +39,17 @@
               placeholder="Ej. Pérez"
               autocomplete="family-name"
               aria-required="true"
-              [attr.aria-invalid]="form.controls.primerApellido.touched && form.controls.primerApellido.invalid"
+              [attr.aria-invalid]="
+                form.controls.primerApellido.touched && form.controls.primerApellido.invalid
+              "
             />
           </span>
           @if (form.controls.primerApellido.touched && form.controls.primerApellido.invalid) {
             <small class="field-error">Ingresa tu primer apellido.</small>
           }
         </div>
-        <div>
+
+        <div class="register-field">
           <label for="segundoApellido">Segundo apellido</label>
           <span class="field-wrap field-wrap--plain">
             <input
@@ -53,107 +62,188 @@
             />
           </span>
         </div>
+
+        <div class="register-field">
+          <label for="correo"
+            >Correo electrónico <span class="required" aria-hidden="true">*</span></label
+          >
+          <span class="field-wrap">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            <input
+              id="correo"
+              class="register-input"
+              type="email"
+              formControlName="correo"
+              placeholder="correo@empresa.com"
+              autocomplete="email"
+              aria-required="true"
+              [attr.aria-invalid]="
+                form.controls.correo.touched &&
+                (form.controls.correo.invalid || correoYaRegistrado())
+              "
+            />
+          </span>
+          @if (form.controls.correo.touched && form.controls.correo.invalid) {
+            <small class="field-error">Ingresa un correo válido.</small>
+          } @else if (correoYaRegistrado()) {
+            <small class="field-error" role="alert">
+              Este correo ya está registrado.
+              <button type="button" class="inline-link" (click)="switchToLogin()">
+                Inicia sesión
+              </button>
+              o
+              <button type="button" class="inline-link" (click)="recoverPassword()">
+                recupera tu contraseña</button
+              >.
+            </small>
+          }
+        </div>
+
+        <div class="register-field">
+          <label for="telefono">Teléfono</label>
+          <span class="field-wrap">
+            <i class="pi pi-phone" aria-hidden="true"></i>
+            <input
+              id="telefono"
+              class="register-input"
+              type="tel"
+              formControlName="telefono"
+              placeholder="55 1234 5678"
+              autocomplete="tel"
+            />
+          </span>
+        </div>
+
+        <div class="register-field register-field--security">
+          <label for="contrasena"
+            >Contraseña <span class="required" aria-hidden="true">*</span></label
+          >
+          <span class="password-field">
+            <i class="pi pi-lock" aria-hidden="true"></i>
+            <input
+              id="contrasena"
+              class="register-input"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              formControlName="contrasena"
+              placeholder="Mínimo 8 caracteres"
+              autocomplete="new-password"
+              aria-describedby="password-guidance"
+              [attr.aria-invalid]="
+                form.controls.contrasena.touched && form.controls.contrasena.invalid
+              "
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="togglePassword()"
+              [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="passwordVisible()"
+            >
+              <i
+                class="pi"
+                [class.pi-eye]="!passwordVisible()"
+                [class.pi-eye-slash]="passwordVisible()"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </span>
+          <div id="password-guidance" class="password-guidance">
+            <span>Para una contraseña segura:</span>
+            <ul>
+              <li [class.is-met]="passwordRequirementMet('length')">
+                <i
+                  class="pi"
+                  [class.pi-check-circle]="passwordRequirementMet('length')"
+                  [class.pi-circle]="!passwordRequirementMet('length')"
+                  aria-hidden="true"
+                ></i>
+                Mas de 8 caracteres
+              </li>
+              <li [class.is-met]="passwordRequirementMet('uppercase')">
+                <i
+                  class="pi"
+                  [class.pi-check-circle]="passwordRequirementMet('uppercase')"
+                  [class.pi-circle]="!passwordRequirementMet('uppercase')"
+                  aria-hidden="true"
+                ></i>
+                Una mayúscula
+              </li>
+              <li [class.is-met]="passwordRequirementMet('number')">
+                <i
+                  class="pi"
+                  [class.pi-check-circle]="passwordRequirementMet('number')"
+                  [class.pi-circle]="!passwordRequirementMet('number')"
+                  aria-hidden="true"
+                ></i>
+                Un número
+              </li>
+              <li [class.is-met]="passwordRequirementMet('special')">
+                <i
+                  class="pi"
+                  [class.pi-check-circle]="passwordRequirementMet('special')"
+                  [class.pi-circle]="!passwordRequirementMet('special')"
+                  aria-hidden="true"
+                ></i>
+                Un carácter especial
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="register-field register-field--security">
+          <label for="confirmarContrasena"
+            >Confirmar contraseña <span class="required" aria-hidden="true">*</span></label
+          >
+          <span class="password-field">
+            <i class="pi pi-lock" aria-hidden="true"></i>
+            <input
+              id="confirmarContrasena"
+              class="register-input"
+              [type]="confirmationVisible() ? 'text' : 'password'"
+              formControlName="confirmarContrasena"
+              placeholder="Repite tu contraseña"
+              autocomplete="new-password"
+              aria-describedby="confirmation-feedback"
+              [attr.aria-invalid]="hasConfirmationValue() && !passwordsMatch()"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="toggleConfirmation()"
+              [attr.aria-label]="
+                confirmationVisible() ? 'Ocultar confirmación' : 'Mostrar confirmación'
+              "
+              [attr.aria-pressed]="confirmationVisible()"
+            >
+              <i
+                class="pi"
+                [class.pi-eye]="!confirmationVisible()"
+                [class.pi-eye-slash]="confirmationVisible()"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </span>
+          @if (hasConfirmationValue()) {
+            <small
+              id="confirmation-feedback"
+              class="password-match"
+              [class.password-match--success]="passwordsMatch()"
+              [class.password-match--error]="!passwordsMatch()"
+              role="status"
+            >
+              <i
+                class="pi"
+                [class.pi-check-circle]="passwordsMatch()"
+                [class.pi-times-circle]="!passwordsMatch()"
+                aria-hidden="true"
+              ></i>
+              {{
+                passwordsMatch() ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.'
+              }}
+            </small>
+          }
+        </div>
       </div>
-
-      <label for="correo">Correo electrónico <span class="required" aria-hidden="true">*</span></label>
-      <span class="field-wrap">
-        <i class="pi pi-envelope" aria-hidden="true"></i>
-        <input
-          id="correo"
-          class="register-input"
-          type="email"
-          formControlName="correo"
-          placeholder="correo@empresa.com"
-          autocomplete="email"
-          aria-required="true"
-          [attr.aria-invalid]="form.controls.correo.touched && (form.controls.correo.invalid || correoYaRegistrado())"
-        />
-      </span>
-      @if (form.controls.correo.touched && form.controls.correo.invalid) {
-        <small class="field-error">Ingresa un correo válido.</small>
-      } @else if (correoYaRegistrado()) {
-        <small class="field-error" role="alert">
-          Este correo ya está registrado.
-          <button type="button" class="inline-link" (click)="switchToLogin()">Inicia sesión</button>
-          o
-          <button type="button" class="inline-link" (click)="recoverPassword()">recupera tu contraseña</button>.
-        </small>
-      }
-
-      <label for="telefono">Teléfono</label>
-      <span class="field-wrap">
-        <i class="pi pi-phone" aria-hidden="true"></i>
-        <input
-          id="telefono"
-          class="register-input"
-          type="tel"
-          formControlName="telefono"
-          placeholder="55 1234 5678"
-          autocomplete="tel"
-        />
-      </span>
-
-      <label for="contrasena">Contraseña <span class="required" aria-hidden="true">*</span></label>
-      <span class="password-field">
-        <i class="pi pi-lock" aria-hidden="true"></i>
-        <input
-          id="contrasena"
-          class="register-input"
-          [type]="passwordVisible() ? 'text' : 'password'"
-          formControlName="contrasena"
-          placeholder="Mínimo 8 caracteres"
-          autocomplete="new-password"
-        />
-        <button
-          type="button"
-          class="password-toggle"
-          (click)="togglePassword()"
-          [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-          [attr.aria-pressed]="passwordVisible()"
-        >
-          <i
-            class="pi"
-            [class.pi-eye]="!passwordVisible()"
-            [class.pi-eye-slash]="passwordVisible()"
-            aria-hidden="true"
-          ></i>
-        </button>
-      </span>
-      @if (form.controls.contrasena.touched && form.controls.contrasena.invalid) {
-        <small class="field-error">Usa al menos 8 caracteres.</small>
-      }
-
-      <label for="confirmarContrasena">Confirmar contraseña <span class="required" aria-hidden="true">*</span></label>
-      <span class="password-field">
-        <i class="pi pi-lock" aria-hidden="true"></i>
-        <input
-          id="confirmarContrasena"
-          class="register-input"
-          [type]="confirmationVisible() ? 'text' : 'password'"
-          formControlName="confirmarContrasena"
-          placeholder="Repite tu contraseña"
-          autocomplete="new-password"
-        />
-        <button
-          type="button"
-          class="password-toggle"
-          (click)="toggleConfirmation()"
-          [attr.aria-label]="
-            confirmationVisible() ? 'Ocultar confirmación' : 'Mostrar confirmación'
-          "
-          [attr.aria-pressed]="confirmationVisible()"
-        >
-          <i
-            class="pi"
-            [class.pi-eye]="!confirmationVisible()"
-            [class.pi-eye-slash]="confirmationVisible()"
-            aria-hidden="true"
-          ></i>
-        </button>
-      </span>
-      @if (form.controls.confirmarContrasena.touched && form.hasError('passwordsMismatch')) {
-        <small class="field-error">Las contraseñas no coinciden.</small>
-      }
 
       @if (error()) {
         <p class="register-error" role="alert">

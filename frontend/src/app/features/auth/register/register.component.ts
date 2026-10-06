@@ -14,6 +14,22 @@ import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { AuthService } from '../auth.service';
 import { AuthTransitionService } from '../auth-transition.service';
 
+type PasswordRequirement = 'length' | 'uppercase' | 'number' | 'special';
+
+function passwordRequirements(password: string): Record<PasswordRequirement, boolean> {
+  return {
+    length: password.length >= 8 && password.length <= 72,
+    uppercase: /\p{Lu}/u.test(password),
+    number: /\p{N}/u.test(password),
+    special: /[^\p{L}\p{N}\s]/u.test(password),
+  };
+}
+
+function securePassword(control: AbstractControl): ValidationErrors | null {
+  const requirements = passwordRequirements(control.value as string);
+  return Object.values(requirements).every(Boolean) ? null : { passwordInsecure: true };
+}
+
 function matchingPasswords(control: AbstractControl): ValidationErrors | null {
   const password = control.get('contrasena');
   const confirmation = control.get('confirmarContrasena');
@@ -47,11 +63,17 @@ export class RegisterComponent {
   readonly form = this.formBuilder.group(
     {
       nombres: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
-      primerApellido: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
+      primerApellido: [
+        '',
+        [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)],
+      ],
       segundoApellido: ['', Validators.maxLength(120)],
       correo: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
       telefono: ['', Validators.maxLength(30)],
-      contrasena: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]],
+      contrasena: [
+        '',
+        [Validators.required, Validators.minLength(8), Validators.maxLength(72), securePassword],
+      ],
       confirmarContrasena: ['', Validators.required],
     },
     { validators: matchingPasswords },
@@ -63,6 +85,18 @@ export class RegisterComponent {
 
   toggleConfirmation(): void {
     this.confirmationVisible.update((visible) => !visible);
+  }
+
+  passwordRequirementMet(requirement: PasswordRequirement): boolean {
+    return passwordRequirements(this.form.controls.contrasena.value)[requirement];
+  }
+
+  hasConfirmationValue(): boolean {
+    return !!this.form.controls.confirmarContrasena.value;
+  }
+
+  passwordsMatch(): boolean {
+    return this.hasConfirmationValue() && !this.form.hasError('passwordsMismatch');
   }
 
   /** El aviso de correo repetido solo aplica mientras el campo conserva ese mismo correo. */

@@ -27,6 +27,7 @@ var (
 	ErrEmailRegistered       = errors.New("este correo ya está registrado")
 	ErrNamesRequired         = errors.New("el nombre es obligatorio")
 	ErrFirstLastNameRequired = errors.New("el primer apellido es obligatorio")
+	ErrPasswordInsecure      = errors.New("la contraseña no cumple los requisitos de seguridad")
 )
 
 type VerificationRepository interface {
@@ -90,6 +91,9 @@ func (s *VerificationService) RegisterWithNames(ctx context.Context, names, firs
 	}
 	if firstLastName == "" {
 		return RegistrationResult{}, ErrFirstLastNameRequired
+	}
+	if !cuentadomain.ContrasenaSegura(password) {
+		return RegistrationResult{}, ErrPasswordInsecure
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

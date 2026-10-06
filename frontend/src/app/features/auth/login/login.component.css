@@ -217,3 +217,22 @@ label {
     gap: 6px;
   }
 }
+
+@media (min-width: 821px) and (max-height: 760px) {
+  .password-heading {
+    margin-top: 14px;
+  }
+
+  .password-field,
+  .login-input {
+    height: 42px;
+  }
+
+  .submit-button {
+    min-height: 42px;
+  }
+
+  .create-account {
+    margin-top: 16px;
+  }
+}

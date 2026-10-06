@@ -62,6 +62,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			})
 			return
 		}
+		if errors.Is(err, application.ErrPasswordInsecure) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"codigo":  "CONTRASENA_INSEGURA",
+				"mensaje": "La contraseña debe incluir una mayúscula, un número y un carácter especial",
+				"campos":  gin.H{"contrasena": "no cumple los requisitos de seguridad"},
+			})
+			return
+		}
 		if errors.Is(err, application.ErrVerificationTooSoon) || errors.Is(err, application.ErrVerificationLimited) {
 			c.JSON(http.StatusTooManyRequests, gin.H{"mensaje": err.Error()})
 			return

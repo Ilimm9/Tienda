@@ -86,3 +86,29 @@ func TestLoginUsesOpaqueProductionCookiesWithStrictAttributes(t *testing.T) {
 		t.Fatalf("cookie CSRF inválida: %+v", csrfCookie)
 	}
 }
+
+func TestRegisterRejectsInsecurePassword(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NewAuthHandler(
+		nil,
+		nil,
+		application.NewVerificationService(nil, nil, nil, application.VerificationConfig{}),
+		config.Config{},
+	)
+	router := gin.New()
+	router.POST("/register", handler.Register)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/register",
+		bytes.NewBufferString(`{"nombres":"Ada","primer_apellido":"Lovelace","correo":"ada@example.com","contrasena":"clavesegura"}`),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if !bytes.Contains(response.Body.Bytes(), []byte(`"codigo":"CONTRASENA_INSEGURA"`)) {
+		t.Fatalf("respuesta inesperada: %s", response.Body.String())
+	}
+}

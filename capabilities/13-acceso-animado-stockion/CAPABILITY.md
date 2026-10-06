@@ -1,4 +1,4 @@
-# Capability 13: Acceso animado Stockion
+# Capability 13: Acceso y registro Stockion
 
 ## Estado
 
@@ -7,6 +7,8 @@ Verificada.
 ## Aprobación
 
 Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: “Implement the plan”.
+
+La seguridad de contraseña y el diseño responsive del registro se aprobaron explícitamente el 2026-10-06 mediante la misma instrucción. Esta capability consolida las anteriores capabilities 14 y 15, eliminadas como documentos independientes.
 
 ## Alcance
 
@@ -31,6 +33,19 @@ Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: 
 - Reordenar exclusivamente el mosaico de registro para igualar la composición de referencia, sin modificar login.
 - Extender verticalmente el cuadro del carrito en registro hasta alinearlo con la base de la caja.
 - Reducir la etiqueta de registro a la misma área vertical que la de login y orientar su ilustración.
+- Reemplazar la marca del acceso por cajitas apiladas y reforzar la adaptación responsive de login y registro.
+- Usar el logo `trace.svg` de `frontend/public` en la marca de login y registro.
+- Añadir una entrada GSAP coordinada para marca, título y formulario, con énfasis animado en el logo público.
+- Evaluar una apertura con el logo Stockion como protagonista antes de revelar el acceso.
+- Reemplazar la apertura de logo protagonista por un mosaico inicial que se ensambla antes de mostrar el acceso.
+- Eliminar la compuerta de introducción que demora el formulario tras ensamblarse el mosaico.
+- Omitir el ensamblaje y la transición FLIP del mosaico en viewports de hasta 820 px, donde el mosaico ya está oculto, para presentar el acceso sin demora.
+- Guiar la creación de contraseña en `/registro` con requisitos visibles y actualizados mientras se escribe.
+- Exigir entre 8 y 72 caracteres, al menos una mayúscula, un número y un carácter especial, tanto en frontend como en backend.
+- Mostrar inmediatamente si la confirmación coincide con la contraseña una vez que el usuario comienza a escribirla.
+- Organizar el formulario de registro en dos columnas en escritorio y en una columna amplia bajo el breakpoint de 820 px.
+- Mantener logo Stockion y enlace para iniciar sesión visibles, y centrar verticalmente el registro de escritorio sin ocultar controles en viewports bajos.
+- Aplicar la paleta local del login a verificación de correo y al flujo completo de recuperación de contraseña.
 
 ## Reglas y contratos
 
@@ -39,6 +54,10 @@ Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: 
 - El shell respeta `prefers-reduced-motion` y mantiene navegación por teclado y foco visible.
 - Los gráficos del mosaico son SVG locales, sin recursos externos.
 - Los tonos de cada cuadro e ilustración se conservan, salvo la etiqueta, cuyo fondo usa el verde `#3F5147` por solicitud explícita; los controles y marca del acceso usan índigo `#2C2E6A` sin modificar el primario global.
+- `confirmarContrasena` solo pertenece a la interfaz y nunca se envía al backend; un carácter especial es cualquier carácter que no sea letra, dígito ni espacio.
+- La API rechaza contraseñas inseguras con `400`, código `CONTRASENA_INSEGURA` y detalle para el campo `contrasena`; los estados de la guía no revelan su contenido.
+- En escritorio el contenido se compacta antes de permitir desplazamiento; el centrado vertical aplica desde 821 px y se sustituye por alineación superior bajo 761 px.
+- Verificación y recuperación usan fondo crema, acciones índigo `#2C2E6A` y hover `#20224E` de forma local, sin modificar tokens globales ni contratos de autenticación.
 
 ## Pruebas y criterios de aceptación
 
@@ -63,6 +82,18 @@ Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: 
 - En login, la etiqueta ocupa una columna por dos filas y comparte su borde izquierdo con la bolsa; su gráfico se orienta verticalmente sin afectar el mosaico de registro.
 - En registro, el carrito ocupa dos columnas por tres filas y su borde inferior se alinea con el de la caja.
 - En registro, la etiqueta ocupa una columna por dos filas junto a la bolsa y usa la misma orientación vertical que en login.
+- Login y registro muestran el logo Stockion de tres cajas apiladas y conservan proporción desde 320 px hasta escritorio, sin alterar el resto de la aplicación.
+- El mosaico se conserva sobre 820 px; bajo ese ancho se oculta y los formularios pueden desplazarse verticalmente sin desbordamiento horizontal.
+- La marca de login y registro usa el logo público `trace.svg` sin recolorearlo ni deformarlo.
+- Marca, título y formulario se revelan con GSAP en paralelo; el logo se destaca con una entrada breve y una flotación sutil, anulada con movimiento reducido.
+- Al abrir login o registro, los seis cuadros se ensamblan antes de revelar la marca, título y formulario; el logo público conserva su rebote y flotación posteriores.
+- La compuerta de introducción se libera al terminar el último tile; formulario y título entran sin desenfoque y sin esperar la animación decorativa del logo.
+- Bajo 820 px, login y registro se muestran directamente y su cambio no espera una animación de mosaico que no es visible.
+- La guía indica por separado longitud, mayúscula, número y carácter especial; la confirmación informa inmediatamente si coincide.
+- El formulario no invoca el registro mientras incumpla un requisito o las contraseñas difieran, y el backend rechaza la misma política para solicitudes directas.
+- Desde 821 px, apellidos, contacto y contraseñas se organizan en pares; nombre, guía, errores y acción principal conservan el ancho necesario.
+- Bajo 821 px, el registro usa una sola columna sin desbordamiento horizontal y, en escritorio estándar, marca, formulario y enlace de acceso se perciben centrados como un bloque.
+- Verificación, solicitud de recuperación y restablecimiento conservan sus rutas, validaciones, temporizadores y estados, con acciones y focos visualmente coherentes con login.
 
 ## Tareas y resultados
 
@@ -89,6 +120,19 @@ Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: 
 - [x] Reubicar ticket, bolsa y carrito en el mosaico de registro según la referencia.
 - [x] Extender el cuadro del carrito de registro una fila hacia abajo.
 - [x] Compactar y orientar verticalmente la etiqueta de registro.
+- [x] Reemplazar la marca del acceso por el logo Stockion de cajas apiladas.
+- [x] Reforzar la adaptación responsive de login y registro.
+- [x] Mostrar el logo público `trace.svg` en login y registro.
+- [x] Animar con GSAP la entrada del acceso y la flotación sutil del logo.
+- [x] Evaluar la introducción GSAP del logo protagonista para compararla con el mosaico.
+- [x] Animar el ensamblaje inicial del mosaico y revelar después el acceso.
+- [x] Revelar el formulario inmediatamente tras el último tile.
+- [x] Omitir la introducción y FLIP del mosaico cuando el breakpoint móvil lo oculta.
+- [x] Definir y probar la política de contraseña del dominio cuenta.
+- [x] Aplicar la validación reactiva, guía visual accesible y respuesta HTTP estable para contraseñas inseguras.
+- [x] Ajustar la estructura semántica, retícula responsive y centrado vertical seguro del formulario de registro.
+- [x] Ejecutar las verificaciones de frontend y backend, formato y actualización del grafo.
+- [x] Ajustar la paleta local de verificación y recuperación al diseño de login.
 
 ## Verificación
 
@@ -115,4 +159,14 @@ Aprobada explícitamente por el usuario el 2026-10-01 mediante la instrucción: 
 - Composición final de registro 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado sin cambios de topología.
 - Carrito extendido en registro 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado sin cambios de topología.
 - Etiqueta compacta en registro 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado sin cambios de topología.
-- Pendiente conocido: el ejecutable `npm test` del entorno usa Node 14 y Angular CLI exige Node 22. La verificación se ejecutó invocando la CLI con Node 22 instalado localmente.
+- Logo Stockion y responsive 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado sin cambios de topología.
+- Logo público Stockion 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado sin cambios de topología.
+- Entrada GSAP Stockion 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado.
+- Apertura de logo protagonista 2026-10-01: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify reconstruido a 2381 nodos y 6586 relaciones.
+- Apertura de mosaico ensamblado 2026-10-06: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify reconstruido a 2626 nodos y 7389 relaciones.
+- Revelación inmediata de formulario 2026-10-06: `tsc --noEmit`, Prettier y `git diff --check` correctos; Graphify actualizado a 2626 nodos y 7389 relaciones.
+- Acceso móvil inmediato 2026-10-06: `tsc --noEmit` y Prettier del shell/capability correctos; `graphify update .` actualizado a 2627 nodos y 7392 relaciones.
+- Contraseña segura 2026-10-06: `GOCACHE=/private/tmp/tienda-go-cache go test ./internal/domain/cuenta ./internal/application/cuenta ./internal/interfaces/http/cuenta` y `tsc --noEmit` correctos; Prettier, `git diff --check` y `graphify update .` correctos (2639 nodos y 7416 relaciones).
+- Registro responsive 2026-10-06: `tsc --noEmit`, Prettier, `git diff --check` y `graphify update .` correctos; el centrado vertical se verificó con fallback para alturas reducidas.
+- Paleta de verificación y recuperación 2026-10-06: `tsc --noEmit`, Prettier y `git diff --check` correctos; `graphify update .` ejecutado sin cambios de topología.
+- Pendiente conocido: el runner Angular requiere Node 22; el entorno principal usa Node 14. Las pruebas de componente se actualizaron y la compilación TypeScript fue correcta; las verificaciones previas con Node 22 no reportaron fallos.

@@ -1,11 +1,12 @@
-<main class="auth-shell" [class.is-register]="mode() === 'registro'">
+<main
+  class="auth-shell"
+  [class.is-intro-active]="introActive()"
+  [class.is-register]="mode() === 'registro'"
+>
   <section class="auth-shell__content" aria-label="Acceso a Stockion">
     <a class="brand" routerLink="/login" aria-label="Stockion, ir a iniciar sesión">
       <span class="brand__mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="m4 8 8-4 8 4-8 4-8-4Z" fill="currentColor" />
-          <path d="M4 8v8l8 4v-8L4 8Zm16 0v8l-8 4v-8l8-4Z" fill="currentColor" opacity=".72" />
-        </svg>
+        <img #brandLogo src="trace.svg" alt="" />
       </span>
       <span>Stockion</span>
     </a>
@@ -22,6 +23,7 @@
   </section>
 
   <section
+    #mosaic
     class="auth-shell__mosaic"
     [attr.aria-label]="'Ilustración de inventario para ' + mode()"
   >
