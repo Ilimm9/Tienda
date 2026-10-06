@@ -17,8 +17,11 @@
     >
       <i class="pi pi-bars" aria-hidden="true"></i>
     </button>
-    <span class="brand-mark"><i class="pi pi-shield" aria-hidden="true"></i></span>
-    <span class="brand-name">Portal Administrativo</span>
+    <a class="brand-home" routerLink="/inicio" aria-label="Stockion, ir al inicio">
+      <span class="brand-mark"><img src="stockion-logo.svg" alt="" width="34" height="34" /></span>
+      <span class="brand-name">Stockion</span>
+    </a>
+    <app-breadcrumbs class="topbar-breadcrumbs" />
   </div>
 
   <div class="topbar-actions">
@@ -81,16 +84,11 @@
           </div>
         }
       </div>
+    } @else if (contexto.estadoAlta() === 'requiere_empresa') {
+      <a class="context-vacio" routerLink="/configuracion-inicial">
+        <i class="pi pi-building" aria-hidden="true"></i><span>Sin empresa todavía</span>
+      </a>
     }
-    <button
-      class="icon-button"
-      type="button"
-      [attr.aria-label]="theme.theme() === 'light' ? 'Activar tema oscuro' : 'Activar tema claro'"
-      (click)="theme.toggle()"
-    >
-      <i [class]="theme.theme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" aria-hidden="true"></i>
-    </button>
-
     <div class="action-menu">
       <button
         class="icon-button"
@@ -116,7 +114,9 @@
         [attr.aria-expanded]="accountOpen()"
         (click)="toggleAccount()"
       >
-        <span class="account-avatar"><i class="pi pi-user" aria-hidden="true"></i></span>
+        <span class="account-avatar" aria-hidden="true">
+          @if (inicial(); as letra) { {{ letra }} } @else { <i class="pi pi-user"></i> }
+        </span>
         <span class="account-label">Mi cuenta</span>
         <i class="pi pi-chevron-down account-chevron" aria-hidden="true"></i>
       </button>

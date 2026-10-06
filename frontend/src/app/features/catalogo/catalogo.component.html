@@ -9,11 +9,11 @@
     @if (items().length > 0) {
       <div class="catalog-actions">
         @if (canImport()) {
-          <button class="secondary-button" type="button" (click)="navigateToImport()">
+          <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
             <i class="pi pi-upload"></i> Carga masiva
           </button>
         }
-        <button class="primary-button" type="button" (click)="navigateToCreate()">
+        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
           <i class="pi pi-plus"></i> Agregar
           {{
             section === 'proveedores'
@@ -39,11 +39,11 @@
       <p>Aún no hay registros para mostrar.</p>
       <div class="catalog-actions">
         @if (canImport()) {
-          <button class="secondary-button" type="button" (click)="navigateToImport()">
+          <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
             <i class="pi pi-upload"></i> Carga masiva
           </button>
         }
-        <button class="primary-button" type="button" (click)="navigateToCreate()">
+        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
           {{
             section === 'unidades'
               ? 'Agregar nueva unidad de medida'
@@ -111,7 +111,7 @@
               }}</span>
             </td>
             <td>
-              <button
+              <button *appPuede="P.catalogoGestionar"
                 class="icon-button"
                 type="button"
                 (click)="navigateToEdit(item)"

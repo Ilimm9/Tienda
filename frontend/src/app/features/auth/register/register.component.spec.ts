@@ -41,7 +41,9 @@ describe('RegisterComponent', () => {
     }));
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
     component.form.setValue({
-      nombreCompleto: 'Juan Pérez',
+      nombres: 'Juan',
+      primerApellido: 'Pérez',
+      segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
       contrasena: '12345678',
@@ -51,7 +53,9 @@ describe('RegisterComponent', () => {
     component.submit();
 
     expect(auth.register).toHaveBeenCalledWith({
-      nombre_completo: 'Juan Pérez',
+      nombres: 'Juan',
+      primer_apellido: 'Pérez',
+      segundo_apellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
       contrasena: '12345678',
@@ -73,7 +77,9 @@ describe('RegisterComponent', () => {
     );
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
     component.form.setValue({
-      nombreCompleto: 'Juan Pérez',
+      nombres: 'Juan',
+      primerApellido: 'Pérez',
+      segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '55 1234 5678',
       contrasena: '12345678',
@@ -98,7 +104,9 @@ describe('RegisterComponent', () => {
     );
     const component = TestBed.createComponent(RegisterComponent).componentInstance;
     component.form.setValue({
-      nombreCompleto: 'Juan Pérez',
+      nombres: 'Juan',
+      primerApellido: 'Pérez',
+      segundoApellido: '',
       correo: 'juan@ejemplo.com',
       telefono: '',
       contrasena: '12345678',
@@ -111,5 +119,41 @@ describe('RegisterComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/verificar-correo'], {
       queryParams: { desafio: 'challenge-retry', envio: 'pendiente' },
     });
+  });
+
+  it('shows a duplicate email under the field until the email changes', () => {
+    auth.register.mockReturnValue(
+      throwError(() => ({ status: 409, error: { codigo: 'CORREO_YA_REGISTRADO' } })),
+    );
+    const component = TestBed.createComponent(RegisterComponent).componentInstance;
+    component.form.setValue({
+      nombres: 'Juan',
+      primerApellido: 'Pérez',
+      segundoApellido: '',
+      correo: 'Juan@ejemplo.com',
+      telefono: '',
+      contrasena: '12345678',
+      confirmarContrasena: '12345678',
+    });
+
+    component.submit();
+
+    expect(component.correoYaRegistrado()).toBe(true);
+    expect(component.error()).toBe('');
+
+    component.submit();
+    expect(auth.register).toHaveBeenCalledTimes(1);
+
+    component.form.controls.correo.setValue('otro@ejemplo.com');
+    expect(component.correoYaRegistrado()).toBe(false);
+  });
+
+  it('requires names and first surname', () => {
+    const component = TestBed.createComponent(RegisterComponent).componentInstance;
+    component.form.patchValue({ nombres: '  ', primerApellido: '' });
+
+    expect(component.form.controls.nombres.invalid).toBe(true);
+    expect(component.form.controls.primerApellido.invalid).toBe(true);
+    expect(component.form.controls.segundoApellido.valid).toBe(true);
   });
 });

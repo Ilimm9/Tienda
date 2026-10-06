@@ -6,6 +6,7 @@ import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { NegocioDetalle } from './negocio.models';
 import { NegocioService } from './negocio.service';
 import { NegocioFormComponent } from './negocio-form.component';
+import { ContextoService } from '../../contexto/contexto.service';
 
 describe('NegocioFormComponent', () => {
   const business: NegocioDetalle = {
@@ -34,6 +35,7 @@ describe('NegocioFormComponent', () => {
   };
   const feedback = { success: vi.fn() };
   const router = { navigate: vi.fn(() => Promise.resolve(true)) };
+  const contexto = { recargar: vi.fn(() => of('listo')) };
 
   async function configure(negocioId: string | null): Promise<void> {
     await TestBed.configureTestingModule({
@@ -42,6 +44,7 @@ describe('NegocioFormComponent', () => {
         { provide: NegocioService, useValue: service },
         { provide: FeedbackService, useValue: feedback },
         { provide: Router, useValue: router },
+        { provide: ContextoService, useValue: contexto },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => negocioId } } },
@@ -61,6 +64,8 @@ describe('NegocioFormComponent', () => {
 
     expect(service.crear).toHaveBeenCalledOnce();
     expect(feedback.success).toHaveBeenCalledWith('Negocio registrado');
+    // El contexto se recarga antes de abrir el negocio: de ahí salen sus permisos de propietario.
+    expect(contexto.recargar).toHaveBeenCalledOnce();
     expect(router.navigate).toHaveBeenCalledWith(['/negocios', business.id]);
   });
 

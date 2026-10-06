@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { LayoutStateService } from '../layout-state.service';
-import { NAVIGATION_ITEMS, NavigationItem } from '../navigation.config';
+import { ContextoService } from '../../contexto/contexto.service';
+import { filtrarNavegacion, NAVIGATION_ITEMS, NavigationItem } from '../navigation.config';
 
 @Component({
   selector: 'app-sidebar',
@@ -15,7 +16,16 @@ export class SidebarComponent {
   private readonly router = inject(Router);
   private readonly expandedGroups = signal(new Set<string>());
 
-  readonly navigationItems = NAVIGATION_ITEMS;
+  private readonly contexto = inject(ContextoService);
+
+  /** El menú refleja los permisos del negocio activo; cambia al cambiar de negocio o recargar el contexto. */
+  readonly navigationItems = computed(() =>
+    filtrarNavegacion(
+      NAVIGATION_ITEMS,
+      (item) =>
+        this.contexto.puede(item.permiso) && (item.acceso !== 'ver-negocios' || this.contexto.puedeVerNegocios()),
+    ),
+  );
 
   isGroupExpanded(item: NavigationItem): boolean {
     return this.isGroupActive(item) || this.expandedGroups().has(item.label);

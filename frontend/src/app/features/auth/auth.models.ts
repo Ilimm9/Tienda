@@ -19,7 +19,9 @@ export interface SessionResponse {
 }
 
 export interface RegisterRequest {
-  nombre_completo: string;
+  nombres: string;
+  primer_apellido: string;
+  segundo_apellido: string;
   correo: string;
   telefono: string;
   contrasena: string;

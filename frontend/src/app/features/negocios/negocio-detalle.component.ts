@@ -7,6 +7,8 @@ import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
 import { ApiErrorResponse, NegocioDetalle } from './negocio.models';
 import { NegocioService } from './negocio.service';
+import { ContextoService } from '../../contexto/contexto.service';
+import { CodigoPermiso, PERMISOS } from '../../contexto/permisos';
 
 @Component({
   selector: 'app-negocio-detalle',
@@ -25,6 +27,14 @@ export class NegocioDetalleComponent {
   readonly loading = signal(true);
   readonly processing = signal(false);
   readonly error = signal<string | null>(null);
+
+  private readonly contexto = inject(ContextoService);
+  readonly P = PERMISOS;
+
+  /** Permiso sobre el negocio de esta pantalla; si el contexto no lo conoce (archivado), decide ser propietario. */
+  puede(codigo: CodigoPermiso): boolean {
+    return this.contexto.puedeEn(this.negocioId, codigo, this.business()?.tipo_miembro === 'propietario');
+  }
 
   constructor() {
     this.load();
@@ -47,6 +57,7 @@ export class NegocioDetalleComponent {
     this.negocioService.archivar(business.id).subscribe({
       next: () => {
         this.processing.set(false);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Negocio archivado');
         void this.router.navigate(['/negocios']);
       },
@@ -68,6 +79,7 @@ export class NegocioDetalleComponent {
       next: (restored) => {
         this.business.set(restored);
         this.processing.set(false);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Negocio restaurado');
       },
       error: (response: HttpErrorResponse) => {

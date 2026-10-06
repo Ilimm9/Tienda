@@ -11,6 +11,7 @@ import (
 )
 
 type rolRepositoryStub struct {
+	rolNoDelegable     bool
 	access             domain.ContextoNegocioSucursal
 	permisos           []string
 	detalle            domain.RolDetalle
@@ -88,6 +89,10 @@ func (r *rolRepositoryStub) QuedaPropietarioConRolSistema(context.Context, uuid.
 	return r.quedaPropietario, nil
 }
 
+func (r *rolRepositoryStub) RolesDelegables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID, *uuid.UUID) (bool, error) {
+	return !r.rolNoDelegable, nil
+}
+
 func negocioActivoCon(permisos ...string) *rolRepositoryStub {
 	return &rolRepositoryStub{
 		access:   domain.ContextoNegocioSucursal{EstadoNegocio: "activo", TipoMiembro: "miembro"},
@@ -130,6 +135,7 @@ func TestRolServiceMiembroConPermisoPuedeGestionar(t *testing.T) {
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearRolInput{
 		Codigo: "cajero", Nombre: "Cajero",
+		Permisos: []uuid.UUID{uuid.New()},
 	})
 
 	if err != nil {
@@ -178,6 +184,7 @@ func TestRolServiceCrearRechazaCodigoDuplicado(t *testing.T) {
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearRolInput{
 		Codigo: "CAJERO", Nombre: "Cajero",
+		Permisos: []uuid.UUID{uuid.New()},
 	})
 
 	if !errors.Is(err, ErrRolConflicto) {
@@ -292,5 +299,32 @@ func TestRolServiceAsignarRolesDeduplica(t *testing.T) {
 	}
 	if len(repository.rolesAsignados) != 1 || repository.rolesAsignados[0] != rolID {
 		t.Fatalf("los roles deben deduplicarse y descartar UUID nulos: %v", repository.rolesAsignados)
+	}
+}
+
+func TestRolServiceAsignarRechazaRolConPermisosQueElEmisorNoTiene(t *testing.T) {
+	repository := negocioActivoCon(domain.PermisoRolAsignar)
+	repository.perteneceMembresia, repository.quedaPropietario, repository.rolNoDelegable = true, true, true
+	service := NewRolService(repository)
+
+	err := service.AsignarRoles(context.Background(), uuid.New(), uuid.New(), uuid.New(), []uuid.UUID{uuid.New()})
+
+	if !errors.Is(err, ErrRolNoDelegable) || repository.rolesAsignados != nil {
+		t.Fatalf("un rol con permisos ajenos al emisor no debe asignarse: %v", err)
+	}
+}
+
+func (*rolRepositoryStub) PermisosOtorgables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func TestRolServiceCrearExigeAlMenosUnPermiso(t *testing.T) {
+	service := NewRolService(negocioActivoCon(domain.PermisoRolGestionar))
+
+	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearRolInput{Codigo: "CAJERO", Nombre: "Cajero"})
+
+	var validacion *ErrorValidacion
+	if !errors.As(err, &validacion) || validacion.Campos["permisos"] == "" {
+		t.Fatalf("un rol sin permisos debe rechazarse: %v", err)
 	}
 }

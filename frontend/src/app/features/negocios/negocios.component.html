@@ -5,10 +5,12 @@
       <h1>Mis negocios</h1>
       <p>Administra los negocios asociados a tu cuenta.</p>
     </div>
-    <a class="primary-button" routerLink="/negocios/nuevo">
-      <i class="pi pi-plus" aria-hidden="true"></i>
-      Registrar negocio
-    </a>
+    @if (puedeCrear()) {
+      <a class="primary-button" routerLink="/negocios/nuevo">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        Registrar negocio
+      </a>
+    }
   </header>
 
   <div class="business-toolbar surface-card">
@@ -63,7 +65,7 @@
               : 'Los negocios archivados aparecerán aquí.'
         }}
       </p>
-      @if (!search() && estado() === 'activo') {
+      @if (!search() && estado() === 'activo' && puedeCrear()) {
         <a class="primary-button" routerLink="/negocios/nuevo">Registrar negocio</a>
       }
     </div>
@@ -103,7 +105,7 @@
           </dl>
           <div class="card-actions">
             <a class="primary-button" [routerLink]="['/negocios', business.id]">Ver negocio</a>
-            @if (business.tipo_miembro === 'propietario') {
+            @if (puedeEn(business, P.negocioArchivar)) {
               @if (business.estado === 'activo') {
                 <button
                   class="text-button danger-text"
@@ -127,7 +129,7 @@
           </div>
         </article>
       }
-      @if (estado() === 'activo' && !search()) {
+      @if (estado() === 'activo' && !search() && puedeCrear()) {
         <a class="create-card" routerLink="/negocios/nuevo">
           <span><i class="pi pi-plus" aria-hidden="true"></i></span>
           <strong>Registrar nuevo negocio</strong>

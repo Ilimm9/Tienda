@@ -15,8 +15,8 @@ const negocioB = '33333333-3333-4333-8333-333333333333';
 const sucursalPrincipal = '22222222-2222-4222-8222-222222222222';
 const sucursalSecundaria = '44444444-4444-4444-8444-444444444444';
 
-function negocio(id: string, sucursales: ContextoNegocio['sucursales']): ContextoNegocio {
-  return { id, slug: `negocio-${id.slice(0, 4)}`, nombre_comercial: `Negocio ${id.slice(0, 4)}`, tipo_miembro: 'propietario', sucursales };
+function negocio(id: string, sucursales: ContextoNegocio['sucursales'], permisos: string[] = []): ContextoNegocio {
+  return { id, slug: `negocio-${id.slice(0, 4)}`, nombre_comercial: `Negocio ${id.slice(0, 4)}`, tipo_miembro: 'propietario', permisos, sucursales };
 }
 
 const sucursales = [
@@ -199,6 +199,77 @@ describe('ContextoService', () => {
 
     responder([negocio(negocioB, sucursales)]);
     expect(service.negocio()?.id).toBe(negocioB);
+  });
+
+  it('expone los permisos del negocio activo y los evalúa por negocio', () => {
+    localStorage.setItem(negocioKey, negocioA);
+    service.inicializar().subscribe();
+    responder([
+      negocio(negocioA, sucursales, ['catalogo.ver', 'compras.ver']),
+      negocio(negocioB, [], ['roles.gestionar']),
+    ]);
+
+    expect(service.puede('catalogo.ver')).toBe(true);
+    expect(service.puede(['catalogo.ver', 'compras.ver'])).toBe(true);
+    expect(service.puede(['catalogo.ver', 'roles.gestionar'])).toBe(false);
+    expect(service.puede(undefined)).toBe(true);
+    expect(service.puedeAlguno('roles.ver', 'compras.ver')).toBe(true);
+    expect(service.puedeEn(negocioB, 'roles.gestionar')).toBe(true);
+    expect(service.puedeEn(negocioB, 'catalogo.ver')).toBe(false);
+  });
+
+  it('deja decidir al llamador cuando el negocio no está en el contexto', () => {
+    service.inicializar().subscribe();
+    responder([negocio(negocioA, sucursales, [])]);
+
+    expect(service.puedeEn(negocioB, 'negocios.archivar')).toBe(false);
+    expect(service.puedeEn(negocioB, 'negocios.archivar', true)).toBe(true);
+  });
+
+  it('solo deja registrar negocios a una cuenta nueva o a quien ya es propietario', () => {
+    expect(service.puedeCrearNegocio()).toBe(true);
+
+    service.inicializar().subscribe();
+    const invitado = { ...negocio(negocioA, sucursales, ['catalogo.ver']), tipo_miembro: 'miembro' as const };
+    responder([invitado]);
+
+    expect(service.puedeCrearNegocio()).toBe(false);
+    expect(service.puedeVerNegocios()).toBe(false);
+
+    service.recargar().subscribe();
+    responder([{ ...invitado, permisos: ['negocios.ver'] }]);
+    expect(service.puedeVerNegocios()).toBe(true);
+    expect(service.puedeCrearNegocio()).toBe(false);
+
+    service.recargar().subscribe();
+    responder([invitado, negocio(negocioB, [], [])]);
+    expect(service.puedeCrearNegocio()).toBe(true);
+  });
+
+  it('calcula qué falta del alta inicial', () => {
+    service.inicializar().subscribe();
+    responder([]);
+    expect(service.estadoAlta()).toBe('requiere_empresa');
+
+    service.recargar().subscribe();
+    responder([negocio(negocioA, [], ['sucursales.crear'])]);
+    expect(service.estadoAlta()).toBe('requiere_sucursal');
+
+    service.recargar().subscribe();
+    responder([{ ...negocio(negocioA, [], ['catalogo.ver']), tipo_miembro: 'miembro' as const }]);
+    expect(service.estadoAlta()).toBe('sin_asignacion');
+
+    service.recargar().subscribe();
+    responder([negocio(negocioA, sucursales, [])]);
+    expect(service.estadoAlta()).toBe('listo');
+  });
+
+  it('recuerda «hacerlo después» solo hasta cerrar sesión', () => {
+    expect(service.altaPospuesta()).toBe(false);
+    service.posponerAlta();
+    expect(service.altaPospuesta()).toBe(true);
+    service.limpiar();
+    expect(service.altaPospuesta()).toBe(false);
   });
 });
 

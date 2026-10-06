@@ -1,19 +1,21 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { enfocarPrimerInvalido } from '../../shared/formularios/formulario';
+import { iniciales } from '../equipo/presentacion';
 import { MiembroRoles, RolApiError, RolResumen } from './rol.models';
 import { RolService } from './rol.service';
 
 @Component({
   selector: 'app-miembro-roles',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './miembro-roles.component.html',
-  styleUrl: './miembro-roles.component.css',
 })
 export class MiembroRolesComponent {
   private readonly rolService = inject(RolService);
@@ -29,6 +31,10 @@ export class MiembroRolesComponent {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+  readonly intentado = signal(false);
+  readonly sinRoles = computed(() => this.intentado() && this.seleccionados().size === 0);
+  readonly iniciales = iniciales;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   constructor() {
     this.load();
@@ -50,6 +56,11 @@ export class MiembroRolesComponent {
   }
 
   guardar(): void {
+    this.intentado.set(true);
+    if (this.seleccionados().size === 0) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
     if (this.saving()) return;
     this.saving.set(true);
     this.error.set(null);

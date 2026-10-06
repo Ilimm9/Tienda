@@ -26,22 +26,68 @@ describe('InvitacionService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('crea una invitación con el empleado y el rol inicial', () => {
-    service.crear(negocioId, { empleado_id: empleadoId, rol_predeterminado_id: null }).subscribe();
+  const sucursalId = '44444444-4444-4444-8444-444444444444';
+  const rolId = '55555555-5555-4555-8555-555555555555';
+
+  it('crea una invitación con empleado, sucursal y rol', () => {
+    const payload = { empleado_id: empleadoId, sucursal_id: sucursalId, rol_predeterminado_id: rolId };
+    service.crear(negocioId, payload).subscribe();
 
     const request = http.expectOne(baseUrl);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ empleado_id: empleadoId, rol_predeterminado_id: null });
+    expect(request.request.body).toEqual(payload);
     request.flush({ invitacion: {}, token: 'abc' });
   });
 
-  it('filtra el listado por estado', () => {
-    service.listar(negocioId, 'pendiente').subscribe();
+  it('filtra el listado por estado y sucursal', () => {
+    service.listar(negocioId, { estado: 'pendiente', sucursalId }).subscribe();
 
     const request = http.expectOne(
-      (candidate) => candidate.url === baseUrl && candidate.params.get('estado') === 'pendiente',
+      (candidate) =>
+        candidate.url === baseUrl &&
+        candidate.params.get('estado') === 'pendiente' &&
+        candidate.params.get('sucursal_id') === sucursalId,
     );
     request.flush({ items: [], total: 0 });
+  });
+
+  it('pide las no aceptadas sin mandar estado', () => {
+    service.listar(negocioId, { sinAceptar: true, estado: 'aceptada' }).subscribe();
+
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === baseUrl &&
+        candidate.params.get('sin_aceptar') === 'true' &&
+        !candidate.params.has('estado'),
+    );
+    request.flush({ items: [], total: 0 });
+  });
+
+  it('reenvía conservando al destinatario cuando no hay correo nuevo', () => {
+    service.reenviar(negocioId, invitacionId).subscribe();
+
+    const request = http.expectOne(`${baseUrl}/${invitacionId}/reenviar`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({ invitacion: {}, token: 'abc' });
+  });
+
+  it('reenvía corrigiendo el correo', () => {
+    service.reenviar(negocioId, invitacionId, 'nuevo@tienda.mx').subscribe();
+
+    const request = http.expectOne(`${baseUrl}/${invitacionId}/reenviar`);
+    expect(request.request.body).toEqual({ correo: 'nuevo@tienda.mx' });
+    request.flush({ invitacion: {}, token: 'abc' });
+  });
+
+  it('registra la cuenta del invitado sin enviar correo', () => {
+    const payload = { nombres: 'Ana', primer_apellido: 'Ruiz', segundo_apellido: '', telefono: '', contrasena: 'contrasena-segura' };
+    service.registrar('token-publico', payload).subscribe();
+
+    const request = http.expectOne(`${environment.apiUrl}/invitaciones/token-publico/registro`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(payload);
+    request.flush({ desafio_id: 'd', correo_enmascarado: 'a***@tienda.mx', reenviar_en_segundos: 60 });
   });
 
   it('cancela una invitación pendiente', () => {
@@ -65,7 +111,7 @@ describe('InvitacionService', () => {
 
     const request = http.expectOne(`${environment.apiUrl}/invitaciones/token-publico/aceptar`);
     expect(request.request.method).toBe('POST');
-    request.flush(null);
+    request.flush({ aceptada: true, negocio_id: negocioId, sucursal_id: null });
   });
 
   it('arma el enlace copiable sobre el origen actual', () => {

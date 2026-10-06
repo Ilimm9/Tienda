@@ -9,7 +9,7 @@
         >.
       </p>
     </div>
-    @if (business()?.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
+    @if (puede(P.sucursalCrear) && business()?.estado === 'activo') {
       <a class="primary-button" [routerLink]="['nueva']">
         <i class="pi pi-plus" aria-hidden="true"></i>
         Nueva sucursal
@@ -81,7 +81,7 @@
               : 'Las sucursales archivadas aparecerán aquí.'
         }}
       </p>
-      @if (!buscar() && estado() === 'activo' && business()?.tipo_miembro === 'propietario') {
+      @if (!buscar() && estado() === 'activo' && puede(P.sucursalCrear)) {
         <a class="primary-button" routerLink="nueva">Registrar sucursal</a>
       }
     </section>
@@ -118,9 +118,11 @@
           </dl>
           <footer>
             <a class="secondary-button" [routerLink]="[branch.id]">Ver detalle</a>
-            @if (branch.tipo_miembro === 'propietario' && business()?.estado === 'activo') {
-              @if (branch.estado === 'activo') {
+            @if (business()?.estado === 'activo') {
+              @if (branch.estado === 'activo' && puede(P.sucursalEditar)) {
                 <a class="text-button" [routerLink]="[branch.id, 'editar']">Editar</a>
+              }
+              @if (branch.estado === 'activo' && puede(P.sucursalArchivar)) {
                 <button
                   class="text-button danger-text"
                   type="button"
@@ -129,7 +131,7 @@
                 >
                   Archivar
                 </button>
-              } @else {
+              } @else if (branch.estado !== 'activo' && puede(P.sucursalArchivar)) {
                 <button
                   class="text-button"
                   type="button"

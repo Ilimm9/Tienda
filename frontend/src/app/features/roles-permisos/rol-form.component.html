@@ -1,96 +1,150 @@
-<section class="role-page">
-  <header class="page-heading">
+<section class="pagina max-w-[1100px]">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Control de acceso</span>
       <h1>{{ editing ? 'Editar rol' : 'Nuevo rol' }}</h1>
-      <p>Elige qué acciones permite este rol dentro del negocio.</p>
+      <p class="descripcion">Elige qué acciones permite este rol dentro del negocio.</p>
     </div>
-    <a class="secondary-button" routerLink="/roles-permisos">Volver</a>
+    <a class="boton boton--secundario" routerLink="/roles-permisos">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>Roles y permisos
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando permisos…</p>
+    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando permisos…</p>
   } @else if (rol()?.es_rol_sistema) {
-    <p class="status-message error" role="alert">
-      El rol de sistema conserva todos los permisos y no puede editarse.
+    <p class="aviso" role="status">
+      <i class="pi pi-lock" aria-hidden="true"></i>El rol de sistema conserva todos los permisos y no puede editarse.
     </p>
-  } @else {
-    <form class="role-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field-row">
-        <div class="field">
-          <label for="codigo">Código</label>
-          <input
-            id="codigo"
-            type="text"
-            formControlName="codigo"
-            autocomplete="off"
-            [attr.aria-invalid]="hasError('codigo')"
-          />
-          @if (editing) {
-            <small>El código no cambia después de crear el rol.</small>
-          } @else if (hasError('codigo')) {
-            <small class="error">{{
-              fieldErrors()['codigo'] || 'Usa entre 2 y 60 caracteres.'
-            }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="nombre">Nombre</label>
-          <input
-            id="nombre"
-            type="text"
-            formControlName="nombre"
-            [attr.aria-invalid]="hasError('nombre')"
-          />
-          @if (hasError('nombre')) {
-            <small class="error">{{
-              fieldErrors()['nombre'] || 'Usa entre 2 y 120 caracteres.'
-            }}</small>
-          }
-        </div>
-      </div>
+  } @else if (modulos().length) {
+    <form class="formulario-g" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="formulario-g__seccion">
+        <legend class="contents">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-id-card"></i></span>
+            <span>
+              <span class="titulo block">Datos del rol</span>
+              <span class="descripcion block">Cómo lo verá tu equipo al asignarlo.</span>
+            </span>
+          </span>
+        </legend>
 
-      <div class="field">
-        <label for="descripcion">Descripción</label>
-        <textarea id="descripcion" rows="2" formControlName="descripcion"></textarea>
-      </div>
-
-      @if (editing) {
-        <label class="checkbox-field">
-          <input type="checkbox" formControlName="activo" />
-          <span>Rol activo</span>
-        </label>
-      }
-
-      <h2 class="section-title">Permisos</h2>
-      @for (modulo of modulos(); track modulo.codigo) {
-        <fieldset class="permission-group">
-          <legend>{{ modulo.nombre }}</legend>
-          <button type="button" class="text-button small" (click)="alternarModulo(modulo)">
-            {{ moduloCompleto(modulo) ? 'Quitar todos' : 'Seleccionar todos' }}
-          </button>
-          <div class="permission-list">
-            @for (permiso of modulo.permisos; track permiso.id) {
-              <label class="checkbox-field">
-                <input
-                  type="checkbox"
-                  [checked]="estaSeleccionado(permiso.id)"
-                  (change)="alternarPermiso(permiso.id)"
-                />
-                <span>{{ permiso.nombre }}<code>{{ permiso.codigo }}</code></span>
-              </label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="campo-bloque">
+            <label class="etiqueta" for="nombre">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+            <input
+              id="nombre"
+              class="campo"
+              type="text"
+              formControlName="nombre"
+              placeholder="Cajero"
+              aria-required="true"
+              [attr.aria-invalid]="hasError('nombre')"
+              [attr.aria-describedby]="hasError('nombre') ? 'nombre-error' : null"
+            />
+            @if (hasError('nombre')) {
+              <small id="nombre-error" class="error-campo">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['nombre'] || 'Usa entre 2 y 120 caracteres.' }}
+              </small>
             }
           </div>
-        </fieldset>
-      }
+          <div class="campo-bloque">
+            <label class="etiqueta" for="codigo">Código <span class="obligatorio" aria-hidden="true">*</span></label>
+            <input
+              id="codigo"
+              class="campo campo--monoespacio campo--mayusculas"
+              type="text"
+              formControlName="codigo"
+              autocomplete="off"
+              placeholder="CAJERO"
+              aria-required="true"
+              aria-describedby="codigo-ayuda"
+              [attr.aria-invalid]="hasError('codigo')"
+            />
+            @if (hasError('codigo')) {
+              <small id="codigo-ayuda" class="error-campo">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ fieldErrors()['codigo'] || 'Usa de 2 a 60 caracteres: letras, números, guion o guion bajo.' }}
+              </small>
+            } @else {
+              <small id="codigo-ayuda" class="ayuda">
+                {{ editing ? 'El código no cambia después de crear el rol.' : 'Identificador corto y único. No podrá cambiarse después.' }}
+              </small>
+            }
+          </div>
+        </div>
 
-      <footer class="form-actions">
-        <a class="secondary-button" routerLink="/roles-permisos">Cancelar</a>
-        <button type="submit" class="primary-button" [disabled]="saving()">
+        <div class="campo-bloque">
+          <label class="etiqueta" for="descripcion">Descripción</label>
+          <textarea id="descripcion" class="campo" rows="2" formControlName="descripcion" placeholder="Para qué sirve este rol"></textarea>
+        </div>
+
+        @if (editing) {
+          <label class="opcion opcion--compacta w-fit">
+            <input type="checkbox" class="casilla mt-0" formControlName="activo" />
+            <span>Rol activo</span>
+          </label>
+        }
+      </fieldset>
+
+      <fieldset
+        class="formulario-g__seccion"
+        [attr.aria-invalid]="sinPermisos()"
+        [attr.aria-describedby]="sinPermisos() ? 'permisos-error' : null"
+        tabindex="-1"
+      >
+        <legend class="contents">
+          <span class="seccion-encabezado flex-wrap">
+            <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-shield"></i></span>
+            <span class="min-w-0 flex-1">
+              <span class="titulo block">Permisos <span class="obligatorio" aria-hidden="true">*</span></span>
+              <span class="descripcion block">Marca al menos uno. «Ver» permite entrar a la sección; los demás permiten cambiarla.</span>
+            </span>
+            <span class="contador">{{ seleccionados().size }} de {{ totalPermisos() }}</span>
+          </span>
+        </legend>
+
+        @if (sinPermisos()) {
+          <p id="permisos-error" class="error-campo" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Selecciona al menos un permiso.
+          </p>
+        }
+
+        <div class="grid gap-4 md:grid-cols-2">
+          @for (modulo of modulos(); track modulo.codigo) {
+            <section class="grupo-permisos" [attr.aria-label]="'Permisos de ' + modulo.nombre">
+              <header class="grupo-permisos__encabezado">
+                <h3>{{ modulo.nombre }}</h3>
+                <span class="ayuda">{{ seleccionadosDe(modulo) }} de {{ modulo.permisos.length }}</span>
+                <button type="button" class="boton-enlace boton-enlace--chico" (click)="alternarModulo(modulo)">
+                  {{ moduloCompleto(modulo) ? 'Quitar todos' : 'Seleccionar todos' }}
+                </button>
+              </header>
+              <ul class="grupo-permisos__lista">
+                @for (permiso of modulo.permisos; track permiso.id) {
+                  <li>
+                    <label>
+                      <input type="checkbox" class="casilla" [checked]="estaSeleccionado(permiso.id)" (change)="alternarPermiso(permiso.id)" />
+                      <span class="min-w-0">
+                        <span class="block">{{ permiso.nombre }}</span>
+                        <span class="codigo block truncate">{{ permiso.codigo }}</span>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      </fieldset>
+
+      <footer class="formulario-g__acciones">
+        <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+        <a class="boton boton--fantasma" routerLink="/roles-permisos">Cancelar</a>
+        <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
+          <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
           {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar rol' }}
         </button>
       </footer>

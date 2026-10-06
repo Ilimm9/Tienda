@@ -11,6 +11,7 @@ import { NegocioDetalle } from '../negocios/negocio.models';
 import { NegocioService } from '../negocios/negocio.service';
 import { SucursalApiError, SucursalResumen } from './sucursal.models';
 import { SucursalService } from './sucursal.service';
+import { CodigoPermiso, PERMISOS } from '../../contexto/permisos';
 
 @Component({
   selector: 'app-sucursales',
@@ -35,6 +36,13 @@ export class SucursalesComponent {
   readonly loading = signal(true);
   readonly processingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly P = PERMISOS;
+
+  /** Permiso sobre el negocio de esta pantalla; si el contexto no lo conoce (archivado), decide ser propietario. */
+  puede(codigo: CodigoPermiso): boolean {
+    return this.contexto.puedeEn(this.negocioId, codigo, this.business()?.tipo_miembro === 'propietario');
+  }
 
   constructor() {
     this.load();

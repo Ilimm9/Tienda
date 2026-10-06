@@ -8,7 +8,6 @@ import { forkJoin } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
-import { RolService } from '../roles-permisos/rol.service';
 import { AsignacionResumen } from './asignacion.models';
 import { AsignacionService } from './asignacion.service';
 import { EmpleadoDetalle } from './empleado.models';
@@ -18,20 +17,19 @@ import { EmpleadoService } from './empleado.service';
   selector: 'app-empleado-sucursales',
   imports: [CommonModule, FechaMexicoPipe, FormsModule, RouterLink],
   templateUrl: './empleado-sucursales.component.html',
-  styleUrl: './empleado-sucursales.component.css',
 })
 export class EmpleadoSucursalesComponent {
   private readonly asignacionService = inject(AsignacionService);
   private readonly empleadoService = inject(EmpleadoService);
-  private readonly rolService = inject(RolService);
   private readonly feedback = inject(FeedbackService);
   readonly contexto = inject(ContextoService);
+  /** Permisos del negocio activo, resueltos una sola vez en el contexto. */
+  readonly misPermisos = computed(() => [...this.contexto.permisos()]);
   private readonly route = inject(ActivatedRoute);
 
   readonly empleadoId = this.route.snapshot.paramMap.get('empleadoId') ?? '';
   readonly empleado = signal<EmpleadoDetalle | null>(null);
   readonly asignaciones = signal<AsignacionResumen[]>([]);
-  readonly misPermisos = signal<string[]>([]);
   readonly loading = signal(true);
   readonly processingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -127,12 +125,10 @@ export class EmpleadoSucursalesComponent {
     forkJoin({
       empleado: this.empleadoService.obtener(negocioId, this.empleadoId),
       asignaciones: this.asignacionService.listar(negocioId, this.empleadoId),
-      permisos: this.rolService.misPermisos(negocioId),
     }).subscribe({
-      next: ({ empleado, asignaciones, permisos }) => {
+      next: ({ empleado, asignaciones }) => {
         this.empleado.set(empleado);
         this.asignaciones.set(asignaciones.items);
-        this.misPermisos.set(permisos.items);
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {

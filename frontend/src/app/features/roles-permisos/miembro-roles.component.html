@@ -1,52 +1,89 @@
-<section class="role-page">
-  <header class="page-heading">
+<section class="pagina max-w-[760px]">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Control de acceso</span>
       <h1>Asignar roles</h1>
-      @if (miembro()) {
-        <p>
-          Define los roles de <strong>{{ miembro()?.correo }}</strong> en este negocio.
-        </p>
-      }
+      <p class="descripcion">Los permisos de una persona son la suma de sus roles.</p>
     </div>
-    <a class="secondary-button" routerLink="/roles-permisos">Volver</a>
+    <a class="boton boton--secundario" routerLink="/roles-permisos">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>Roles y permisos
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando roles…</p>
-  } @else if (miembro()) {
-    <div class="surface-card assign-card">
-      <div class="permission-list">
-        @for (rol of roles(); track rol.id) {
-          <label class="checkbox-field">
-            <input
-              type="checkbox"
-              [checked]="estaSeleccionado(rol.id)"
-              (change)="alternar(rol.id)"
-            />
-            <span>
-              {{ rol.nombre }}
-              <code>{{ rol.codigo }}</code>
-              @if (rol.es_rol_sistema) {
-                <small>Concentra todos los permisos del negocio.</small>
-              }
-            </span>
-          </label>
-        } @empty {
-          <p class="status-message">Este negocio todavía no tiene roles activos.</p>
-        }
-      </div>
+    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
+  } @else if (miembro(); as persona) {
+    <form class="formulario-g" (ngSubmit)="guardar()" novalidate>
+      <header class="tarjeta-encabezado">
+        <span class="avatar avatar--grande" aria-hidden="true">{{ iniciales(persona.nombre, persona.correo) }}</span>
+        <div class="min-w-0 flex-1">
+          <strong class="tabla-principal truncate">{{ persona.nombre || persona.correo }}</strong>
+          <span class="secundario truncate">
+            {{ persona.nombre ? persona.correo + ' · ' : '' }}{{ persona.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro' }}
+          </span>
+        </div>
+      </header>
 
-      <footer class="form-actions">
-        <a class="secondary-button" routerLink="/roles-permisos">Cancelar</a>
-        <button type="button" class="primary-button" [disabled]="saving()" (click)="guardar()">
+      <fieldset
+        class="formulario-g__seccion"
+        [attr.aria-invalid]="sinRoles()"
+        [attr.aria-describedby]="sinRoles() ? 'roles-error' : null"
+        tabindex="-1"
+      >
+        <legend class="contents">
+          <span class="seccion-encabezado items-center">
+            <span class="titulo flex-1">Roles <span class="obligatorio" aria-hidden="true">*</span></span>
+            <span class="contador">{{ seleccionados().size }} de {{ roles().length }}</span>
+          </span>
+        </legend>
+
+        @if (sinRoles()) {
+          <p id="roles-error" class="error-campo" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Selecciona al menos un rol. Sin roles, la persona no puede hacer nada en el negocio.
+          </p>
+        }
+
+        <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+          @for (rol of roles(); track rol.id) {
+            <li>
+              <label class="opcion">
+                <input type="checkbox" class="casilla" [checked]="estaSeleccionado(rol.id)" (change)="alternar(rol.id)" />
+                <span class="min-w-0 flex-1">
+                  <span class="flex flex-wrap items-center gap-2">
+                    <strong>{{ rol.nombre }}</strong>
+                    <span class="codigo">{{ rol.codigo }}</span>
+                    @if (rol.es_rol_sistema) {
+                      <span class="pastilla pastilla--plana">Sistema</span>
+                    }
+                  </span>
+                  <span class="secundario">
+                    {{ rol.es_rol_sistema ? 'Concentra todos los permisos del negocio.' : rol.descripcion || 'Sin descripción.' }}
+                  </span>
+                </span>
+                <span class="ayuda">{{ rol.total_permisos === 1 ? '1 permiso' : rol.total_permisos + ' permisos' }}</span>
+              </label>
+            </li>
+          } @empty {
+            <li class="aviso aviso--atencion">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>Este negocio todavía no tiene roles activos. <a routerLink="/roles-permisos/nuevo">Crear un rol</a></span>
+            </li>
+          }
+        </ul>
+        <p class="ayuda">Solo puedes otorgar roles cuyos permisos tú también tienes.</p>
+      </fieldset>
+
+      <footer class="formulario-g__acciones">
+        <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+        <a class="boton boton--fantasma" routerLink="/roles-permisos">Cancelar</a>
+        <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
+          <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
           {{ saving() ? 'Guardando…' : 'Guardar roles' }}
         </button>
       </footer>
-    </div>
+    </form>
   }
 </section>

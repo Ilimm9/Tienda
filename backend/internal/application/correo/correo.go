@@ -63,7 +63,7 @@ type DatosInvitacion struct {
 	NombreNegocio  string
 	NombreInvitado string
 	Enlace         string
-	Dias           int
+	Horas          int
 }
 
 type DatosRecuperacion struct {
@@ -118,16 +118,16 @@ func (s *Servicio) SendPasswordChanged(ctx context.Context, recipient string) er
 }
 
 func (s *Servicio) EnviarInvitacion(ctx context.Context, para, nombreNegocio, nombreInvitado, token string, expiraEn time.Time) error {
-	dias := int(math.Round(expiraEn.Sub(s.now()).Hours() / 24))
-	if dias < 1 {
-		dias = 1
+	horas := int(math.Round(expiraEn.Sub(s.now()).Hours()))
+	if horas < 1 {
+		horas = 1
 	}
 	return s.enviar(ctx, para, PlantillaInvitacion, DatosInvitacion{
 		Base:           s.base(),
 		NombreNegocio:  nombreNegocio,
 		NombreInvitado: nombreInvitado,
 		Enlace:         s.config.FrontendURL + "/invitacion/" + url.PathEscape(token),
-		Dias:           dias,
+		Horas:          horas,
 	})
 }
 

@@ -1,3 +1,4 @@
+/* Topbar índigo: único bloque oscuro de la app (opción G). Los menús desplegables siguen blancos. */
 :host {
   position: relative;
   z-index: 30;
@@ -11,9 +12,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 24px;
-  background: var(--surface-raised);
-  border-bottom: 1px solid var(--border);
+  padding: 0 20px 0 14px;
+  color: #fff;
+  background: var(--brand-ink);
 }
 
 .brand,
@@ -24,40 +25,91 @@
 
 .brand {
   min-width: 0;
-  gap: 12px;
+  flex: 1 1 auto;
+  gap: 10px;
+}
+
+.brand-home {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
+.brand-home:hover {
+  background: var(--brand-ink-hover);
+}
+
+/* Cuadro blanco para que el hexágono índigo del logo se distinga sobre la barra. */
+.brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.brand-mark img {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.brand-name {
+  overflow: hidden;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-breadcrumbs {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1px solid var(--brand-ink-line);
 }
 
 .topbar-actions {
+  flex: 0 0 auto;
   gap: 6px;
 }
 
-.context-loading { color:var(--text-muted); font-size:12px; }
+.context-loading { color: var(--brand-ink-muted); font-size: 12px; }
 
-.context-menu { margin-right: 6px; }
+.context-menu { margin-right: 4px; }
 
 .context-button {
   display: flex;
-  min-width: 245px;
-  max-width: 330px;
-  min-height: 48px;
+  min-width: 230px;
+  max-width: 320px;
+  min-height: 46px;
   align-items: center;
   gap: 10px;
   padding: 5px 11px 5px 6px;
-  color: var(--text);
-  border: 1px solid var(--border);
+  color: #fff;
+  border: 1px solid var(--brand-ink-line);
   border-radius: 12px;
-  background: var(--surface-raised);
+  background: var(--brand-ink-raised);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, background 150ms ease;
 }
 
 .context-button:hover,
 .context-button[aria-expanded='true'] {
-  border-color: var(--primary-border);
-  background: var(--primary-soft);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 9%, transparent);
+  border-color: var(--brand-ink-muted);
+  background: var(--brand-ink-hover);
 }
 
 .context-icon,
@@ -70,13 +122,14 @@
   background: var(--primary-soft);
 }
 
-.context-icon { width: 36px; height: 36px; border-radius: 9px; }
+/* Toque cálido del mosaico: el contexto de trabajo va sobre salvia. */
+.context-icon { width: 34px; height: 34px; border-radius: 9px; color: var(--tone-sage-text); background: var(--tone-sage); }
 .context-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
 .context-copy strong,
 .context-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .context-copy strong { font-size: 13px; }
-.context-copy small { color: var(--text-muted); font-size: 11px; }
-.context-chevron { color: var(--text-subtle); font-size: 10px; transition: transform 150ms ease; }
+.context-copy small { color: var(--brand-ink-muted); font-size: 11.5px; }
+.context-chevron { color: var(--brand-ink-muted); font-size: 10px; transition: transform 150ms ease; }
 .context-button[aria-expanded='true'] .context-chevron { transform: rotate(180deg); }
 
 .context-dropdown { width: min(410px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
@@ -115,35 +168,24 @@
 .option-check { color: var(--primary); }
 .empty-branch { display: flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; border: 1px dashed var(--primary-border); border-radius: 10px; background: var(--primary-soft); font-size: 13px; font-weight: 700; }
 
-.brand-mark,
 .account-avatar {
   display: grid;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   place-items: center;
-  color: #fff;
-  background: var(--primary);
-}
-
-.brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-}
-
-.brand-name {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 17px;
+  color: var(--tone-sage-text);
+  border-radius: 50%;
+  background: var(--tone-sage);
+  font-size: 13px;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .icon-button,
 .account-button {
   min-width: 44px;
   min-height: 44px;
-  color: var(--text-muted);
+  color: var(--brand-ink-text);
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -152,43 +194,53 @@
 .icon-button {
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 10px;
   font-size: 17px;
 }
 
 .icon-button:hover,
-.account-button:hover {
-  color: var(--text);
-  background: var(--surface-hover);
+.icon-button[aria-expanded='true'] {
+  color: #fff;
+  background: var(--brand-ink-hover);
 }
 
 .navigation-toggle {
   display: grid;
+  flex: 0 0 auto;
 }
 
 .account-button {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 4px 10px 4px 5px;
-  border: 1px solid var(--border);
-  border-radius: 24px;
+  gap: 8px;
+  padding: 4px 12px 4px 5px;
+  color: #fff;
+  border-radius: 999px;
+  background: var(--brand-ink-raised);
   font: inherit;
 }
 
-.account-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.account-button:hover,
+.account-button[aria-expanded='true'] {
+  background: var(--brand-ink-hover);
 }
 
 .account-label {
-  color: var(--text);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .account-chevron {
+  color: var(--brand-ink-muted);
   font-size: 10px;
+}
+
+.topbar .icon-button:focus-visible,
+.topbar .account-button:focus-visible,
+.topbar .context-button:focus-visible,
+.brand-home:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 70%);
+  outline-offset: 2px;
 }
 
 .action-menu {
@@ -244,22 +296,42 @@
   cursor: pointer;
 }
 
+.dropdown :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Pantallas medianas: el nombre de la marca cede espacio a las migas. */
+@media (max-width: 1199px) {
+  .brand-name {
+    display: none;
+  }
+
+  .brand-home {
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 899px) {
+  .context-button {
+    min-width: 0;
+    max-width: 220px;
+  }
+}
+
 @media (max-width: 599px) {
   .topbar {
-    padding-inline: 10px;
+    gap: 8px;
+    padding-inline: 6px 10px;
   }
 
   .brand {
-    gap: 6px;
+    gap: 4px;
   }
 
-  .brand-mark {
-    display: none;
-  }
-
-  .brand-name {
-    display: none;
-    font-size: 14px;
+  .topbar-breadcrumbs {
+    margin-left: 2px;
+    padding-left: 10px;
   }
 
   .account-label,
@@ -269,13 +341,16 @@
 
   .account-button {
     padding: 4px;
-    border: 0;
   }
 
   .topbar-actions { gap: 2px; }
   .context-menu { margin-right: 0; }
-  .context-button { min-width: 0; width: 48px; padding: 5px; justify-content: center; border-radius: 50%; }
+  .context-button { width: 46px; padding: 5px; justify-content: center; border-radius: 12px; }
   .context-copy,
   .context-chevron { display: none; }
   .context-dropdown { position: fixed; top: 70px; right: 8px; left: 8px; width: auto; max-height: calc(100dvh - 82px); overflow-y: auto; }
 }
+
+.context-vacio { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 14px; color: #d6d7ec; border: 1px dashed #6c6eb0; border-radius: 12px; font-weight: 500; text-decoration: none; }
+.context-vacio:hover { color: #fff; border-color: #fff; text-decoration: none; }
+@media (max-width: 640px) { .context-vacio span { display: none; } }

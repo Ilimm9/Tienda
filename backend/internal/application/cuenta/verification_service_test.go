@@ -120,7 +120,7 @@ func newVerificationServiceForTest() (*VerificationService, *verificationUsersSt
 
 func TestRegisterCreatesPendingAccountAndStoresOnlyOTPHMAC(t *testing.T) {
 	service, users, challenges, mailer := newVerificationServiceForTest()
-	result, err := service.Register(context.Background(), "Ada Lovelace", " ADA@EXAMPLE.COM ", "+52 55", "contrasena-segura", "127.0.0.1")
+	result, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", " ADA@EXAMPLE.COM ", "+52 55", "contrasena-segura", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestRegisterCreatesPendingAccountAndStoresOnlyOTPHMAC(t *testing.T) {
 
 func TestVerifyRejectsWrongCodeThenActivatesAndConsumesCorrectCode(t *testing.T) {
 	service, users, challenges, mailer := newVerificationServiceForTest()
-	result, err := service.Register(context.Background(), "Ada Lovelace", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
+	result, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestVerifyRejectsWrongCodeThenActivatesAndConsumesCorrectCode(t *testing.T)
 
 func TestResendEnforcesWaitAndHourlyLimit(t *testing.T) {
 	service, _, challenges, _ := newVerificationServiceForTest()
-	result, err := service.Register(context.Background(), "Ada Lovelace", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
+	result, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestResendEnforcesWaitAndHourlyLimit(t *testing.T) {
 
 func TestResendInvalidatesPreviousChallenge(t *testing.T) {
 	service, _, challenges, _ := newVerificationServiceForTest()
-	first, err := service.Register(context.Background(), "Ada Lovelace", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
+	first, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestResendInvalidatesPreviousChallenge(t *testing.T) {
 
 func TestVerifyRejectsExpiredAndExhaustedChallenges(t *testing.T) {
 	service, _, challenges, mailer := newVerificationServiceForTest()
-	result, err := service.Register(context.Background(), "Ada Lovelace", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
+	result, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,25 +211,38 @@ func TestVerifyRejectsExpiredAndExhaustedChallenges(t *testing.T) {
 	}
 }
 
-func TestRegisterDoesNotRevealExistingActiveEmail(t *testing.T) {
+func TestRegisterRejectsEmailOfVerifiedAccount(t *testing.T) {
 	service, users, challenges, mailer := newVerificationServiceForTest()
 	verifiedAt := service.now()
 	active := &cuentadomain.Usuario{ID: uuid.New(), Correo: "ada@example.com", Estado: "activo", CorreoVerificadoEn: &verifiedAt}
 	users.byEmail[active.Correo], users.byID[active.ID] = active, active
-	result, err := service.Register(context.Background(), "Otra Persona", active.Correo, "", "contrasena-segura", "127.0.0.1")
-	if err != nil || result.ChallengeID == uuid.Nil || len(challenges.items) != 0 || mailer.code != "" {
-		t.Fatalf("registro enumerable: result=%#v err=%v", result, err)
+	_, err := service.RegisterWithNames(context.Background(), "Otra", "Persona", "", " ADA@example.com ", "", "contrasena-segura", "127.0.0.1")
+	if !errors.Is(err, ErrEmailRegistered) || len(challenges.items) != 0 || mailer.code != "" {
+		t.Fatalf("un correo ya verificado debe rechazarse sin emitir código: err=%v", err)
+	}
+}
+
+func TestRegisterRequiresNamesAndFirstLastName(t *testing.T) {
+	service, users, _, _ := newVerificationServiceForTest()
+	if _, err := service.RegisterWithNames(context.Background(), " ", "Lovelace", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1"); !errors.Is(err, ErrNamesRequired) {
+		t.Fatalf("se esperaba ErrNamesRequired, llegó %v", err)
+	}
+	if _, err := service.RegisterWithNames(context.Background(), "Ada", " ", "", "ada@example.com", "", "contrasena-segura", "127.0.0.1"); !errors.Is(err, ErrFirstLastNameRequired) {
+		t.Fatalf("se esperaba ErrFirstLastNameRequired, llegó %v", err)
+	}
+	if len(users.byEmail) != 0 {
+		t.Fatal("un registro inválido no debe crear cuenta")
 	}
 }
 
 func TestRegisterAgainReplacesPendingPasswordAndInvalidatesOldCode(t *testing.T) {
 	service, users, challenges, _ := newVerificationServiceForTest()
-	first, err := service.Register(context.Background(), "Ada Lovelace", "ada@example.com", "", "primera-contrasena", "127.0.0.1")
+	first, err := service.RegisterWithNames(context.Background(), "Ada", "Lovelace", "", "ada@example.com", "", "primera-contrasena", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	service.now = func() time.Time { return time.Date(2026, 9, 20, 20, 2, 0, 0, time.UTC) }
-	second, err := service.Register(context.Background(), "Ada Actualizada", "ada@example.com", "", "segunda-contrasena", "127.0.0.1")
+	second, err := service.RegisterWithNames(context.Background(), "Ada", "Actualizada", "", "ada@example.com", "", "segunda-contrasena", "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
 	}

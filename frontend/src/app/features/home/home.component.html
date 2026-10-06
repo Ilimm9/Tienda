@@ -1,33 +1,127 @@
 <section class="home-page">
-  <header>
-    <p class="eyebrow">Panel principal</p>
-    <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
-    <p class="description">
-      @if (contexto.sucursal(); as sucursal) { Contexto activo: {{ sucursal.codigo }} · {{ sucursal.nombre }}. } @else { Registra una sucursal para operar módulos que la requieren. }
-    </p>
-  </header>
+  @if (alta() === 'listo') {
+    <header class="contexto tarjeta">
+      <div class="contexto__texto">
+        <p class="eyebrow">Panel principal</p>
+        <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
+        @if (contexto.sucursal(); as sucursal) {
+          <p class="etiquetas">
+            <span class="pastilla">{{ sucursal.codigo }}</span>
+            <span class="pastilla pastilla--aceptada">Sucursal {{ sucursal.nombre }} · activa</span>
+          </p>
+        } @else {
+          <p class="description">Registra una sucursal para operar módulos que la requieren.</p>
+        }
+      </div>
+    </header>
 
-  <div class="summary-grid">
-    <article>
-      <span class="summary-icon blue"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
-      <div>
-        <strong>Negocios</strong>
-        <p>Gestiona la información general de tus negocios.</p>
+    <div class="summary-grid">
+      @if (contexto.puedeVerNegocios()) {
+        <a class="resumen-tarjeta" routerLink="/negocios">
+          <span class="summary-icon lavanda"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+          <span class="resumen-tarjeta__texto">
+            <strong>Negocios</strong>
+            <span>Gestiona la información general de tus negocios.</span>
+          </span>
+          <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+        </a>
+      }
+      <a *appPuede="P.sucursalVer" class="resumen-tarjeta" routerLink="/sucursales">
+        <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+        <span class="resumen-tarjeta__texto">
+          <strong>Sucursales</strong>
+          <span>Organiza ubicaciones, equipos y operaciones.</span>
+        </span>
+        <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+      </a>
+      <a *appPuede="P.empleadoVer" class="resumen-tarjeta" routerLink="/equipo/empleados">
+        <span class="summary-icon lavanda"><i class="pi pi-users" aria-hidden="true"></i></span>
+        <span class="resumen-tarjeta__texto">
+          <strong>Equipo</strong>
+          <span>Consulta empleados, invitaciones y permisos.</span>
+        </span>
+        <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
+      </a>
+    </div>
+  } @else {
+    <header class="encabezado-pagina">
+      <h1>Inicio</h1>
+      <span class="tenue">{{ hoy }}</span>
+    </header>
+
+    <section class="flex flex-wrap items-stretch gap-3.5" aria-label="Configuración inicial">
+      <div class="tarjeta alta-aviso flex-[1_1_520px]">
+        @if (alta() === 'sin_asignacion') {
+          <span class="pastilla pastilla--plana pastilla--atencion self-start">Acceso pendiente</span>
+          <h2 class="alta-aviso__titulo">Aún no tienes una sucursal asignada.</h2>
+          <p class="alta-aviso__texto">
+            Tu cuenta ya pertenece a <strong>{{ contexto.negocio()?.nombre_comercial }}</strong>, pero todavía no puedes operar.
+            Solicita una asignación al administrador del negocio.
+          </p>
+        } @else {
+          <span class="alta-aviso__avance">
+            <span class="proporcion" aria-hidden="true"><span [style.width.%]="alta() === 'requiere_sucursal' ? 50 : 0"></span></span>
+            Configuración inicial · {{ alta() === 'requiere_sucursal' ? 1 : 0 }} de 2 pasos
+          </span>
+          <h2 class="alta-aviso__titulo">
+            Tu panel ya está abierto.<br />{{ alta() === 'requiere_sucursal' ? 'Falta tu primera sucursal.' : 'Falta tu empresa.' }}
+          </h2>
+          <p class="alta-aviso__texto">
+            Registra tu empresa y una primera sucursal para vender, comprar y llevar inventario. Mientras tanto puedes recorrer cualquier sección.
+          </p>
+          <ol class="m-0 flex list-none flex-col gap-2 p-0">
+            <li class="alta-paso" [class.alta-paso--actual]="alta() === 'requiere_empresa'" [class.alta-paso--hecho]="alta() === 'requiere_sucursal'">
+              <span class="alta-paso__numero">
+                @if (alta() === 'requiere_sucursal') { <i class="pi pi-check" aria-hidden="true"></i> } @else { 1 }
+              </span>
+              <span class="min-w-0 flex-1"><strong>Tu empresa</strong><span class="secundario">Solo el nombre comercial. RFC y datos fiscales pueden esperar.</span></span>
+              <span class="alta-paso__estado">{{ alta() === 'requiere_sucursal' ? 'Hecho' : 'Siguiente' }}</span>
+            </li>
+            <li class="alta-paso" [class.alta-paso--actual]="alta() === 'requiere_sucursal'">
+              <span class="alta-paso__numero">2</span>
+              <span class="min-w-0 flex-1"><strong>Tu primera sucursal</strong><span class="secundario">Nombre y código. Queda como principal.</span></span>
+              <span class="alta-paso__estado">{{ alta() === 'requiere_sucursal' ? 'Siguiente' : 'Pendiente' }}</span>
+            </li>
+          </ol>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <a class="boton" routerLink="/configuracion-inicial">
+              {{ alta() === 'requiere_sucursal' ? 'Crear sucursal' : 'Configurar empresa' }}<i class="pi pi-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a class="boton boton--fantasma" href="/inicio#secciones" (click)="irASecciones($event)">Seguir explorando</a>
+          </div>
+        }
       </div>
-    </article>
-    <article>
-      <span class="summary-icon green"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
-      <div>
-        <strong>Sucursales</strong>
-        <p>Organiza ubicaciones, equipos y operaciones.</p>
+      <div class="mosaico mosaico--chico flex-[1_1_320px]" aria-hidden="true">
+        <div class="mosaico__celda mosaico__celda--salvia mosaico__celda--centro [grid-area:1/1/3/3]"><i class="pi pi-building"></i></div>
+        <div class="mosaico__celda mosaico__celda--lavanda-2 [grid-area:1/3/2/5]"></div>
+        <div class="mosaico__celda mosaico__celda--violeta [grid-area:2/3/4/4]"></div>
+        <div class="mosaico__celda mosaico__celda--verde [grid-area:2/4/4/5]"></div>
+        <div class="mosaico__celda mosaico__celda--lavanda mosaico__celda--centro [grid-area:3/1/5/3]"><i class="pi pi-shop"></i></div>
+        <div class="mosaico__celda mosaico__celda--salvia-2 [grid-area:4/3/5/5]"></div>
       </div>
-    </article>
-    <article>
-      <span class="summary-icon orange"><i class="pi pi-users" aria-hidden="true"></i></span>
-      <div>
-        <strong>Equipo</strong>
-        <p>Consulta empleados, invitaciones y permisos.</p>
-      </div>
-    </article>
-  </div>
+    </section>
+
+    @if (alta() !== 'sin_asignacion') {
+      <section id="secciones" class="flex flex-col gap-3.5" aria-labelledby="titulo-secciones">
+        <h2 id="titulo-secciones" class="alta-aviso__subtitulo">Lo que podrás hacer</h2>
+        <div class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          <article class="tarjeta flex flex-col gap-2.5 p-5">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-box"></i></span>
+            <h3 class="tabla-principal m-0">Productos</h3>
+            <p class="secundario m-0">El catálogo pertenece a la empresa. Podrás agregar productos al registrarla.</p>
+          </article>
+          <article class="tarjeta flex flex-col gap-2.5 p-5">
+            <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-shop"></i></span>
+            <h3 class="tabla-principal m-0">Inventario y compras</h3>
+            <p class="secundario m-0">Las existencias se llevan por sucursal. Necesitan al menos una activa.</p>
+          </article>
+          <article class="tarjeta flex flex-col gap-2.5 p-5">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-users"></i></span>
+            <h3 class="tabla-principal m-0">Equipo</h3>
+            <p class="secundario m-0">Invita empleados a una sucursal con un enlace que vence en 72 horas.</p>
+          </article>
+        </div>
+      </section>
+    }
+  }
 </section>

@@ -39,7 +39,7 @@ func (r *renderizadorFalso) Render(plantilla string, datos any) (Contenido, erro
 }
 
 func nuevoServicio(t *transporteFalso, r *renderizadorFalso) *Servicio {
-	s := NewServicio(t, r, Config{NombreApp: "Tienda", FrontendURL: "https://tienda.mergemakers.com/"})
+	s := NewServicio(t, r, Config{NombreApp: "Stockion", FrontendURL: "https://tienda.mergemakers.com/"})
 	s.now = func() time.Time { return time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC) }
 	return s
 }
@@ -53,7 +53,7 @@ func TestSendVerificationOTPRendersCodeAndMinutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	datos, ok := plantillas.datos.(DatosVerificacion)
-	if plantillas.plantilla != PlantillaVerificacion || !ok || datos.Codigo != "123456" || datos.Minutos != 10 || datos.NombreApp != "Tienda" || datos.Anio != 2026 {
+	if plantillas.plantilla != PlantillaVerificacion || !ok || datos.Codigo != "123456" || datos.Minutos != 10 || datos.NombreApp != "Stockion" || datos.Anio != 2026 {
 		t.Fatalf("datos de verificación inesperados: %s %#v", plantillas.plantilla, plantillas.datos)
 	}
 	if len(transporte.enviados) != 1 || transporte.enviados[0].Para != "ana@ejemplo.com" || transporte.enviados[0].Texto != "texto" {
@@ -75,15 +75,15 @@ func TestPasswordResetLinkUsesFragmentAndFrontendURL(t *testing.T) {
 	}
 }
 
-func TestInvitationLinkAndDays(t *testing.T) {
+func TestInvitationLinkAndHours(t *testing.T) {
 	plantillas := &renderizadorFalso{}
 	s := nuevoServicio(&transporteFalso{}, plantillas)
 
-	if err := s.EnviarInvitacion(context.Background(), "luis@ejemplo.com", "Abarrotes Luna", "Luis Pérez", "abc_DEF-123", s.now().Add(7*24*time.Hour-time.Second)); err != nil {
+	if err := s.EnviarInvitacion(context.Background(), "luis@ejemplo.com", "Abarrotes Luna", "Luis Pérez", "abc_DEF-123", s.now().Add(72*time.Hour-time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	datos := plantillas.datos.(DatosInvitacion)
-	if datos.Enlace != "https://tienda.mergemakers.com/invitacion/abc_DEF-123" || datos.Dias != 7 || datos.NombreNegocio != "Abarrotes Luna" || datos.NombreInvitado != "Luis Pérez" {
+	if datos.Enlace != "https://tienda.mergemakers.com/invitacion/abc_DEF-123" || datos.Horas != 72 || datos.NombreNegocio != "Abarrotes Luna" || datos.NombreInvitado != "Luis Pérez" {
 		t.Fatalf("datos de invitación inesperados: %#v", datos)
 	}
 }

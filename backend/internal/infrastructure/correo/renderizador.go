@@ -12,7 +12,7 @@ import (
 )
 
 // LogoCID identifica el logo embebido; la plantilla base lo referencia como `cid:<LogoCID>`.
-const LogoCID = "logo@tienda"
+const LogoCID = "logo@stockion"
 
 //go:embed plantillas/*.tmpl plantillas/logo.png
 var plantillasFS embed.FS

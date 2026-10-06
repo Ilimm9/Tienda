@@ -1,124 +1,148 @@
-<section class="team-page">
+<section class="pagina">
   @if (loading()) {
-    <p class="status-message" role="status">Cargando empleado…</p>
+    <p class="estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleado…</p>
   } @else if (error() && !empleado()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
-    <a class="secondary-button back-button" routerLink="/equipo/empleados">Volver a empleados</a>
+    <div class="flex flex-col items-start gap-4">
+      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+      <a class="boton boton--secundario" routerLink="/equipo/empleados">
+        <i class="pi pi-arrow-left" aria-hidden="true"></i>Volver a empleados
+      </a>
+    </div>
   } @else if (empleado(); as persona) {
-    <header class="page-heading">
-      <div>
-        <span class="eyebrow">{{ persona.numero_empleado || 'Sin número' }}</span>
-        <h1>{{ persona.nombre_completo }}</h1>
-        <p>{{ persona.puesto || 'Sin puesto asignado' }}</p>
+    <header class="tarjeta flex flex-wrap items-center justify-between gap-5 p-5 sm:p-7">
+      <div class="flex min-w-0 items-center gap-4">
+        <span class="avatar avatar--ficha" [class]="avatarDeEstado(persona.estado)" aria-hidden="true">{{ iniciales(persona.nombre_completo) }}</span>
+        <div class="min-w-0">
+          <h1 class="titulo-pagina truncate">{{ persona.nombre_completo }}</h1>
+          <p class="tenue m-0 mt-1">
+            {{ persona.puesto || 'Sin puesto asignado' }}
+            @if (persona.numero_empleado) {
+              · <span class="codigo">{{ persona.numero_empleado }}</span>
+            }
+          </p>
+          <p class="m-0 mt-2.5 flex flex-wrap gap-2">
+            <span class="pastilla" [class]="pastillaEstado[persona.estado]">{{ etiquetaEstado[persona.estado] }}</span>
+            <span class="pastilla pastilla--plana" [class.pastilla--exito]="persona.tiene_cuenta" [class.pastilla--neutra]="!persona.tiene_cuenta">
+              {{ persona.tiene_cuenta ? 'Con cuenta' : 'Sin cuenta' }}
+            </span>
+          </p>
+        </div>
       </div>
-      <div class="heading-actions">
-        <a class="secondary-button" routerLink="/equipo/empleados">
-          <i class="pi pi-arrow-left" aria-hidden="true"></i>
-          Empleados
-        </a>
+      <div class="flex flex-wrap gap-2.5">
+        <a class="boton boton--secundario" routerLink="/equipo/empleados"><i class="pi pi-arrow-left" aria-hidden="true"></i>Empleados</a>
         @if (puedeGestionar()) {
-          <a class="primary-button" [routerLink]="['/equipo/empleados', persona.id, 'editar']">
-            <i class="pi pi-pencil" aria-hidden="true"></i>
-            Editar
-          </a>
+          <a class="boton" [routerLink]="['/equipo/empleados', persona.id, 'editar']"><i class="pi pi-pencil" aria-hidden="true"></i>Editar</a>
         }
       </div>
     </header>
 
     @if (error()) {
-      <p class="status-message error" role="alert">{{ error() }}</p>
+      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
     }
 
-    <div class="detail-layout">
-      <div class="detail-main">
-        <section class="detail-card surface-card">
-          <header>
-            <i class="pi pi-id-card" aria-hidden="true"></i>
-            <h2>Identificación y contacto</h2>
+    <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
+      <div class="flex min-w-0 flex-col gap-5">
+        <section class="tarjeta" aria-labelledby="titulo-contacto">
+          <header class="tarjeta-encabezado">
+            <div class="seccion-encabezado items-center">
+              <span class="seccion-icono" aria-hidden="true"><i class="pi pi-id-card"></i></span>
+              <h2 id="titulo-contacto">Identificación y contacto</h2>
+            </div>
           </header>
-          <dl class="detail-grid">
-            <div>
-              <dt>Correo</dt>
-              <dd>{{ persona.correo || 'Sin correo' }}</dd>
+          <dl class="m-0 grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
+            <div class="min-w-0">
+              <dt class="dato__rotulo">Correo</dt>
+              <dd class="dato__valor" [class.dato__valor--vacio]="!persona.correo">{{ persona.correo || 'Sin correo' }}</dd>
             </div>
             <div>
-              <dt>Teléfono</dt>
-              <dd>{{ persona.telefono || 'Sin teléfono' }}</dd>
+              <dt class="dato__rotulo">Teléfono</dt>
+              <dd class="dato__valor" [class.dato__valor--vacio]="!persona.telefono">{{ persona.telefono || 'Sin teléfono' }}</dd>
             </div>
             <div>
-              <dt>Contratación</dt>
-              <dd>{{ persona.contratado_en ? (persona.contratado_en | date: 'longDate') : 'Sin registrar' }}</dd>
+              <dt class="dato__rotulo">Contratación</dt>
+              <dd class="dato__valor" [class.dato__valor--vacio]="!persona.contratado_en">
+                {{ persona.contratado_en ? (persona.contratado_en | date: 'longDate' : 'UTC' : 'es-MX') : 'Sin registrar' }}
+              </dd>
             </div>
             @if (persona.terminado_en) {
               <div>
-                <dt>Terminación</dt>
-                <dd>{{ persona.terminado_en | date: 'longDate' }}</dd>
+                <dt class="dato__rotulo">Baja</dt>
+                <dd class="dato__valor">{{ persona.terminado_en | date: 'longDate' : 'UTC' : 'es-MX' }}</dd>
               </div>
             }
-            <div class="wide">
-              <dt>Cuenta</dt>
-              <dd>{{ persona.tiene_cuenta ? 'Vinculada a una membresía' : 'Todavía sin cuenta' }}</dd>
+            <div>
+              <dt class="dato__rotulo">Cuenta</dt>
+              <dd class="dato__valor" [class.dato__valor--vacio]="!persona.tiene_cuenta">
+                {{ persona.tiene_cuenta ? 'Vinculada a una membresía' : 'Todavía sin cuenta' }}
+              </dd>
             </div>
           </dl>
         </section>
 
         @if (puedeGestionar()) {
-          <section class="detail-card surface-card">
-            <header>
-              <i class="pi pi-shield" aria-hidden="true"></i>
-              <h2>Acceso</h2>
+          <section class="tarjeta" aria-labelledby="titulo-acceso">
+            <header class="tarjeta-encabezado">
+              <div class="seccion-encabezado items-center">
+                <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-shield"></i></span>
+                <div>
+                  <h2 id="titulo-acceso">Acceso</h2>
+                  <p>Dónde trabaja y cómo entra al sistema.</p>
+                </div>
+              </div>
             </header>
-            <p class="section-hint">Sucursales asignadas y acceso al sistema.</p>
-            <div class="access-actions">
-              <a class="secondary-button" [routerLink]="['/equipo/empleados', persona.id, 'sucursales']">
-                Sucursales asignadas
-              </a>
-              @if (!persona.tiene_cuenta && puedeInvitar()) {
-                <a
-                  class="secondary-button"
-                  [routerLink]="['/equipo/invitaciones/nueva']"
-                  [queryParams]="{ empleadoId: persona.id }"
-                >
-                  Invitar
+            <div class="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
+              @if (puedeVerAsignaciones()) {
+                <a class="enlace-tarjeta" [routerLink]="['/equipo/empleados', persona.id, 'sucursales']">
+                  <span class="seccion-icono" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <strong>Sucursales asignadas</strong>
+                    <span class="secundario">Agrega, retira o cambia la principal.</span>
+                  </span>
+                  <i class="pi pi-chevron-right tenue" aria-hidden="true"></i>
                 </a>
+              }
+              @if (!persona.tiene_cuenta && puedeInvitar()) {
+                <a class="enlace-tarjeta" [routerLink]="['/equipo/invitaciones/nueva']" [queryParams]="{ empleado: persona.id }">
+                  <span class="seccion-icono" aria-hidden="true"><i class="pi pi-send"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <strong>Invitar a la plataforma</strong>
+                    <span class="secundario">Enlace válido por 72 horas.</span>
+                  </span>
+                  <i class="pi pi-chevron-right tenue" aria-hidden="true"></i>
+                </a>
+              } @else if (persona.tiene_cuenta) {
+                <div class="enlace-tarjeta enlace-tarjeta--hecho">
+                  <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-check"></i></span>
+                  <span>
+                    <strong>Ya tiene cuenta</strong>
+                    <span class="block">Ajusta sus permisos en Roles y permisos.</span>
+                  </span>
+                </div>
               }
             </div>
           </section>
 
-          <section class="danger-zone surface-card">
-            <div>
-              <h2>Estado del empleado</h2>
-              <p>Cambia el estado según su situación laboral actual.</p>
+          <section class="tarjeta flex flex-wrap items-center gap-4 p-5 sm:p-6" aria-labelledby="titulo-estado">
+            <div class="seccion-encabezado flex-1">
+              <div>
+                <h2 id="titulo-estado">Estado del empleado</h2>
+                <p>Cámbialo según su situación laboral actual.</p>
+              </div>
             </div>
-            <div class="state-actions">
+            <div class="flex flex-wrap gap-2.5">
               @if (persona.estado !== 'activo') {
-                <button
-                  type="button"
-                  class="secondary-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('activo')"
-                >
-                  Marcar activo
+                <button type="button" class="boton boton--secundario boton--compacto" [disabled]="processing()" (click)="cambiarEstado('activo')">
+                  <i class="pi pi-check-circle" aria-hidden="true"></i>Marcar activo
                 </button>
               }
               @if (persona.estado !== 'suspendido') {
-                <button
-                  type="button"
-                  class="secondary-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('suspendido')"
-                >
-                  Suspender
+                <button type="button" class="boton boton--secundario boton--compacto" [disabled]="processing()" (click)="cambiarEstado('suspendido')">
+                  <i class="pi pi-pause-circle" aria-hidden="true"></i>Suspender
                 </button>
               }
               @if (persona.estado !== 'terminado') {
-                <button
-                  type="button"
-                  class="danger-button"
-                  [disabled]="processing()"
-                  (click)="cambiarEstado('terminado')"
-                >
-                  Dar de baja
+                <button type="button" class="boton boton--peligro boton--compacto" [disabled]="processing()" (click)="cambiarEstado('terminado')">
+                  <i class="pi pi-user-minus" aria-hidden="true"></i>Dar de baja
                 </button>
               }
             </div>
@@ -126,27 +150,20 @@
         }
       </div>
 
-      <aside class="employee-summary surface-card">
-        <div class="summary-title">
-          <span class="status-pill" [class.active]="persona.estado === 'activo'" [class.archived]="persona.estado !== 'activo'">
-            {{ persona.estado }}
-          </span>
-          <span class="relation-pill" [class.linked]="persona.tiene_cuenta">
-            {{ persona.tiene_cuenta ? 'Con cuenta' : 'Sin cuenta' }}
-          </span>
-        </div>
-        <dl>
+      <aside class="tarjeta p-5 sm:p-6 lg:sticky lg:top-6" aria-label="Registro">
+        <p class="rotulo tenue m-0">Registro</p>
+        <dl class="m-0 mt-4 flex flex-col gap-4">
           <div>
-            <dt>Fecha de registro</dt>
-            <dd>{{ persona.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
+            <dt class="dato__rotulo">Fecha de registro</dt>
+            <dd class="dato__valor">{{ persona.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
           </div>
           <div>
-            <dt>Última modificación</dt>
-            <dd>{{ persona.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dt class="dato__rotulo">Última modificación</dt>
+            <dd class="dato__valor">{{ persona.actualizado_en | fechaMexico: 'dd MMM yyyy, HH:mm' }}</dd>
           </div>
           <div>
-            <dt>ID de empleado</dt>
-            <dd><code>{{ persona.id }}</code></dd>
+            <dt class="dato__rotulo">ID de empleado</dt>
+            <dd class="dato__valor codigo">{{ persona.id }}</dd>
           </div>
         </dl>
       </aside>

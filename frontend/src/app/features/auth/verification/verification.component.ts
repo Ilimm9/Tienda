@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
+import { consumirRetornoInvitacion } from '../../invitacion/retorno-invitacion';
 import { AuthService } from '../auth.service';
 
 const CHALLENGE_STORAGE_KEY = 'tienda.verification.challenge';
@@ -67,7 +68,8 @@ export class VerificationComponent implements OnDestroy {
         next: () => {
           sessionStorage.removeItem(CHALLENGE_STORAGE_KEY);
           this.feedback.success('Correo verificado', 'Tu cuenta ya está activa.');
-          void this.router.navigate(['/inicio']);
+          const retorno = consumirRetornoInvitacion();
+          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate(['/inicio']));
         },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible verificar el código.'),

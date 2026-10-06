@@ -119,3 +119,11 @@ func TestRequierePermisoRechazaUUIDInvalido(t *testing.T) {
 		t.Fatalf("un UUID mal formado debe responder 400, respondió %d", code)
 	}
 }
+
+func (*permisoRepositoryStub) RolesDelegables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID, *uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func (*permisoRepositoryStub) PermisosOtorgables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID) (bool, error) {
+	return true, nil
+}

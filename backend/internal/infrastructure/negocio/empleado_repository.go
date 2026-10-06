@@ -108,6 +108,37 @@ func (r *EmpleadoRepository) ExisteNumero(ctx context.Context, negocioID uuid.UU
 	return total > 0, err
 }
 
+func (r *EmpleadoRepository) CorreoEnUso(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) (bool, error) {
+	return correoEnUsoEnNegocio(r.db.WithContext(ctx), negocioID, correo, excluir)
+}
+
+// correoEnUsoEnNegocio revisa a los demás empleados y a los miembros con cuenta: el propietario
+// no tiene fila de empleado y aun así su correo no debe repetirse en el equipo.
+func correoEnUsoEnNegocio(db *gorm.DB, negocioID uuid.UUID, correo string, excluir *uuid.UUID) (bool, error) {
+	empleados := db.Table("empleados").Where("negocio_id = ? AND lower(correo) = lower(?)", negocioID, correo)
+	miembros := db.Table("membresias_negocio m").
+		Joins("JOIN usuarios u ON u.id = m.usuario_id").
+		Where("m.negocio_id = ? AND lower(u.correo) = lower(?)", negocioID, correo)
+	if excluir != nil {
+		empleados = empleados.Where("id <> ?", *excluir)
+		miembros = miembros.Where("NOT EXISTS (SELECT 1 FROM empleados e WHERE e.id = ? AND e.membresia_id = m.id)", *excluir)
+	}
+	var total int64
+	if err := empleados.Count(&total).Error; err != nil || total > 0 {
+		return total > 0, err
+	}
+	err := miembros.Count(&total).Error
+	return total > 0, err
+}
+
+// errorCorreoDuplicado traduce la violación del índice único cuando dos altas simultáneas pasan la consulta previa.
+func errorCorreoDuplicado(err error) error {
+	if err != nil && strings.Contains(err.Error(), indiceCorreoEmpleado) {
+		return application.ErrEmpleadoCorreoDuplicado
+	}
+	return err
+}
+
 func (r *EmpleadoRepository) Crear(ctx context.Context, negocioID, creadoPor uuid.UUID, input domain.CrearEmpleadoInput) (uuid.UUID, error) {
 	empleado := domain.Empleado{
 		NegocioID: negocioID, NumeroEmpleado: input.NumeroEmpleado,
@@ -118,7 +149,7 @@ func (r *EmpleadoRepository) Crear(ctx context.Context, negocioID, creadoPor uui
 		CreadoPorUsuarioID: creadoPor,
 	}
 	err := r.db.WithContext(ctx).Create(&empleado).Error
-	return empleado.ID, err
+	return empleado.ID, errorCorreoDuplicado(err)
 }
 
 func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleadoID uuid.UUID, input domain.ActualizarEmpleadoInput) error {
@@ -152,8 +183,8 @@ func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleado
 		return nil
 	}
 	cambios["actualizado_en"] = time.Now().UTC()
-	return r.db.WithContext(ctx).Table("empleados").
-		Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Updates(cambios).Error
+	return errorCorreoDuplicado(r.db.WithContext(ctx).Table("empleados").
+		Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Updates(cambios).Error)
 }
 
 func asignarOpcional(cambios map[string]any, columna string, campo domain.Optional[string]) {

@@ -65,6 +65,17 @@ func (r *NegocioRepository) ObtenerAccesible(ctx context.Context, usuarioID, neg
 	return detalleNegocio(negocio, access.TipoMiembro, total), nil
 }
 
+func (r *NegocioRepository) MembresiasActivas(ctx context.Context, usuarioID uuid.UUID) (int64, int64, error) {
+	var conteo struct {
+		Total           int64
+		ComoPropietario int64
+	}
+	err := r.db.WithContext(ctx).Table("membresias_negocio").
+		Select("count(*) AS total, count(*) FILTER (WHERE tipo_miembro = 'propietario') AS como_propietario").
+		Where("usuario_id = ? AND estado = 'activo'", usuarioID).Scan(&conteo).Error
+	return conteo.Total, conteo.ComoPropietario, err
+}
+
 func (r *NegocioRepository) ExisteSlug(ctx context.Context, slug string) (bool, error) {
 	var total int64
 	err := r.db.WithContext(ctx).Model(&domain.Negocio{}).

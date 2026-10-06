@@ -1,102 +1,277 @@
-<section class="team-page">
-  <header class="page-heading">
+<section class="pagina">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Equipo</span>
       <h1>{{ editing ? 'Editar empleado' : 'Nuevo empleado' }}</h1>
-      <p>Un empleado puede registrarse antes de tener cuenta en la plataforma.</p>
+      <p class="descripcion">Un empleado puede registrarse antes de tener cuenta en la plataforma.</p>
     </div>
-    <a class="secondary-button" routerLink="/equipo/empleados">Volver</a>
+    <a class="boton boton--secundario" routerLink="/equipo/empleados">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>Volver a empleados
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando empleado…</p>
+    <p class="estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleado…</p>
   } @else {
-    <form class="team-form surface-card" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field-row">
-        <div class="field">
-          <label for="numero_empleado">Número interno</label>
-          <input id="numero_empleado" type="text" formControlName="numero_empleado" autocomplete="off" />
-          @if (fieldErrors()['numero_empleado']) {
-            <small class="error">{{ fieldErrors()['numero_empleado'] }}</small>
-          } @else {
-            <small>Opcional. Debe ser único dentro del negocio.</small>
-          }
+    <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+    <form class="formulario-g" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="formulario-g__seccion">
+        <legend class="contents">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-user"></i></span>
+            <span>
+              <span class="titulo block">Datos personales</span>
+              <span class="descripcion block">Como aparece en su identificación.</span>
+            </span>
+          </span>
+        </legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="campo-bloque">
+            <label class="etiqueta" for="nombre">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+            <input
+              id="nombre"
+              class="campo"
+              type="text"
+              formControlName="nombre"
+              autocomplete="given-name"
+              placeholder="Laura"
+              aria-required="true"
+              [attr.aria-invalid]="hasError('nombre')"
+              [attr.aria-describedby]="hasError('nombre') ? 'nombre-error' : null"
+            />
+            @if (hasError('nombre')) {
+              <small id="nombre-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('nombre') }}</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="segundo_nombre">Segundo nombre</label>
+            <input
+              id="segundo_nombre"
+              class="campo"
+              type="text"
+              formControlName="segundo_nombre"
+              autocomplete="additional-name"
+              [attr.aria-invalid]="hasError('segundo_nombre')"
+              [attr.aria-describedby]="hasError('segundo_nombre') ? 'segundo-nombre-error' : null"
+            />
+            @if (hasError('segundo_nombre')) {
+              <small id="segundo-nombre-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('segundo_nombre') }}</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="primer_apellido">Primer apellido <span class="obligatorio" aria-hidden="true">*</span></label>
+            <input
+              id="primer_apellido"
+              class="campo"
+              type="text"
+              formControlName="primer_apellido"
+              autocomplete="family-name"
+              placeholder="Ortega"
+              aria-required="true"
+              [attr.aria-invalid]="hasError('primer_apellido')"
+              [attr.aria-describedby]="hasError('primer_apellido') ? 'primer-apellido-error' : null"
+            />
+            @if (hasError('primer_apellido')) {
+              <small id="primer-apellido-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('primer_apellido') }}</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="segundo_apellido">Segundo apellido</label>
+            <input
+              id="segundo_apellido"
+              class="campo"
+              type="text"
+              formControlName="segundo_apellido"
+              [attr.aria-invalid]="hasError('segundo_apellido')"
+              [attr.aria-describedby]="hasError('segundo_apellido') ? 'segundo-apellido-error' : null"
+            />
+            @if (hasError('segundo_apellido')) {
+              <small id="segundo-apellido-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('segundo_apellido') }}</small>
+            }
+          </div>
         </div>
-        <div class="field">
-          <label for="puesto">Puesto</label>
-          <input id="puesto" type="text" formControlName="puesto" />
+      </fieldset>
+      <fieldset class="formulario-g__seccion">
+        <legend class="contents">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-envelope"></i></span>
+            <span>
+              <span class="titulo block">Contacto</span>
+              <span class="descripcion block">Para avisarle e invitarlo a la plataforma.</span>
+            </span>
+          </span>
+        </legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="campo-bloque">
+            <label class="etiqueta" for="correo">Correo</label>
+            <span class="campo-grupo">
+              <i class="pi pi-envelope" aria-hidden="true"></i>
+              <input
+                id="correo"
+                type="email"
+                formControlName="correo"
+                autocomplete="email"
+                placeholder="nombre@correo.mx"
+                aria-describedby="correo-ayuda"
+                [attr.aria-invalid]="hasError('correo')"
+              />
+            </span>
+            @if (hasError('correo')) {
+              <small id="correo-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('correo') }}</small>
+            } @else {
+              <small id="correo-ayuda" class="ayuda">Sin correo no se le puede invitar.</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="telefono">Teléfono</label>
+            <span class="campo-grupo">
+              <i class="pi pi-phone" aria-hidden="true"></i>
+              <input
+                id="telefono"
+                type="tel"
+                formControlName="telefono"
+                autocomplete="tel"
+                placeholder="55 1234 5678"
+                [attr.aria-describedby]="hasError('telefono') ? 'telefono-ayuda' : null"
+                [attr.aria-invalid]="hasError('telefono')"
+              />
+            </span>
+            @if (hasError('telefono')) {
+              <small id="telefono-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('telefono') }}</small>
+            }
+          </div>
         </div>
-      </div>
+      </fieldset>
+      <fieldset class="formulario-g__seccion">
+        <legend class="contents">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
+            <span>
+              <span class="titulo block">Datos laborales</span>
+              <span class="descripcion block">Se puede completar después.</span>
+            </span>
+          </span>
+        </legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="campo-bloque">
+            <label class="etiqueta" for="puesto">Puesto</label>
+            <span class="campo-grupo">
+              <i class="pi pi-id-card" aria-hidden="true"></i>
+              <input
+                id="puesto"
+                type="text"
+                formControlName="puesto"
+                autocomplete="organization-title"
+                placeholder="Cajera, almacenista…"
+                [attr.aria-describedby]="hasError('puesto') ? 'puesto-ayuda' : null"
+                [attr.aria-invalid]="hasError('puesto')"
+              />
+            </span>
+            @if (hasError('puesto')) {
+              <small id="puesto-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('puesto') }}</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="numero_empleado">Número interno</label>
+            <span class="campo-grupo">
+              <i class="pi pi-hashtag" aria-hidden="true"></i>
+              <input
+                id="numero_empleado"
+                type="text"
+                formControlName="numero_empleado"
+                autocomplete="off"
+                placeholder="EMP-001"
+                aria-describedby="numero-empleado-ayuda"
+                [attr.aria-invalid]="hasError('numero_empleado')"
+              />
+            </span>
+            @if (hasError('numero_empleado')) {
+              <small id="numero-empleado-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('numero_empleado') }}</small>
+            } @else {
+              <small id="numero-empleado-ayuda" class="ayuda">Único dentro del negocio.</small>
+            }
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="contratado_en">Fecha de contratación</label>
+            <span class="campo-grupo">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <input
+                id="contratado_en"
+                type="date"
+                formControlName="contratado_en"
+                [attr.aria-describedby]="hasError('contratado_en') ? 'contratado-en-ayuda' : null"
+                [attr.aria-invalid]="hasError('contratado_en')"
+              />
+            </span>
+            @if (hasError('contratado_en')) {
+              <small id="contratado-en-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('contratado_en') }}</small>
+            }
+          </div>
+        </div>
+      </fieldset>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="nombre">Nombre</label>
-          <input id="nombre" type="text" formControlName="nombre" [attr.aria-invalid]="hasError('nombre')" />
-          @if (hasError('nombre')) {
-            <small class="error">{{ fieldErrors()['nombre'] || 'Usa entre 2 y 100 caracteres.' }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="segundo_nombre">Segundo nombre</label>
-          <input id="segundo_nombre" type="text" formControlName="segundo_nombre" />
-        </div>
-      </div>
-
-      <div class="field-row">
-        <div class="field">
-          <label for="primer_apellido">Primer apellido</label>
-          <input
-            id="primer_apellido"
-            type="text"
-            formControlName="primer_apellido"
-            [attr.aria-invalid]="hasError('primer_apellido')"
-          />
-          @if (hasError('primer_apellido')) {
-            <small class="error">{{
-              fieldErrors()['primer_apellido'] || 'Usa entre 2 y 100 caracteres.'
-            }}</small>
-          }
-        </div>
-        <div class="field">
-          <label for="segundo_apellido">Segundo apellido</label>
-          <input id="segundo_apellido" type="text" formControlName="segundo_apellido" />
-        </div>
-      </div>
-
-      <div class="field-row">
-        <div class="field">
-          <label for="correo">Correo</label>
-          <input id="correo" type="email" formControlName="correo" [attr.aria-invalid]="hasError('correo')" />
-          @if (fieldErrors()['correo']) {
-            <small class="error">{{ fieldErrors()['correo'] }}</small>
-          } @else {
-            <small>Se usará para invitarlo cuando corresponda.</small>
-          }
-        </div>
-        <div class="field">
-          <label for="telefono">Teléfono</label>
-          <input id="telefono" type="tel" formControlName="telefono" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="contratado_en">Fecha de contratación</label>
-        <input id="contratado_en" type="date" formControlName="contratado_en" />
-        @if (fieldErrors()['contratado_en']) {
-          <small class="error">{{ fieldErrors()['contratado_en'] }}</small>
-        }
-      </div>
-
-      <footer class="form-actions">
-        <a class="secondary-button" routerLink="/equipo/empleados">Cancelar</a>
-        <button type="submit" class="primary-button" [disabled]="saving()">
+      <footer class="formulario-g__acciones">
+        <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+        <a class="boton boton--fantasma" routerLink="/equipo/empleados">Cancelar</a>
+        <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
+          <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
           {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar empleado' }}
         </button>
       </footer>
     </form>
+
+    <aside class="flex flex-col gap-3.5 lg:sticky lg:top-6" aria-label="Vista previa">
+      <section class="tarjeta tarjeta--tinte p-5.5">
+        <p class="rotulo m-0">Vista previa</p>
+        <div class="mt-4 flex items-center gap-3.5">
+          <span class="avatar avatar--ficha avatar--solido" aria-hidden="true">{{ inicialesVista() }}</span>
+          <div class="min-w-0">
+            <strong class="resumen-frase resumen-frase--chica truncate block">{{ nombreVista() || 'Nombre del empleado' }}</strong>
+            <span class="secundario truncate">{{ puestoVista() || 'Sin puesto' }}</span>
+          </div>
+        </div>
+        <dl class="m-0 mt-4 flex flex-col gap-3">
+          <div class="min-w-0">
+            <dt class="dato__rotulo">Correo</dt>
+            <dd class="dato__valor truncate">{{ correoVista() || '—' }}</dd>
+          </div>
+          <div class="min-w-0">
+            <dt class="dato__rotulo">Teléfono</dt>
+            <dd class="dato__valor truncate">{{ telefonoVista() || '—' }}</dd>
+          </div>
+          <div class="min-w-0">
+            <dt class="dato__rotulo">Número</dt>
+            <dd class="dato__valor truncate">{{ numeroVista() || '—' }}</dd>
+          </div>
+        </dl>
+        <p class="m-0 mt-4">
+          <span class="pastilla" [class.pastilla--exito]="empleado()?.tiene_cuenta" [class.pastilla--neutra]="!empleado()?.tiene_cuenta">
+            {{ empleado()?.tiene_cuenta ? 'Cuenta vinculada' : 'Sin cuenta todavía' }}
+          </span>
+        </p>
+      </section>
+
+      <section class="tarjeta p-5.5">
+        <div class="seccion-encabezado"><h2>Qué sigue</h2></div>
+        <ol class="m-0 mt-3.5 flex list-none flex-col gap-3 p-0">
+          <li class="flex items-start gap-3">
+            <span class="contador" aria-hidden="true">1</span>
+            <span><strong class="tabla-principal">Asigna sucursales</strong><span class="secundario">Define dónde trabaja desde su ficha.</span></span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="contador" aria-hidden="true">2</span>
+            <span><strong class="tabla-principal">Invítalo a la plataforma</strong><span class="secundario">Con correo registrado, le llega un enlace válido 72 horas.</span></span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="contador contador--salvia" aria-hidden="true">3</span>
+            <span><strong class="tabla-principal">Ajusta sus permisos</strong><span class="secundario">Desde Roles y permisos, cuando ya tenga cuenta.</span></span>
+          </li>
+        </ol>
+      </section>
+    </aside>
+    </div>
   }
 </section>

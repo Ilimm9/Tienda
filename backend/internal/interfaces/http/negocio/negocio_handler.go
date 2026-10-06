@@ -130,6 +130,8 @@ func responderErrorNegocio(c *gin.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"codigo": "DATOS_INVALIDOS", "mensaje": validation.Error(), "campos": validation.Campos})
 	case errors.Is(err, application.ErrNegocioNoEncontrado):
 		c.JSON(http.StatusNotFound, gin.H{"codigo": "NEGOCIO_NO_ENCONTRADO", "mensaje": "No fue posible encontrar el negocio solicitado.", "campos": gin.H{}})
+	case errors.Is(err, application.ErrNegocioSoloPropietarios):
+		c.JSON(http.StatusForbidden, gin.H{"codigo": "SOLO_PROPIETARIOS", "mensaje": err.Error(), "campos": gin.H{}})
 	case errors.Is(err, application.ErrNegocioProhibido):
 		c.JSON(http.StatusForbidden, gin.H{"codigo": "ACCESO_DENEGADO", "mensaje": err.Error(), "campos": gin.H{}})
 	case errors.Is(err, application.ErrNegocioSinCambios):

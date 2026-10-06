@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -8,6 +8,7 @@ import { forkJoin, of } from 'rxjs';
 import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
+import { enfocarPrimerInvalido, sinSoloEspacios } from '../../shared/formularios/formulario';
 import { Permiso, RolApiError, RolDetalle } from './rol.models';
 import { RolService } from './rol.service';
 
@@ -23,6 +24,8 @@ const nombresDeModulo: Record<string, string> = {
   equipo: 'Equipo',
   roles: 'Roles y permisos',
   catalogo: 'Catálogo',
+  compras: 'Compras',
+  precios: 'Costos y precios',
   ventas: 'Ventas',
 };
 
@@ -30,7 +33,6 @@ const nombresDeModulo: Record<string, string> = {
   selector: 'app-rol-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './rol-form.component.html',
-  styleUrl: './rol-form.component.css',
 })
 export class RolFormComponent {
   private readonly rolService = inject(RolService);
@@ -50,10 +52,16 @@ export class RolFormComponent {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly fieldErrors = signal<Record<string, string>>({});
+  readonly intentado = signal(false);
+  readonly totalPermisos = computed(() => this.modulos().reduce((total, modulo) => total + modulo.permisos.length, 0));
+  /** Un rol sin permisos no sirve para nada: se exige al menos uno al guardar. */
+  readonly sinPermisos = computed(() => this.intentado() && this.seleccionados().size === 0);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly form = this.fb.nonNullable.group({
-    codigo: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
-    nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    // Mismo formato que valida el backend; se envía en mayúsculas.
+    codigo: ['', [Validators.required, Validators.pattern(/^\s*[A-Za-z0-9][A-Za-z0-9_-]{1,59}\s*$/)]],
+    nombre: ['', [Validators.required, sinSoloEspacios, Validators.minLength(2), Validators.maxLength(120)]],
     descripcion: [''],
     activo: [true],
   });
@@ -95,6 +103,10 @@ export class RolFormComponent {
     this.form.markAsDirty();
   }
 
+  seleccionadosDe(modulo: ModuloPermisos): number {
+    return modulo.permisos.filter((permiso) => this.estaSeleccionado(permiso.id)).length;
+  }
+
   moduloCompleto(modulo: ModuloPermisos): boolean {
     return modulo.permisos.length > 0 && modulo.permisos.every((permiso) => this.estaSeleccionado(permiso.id));
   }
@@ -103,7 +115,12 @@ export class RolFormComponent {
     this.form.markAllAsTouched();
     this.error.set(null);
     this.fieldErrors.set({});
-    if (this.form.invalid || this.saving()) return;
+    this.intentado.set(true);
+    if (this.form.invalid || this.seleccionados().size === 0) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
+    if (this.saving()) return;
 
     const value = this.form.getRawValue();
     const permisos = [...this.seleccionados()];
@@ -134,6 +151,7 @@ export class RolFormComponent {
         const apiError = response.error as RolApiError | null;
         this.error.set(apiError?.mensaje ?? 'No fue posible guardar el rol.');
         this.fieldErrors.set(apiError?.campos ?? {});
+        enfocarPrimerInvalido(this.host.nativeElement);
       },
     });
   }

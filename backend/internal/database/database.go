@@ -44,6 +44,9 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseFive(db); err != nil {
 		return err
 	}
+	if err := cuentainfra.MigratePerfilApellidos(db); err != nil {
+		return err
+	}
 
 	models := []interface{}{
 		&cuentadomain.Usuario{}, &cuentadomain.PerfilUsuario{}, &cuentadomain.SesionUsuario{}, &cuentadomain.DesafioAutenticacion{},
@@ -86,6 +89,12 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := negocioinfra.MigratePhaseSeven(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigrateInvitacionSucursal(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigrateEmpleadoCorreoUnico(db); err != nil {
 		return err
 	}
 
@@ -135,7 +144,7 @@ func SeedDevelopment(db *gorm.DB) error {
 
 		var branch negociodomain.Sucursal
 		return tx.Where("id = ?", branchID).Attrs(negociodomain.Sucursal{
-			ID: branchID, NegocioID: businessID, Codigo: "SUC-001", Nombre: "Tienda prueba",
+			ID: branchID, NegocioID: businessID, Codigo: "SUC-001", Nombre: "Sucursal de prueba",
 			EsPrincipal: true, Activo: true,
 		}).FirstOrCreate(&branch).Error
 	})

@@ -8,7 +8,7 @@ import (
 )
 
 func base() application.Base {
-	return application.Base{NombreApp: "Tienda", URLApp: "https://tienda.mergemakers.com", Anio: 2026}
+	return application.Base{NombreApp: "Stockion", URLApp: "https://tienda.mergemakers.com", Anio: 2026}
 }
 
 func TestAllTemplatesRenderSubjectHTMLAndText(t *testing.T) {
@@ -23,19 +23,19 @@ func TestAllTemplatesRenderSubjectHTMLAndText(t *testing.T) {
 	}{
 		application.PlantillaVerificacion: {
 			application.DatosVerificacion{Base: base(), Codigo: "042917", Minutos: 10},
-			"Tu código de verificación de Tienda", []string{"042917", "10 minutos"},
+			"Tu código de verificación de Stockion", []string{"042917", "10 minutos"},
 		},
 		application.PlantillaInvitacion: {
-			application.DatosInvitacion{Base: base(), NombreNegocio: "Abarrotes Luna", NombreInvitado: "Luis", Enlace: "https://tienda.mergemakers.com/invitacion/abc", Dias: 7},
-			"Abarrotes Luna te invitó a Tienda", []string{"https://tienda.mergemakers.com/invitacion/abc", "7 días"},
+			application.DatosInvitacion{Base: base(), NombreNegocio: "Abarrotes Luna", NombreInvitado: "Luis", Enlace: "https://tienda.mergemakers.com/invitacion/abc", Horas: 72},
+			"Abarrotes Luna te invitó a Stockion", []string{"https://tienda.mergemakers.com/invitacion/abc", "72 horas"},
 		},
 		application.PlantillaRecuperacion: {
 			application.DatosRecuperacion{Base: base(), Enlace: "https://tienda.mergemakers.com/restablecer-contrasena#desafio=1&token=x", Minutos: 30},
-			"Restablece tu contraseña de Tienda", []string{"restablecer-contrasena#desafio=1", "30 minutos"},
+			"Restablece tu contraseña de Stockion", []string{"restablecer-contrasena#desafio=1", "30 minutos"},
 		},
 		application.PlantillaContrasenaCambiada: {
 			application.DatosContrasenaCambiada{Base: base(), EnlaceRecuperacion: "https://tienda.mergemakers.com/recuperar-contrasena"},
-			"Tu contraseña de Tienda cambió", []string{"https://tienda.mergemakers.com/recuperar-contrasena"},
+			"Tu contraseña de Stockion cambió", []string{"https://tienda.mergemakers.com/recuperar-contrasena"},
 		},
 	}
 	for nombre, caso := range casos {
@@ -70,7 +70,7 @@ func TestHTMLEscapesUserDataAndSubjectHasNoNewlines(t *testing.T) {
 	}
 	contenido, err := r.Render(application.PlantillaInvitacion, application.DatosInvitacion{
 		Base: base(), NombreNegocio: "<script>alert(1)</script>\r\nBcc: x@y.com", NombreInvitado: `"><img src=x>`,
-		Enlace: "javascript:alert(1)", Dias: 1,
+		Enlace: "javascript:alert(1)", Horas: 1,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,8 +84,8 @@ func TestHTMLEscapesUserDataAndSubjectHasNoNewlines(t *testing.T) {
 	if strings.ContainsAny(contenido.Asunto, "\r\n") {
 		t.Fatalf("el asunto contiene saltos de línea: %q", contenido.Asunto)
 	}
-	if !strings.Contains(contenido.Texto, "1 día.") {
-		t.Fatalf("singular de días incorrecto: %q", contenido.Texto)
+	if !strings.Contains(contenido.Texto, "1 hora.") {
+		t.Fatalf("singular de horas incorrecto: %q", contenido.Texto)
 	}
 }
 

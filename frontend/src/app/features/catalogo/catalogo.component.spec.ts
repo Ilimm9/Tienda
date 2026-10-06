@@ -25,7 +25,7 @@ describe('CatalogoComponent', () => {
         },
         {
           provide: ContextoService,
-          useValue: { negocio: signal({ id: environment.defaultBusinessId }) },
+          useValue: { negocio: signal({ id: environment.defaultBusinessId }), puede: () => true },
         },
         { provide: Router, useValue: router },
       ],

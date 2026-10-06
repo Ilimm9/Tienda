@@ -52,3 +52,16 @@ func (r *Repository) Authorize(businessID, userID, proposalID uuid.UUID, input p
 }
 func round2(v float64) float64 { return math.Round(v*100) / 100 }
 func round4(v float64) float64 { return math.Round(v*10000) / 10000 }
+
+func (r *Repository) BranchOfProposal(businessID, proposalID uuid.UUID) (uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.Table("propuestas_costo_precio").
+		Where("id = ? AND negocio_id = ?", proposalID, businessID).Limit(1).Pluck("sucursal_id", &ids).Error
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if len(ids) == 0 {
+		return uuid.Nil, gorm.ErrRecordNotFound
+	}
+	return ids[0], nil
+}

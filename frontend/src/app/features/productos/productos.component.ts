@@ -13,6 +13,8 @@ import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogOption, ProductImportPreview, ProductImportResult, ProductLookup, ProductRow, ProductVariantRow } from './product.models';
 import { ProductosService } from './productos.service';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
+import { PERMISOS } from '../../contexto/permisos';
+import { PuedeDirective } from '../../contexto/puede.directive';
 
 type VariantFormGroup = FormGroup<{
   atributos: FormControl<string>;
@@ -26,7 +28,7 @@ type VariantFormGroup = FormGroup<{
 @Component({
   selector: 'app-productos',
   standalone: true,
-  imports: [
+  imports: [PuedeDirective, 
     CommonModule,
     ButtonModule,
     CheckboxModule,
@@ -41,6 +43,7 @@ type VariantFormGroup = FormGroup<{
   styleUrl: './productos.component.css',
 })
 export class ProductosComponent {
+  readonly P = PERMISOS;
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
   private readonly formBuilder = inject(FormBuilder);

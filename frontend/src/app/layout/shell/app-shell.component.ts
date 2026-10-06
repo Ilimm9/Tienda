@@ -3,14 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
-import { BreadcrumbsComponent } from '../breadcrumbs/breadcrumbs.component';
 import { LayoutStateService } from '../layout-state.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, BreadcrumbsComponent, SidebarComponent, TopbarComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })

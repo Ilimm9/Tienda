@@ -25,6 +25,7 @@ describe('ProductosComponent', () => {
           useValue: {
             negocio: signal({ id: environment.defaultBusinessId }),
             sucursal: signal(null),
+            puede: () => true,
           },
         },
         { provide: Router, useValue: router },

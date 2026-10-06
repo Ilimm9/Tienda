@@ -8,11 +8,11 @@
     </div>
     @if (!loading() && !error() && products().length > 0) {
       <div class="products-actions">
-        <button class="secondary-button" type="button" (click)="navigateToImport()">
+        <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
           <i class="pi pi-upload" aria-hidden="true"></i>
           Carga masiva
         </button>
-        <button class="primary-button" type="button" (click)="navigateToCreate()">
+        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
           <i class="pi pi-plus" aria-hidden="true"></i>
           Agregar nuevo producto
         </button>
@@ -30,10 +30,10 @@
       <h2>Sin productos disponibles</h2>
       <p>Agrega tu primer producto para comenzar a administrar tu catálogo.</p>
       <div class="products-actions">
-        <button class="secondary-button" type="button" (click)="navigateToImport()">
+        <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
           <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
         </button>
-        <button class="primary-button" type="button" (click)="navigateToCreate()">
+        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
           <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
         </button>
       </div>
@@ -198,7 +198,7 @@
             </td>
             <td class="actions-column">
               <div class="table-actions">
-                <button
+                <button *appPuede="P.catalogoGestionar"
                   type="button"
                   pButton
                   variant="text"
@@ -210,7 +210,7 @@
                 >
                   <i class="pi pi-pencil" aria-hidden="true"></i>
                 </button>
-                <button
+                <button *appPuede="P.catalogoGestionar"
                   type="button"
                   pButton
                   variant="text"

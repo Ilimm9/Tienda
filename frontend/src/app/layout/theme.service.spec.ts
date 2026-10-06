@@ -12,30 +12,22 @@ describe('ThemeService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('uses the system theme initially and persists a manual change', () => {
+  it('applies the light theme even when the system prefers dark', () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn(() => mediaQuery(true)),
     );
     const service = TestBed.inject(ThemeService);
 
-    expect(service.theme()).toBe('dark');
-    expect(document.documentElement.dataset['theme']).toBe('dark');
-
-    service.toggle();
-
     expect(service.theme()).toBe('light');
-    expect(localStorage.getItem('tienda.theme')).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(document.documentElement.style.colorScheme).toBe('light');
   });
 
-  it('prefers a saved theme over the operating system', () => {
+  it('ignores a dark theme saved before it was disabled', () => {
     localStorage.setItem('tienda.theme', 'dark');
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn(() => mediaQuery(false)),
-    );
 
-    expect(TestBed.inject(ThemeService).theme()).toBe('dark');
+    expect(TestBed.inject(ThemeService).theme()).toBe('light');
   });
 });
 

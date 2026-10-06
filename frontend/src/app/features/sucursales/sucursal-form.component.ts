@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -18,15 +18,17 @@ import {
   SucursalDetalle,
 } from './sucursal.models';
 import { SucursalService } from './sucursal.service';
+import { PERMISOS } from '../../contexto/permisos';
+import { enfocarPrimerInvalido } from '../../shared/formularios/formulario';
 
 @Component({
   selector: 'app-sucursal-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './sucursal-form.component.html',
-  styleUrl: './sucursal-form.component.css',
 })
 export class SucursalFormComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly sucursalService = inject(SucursalService);
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
@@ -81,8 +83,12 @@ export class SucursalFormComponent {
     this.form.markAllAsTouched();
     this.error.set(null);
     this.fieldErrors.set({});
-    if (this.form.invalid || this.saving()) return;
-    if (this.business()?.tipo_miembro !== 'propietario') {
+    if (this.form.invalid) {
+      enfocarPrimerInvalido(this.host.nativeElement);
+      return;
+    }
+    if (this.saving()) return;
+    if (!this.contexto.puedeEn(this.negocioId, this.editing ? PERMISOS.sucursalEditar : PERMISOS.sucursalCrear, true)) {
       this.error.set('No tienes permiso para modificar sucursales.');
       return;
     }
@@ -126,6 +132,11 @@ export class SucursalFormComponent {
         this.fieldErrors.set(apiError?.campos ?? {});
       },
     });
+  }
+
+  /** Inválido por validación local o porque el servidor rechazó el campo. */
+  invalido(control: keyof typeof this.form.controls): boolean {
+    return this.hasError(control) || Boolean(this.fieldErrors()[control]);
   }
 
   hasError(control: keyof typeof this.form.controls): boolean {

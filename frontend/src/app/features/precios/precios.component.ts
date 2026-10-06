@@ -4,9 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { ContextoService } from '../../contexto/contexto.service';
 import { PriceProposal, PreciosService } from './precios.service';
+import { PERMISOS } from '../../contexto/permisos';
+import { PuedeDirective } from '../../contexto/puede.directive';
 
-@Component({ selector: 'app-precios', standalone: true, imports: [CommonModule, FormsModule, InputTextModule], templateUrl: './precios.component.html', styleUrl: './precios.component.css' })
+@Component({ selector: 'app-precios', standalone: true, imports: [PuedeDirective, CommonModule, FormsModule, InputTextModule], templateUrl: './precios.component.html', styleUrl: './precios.component.css' })
 export class PreciosComponent {
+  readonly P = PERMISOS;
   private readonly service = inject(PreciosService); private readonly context = inject(ContextoService);
   readonly items = signal<PriceProposal[]>([]); readonly loading = signal(true); readonly error = signal<string | null>(null); readonly saving = signal<string | null>(null);
   constructor() { this.load(); }

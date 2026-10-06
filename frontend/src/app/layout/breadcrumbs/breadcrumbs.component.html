@@ -1,14 +1,20 @@
 <nav class="breadcrumbs" aria-label="Ruta de navegación">
-  <a class="home-link" routerLink="/inicio" aria-label="Ir al inicio">
+  <a class="home-link" routerLink="/inicio" aria-label="Ir al inicio" title="Inicio">
     <i class="pi pi-home" aria-hidden="true"></i>
   </a>
 
-  @for (item of items(); track item.url; let last = $last) {
-    <i class="pi pi-chevron-right separator" aria-hidden="true"></i>
-    @if (last) {
-      <span class="current" aria-current="page">{{ item.label }}</span>
-    } @else {
-      <a [routerLink]="item.url">{{ item.label }}</a>
+  <ol class="trail">
+    @for (item of items(); track $index; let last = $last) {
+      <li class="crumb" [class.crumb--current]="last">
+        <span class="separator" aria-hidden="true">/</span>
+        @if (last) {
+          <span class="current" aria-current="page" [attr.title]="item.label">{{ item.label }}</span>
+        } @else if (item.url) {
+          <a [routerLink]="item.url" [attr.title]="item.label">{{ item.label }}</a>
+        } @else {
+          <span class="group" [attr.title]="item.label">{{ item.label }}</span>
+        }
+      </li>
     }
-  }
+  </ol>
 </nav>

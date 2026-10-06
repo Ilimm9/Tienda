@@ -18,8 +18,10 @@ var (
 	ErrRolConflicto        = errors.New("ya existe un rol con ese código")
 	ErrRolSistemaInmutable = errors.New("el rol de sistema no puede modificarse ni eliminarse")
 	ErrRolEnUso            = errors.New("el rol tiene miembros asignados")
+	// ErrRolNoDelegable evita escalar privilegios: nadie otorga permisos que no posee.
+	ErrRolNoDelegable        = errors.New("no puedes otorgar un rol con permisos que tú no tienes")
 	ErrMembresiaNoEncontrada = errors.New("membresía no encontrada")
-	ErrPropietarioSinRol   = errors.New("el negocio debe conservar al menos un propietario con el rol de sistema")
+	ErrPropietarioSinRol     = errors.New("el negocio debe conservar al menos un propietario con el rol de sistema")
 )
 
 var codigoRolPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{1,59}$`)
@@ -39,6 +41,10 @@ type RolRepository interface {
 	ReemplazarRolesDeMembresia(ctx context.Context, negocioID, membresiaID uuid.UUID, roles []uuid.UUID, asignadoPor uuid.UUID) error
 	MembresiaPerteneceANegocio(ctx context.Context, negocioID, membresiaID uuid.UUID) (bool, error)
 	QuedaPropietarioConRolSistema(ctx context.Context, negocioID, membresiaID uuid.UUID, roles []uuid.UUID) (bool, error)
+	// RolesDelegables indica si el usuario posee todos los permisos de `roles`; ignora los que `membresiaDestino` ya tiene.
+	RolesDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error)
+	// PermisosOtorgables indica si el usuario posee todos los permisos indicados.
+	PermisosOtorgables(ctx context.Context, usuarioID, negocioID uuid.UUID, permisos []uuid.UUID) (bool, error)
 }
 
 type RolService struct {
@@ -104,6 +110,9 @@ func (s *RolService) Crear(ctx context.Context, usuarioID, negocioID uuid.UUID, 
 	if existe {
 		return domain.RolDetalle{}, ErrRolConflicto
 	}
+	if err := s.otorgables(ctx, usuarioID, negocioID, input.Permisos); err != nil {
+		return domain.RolDetalle{}, err
+	}
 	rolID, err := s.roles.CrearRol(ctx, negocioID, usuarioID, input)
 	if err != nil {
 		return domain.RolDetalle{}, err
@@ -129,10 +138,41 @@ func (s *RolService) Actualizar(ctx context.Context, usuarioID, negocioID, rolID
 	if err := normalizarYValidarActualizarRol(&input); err != nil {
 		return domain.RolDetalle{}, err
 	}
+	if input.Permisos.Set && input.Permisos.Value != nil {
+		// Solo cuentan los permisos que se agregan: conservar los que el rol ya tenía no otorga nada nuevo.
+		previos := make(map[uuid.UUID]struct{}, len(actual.Permisos))
+		for _, id := range actual.Permisos {
+			previos[id] = struct{}{}
+		}
+		nuevos := make([]uuid.UUID, 0)
+		for _, id := range *input.Permisos.Value {
+			if _, ok := previos[id]; !ok {
+				nuevos = append(nuevos, id)
+			}
+		}
+		if err := s.otorgables(ctx, usuarioID, negocioID, nuevos); err != nil {
+			return domain.RolDetalle{}, err
+		}
+	}
 	if err := s.roles.ActualizarRol(ctx, negocioID, rolID, input); err != nil {
 		return domain.RolDetalle{}, err
 	}
 	return s.roles.ObtenerRol(ctx, negocioID, rolID)
+}
+
+// otorgables impide que alguien con `roles.gestionar` se conceda permisos que no posee editando un rol.
+func (s *RolService) otorgables(ctx context.Context, usuarioID, negocioID uuid.UUID, permisos []uuid.UUID) error {
+	if len(permisos) == 0 {
+		return nil
+	}
+	ok, err := s.roles.PermisosOtorgables(ctx, usuarioID, negocioID, permisos)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrRolNoDelegable
+	}
+	return nil
 }
 
 func (s *RolService) Eliminar(ctx context.Context, usuarioID, negocioID, rolID uuid.UUID) error {
@@ -183,6 +223,13 @@ func (s *RolService) AsignarRoles(ctx context.Context, usuarioID, negocioID, mem
 	if !queda {
 		return ErrPropietarioSinRol
 	}
+	delegables, err := s.roles.RolesDelegables(ctx, usuarioID, negocioID, roles, &membresiaID)
+	if err != nil {
+		return err
+	}
+	if !delegables {
+		return ErrRolNoDelegable
+	}
 	return s.roles.ReemplazarRolesDeMembresia(ctx, negocioID, membresiaID, roles, usuarioID)
 }
 
@@ -216,6 +263,9 @@ func validarCrearRol(input domain.CrearRolInput) error {
 	if longitud := len([]rune(input.Nombre)); longitud < 2 || longitud > 120 {
 		campos["nombre"] = "usa entre 2 y 120 caracteres"
 	}
+	if len(input.Permisos) == 0 {
+		campos["permisos"] = "selecciona al menos un permiso"
+	}
 	if len(campos) > 0 {
 		return &ErrorValidacion{Campos: campos}
 	}
@@ -238,6 +288,9 @@ func normalizarYValidarActualizarRol(input *domain.ActualizarRolInput) error {
 	if input.Permisos.Set && input.Permisos.Value != nil {
 		unicos := rolesUnicos(*input.Permisos.Value)
 		input.Permisos.Value = &unicos
+		if len(unicos) == 0 {
+			campos["permisos"] = "selecciona al menos un permiso"
+		}
 	}
 	if len(campos) > 0 {
 		return &ErrorValidacion{Campos: campos}

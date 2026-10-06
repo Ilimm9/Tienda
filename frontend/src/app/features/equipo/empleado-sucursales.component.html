@@ -1,97 +1,101 @@
-<section class="team-page">
-  <header class="page-heading">
+<section class="pagina">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Equipo</span>
       <h1>Sucursales asignadas</h1>
       @if (empleado(); as persona) {
-        <p>Define dónde opera <strong>{{ persona.nombre_completo }}</strong>.</p>
+        <p class="descripcion">
+          Define dónde opera <strong>{{ persona.nombre_completo }}</strong>. La principal es la que se abre al entrar.
+        </p>
       }
     </div>
-    <a class="secondary-button" [routerLink]="['/equipo/empleados', empleadoId]">Volver</a>
+    <a class="boton boton--secundario" [routerLink]="['/equipo/empleados', empleadoId]">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>Volver al empleado
+    </a>
   </header>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="status-message">Cargando asignaciones…</p>
+    <p class="estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando asignaciones…</p>
   } @else if (!error()) {
     @if (puedeEditar()) {
-      <div class="surface-card assign-form">
-        <h2>Asignar una sucursal</h2>
-        @if (disponibles().length) {
-          <div class="field-row">
-            <div class="field">
-              <label for="sucursal">Sucursal</label>
-              <select id="sucursal" [(ngModel)]="sucursalSeleccionada">
-                <option value="">Selecciona…</option>
-                @for (sucursal of disponibles(); track sucursal.id) {
-                  <option [value]="sucursal.id">{{ sucursal.codigo }} — {{ sucursal.nombre }}</option>
-                }
-              </select>
+      <section class="tarjeta" aria-labelledby="titulo-asignar">
+        <header class="tarjeta-encabezado">
+          <div class="seccion-encabezado items-center">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-plus"></i></span>
+            <div>
+              <h2 id="titulo-asignar">Asignar una sucursal</h2>
+              <p>Solo aparecen sucursales activas que aún no tiene.</p>
             </div>
-            <label class="checkbox-field">
-              <input type="checkbox" [(ngModel)]="comoPrincipal" />
+          </div>
+        </header>
+        @if (disponibles().length) {
+          <div class="flex flex-wrap items-end gap-4 p-5 sm:p-6">
+            <div class="campo-bloque min-w-[240px] flex-1">
+              <label class="etiqueta" for="sucursal">Sucursal <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <select id="sucursal" aria-required="true" [(ngModel)]="sucursalSeleccionada">
+                  <option value="">Selecciona…</option>
+                  @for (sucursal of disponibles(); track sucursal.id) {
+                    <option [value]="sucursal.id">{{ sucursal.nombre }} · {{ sucursal.codigo }}</option>
+                  }
+                </select>
+              </span>
+            </div>
+            <label class="opcion opcion--compacta">
+              <input type="checkbox" class="casilla mt-0" [(ngModel)]="comoPrincipal" />
               <span>Marcar como principal</span>
             </label>
-            <button
-              type="button"
-              class="primary-button"
-              [disabled]="!sucursalSeleccionada || processingId() === 'nueva'"
-              (click)="asignar()"
-            >
-              Asignar
+            <button type="button" class="boton" [disabled]="!sucursalSeleccionada || processingId() === 'nueva'" (click)="asignar()">
+              <i class="pi pi-plus" aria-hidden="true"></i>Asignar
             </button>
           </div>
         } @else {
-          <p class="status-message">
-            Este empleado ya está asignado a todas las sucursales activas del negocio.
+          <p class="aviso aviso--salvia m-5 sm:m-6">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>Ya está asignado a todas las sucursales activas del negocio.
           </p>
         }
-      </div>
+      </section>
     }
 
-    <div class="team-grid">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (asignacion of asignaciones(); track asignacion.id) {
-        <article class="team-card surface-card">
-          <header>
-            <div>
-              <h3>{{ asignacion.nombre_sucursal }}</h3>
-              <code>{{ asignacion.codigo_sucursal }}</code>
+        <article class="tarjeta flex flex-col" [class.tarjeta--destacada]="asignacion.es_principal">
+          <div class="flex items-start gap-3 p-5">
+            <span class="seccion-icono" [class.seccion-icono--salvia]="!asignacion.es_principal" aria-hidden="true"><i class="pi pi-shop"></i></span>
+            <div class="min-w-0 flex-1">
+              <h3 class="tabla-principal m-0 truncate">{{ asignacion.nombre_sucursal }}</h3>
+              <span class="codigo">{{ asignacion.codigo_sucursal }}</span>
             </div>
             @if (asignacion.es_principal) {
-              <span class="relation-pill">Principal</span>
+              <span class="pastilla pastilla--plana"><i class="pi pi-star-fill" aria-hidden="true"></i>Principal</span>
             }
-          </header>
-          <dl class="team-data">
-            <div><dt>Asignada</dt><dd>{{ asignacion.asignado_en | fechaMexico: 'mediumDate' }}</dd></div>
-          </dl>
+          </div>
+          <p class="secundario m-0 px-5 pb-4">
+            <i class="pi pi-calendar" aria-hidden="true"></i> Asignada el {{ asignacion.asignado_en | fechaMexico: 'mediumDate' }}
+          </p>
           @if (puedeEditar()) {
-            <footer>
+            <footer class="tarjeta-pie mt-auto">
               @if (!asignacion.es_principal) {
-                <button
-                  type="button"
-                  class="text-button"
-                  [disabled]="processingId() === asignacion.id"
-                  (click)="marcarPrincipal(asignacion)"
-                >
-                  Hacer principal
+                <button type="button" class="boton-enlace boton-enlace--chico" [disabled]="processingId() === asignacion.id" (click)="marcarPrincipal(asignacion)">
+                  <i class="pi pi-star" aria-hidden="true"></i> Hacer principal
                 </button>
               }
-              <button
-                type="button"
-                class="text-button danger-text"
-                [disabled]="processingId() === asignacion.id"
-                (click)="retirar(asignacion)"
-              >
-                Retirar
+              <button type="button" class="boton-enlace boton-enlace--chico boton-enlace--peligro" [disabled]="processingId() === asignacion.id" (click)="retirar(asignacion)">
+                <i class="pi pi-times" aria-hidden="true"></i> Retirar
               </button>
             </footer>
           }
         </article>
       } @empty {
-        <p class="status-message">Este empleado todavía no tiene sucursales asignadas.</p>
+        <p class="tarjeta tarjeta--punteada estado-vacio estado-vacio--guiado col-span-full">
+          <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+          <strong>Sin sucursales asignadas</strong>
+          <span>Asígnale al menos una para que pueda operar.</span>
+        </p>
       }
     </div>
   }

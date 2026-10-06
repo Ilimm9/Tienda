@@ -30,8 +30,12 @@ func (r *contextoRepositoryStub) NegocioActivoAccesible(context.Context, uuid.UU
 	return r.negocioOK, nil
 }
 
-func (r *contextoRepositoryStub) SucursalActivaDelNegocio(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+func (r *contextoRepositoryStub) SucursalActivaAccesible(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
 	return r.sucursalOK, nil
+}
+
+func (r *contextoRepositoryStub) SucursalesAccesibles(context.Context, uuid.UUID, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
 }
 
 func testContextoRouter(t *testing.T, repository *contextoRepositoryStub) (*gin.Engine, *http.Cookie) {
@@ -68,6 +72,7 @@ func TestContextoHandlerOpcionesDevuelveContrato(t *testing.T) {
 	sucursalID := uuid.New()
 	router, cookie := testContextoRouter(t, &contextoRepositoryStub{opciones: []domain.ContextoNegocio{{
 		ID: negocioID, Slug: "tienda-centro", NombreComercial: "Tienda Centro", TipoMiembro: "propietario",
+		Permisos:   []string{"catalogo.ver", "precios.autorizar"},
 		Sucursales: []domain.ContextoSucursal{{ID: sucursalID, Codigo: "SUC-001", Nombre: "Matriz", EsPrincipal: true}},
 	}}})
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/contexto/opciones", nil)
@@ -85,8 +90,11 @@ func TestContextoHandlerOpcionesDevuelveContrato(t *testing.T) {
 			t.Fatalf("falta %s en %s", esperado, body)
 		}
 	}
-	if strings.Contains(body, "permisos") || strings.Contains(body, "roles") {
-		t.Fatalf("el contrato no debe exponer roles ni permisos antes de fase 4: %s", body)
+	if !strings.Contains(body, `"permisos":["catalogo.ver","precios.autorizar"]`) {
+		t.Fatalf("el contrato debe exponer los permisos efectivos del negocio: %s", body)
+	}
+	if strings.Contains(body, "roles") {
+		t.Fatalf("el contrato expone permisos, no roles: %s", body)
 	}
 }
 

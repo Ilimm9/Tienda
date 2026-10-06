@@ -3,6 +3,7 @@ package negocio
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	application "tienda/backend/internal/application/negocio"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type InvitacionRepository struct {
@@ -41,10 +43,35 @@ func (r *InvitacionRepository) ObtenerEmpleado(ctx context.Context, negocioID, e
 	return NewEmpleadoRepository(r.db).Obtener(ctx, negocioID, empleadoID)
 }
 
-func (r *InvitacionRepository) RolPerteneceANegocio(ctx context.Context, negocioID, rolID uuid.UUID) (bool, error) {
+// CodigoRolActivo devuelve el código del rol solo si está activo y pertenece al negocio.
+func (r *InvitacionRepository) CodigoRolActivo(ctx context.Context, negocioID, rolID uuid.UUID) (string, bool, error) {
+	return codigoRolActivo(r.db.WithContext(ctx), negocioID, rolID)
+}
+
+func (r *InvitacionRepository) RolesDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID, roles []uuid.UUID, membresiaDestino *uuid.UUID) (bool, error) {
+	return rolesDelegables(ctx, r.db, usuarioID, negocioID, roles, membresiaDestino)
+}
+
+func codigoRolActivo(db *gorm.DB, negocioID, rolID uuid.UUID) (string, bool, error) {
+	var codigos []string
+	err := db.Table("roles").
+		Where("id = ? AND negocio_id = ? AND activo = TRUE", rolID, negocioID).
+		Limit(1).Pluck("codigo", &codigos).Error
+	if err != nil || len(codigos) == 0 {
+		return "", false, err
+	}
+	return codigos[0], true, nil
+}
+
+func (r *InvitacionRepository) SucursalActivaDelNegocio(ctx context.Context, negocioID, sucursalID uuid.UUID) (bool, error) {
+	return sucursalActiva(r.db.WithContext(ctx), negocioID, sucursalID)
+}
+
+func sucursalActiva(db *gorm.DB, negocioID, sucursalID uuid.UUID) (bool, error) {
 	var total int64
-	err := r.db.WithContext(ctx).Table("roles").
-		Where("id = ? AND negocio_id = ? AND activo = TRUE", rolID, negocioID).Count(&total).Error
+	err := db.Table("sucursales").
+		Where("id = ? AND negocio_id = ? AND activo = TRUE AND eliminado_en IS NULL", sucursalID, negocioID).
+		Count(&total).Error
 	return total == 1, err
 }
 
@@ -56,42 +83,186 @@ func (r *InvitacionRepository) MarcarExpiradas(ctx context.Context, negocioID uu
 		domain.EstadoInvitacionExpirada, negocioID, domain.EstadoInvitacionPendiente, time.Now().UTC()).Error
 }
 
-func (r *InvitacionRepository) Listar(ctx context.Context, negocioID uuid.UUID, estado string) ([]domain.InvitacionResumen, error) {
-	items := make([]domain.InvitacionResumen, 0)
-	query := r.db.WithContext(ctx).Table("invitaciones_negocio AS i").
-		Select(`i.id, i.negocio_id, i.empleado_id, i.correo, i.rol_predeterminado_id, i.estado,
+// consultaResumen calcula el estado efectivo con el reloj del servidor aunque la fila diga pendiente.
+func consultaResumen(db *gorm.DB, ahora time.Time) *gorm.DB {
+	return db.Table("invitaciones_negocio AS i").
+		Select(`i.id, i.negocio_id, i.empleado_id, i.correo, i.sucursal_id, i.rol_predeterminado_id,
+			CASE WHEN i.estado = 'pendiente' AND i.expira_en < ? THEN 'expirada' ELSE i.estado END AS estado,
 			i.expira_en, i.aceptado_en, i.creado_en,
-			COALESCE(e.nombre || ' ' || e.primer_apellido, '') AS nombre_empleado`).
+			COALESCE(e.nombre || ' ' || e.primer_apellido, '') AS nombre_empleado,
+			COALESCE(s.nombre, '') AS nombre_sucursal, COALESCE(ro.nombre, '') AS nombre_rol`, ahora).
 		Joins("LEFT JOIN empleados e ON e.id = i.empleado_id").
-		Where("i.negocio_id = ?", negocioID)
-	if estado != "" && estado != "todos" {
-		query = query.Where("i.estado = ?", estado)
+		Joins("LEFT JOIN sucursales s ON s.id = i.sucursal_id").
+		Joins("LEFT JOIN roles ro ON ro.id = i.rol_predeterminado_id")
+}
+
+func (r *InvitacionRepository) Listar(ctx context.Context, negocioID uuid.UUID, filtro domain.FiltroInvitaciones) ([]domain.InvitacionResumen, error) {
+	items := make([]domain.InvitacionResumen, 0)
+	ahora := time.Now().UTC()
+	query := consultaResumen(r.db.WithContext(ctx), ahora).Where("i.negocio_id = ?", negocioID)
+	switch {
+	case filtro.SinAceptar:
+		query = query.Where("i.estado IN ?", []string{domain.EstadoInvitacionPendiente, domain.EstadoInvitacionExpirada})
+	case filtro.Estado != "" && filtro.Estado != "todos":
+		query = query.Where("i.estado = ?", filtro.Estado)
+	}
+	if filtro.SucursalID != nil {
+		query = query.Where("i.sucursal_id = ?", *filtro.SucursalID)
 	}
 	err := query.Order("i.creado_en DESC, i.id ASC").Scan(&items).Error
 	return items, err
 }
 
-func (r *InvitacionRepository) Crear(ctx context.Context, invitacion domain.InvitacionNegocio) (domain.InvitacionResumen, error) {
-	if err := r.db.WithContext(ctx).Create(&invitacion).Error; err != nil {
-		return domain.InvitacionResumen{}, err
+func obtenerResumen(tx *gorm.DB, invitacionID uuid.UUID) (domain.InvitacionResumen, error) {
+	var resumen domain.InvitacionResumen
+	err := consultaResumen(tx, time.Now().UTC()).Where("i.id = ?", invitacionID).Take(&resumen).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.InvitacionResumen{}, application.ErrInvitacionNoEncontrada
 	}
-	items, err := r.Listar(ctx, invitacion.NegocioID, "")
-	if err != nil {
-		return domain.InvitacionResumen{}, err
-	}
-	for _, item := range items {
-		if item.ID == invitacion.ID {
-			return item, nil
-		}
-	}
-	return domain.InvitacionResumen{}, application.ErrInvitacionNoEncontrada
+	return resumen, err
 }
 
-func (r *InvitacionRepository) CancelarPendientesDeEmpleado(ctx context.Context, negocioID, empleadoID uuid.UUID) error {
-	return r.db.WithContext(ctx).Exec(
-		`UPDATE invitaciones_negocio SET estado = ?
-		 WHERE negocio_id = ? AND empleado_id = ? AND estado = ?`,
+// bloquearEmpleado serializa emisión, reenvío y aceptación del mismo empleado.
+func bloquearEmpleado(tx *gorm.DB, negocioID, empleadoID uuid.UUID) (domain.Empleado, error) {
+	var empleado domain.Empleado
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Take(&empleado).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.Empleado{}, application.ErrEmpleadoNoEncontrado
+	}
+	return empleado, err
+}
+
+// retirarPendientes deja libre el índice único de pendiente por empleado antes de insertar otra.
+func retirarPendientes(tx *gorm.DB, negocioID, empleadoID uuid.UUID, ahora time.Time) error {
+	err := tx.Exec(`UPDATE invitaciones_negocio SET estado = ?
+		WHERE negocio_id = ? AND empleado_id = ? AND estado = ? AND expira_en < ?`,
+		domain.EstadoInvitacionExpirada, negocioID, empleadoID, domain.EstadoInvitacionPendiente, ahora).Error
+	if err != nil {
+		return err
+	}
+	return tx.Exec(`UPDATE invitaciones_negocio SET estado = ?
+		WHERE negocio_id = ? AND empleado_id = ? AND estado = ?`,
 		domain.EstadoInvitacionCancelada, negocioID, empleadoID, domain.EstadoInvitacionPendiente).Error
+}
+
+// Emitir cancela pendientes previas del empleado e inserta la nueva en una sola transacción.
+func (r *InvitacionRepository) Emitir(ctx context.Context, invitacion domain.InvitacionNegocio) (domain.InvitacionResumen, error) {
+	var resumen domain.InvitacionResumen
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if invitacion.EmpleadoID == nil {
+			return application.ErrEmpleadoNoEncontrado
+		}
+		empleado, err := bloquearEmpleado(tx, invitacion.NegocioID, *invitacion.EmpleadoID)
+		if err != nil {
+			return err
+		}
+		if empleado.MembresiaID != nil {
+			return application.ErrInvitacionYaVinculado
+		}
+		if err := retirarPendientes(tx, invitacion.NegocioID, empleado.ID, time.Now().UTC()); err != nil {
+			return err
+		}
+		if err := tx.Create(&invitacion).Error; err != nil {
+			return err
+		}
+		resumen, err = obtenerResumen(tx, invitacion.ID)
+		return err
+	})
+	return resumen, err
+}
+
+// Reemitir sustituye la última invitación del empleado; si llega correo, lo corrige en el empleado.
+//
+// La fila anterior se conserva como historial con su correo original.
+func (r *InvitacionRepository) Reemitir(ctx context.Context, negocioID, invitacionID, usuarioID uuid.UUID, correo *string, hash string, expiraEn time.Time) (domain.InvitacionResumen, error) {
+	var resumen domain.InvitacionResumen
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var referencia domain.InvitacionNegocio
+		err := tx.Where("id = ? AND negocio_id = ?", invitacionID, negocioID).Take(&referencia).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return application.ErrInvitacionNoEncontrada
+		}
+		if err != nil {
+			return err
+		}
+		if referencia.EmpleadoID == nil {
+			return application.ErrInvitacionSinSucursal
+		}
+		// El empleado se bloquea antes que la invitación, igual que en la aceptación.
+		empleado, err := bloquearEmpleado(tx, negocioID, *referencia.EmpleadoID)
+		if err != nil {
+			return err
+		}
+		var anterior domain.InvitacionNegocio
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", invitacionID).Take(&anterior).Error; err != nil {
+			return err
+		}
+		if anterior.Estado == domain.EstadoInvitacionAceptada {
+			return application.ErrInvitacionYaAceptada
+		}
+		if empleado.MembresiaID != nil {
+			return application.ErrInvitacionYaVinculado
+		}
+		if empleado.Estado == domain.EstadoEmpleadoSuspendido || empleado.Estado == domain.EstadoEmpleadoTerminado {
+			return application.ErrInvitacionEmpleadoNoElegible
+		}
+		var ultimas []string
+		if err := tx.Table("invitaciones_negocio").
+			Where("negocio_id = ? AND empleado_id = ?", negocioID, empleado.ID).
+			Order("creado_en DESC, id DESC").Limit(1).Pluck("id", &ultimas).Error; err != nil {
+			return err
+		}
+		if len(ultimas) == 0 || ultimas[0] != anterior.ID.String() {
+			return application.ErrInvitacionReemplazada
+		}
+		if anterior.SucursalID == nil || anterior.RolPredeterminadoID == nil {
+			return application.ErrInvitacionSinSucursal
+		}
+		if activa, err := sucursalActiva(tx, negocioID, *anterior.SucursalID); err != nil {
+			return err
+		} else if !activa {
+			return application.ErrInvitacionSucursalNoDisponible
+		}
+		codigo, existe, err := codigoRolActivo(tx, negocioID, *anterior.RolPredeterminadoID)
+		if err != nil {
+			return err
+		}
+		if !existe || strings.EqualFold(codigo, domain.CodigoRolPropietario) {
+			return application.ErrInvitacionRolNoDisponible
+		}
+
+		ahora := time.Now().UTC()
+		destinatario := anterior.Correo
+		if correo != nil {
+			destinatario = *correo
+			if enUso, err := correoEnUsoEnNegocio(tx, negocioID, destinatario, &empleado.ID); err != nil {
+				return err
+			} else if enUso {
+				return application.ErrEmpleadoCorreoDuplicado
+			}
+			if err := tx.Table("empleados").Where("id = ?", empleado.ID).
+				Updates(map[string]any{"correo": destinatario, "actualizado_en": ahora}).Error; err != nil {
+				return errorCorreoDuplicado(err)
+			}
+		}
+		if err := retirarPendientes(tx, negocioID, empleado.ID, ahora); err != nil {
+			return err
+		}
+		nueva := domain.InvitacionNegocio{
+			NegocioID: negocioID, EmpleadoID: &empleado.ID, SucursalID: anterior.SucursalID,
+			Correo: destinatario, RolPredeterminadoID: anterior.RolPredeterminadoID,
+			HashToken: hash, Estado: domain.EstadoInvitacionPendiente,
+			InvitadoPorUsuarioID: usuarioID, ExpiraEn: expiraEn,
+		}
+		if err := tx.Create(&nueva).Error; err != nil {
+			return err
+		}
+		resumen, err = obtenerResumen(tx, nueva.ID)
+		return err
+	})
+	return resumen, err
 }
 
 func (r *InvitacionRepository) Cancelar(ctx context.Context, negocioID, invitacionID uuid.UUID) error {
@@ -121,9 +292,12 @@ func (r *InvitacionRepository) DatosPublicos(ctx context.Context, invitacionID u
 	var publica domain.InvitacionPublica
 	err := r.db.WithContext(ctx).Table("invitaciones_negocio AS i").
 		Select(`i.correo, i.expira_en, n.nombre_comercial AS nombre_negocio,
-			COALESCE(e.nombre || ' ' || e.primer_apellido, '') AS nombre_empleado`).
+			COALESCE(e.nombre || ' ' || e.primer_apellido, '') AS nombre_empleado,
+			COALESCE(s.nombre, '') AS nombre_sucursal, COALESCE(ro.nombre, '') AS nombre_rol`).
 		Joins("JOIN negocios n ON n.id = i.negocio_id").
 		Joins("LEFT JOIN empleados e ON e.id = i.empleado_id").
+		Joins("LEFT JOIN sucursales s ON s.id = i.sucursal_id").
+		Joins("LEFT JOIN roles ro ON ro.id = i.rol_predeterminado_id").
 		Where("i.id = ?", invitacionID).
 		Take(&publica).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -139,68 +313,217 @@ func (r *InvitacionRepository) CorreoDeUsuario(ctx context.Context, usuarioID uu
 	return correo, err
 }
 
-func (r *InvitacionRepository) ExisteCuentaConCorreo(ctx context.Context, correo string) (bool, error) {
+// ExisteCuentaVerificada ignora cuentas pendientes: esas todavía pueden completarse desde el enlace.
+func (r *InvitacionRepository) ExisteCuentaVerificada(ctx context.Context, correo string) (bool, error) {
 	var total int64
 	err := r.db.WithContext(ctx).Table("usuarios").
-		Where("lower(correo) = lower(?)", correo).Count(&total).Error
+		Where("lower(correo) = lower(?) AND correo_verificado_en IS NOT NULL", correo).Count(&total).Error
 	return total > 0, err
 }
 
-// Aceptar crea o reactiva la membresía, vincula al empleado y asigna el rol predeterminado, todo junto.
-func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacion domain.InvitacionNegocio, usuarioID uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// Aceptar bloquea empleado e invitación y revalida todo dentro de la transacción: de dos
+// aceptaciones simultáneas, o de una aceptación contra un reenvío, solo una produce efectos.
+func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacionID, usuarioID uuid.UUID) (domain.InvitacionAceptada, error) {
+	var aceptada domain.InvitacionAceptada
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		ahora := time.Now().UTC()
-		var membresia domain.MembresiaNegocio
-		err := tx.Where("negocio_id = ? AND usuario_id = ?", invitacion.NegocioID, usuarioID).
-			Take(&membresia).Error
-		switch {
-		case errors.Is(err, gorm.ErrRecordNotFound):
-			membresia = domain.MembresiaNegocio{
-				NegocioID: invitacion.NegocioID, UsuarioID: usuarioID,
-				TipoMiembro: "miembro", Estado: "activo", SeUnioEn: &ahora,
-			}
-			if err := tx.Create(&membresia).Error; err != nil {
-				return err
-			}
-		case err != nil:
+		var referencia domain.InvitacionNegocio
+		err := tx.Where("id = ?", invitacionID).Take(&referencia).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return application.ErrInvitacionNoEncontrada
+		}
+		if err != nil {
 			return err
-		default:
-			// Reactivar una membresía suspendida o revocada no debe degradar a un propietario.
-			err := tx.Table("membresias_negocio").Where("id = ?", membresia.ID).Updates(map[string]any{
-				"estado": "activo", "suspendido_en": nil, "revocado_en": nil,
-				"se_unio_en": gorm.Expr("COALESCE(se_unio_en, ?)", ahora), "actualizado_en": ahora,
-			}).Error
+		}
+		if referencia.EmpleadoID == nil || referencia.SucursalID == nil {
+			return application.ErrInvitacionNoVigente
+		}
+		empleado, err := bloquearEmpleado(tx, referencia.NegocioID, *referencia.EmpleadoID)
+		if errors.Is(err, application.ErrEmpleadoNoEncontrado) {
+			return application.ErrInvitacionEmpleadoNoElegible
+		}
+		if err != nil {
+			return err
+		}
+		var invitacion domain.InvitacionNegocio
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", invitacionID).Take(&invitacion).Error; err != nil {
+			return err
+		}
+		if invitacion.Estado == domain.EstadoInvitacionAceptada {
+			return application.ErrInvitacionYaAceptada
+		}
+		if invitacion.Estado != domain.EstadoInvitacionPendiente || !invitacion.ExpiraEn.After(ahora) {
+			return application.ErrInvitacionNoVigente
+		}
+		if empleado.MembresiaID != nil {
+			return application.ErrInvitacionYaVinculado
+		}
+		if empleado.Estado == domain.EstadoEmpleadoSuspendido || empleado.Estado == domain.EstadoEmpleadoTerminado {
+			return application.ErrInvitacionEmpleadoNoElegible
+		}
+		var estadoNegocio string
+		if err := tx.Table("negocios").Where("id = ?", invitacion.NegocioID).
+			Limit(1).Pluck("estado", &estadoNegocio).Error; err != nil {
+			return err
+		}
+		if estadoNegocio != "activo" {
+			return application.ErrEstadoNegocio
+		}
+		if activa, err := sucursalActiva(tx, invitacion.NegocioID, *invitacion.SucursalID); err != nil {
+			return err
+		} else if !activa {
+			return application.ErrInvitacionSucursalNoDisponible
+		}
+		if invitacion.RolPredeterminadoID != nil {
+			codigo, existe, err := codigoRolActivo(tx, invitacion.NegocioID, *invitacion.RolPredeterminadoID)
 			if err != nil {
 				return err
+			}
+			if !existe || strings.EqualFold(codigo, domain.CodigoRolPropietario) {
+				return application.ErrInvitacionRolNoDisponible
 			}
 		}
 
-		if invitacion.EmpleadoID != nil {
-			err := tx.Table("empleados").
-				Where("id = ? AND negocio_id = ?", *invitacion.EmpleadoID, invitacion.NegocioID).
-				Updates(map[string]any{
-					"membresia_id": membresia.ID, "estado": domain.EstadoEmpleadoActivo,
-					"actualizado_en": ahora,
-				}).Error
-			if err != nil {
-				return err
-			}
+		membresia, err := membresiaParaAceptar(tx, invitacion.NegocioID, usuarioID, ahora)
+		if err != nil {
+			return err
+		}
+		// La membresía ya puede pertenecer a otro empleado del negocio: no se reemplaza.
+		var vinculados int64
+		if err := tx.Table("empleados").Where("membresia_id = ?", membresia.ID).Count(&vinculados).Error; err != nil {
+			return err
+		}
+		if vinculados > 0 {
+			return application.ErrInvitacionYaVinculado
+		}
+
+		cambios := map[string]any{
+			"membresia_id": membresia.ID, "estado": domain.EstadoEmpleadoActivo, "actualizado_en": ahora,
+		}
+		if err := datosPersonalesConfirmados(tx, usuarioID, cambios); err != nil {
+			return err
+		}
+		if err := tx.Table("empleados").Where("id = ?", empleado.ID).Updates(cambios).Error; err != nil {
+			return err
 		}
 
 		if invitacion.RolPredeterminadoID != nil {
 			err := tx.Exec(`INSERT INTO roles_membresia (id, membresia_negocio_id, rol_id, asignado_por_usuario_id, asignado_en)
-				SELECT gen_random_uuid(), ?, r.id, ?, ? FROM roles r
-				WHERE r.id = ? AND r.negocio_id = ?
+				VALUES (gen_random_uuid(), ?, ?, ?, ?)
 				ON CONFLICT (membresia_negocio_id, rol_id) DO NOTHING`,
-				membresia.ID, invitacion.InvitadoPorUsuarioID, ahora,
-				*invitacion.RolPredeterminadoID, invitacion.NegocioID).Error
+				membresia.ID, *invitacion.RolPredeterminadoID, invitacion.InvitadoPorUsuarioID, ahora).Error
 			if err != nil {
 				return err
 			}
 		}
-
-		return tx.Table("invitaciones_negocio").Where("id = ?", invitacion.ID).Updates(map[string]any{
+		if err := asignarSucursalInvitada(tx, invitacion.NegocioID, empleado.ID, *invitacion.SucursalID); err != nil {
+			return err
+		}
+		err = tx.Table("invitaciones_negocio").Where("id = ?", invitacion.ID).Updates(map[string]any{
 			"estado": domain.EstadoInvitacionAceptada, "aceptado_por_usuario_id": usuarioID, "aceptado_en": ahora,
 		}).Error
+		if err != nil {
+			return err
+		}
+		aceptada = domain.InvitacionAceptada{Aceptada: true, NegocioID: invitacion.NegocioID, SucursalID: invitacion.SucursalID}
+		return nil
 	})
+	return aceptada, err
+}
+
+// membresiaParaAceptar crea la membresía o reutiliza la activa; una suspendida o revocada no se
+// reactiva por un enlace y un propietario existente nunca se degrada.
+func membresiaParaAceptar(tx *gorm.DB, negocioID, usuarioID uuid.UUID, ahora time.Time) (domain.MembresiaNegocio, error) {
+	var membresia domain.MembresiaNegocio
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("negocio_id = ? AND usuario_id = ?", negocioID, usuarioID).Take(&membresia).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		membresia = domain.MembresiaNegocio{
+			NegocioID: negocioID, UsuarioID: usuarioID,
+			TipoMiembro: "miembro", Estado: "activo", SeUnioEn: &ahora,
+		}
+		return membresia, tx.Create(&membresia).Error
+	}
+	if err != nil {
+		return domain.MembresiaNegocio{}, err
+	}
+	if membresia.Estado != "activo" {
+		return domain.MembresiaNegocio{}, application.ErrInvitacionMembresiaInactiva
+	}
+	return membresia, nil
+}
+
+// datosPersonalesConfirmados copia al empleado lo que el invitado confirmó en su perfil.
+// Número, puesto, fechas laborales y roles siguen bajo control administrativo.
+func datosPersonalesConfirmados(tx *gorm.DB, usuarioID uuid.UUID, cambios map[string]any) error {
+	var perfil struct {
+		Nombres         string
+		PrimerApellido  string
+		SegundoApellido *string
+		Telefono        *string
+	}
+	err := tx.Table("perfil_usuarios").Select("nombres, primer_apellido, segundo_apellido, telefono").
+		Where("usuario_id = ?", usuarioID).Take(&perfil).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	nombres := strings.Fields(perfil.Nombres)
+	primerApellido := strings.TrimSpace(perfil.PrimerApellido)
+	if len(nombres) == 0 || primerApellido == "" {
+		return nil
+	}
+	// El empleado separa nombre y segundo nombre; el perfil los guarda juntos.
+	cambios["nombre"] = recortar(nombres[0], 100)
+	cambios["segundo_nombre"] = nil
+	if len(nombres) > 1 {
+		cambios["segundo_nombre"] = recortar(strings.Join(nombres[1:], " "), 100)
+	}
+	cambios["primer_apellido"] = recortar(primerApellido, 100)
+	cambios["segundo_apellido"] = nil
+	if perfil.SegundoApellido != nil && strings.TrimSpace(*perfil.SegundoApellido) != "" {
+		cambios["segundo_apellido"] = recortar(strings.TrimSpace(*perfil.SegundoApellido), 100)
+	}
+	if perfil.Telefono != nil && strings.TrimSpace(*perfil.Telefono) != "" {
+		cambios["telefono"] = strings.TrimSpace(*perfil.Telefono)
+	}
+	return nil
+}
+
+func recortar(valor string, maximo int) string {
+	runas := []rune(valor)
+	if len(runas) > maximo {
+		return string(runas[:maximo])
+	}
+	return valor
+}
+
+// asignarSucursalInvitada crea o reactiva la asignación; solo es principal si el empleado no tiene otra.
+func asignarSucursalInvitada(tx *gorm.DB, negocioID, empleadoID, sucursalID uuid.UUID) error {
+	var principales int64
+	if err := tx.Table("asignaciones_empleado_sucursal").
+		Where("empleado_id = ? AND activo = TRUE AND es_principal = TRUE AND sucursal_id <> ?", empleadoID, sucursalID).
+		Count(&principales).Error; err != nil {
+		return err
+	}
+	var existente domain.AsignacionEmpleadoSucursal
+	err := tx.Where("empleado_id = ? AND sucursal_id = ?", empleadoID, sucursalID).Take(&existente).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return tx.Create(&domain.AsignacionEmpleadoSucursal{
+			NegocioID: negocioID, EmpleadoID: empleadoID, SucursalID: sucursalID,
+			EsPrincipal: principales == 0, Activo: true,
+		}).Error
+	}
+	if err != nil {
+		return err
+	}
+	if existente.Activo {
+		return nil
+	}
+	return tx.Table("asignaciones_empleado_sucursal").Where("id = ?", existente.ID).Updates(map[string]any{
+		"activo": true, "finalizado_en": nil, "es_principal": principales == 0,
+	}).Error
 }
