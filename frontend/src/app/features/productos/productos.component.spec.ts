@@ -87,7 +87,7 @@ describe('ProductosComponent', () => {
 
     const controls = component.productForm.controls;
     expect(controls.nombre.value).toBe('Coca-Cola 600 ml');
-    expect(controls.sku_interno.value).toBe('7501055303038');
+    expect(controls.sku_interno.value).toBe('');
     expect(controls.precio_venta.value).toBe(18.5);
     expect(controls.contenido.value).toBe(600);
     expect(controls.marca_id.value).toBe('marca-coca-cola');
@@ -179,7 +179,7 @@ describe('ProductosComponent', () => {
       });
 
     expect(controls.nombre.value).toBe('Nombre escrito por el usuario');
-    expect(controls.sku_interno.value).toBe('7501234567890');
+    expect(controls.sku_interno.value).toBe('');
     expect(controls.marca_id.value).toBe('');
     expect(controls.categoria_id.value).toBe('');
     expect(component.catalogLookupWarnings()).toHaveLength(2);
@@ -199,15 +199,27 @@ describe('ProductosComponent', () => {
     expect(controls.sku_interno.enabled).toBe(true);
   });
 
-  it('adds variant rows and disables simple-product commercial fields', () => {
+  it('keeps the base price editable when variants are enabled', () => {
     const controls = component.productForm.controls;
     controls.tiene_variantes.setValue(true);
     component.onVariantsChanged();
 
-    expect(component.variantControls.length).toBe(1);
+    expect(component.variantControls.length).toBe(0);
     expect(controls.sku_interno.disabled).toBe(true);
-    expect(controls.precio_venta.disabled).toBe(true);
+    expect(controls.precio_venta.enabled).toBe(true);
     expect(controls.stock_inicial.disabled).toBe(true);
+  });
+
+  it('only enables saving an edited product after a real change', () => {
+    component.editingProduct.set({ id: 'producto-1' } as ProductRow);
+    component.productForm.markAsPristine();
+
+    expect(component.canSubmitProduct()).toBe(false);
+
+    component.productForm.controls.nombre.setValue('Nombre actualizado');
+    component.productForm.controls.nombre.markAsDirty();
+
+    expect(component.canSubmitProduct()).toBe(true);
   });
 
   it('replaces a dropped import file and clears its preview when removed', () => {
@@ -224,6 +236,7 @@ describe('ProductosComponent', () => {
       insertables: 1,
       omitidas: 0,
       invalidas: 0,
+      productos_simples_creados: 0,
       productos_base_creados: 0,
       productos_base_reutilizados: 0,
       variantes_creadas: 0,

@@ -51,6 +51,9 @@ export class ComprasComponent {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+  readonly creatingProvider = signal(false);
+  readonly providerSaving = signal(false);
+  readonly providerError = signal<string | null>(null);
   readonly unitDetailIndex = signal<number | null>(null);
   readonly unitSaving = signal(false);
   readonly documentTypes = ['TICKET', 'FACTURA'];
@@ -79,6 +82,7 @@ export class ComprasComponent {
     factor_a_base: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
     decimales: [0, [Validators.required, Validators.min(0), Validators.max(6)]],
   });
+  readonly providerForm = this.fb.nonNullable.group({ nombre: ['', Validators.required] });
   readonly packagingUnits = computed(() =>
     this.units().filter(
       (unit) =>
@@ -90,6 +94,12 @@ export class ComprasComponent {
   readonly productOptions = computed(() => [
     ...this.products(),
     { id: '__new_product__', nombre: 'Crear nuevo…', sku: null, codigo_barras: null },
+  ]);
+  readonly providerOptions = computed(() => [
+    ...this.providers(),
+    ...(this.context.puede(this.P.catalogoGestionar)
+      ? [{ id: '__new_provider__', nombre: 'Crear nuevo…' }]
+      : []),
   ]);
   readonly unitOptions = computed(() => [
     ...this.packagingUnits(),
@@ -207,6 +217,52 @@ export class ComprasComponent {
         next: (items) => this.products.set(items),
         error: () => this.error.set('No fue posible cargar los productos del proveedor.'),
       });
+  }
+  selectProvider(value: string): void {
+    if (value !== '__new_provider__') {
+      this.creatingProvider.set(false);
+      this.loadProducts();
+      return;
+    }
+    this.form.controls.proveedor_id.setValue('');
+    this.providerForm.reset({ nombre: '' });
+    this.providerError.set(null);
+    this.creatingProvider.set(true);
+  }
+  createProvider(): void {
+    this.providerForm.markAllAsTouched();
+    if (this.providerForm.invalid || this.providerSaving()) return;
+    const nombre = this.providerForm.controls.nombre.value.trim();
+    const previousIDs = new Set(this.providers().map((provider) => provider.id));
+    this.providerSaving.set(true);
+    this.providerError.set(null);
+    this.service.createProvider(this.businessId, { nombre }).subscribe({
+      next: () =>
+        this.service.providers(this.businessId).subscribe({
+          next: (providers) => {
+            this.providers.set(providers);
+            const created = providers.find((provider) => !previousIDs.has(provider.id))
+              ?? providers.find((provider) => provider.nombre.trim().toLowerCase() === nombre.toLowerCase());
+            if (!created) {
+              this.providerSaving.set(false);
+              this.providerError.set('El proveedor fue creado, pero no fue posible seleccionarlo.');
+              return;
+            }
+            this.form.controls.proveedor_id.setValue(created.id);
+            this.creatingProvider.set(false);
+            this.providerSaving.set(false);
+            this.loadProducts();
+          },
+          error: () => {
+            this.providerSaving.set(false);
+            this.providerError.set('El proveedor fue creado, pero no fue posible recargarlo.');
+          },
+        }),
+      error: (response) => {
+        this.providerSaving.set(false);
+        this.providerError.set(response.error?.mensaje ?? 'No fue posible crear el proveedor.');
+      },
+    });
   }
   addDetail(): void {
     this.details.push(this.newDetail());

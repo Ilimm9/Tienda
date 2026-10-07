@@ -16,6 +16,7 @@ describe('ComprasComponent', () => {
     products: vi.fn(() => of([])),
     create: vi.fn(),
     createUnit: vi.fn(),
+    createProvider: vi.fn(() => of(undefined)),
   };
 
   async function createFixture(): Promise<ComponentFixture<ComprasComponent>> {
@@ -81,5 +82,16 @@ describe('ComprasComponent', () => {
 
     expect(component.details.at(0).get('nombre_producto_nuevo')?.valid).toBe(true);
     expect(component.details.at(0).get('codigo_barras_nuevo')?.valid).toBe(true);
+  });
+
+  it('solo habilita el alta rápida de proveedor después de escribir su nombre', async () => {
+    const component = (await createFixture()).componentInstance;
+
+    component.selectProvider('__new_provider__');
+    expect(component.creatingProvider()).toBe(true);
+    expect(component.providerForm.invalid).toBe(true);
+
+    component.providerForm.controls.nombre.setValue('Distribuidora Norte');
+    expect(component.providerForm.valid).toBe(true);
   });
 });

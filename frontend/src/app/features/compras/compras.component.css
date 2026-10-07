@@ -138,16 +138,18 @@
 
 .purchase-form {
   min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
 }
 
 .purchase-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(250px, .32fr);
+  gap: 1.5rem;
   margin-top: 2rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-card);
 }
 
 .purchase-workspace .purchase-card {
@@ -204,7 +206,8 @@
 
 .purchase-section-heading h2,
 .purchase-unit-form h3,
-.purchase-product-form h3 {
+.purchase-product-form h3,
+.purchase-provider-form h3 {
   margin: 0 0 .4rem;
   font-size: 1.2rem;
 }
@@ -218,7 +221,8 @@
 
 .inline-create,
 .purchase-unit-form,
-.purchase-product-form { grid-column: 1 / -1; }
+.purchase-product-form,
+.purchase-provider-form { grid-column: 1 / -1; }
 
 .tax-options { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
 
@@ -254,12 +258,14 @@
 
 .purchase-new-product,
 .purchase-unit-form,
-.purchase-product-form {
+.purchase-product-form,
+.purchase-provider-form {
   margin-top: 1rem;
 }
 
 .purchase-unit-form,
-.purchase-product-form {
+.purchase-product-form,
+.purchase-provider-form {
   padding: 1.25rem;
   border: 1px solid var(--border);
   border-radius: .75rem;
@@ -267,6 +273,7 @@
 }
 
 .purchase-unit-form .purchase-actions,
+.purchase-provider-form .purchase-actions,
 .detail-actions {
   margin-top: 1rem;
 }
@@ -298,7 +305,10 @@
   align-self: start;
   min-width: 0;
   padding: 1.5rem;
-  border-left: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
 }
 
 .product-summary-list {
@@ -361,8 +371,6 @@
 
   .purchase-summary-panel {
     position: static;
-    border-top: 1px solid var(--border);
-    border-left: 0;
   }
 
   .purchase-field-wide {

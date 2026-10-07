@@ -157,7 +157,7 @@
           [rowsPerPageOptions]="[10, 25, 50]"
           [showCurrentPageReport]="true"
           currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
-          [tableStyle]="{ 'min-width': '76rem' }"
+          [tableStyle]="{ 'min-width': '68rem' }"
           dataKey="id"
           class="app-table app-table--products"
           styleClass="products-table"
@@ -166,9 +166,8 @@
           <ng-template #header>
             <tr>
               <th class="expander-column" aria-label="Variantes"></th>
-              <th>Imagen</th>
+              <th class="image-column">Imagen</th>
               <th>Nombre</th>
-              <th>SKU</th>
               <th>Precio</th>
               <th>Stock</th>
               <th>Categoría</th>
@@ -199,7 +198,7 @@
                   </button>
                 }
               </td>
-              <td>
+              <td class="image-column">
                 @if (product.imagen_url && !hasProductImageFailed(product.id)) {
                   <img
                     class="product-image"
@@ -217,13 +216,6 @@
                 {{ product.nombre }}
                 @if (product.variantes.length) {
                   <small>{{ product.variantes.length }} variantes</small>
-                }
-              </td>
-              <td>
-                @if (hasVariants(product)) {
-                  <span class="variant-summary">Ver variantes</span>
-                } @else {
-                  <code>{{ product.sku || '—' }}</code>
                 }
               </td>
               <td>
@@ -287,7 +279,6 @@
                     <thead>
                       <tr>
                         <th>Atributos</th>
-                        <th>SKU</th>
                         <th>Código de barras</th>
                         <th>Precio</th>
                         <th>Stock</th>
@@ -297,9 +288,6 @@
                       @for (variant of product.variantes; track variant.id) {
                         <tr>
                           <td>{{ variantAttributes(variant) }}</td>
-                          <td>
-                            <code>{{ variant.sku || '—' }}</code>
-                          </td>
                           <td>
                             <code>{{ variant.codigo_barras || '—' }}</code>
                           </td>
@@ -369,7 +357,8 @@
         [formGroup]="productForm"
         (ngSubmit)="saveProduct()"
       >
-        <div class="barcode-lookup-card">
+        @if (!productForm.controls.tiene_variantes.value) {
+        <section class="barcode-lookup-card" [class.field--error]="hasError('codigo_barras')">
           <div class="field">
             <span>Código de barras <small class="optional-label">(opcional)</small></span>
             <div class="barcode-input-row">
@@ -380,6 +369,7 @@
                 maxlength="14"
                 placeholder="Ej. 7501055303038"
                 (input)="onBarcodeChanged()"
+                (keydown.enter)="onBarcodeEnter($event)"
               />
               <button
                 class="secondary-button"
@@ -393,14 +383,6 @@
                   Buscar producto
                 }
               </button>
-              @if (previewImageURL(); as imageURL) {
-                <img
-                  class="barcode-thumbnail"
-                  [src]="imageURL"
-                  alt="Miniatura del producto encontrado"
-                  (error)="handlePreviewImageError()"
-                />
-              }
             </div>
             @if (hasError('codigo_barras')) {
               <small>Usa únicamente entre 8 y 14 dígitos.</small>
@@ -420,78 +402,51 @@
               >
             }
           </div>
-        </div>
+        </section>
+        }
 
-        <div class="form-section">
-          <h3>Información general</h3>
+        <section class="family-card shared-data-card">
+          <h2>Datos del producto</h2>
           @for (message of catalogLoadErrors(); track message) {
             <div class="form-error" role="alert">{{ message }}</div>
           }
-          <div class="form-grid">
-            <label class="field full-field">
+          <div class="shared-data-layout">
+            <div class="product-image-preview">
+              @if (previewImageURL(); as imageURL) {
+                <img [src]="imageURL" alt="Imagen del producto" (error)="handlePreviewImageError()" />
+              } @else {
+                <i class="pi pi-image" aria-hidden="true"></i><span>Sin imagen</span>
+              }
+            </div>
+            <div class="shared-data-fields">
+            <label class="field" [class.field--error]="hasError('nombre')">
               <span>Nombre del producto <b>*</b></span>
-              <input pInputText formControlName="nombre" placeholder="Ej. Monitor Curvo 34'" />
+              <input pInputText formControlName="nombre" placeholder="Ej. Galletas" />
               @if (hasError('nombre')) {
                 <small>El nombre es obligatorio.</small>
               }
             </label>
 
             <label class="field">
-              <span
-                >SKU interno
-                @if (productForm.controls.tiene_variantes.value) {
-                  <small class="optional-label">(se define en cada variante)</small>
-                } @else if (!editingProduct() && productForm.controls.generar_sku_interno.value) {
-                  <small class="optional-label">(se generará automáticamente)</small>
-                } @else {
-                  <b>*</b>
-                }
-              </span>
-              <input pInputText formControlName="sku_interno" placeholder="PROD-001" />
-              @if (hasError('sku_interno')) {
-                <small>Captura un SKU o activa la generación automática.</small>
-              }
-            </label>
-
-            @if (!editingProduct()) {
-              <div class="field">
-                <span>Variantes</span>
-                <p-checkbox
-                  formControlName="tiene_variantes"
-                  [binary]="true"
-                  inputId="tiene-variantes"
-                  (onChange)="onVariantsChanged()"
-                />
-                <label for="tiene-variantes"
-                  >Este producto tiene sabor, color, colección u otra variante</label
-                >
-              </div>
-            }
-
-            @if (!editingProduct() && !productForm.controls.tiene_variantes.value) {
-              <div class="field">
-                <span>Identificador automático</span>
-                <p-checkbox
-                  formControlName="generar_sku_interno"
-                  [binary]="true"
-                  inputId="generar-sku"
-                  (onChange)="onGenerateSKUChanged()"
-                />
-                <label for="generar-sku">Generar SKU interno automáticamente</label>
-              </div>
-            }
-
-            <label class="field">
-              <span>Categoría <small class="optional-label">(opcional)</small></span>
+              <span>Categoría</span>
               <p-select
                 formControlName="categoria_id"
-                [options]="categories()"
+                [options]="categoryOptions()"
                 optionLabel="nombre"
                 optionValue="id"
                 placeholder="Seleccionar..."
                 [style]="{ width: '100%' }"
+                (onChange)="onCategorySelected($event.value)"
               />
             </label>
+            @if (categoryCreationVisible()) {
+              <section class="brand-create-form" [formGroup]="categoryForm">
+                <h3>Nueva categoría</h3>
+                <label class="field"><span>Nombre <b>*</b></span><input pInputText formControlName="nombre" maxlength="180" /></label>
+                @if (categoryCreationError(); as message) { <div class="form-error" role="alert">{{ message }}</div> }
+                <div class="brand-create-actions"><button class="secondary-button" type="button" (click)="categoryCreationVisible.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="categoryCreating()" (click)="createCategory()">{{ categoryCreating() ? 'Creando…' : 'Guardar categoría' }}</button></div>
+              </section>
+            }
 
             <label class="field">
               <span>Marca</span>
@@ -540,7 +495,7 @@
               </section>
             }
             <label class="field">
-              <span>Proveedor <small class="optional-label">(opcional)</small></span>
+              <span>Proveedor </span>
               <p-select
                 formControlName="proveedor_id"
                 [options]="providers()"
@@ -552,180 +507,71 @@
               />
             </label>
 
-            <label class="field full-field">
-              <span>Descripción</span>
-              <textarea
-                pInputTextarea
-                formControlName="descripcion"
-                rows="3"
-                placeholder="Describe las especificaciones principales del producto..."
-              ></textarea>
-            </label>
-          </div>
-
-          @if (!editingProduct() && productForm.controls.tiene_variantes.value) {
-            <div class="form-section" formArrayName="variantes">
-              <div class="products-actions">
-                <h3>Variantes</h3>
-                <button class="secondary-button" type="button" (click)="addVariant()">
-                  Agregar variante
-                </button>
-              </div>
-              @for (variant of variantControls.controls; track $index; let index = $index) {
-                <section class="variant-card" [formGroupName]="index">
-                  <div class="variant-card-header">
-                    <span>Variante {{ index + 1 }}</span>
-                    <button
-                      class="secondary-button variant-remove-button"
-                      type="button"
-                      (click)="removeVariant(index)"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                  <div class="form-grid">
-                    <label class="field full-field">
-                      <span>Atributos <b>*</b></span>
-                      <input
-                        pInputText
-                        formControlName="atributos"
-                        placeholder="Colección=Dinosaurios; Color=Rojo"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>SKU interno</span>
-                      <input
-                        pInputText
-                        formControlName="sku_interno"
-                        placeholder="Opcional si se genera"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>Generar identificador</span>
-                      <p-checkbox
-                        formControlName="generar_sku_interno"
-                        [binary]="true"
-                        [inputId]="'generar-sku-' + index"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>Precio de venta <b>*</b></span>
-                      <input
-                        pInputText
-                        type="number"
-                        formControlName="precio_venta"
-                        min="0"
-                        step="0.01"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>Stock inicial <b>*</b></span>
-                      <input
-                        pInputText
-                        type="number"
-                        formControlName="stock_inicial"
-                        min="0"
-                        step="1"
-                      />
-                    </label>
-                    <label class="field">
-                      <span>Código de barras</span>
-                      <input
-                        pInputText
-                        formControlName="codigo_barras"
-                        inputmode="numeric"
-                        maxlength="14"
-                      />
-                    </label>
-                  </div>
-                </section>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="form-section">
-          <h3>Presentación, inventario y precio</h3>
-          <div class="form-grid">
             <label class="field">
               <span>Presentación</span>
-              <input
-                pInputText
-                formControlName="presentacion"
-                placeholder="Pieza, caja, botella..."
-              />
+              <input pInputText formControlName="presentacion" placeholder="Caja, bolsa, botella..." />
             </label>
-            <label class="field">
+            <label class="field" [class.field--error]="hasError('contenido')">
               <span>Contenido</span>
-              <input
-                pInputText
-                type="number"
-                formControlName="contenido"
-                min="0"
-                placeholder="600"
-              />
+              <input pInputText type="number" formControlName="contenido" min="0" placeholder="Ej. 250" />
+              @if (hasError('contenido')) { <small>El contenido no puede ser negativo.</small> }
             </label>
             <label class="field">
               <span>Unidad de contenido</span>
-              <p-select
-                formControlName="unidad_medida_id"
-                [options]="units()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Seleccionar unidad..."
-                [showClear]="true"
-                [style]="{ width: '100%' }"
-              />
+              <p-select formControlName="unidad_medida_id" [options]="unitOptions()" optionLabel="nombre" optionValue="id" placeholder="Seleccionar unidad..." [showClear]="true" [style]="{ width: '100%' }" (onChange)="onUnitContentSelected($event.value)" />
             </label>
-            @if (!editingProduct()) {
+            @if (unitCreationVisible()) {
+              <section class="brand-create-form" [formGroup]="unitForm">
+                <h3>Nueva unidad de contenido</h3>
+                <div class="form-grid"><label class="field"><span>Nombre <b>*</b></span><input pInputText formControlName="nombre" placeholder="Mililitro" /></label><label class="field"><span>Símbolo <b>*</b></span><input pInputText formControlName="simbolo" placeholder="ml" /></label><label class="field"><span>Tipo <b>*</b></span><p-select formControlName="tipo" [options]="[{ label: 'Volumen', value: 'VOLUMEN' }, { label: 'Peso', value: 'PESO' }, { label: 'Cantidad', value: 'CANTIDAD' }]" optionLabel="label" optionValue="value" /></label></div>
+                @if (unitCreationError(); as message) { <div class="form-error" role="alert">{{ message }}</div> }
+                <div class="brand-create-actions"><button class="secondary-button" type="button" (click)="unitCreationVisible.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="unitCreating()" (click)="createUnit()">{{ unitCreating() ? 'Creando…' : 'Guardar unidad' }}</button></div>
+              </section>
+            }
+            <label class="field" [class.field--error]="hasError('precio_venta')">
+              <span>Precio base <b>*</b></span>
+              <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" />
+              @if (hasError('precio_venta')) { <small>Captura un precio válido.</small> }
+            </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="family-card product-mode-card">
+          <label class="variants-switch" for="tiene-variantes">
+            <p-checkbox formControlName="tiene_variantes" [binary]="true" inputId="tiene-variantes" [disabled]="!!editingProduct()" (onChange)="onVariantsChanged()" />
+            <span><strong>Este producto tiene variantes</strong><small>Por ejemplo: sabores, tamaños o colores.</small></span>
+          </label>
+          @if (!productForm.controls.tiene_variantes.value) {
+            <div class="simple-product-fields">
+              <label class="field"><span>Stock inicial <b>*</b></span><input pInputText type="number" formControlName="stock_inicial" min="0" /></label>
+              <span class="auto-sku">El SKU interno se genera automáticamente.</span>
+            </div>
+          } @else {
+            <div class="variant-editor" formArrayName="variantes">
+              <div class="variant-editor-header"><h2>Variantes</h2></div>
+              <div class="dimension-new"><input pInputText [value]="newDimensionName()" (input)="newDimensionName.set($any($event.target).value)" placeholder="Ej. Sabor o Tamaño" /><button type="button" class="secondary-button" (click)="addDimension()">Agregar</button></div>
+              @for (dimension of variantDimensions(); track dimension.nombre; let dimensionIndex = $index) {
+                <div class="dimension-row"><strong>{{ dimension.nombre }}</strong><div class="dimension-values">@for (value of dimension.valores; track value; let valueIndex = $index) {<span class="dimension-chip">{{ value }} <button type="button" (click)="removeDimensionValue(dimensionIndex, valueIndex)">×</button></span>}<input pInputText [value]="dimension.nuevoValor" (input)="setDimensionValue(dimensionIndex, $any($event.target).value)" (keydown.enter)="$event.preventDefault(); addDimensionValue(dimensionIndex)" placeholder="Valor" /><button type="button" class="secondary-button" (click)="addDimensionValue(dimensionIndex)">Añadir</button></div><button type="button" class="icon-button" (click)="removeDimension(dimensionIndex)">×</button></div>
+              }
+              <div class="variant-actions"><span>El precio base se aplica automáticamente a las variantes.</span><button type="button" class="primary-button" [disabled]="!canGenerateCombinations()" (click)="generateCombinations()">Generar combinaciones</button></div>
+              @if (variantControls.length > 0) {<div class="variant-table-wrap"><table class="variant-edit-table"><thead><tr>@for (dimension of variantDimensions(); track dimension.nombre) {<th>{{ dimension.nombre }}</th>}<th>Código de barras</th><th>Precio</th><th>{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }}</th><th></th></tr></thead><tbody>@for (variant of variantControls.controls; track $index; let index = $index) {<tr [formGroupName]="index">@for (attribute of variantAttributeValues(index); track attribute.nombre) {<td>{{ attribute.valor }}</td>}<td><input pInputText formControlName="codigo_barras" /></td><td><input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" /></td><td><input pInputText type="number" formControlName="stock_inicial" min="0" /></td><td><button type="button" class="icon-button danger" (click)="removeVariant(index)">×</button></td></tr>}</tbody></table></div>}
+            </div>
+          }
+        </section>
+
+        <details class="family-card optional-details">
+          <summary>Detalles opcionales</summary>
+          <div class="form-grid">
+            @if (branches().length > 1 && !editingProduct()) {
               <label class="field">
                 <span>Sucursal <b>*</b></span>
-                <p-select
-                  formControlName="sucursal_id"
-                  [options]="branches()"
-                  optionLabel="nombre"
-                  optionValue="id"
-                  placeholder="Seleccionar..."
-                  [style]="{ width: '100%' }"
-                  (onChange)="onBranchSelected()"
-                />
-                @if (hasError('sucursal_id')) {
-                  <small>Selecciona una sucursal.</small>
-                }
+                <p-select formControlName="sucursal_id" [options]="branches()" optionLabel="nombre" optionValue="id" placeholder="Seleccionar..." [style]="{ width: '100%' }" (onChange)="onBranchSelected()" />
               </label>
             }
-            <label class="field">
-              <span>Precio de venta <b>*</b></span>
-              <input
-                pInputText
-                type="number"
-                formControlName="precio_venta"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-              />
-              @if (hasError('precio_venta')) {
-                <small>Indica un precio válido.</small>
-              }
-            </label>
-            @if (!editingProduct()) {
-              <label class="field">
-                <span>Stock inicial <b>*</b></span>
-                <input
-                  pInputText
-                  type="number"
-                  formControlName="stock_inicial"
-                  min="0"
-                  step="1"
-                  placeholder="0"
-                />
-                @if (hasError('stock_inicial')) {
-                  <small>Indica un stock válido.</small>
-                }
-              </label>
-            }
+            <label class="field full-field"><span>Descripción</span><textarea pInputTextarea formControlName="descripcion" rows="3"></textarea></label>
           </div>
-        </div>
+        </details>
 
         <div class="form-section multimedia-section" aria-disabled="true">
           <h3>Multimedia</h3>

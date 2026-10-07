@@ -64,10 +64,9 @@ describe('ProductosService', () => {
   it('updates commercial product data without inventory fields', () => {
     const payload = {
       nombre: 'Producto actualizado',
-      sku_interno: 'PROD-001',
       marca_id: null,
       proveedor_id: null,
-      categoria_id: 'categoria-1',
+      categoria_id: null,
       descripcion: 'Descripción',
       contenido: 600,
       unidad_contenido: 'ml',
@@ -76,6 +75,7 @@ describe('ProductosService', () => {
       precio_venta: 18.5,
       codigo_barras: '7501055303038',
       imagen_url: 'https://cdn.example.com/producto.jpg',
+      variantes: [],
     };
 
     service.update('negocio-1', 'producto-1', payload).subscribe();

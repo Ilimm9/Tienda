@@ -39,6 +39,13 @@ export interface ProductVariantRow {
   atributos: ProductVariantAttribute[];
 }
 
+export interface UpdateProductVariantRequest {
+  id: string | null;
+  atributos: ProductVariantAttribute[];
+  precio_venta: number;
+  codigo_barras: string | null;
+}
+
 export interface CreateProductVariantRequest {
   atributos: ProductVariantAttribute[];
   sku_interno: string;
@@ -64,6 +71,21 @@ export interface CatalogOption {
   nombre: string;
 }
 
+export interface UnitOption extends CatalogOption {
+  codigo: string;
+  simbolo: string;
+}
+
+export interface CreateUnitRequest {
+  codigo: string;
+  nombre: string;
+  simbolo: string;
+  tipo: string;
+  factor_a_base: number;
+  permite_fraccion: boolean;
+  decimales: number;
+}
+
 export interface CreateProductRequest {
   nombre: string;
   sku_interno: string;
@@ -84,8 +106,20 @@ export interface CreateProductRequest {
   variantes?: CreateProductVariantRequest[];
 }
 
-export interface UpdateProductRequest extends Omit<CreateProductRequest, 'sucursal_id' | 'stock_inicial' | 'generar_sku_interno' | 'categoria_id'> {
-  categoria_id: string;
+export interface UpdateProductRequest {
+  nombre: string;
+  marca_id: string | null;
+  proveedor_id: string | null;
+  categoria_id: string | null;
+  descripcion: string | null;
+  contenido: number | null;
+  unidad_contenido: string | null;
+  unidad_medida_id?: string | null;
+  presentacion: string | null;
+  precio_venta: number;
+  codigo_barras: string | null;
+  imagen_url: string | null;
+  variantes: UpdateProductVariantRequest[];
 }
 
 export interface ProductLookup {
@@ -113,6 +147,7 @@ export interface ProductImportResult {
   omitidas: number;
   invalidas: number;
   skus_generados: number;
+  productos_simples_creados: number;
   productos_base_creados: number;
   productos_base_reutilizados: number;
   variantes_creadas: number;

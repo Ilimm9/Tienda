@@ -178,8 +178,8 @@
 
 .product-image {
   display: inline-grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem;
+  height: 2rem;
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 0.35rem;
@@ -189,6 +189,12 @@
 
 .image-placeholder {
   color: var(--text-subtle);
+}
+
+.image-column {
+  width: 3.5rem;
+  min-width: 3.5rem;
+  text-align: center;
 }
 
 .product-name {
@@ -364,6 +370,67 @@ code {
   gap: 1.5rem;
 }
 
+.family-card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  background: var(--surface-raised);
+}
+
+.family-card h2 { margin: 0 0 1rem; color: var(--text); font-size: 1.2rem; }
+
+.shared-data-layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.product-image-preview { display: grid; min-height: 11rem; margin-top: 1.45rem; place-items: center; align-content: center; gap: .55rem; overflow: hidden; border-radius: .5rem; color: var(--text-muted); background: var(--surface-hover); }
+.product-image-preview img { width: 100%; height: 11rem; object-fit: contain; background: white; }
+.product-image-preview i { font-size: 2rem; }
+.shared-data-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.variants-switch { display: flex; align-items: center; gap: .8rem; cursor: pointer; }
+.variants-switch span { display: grid; gap: .2rem; }
+.variants-switch small { color: var(--text-muted); }
+.simple-product-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 1rem; margin-top: 1rem; }
+.auto-sku { padding-bottom: .7rem; color: var(--text-muted); font-size: .85rem; }
+.variant-editor { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.variant-editor-header, .variant-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.variant-editor-header h2 { margin: 0; }
+.dimension-new { display: flex; max-width: 28rem; gap: .5rem; }
+.dimension-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: .75rem; align-items: center; padding: .75rem; border: 1px solid var(--border); border-radius: .5rem; }
+.dimension-values { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.dimension-values input { width: 8rem; }
+.dimension-chip { display: inline-flex; align-items: center; gap: .25rem; padding: .35rem .6rem; border-radius: 999px; background: var(--primary-soft); font-size: .8rem; }
+.dimension-chip button, .icon-button { border: 0; color: inherit; background: transparent; cursor: pointer; font: inherit; }
+.icon-button { display: inline-grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid var(--border); border-radius: .35rem; }
+.icon-button.danger { color: var(--danger); }
+.variant-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: .5rem; }
+.variant-edit-table { width: 100%; min-width: 50rem; border-collapse: collapse; }
+.variant-edit-table th, .variant-edit-table td { padding: .55rem; border-bottom: 1px solid var(--border); text-align: left; }
+.variant-edit-table th { color: var(--text-muted); font-size: .75rem; }
+.variant-edit-table tr:last-child td { border-bottom: 0; }
+.variant-edit-table input { min-width: 6.5rem; width: 100%; }
+.optional-details summary { cursor: pointer; color: var(--text); font-weight: 700; }
+.optional-details .form-grid { margin-top: 1rem; }
+
+@media (max-width: 1024px) {
+  .product-page { padding-inline: 1.5rem; }
+  .shared-data-layout { grid-template-columns: 10rem minmax(0, 1fr); }
+  .shared-data-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-image-preview, .product-image-preview img { min-height: 9rem; height: 9rem; }
+  .brand-create-form { grid-column: 1 / -1; }
+  .variant-actions { align-items: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .form-page-header { align-items: stretch; }
+  .form-page-header .products-actions { justify-content: stretch; }
+  .form-page-header .products-actions button { flex: 1; }
+  .shared-data-layout { grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; }
+  .shared-data-fields, .simple-product-fields { grid-template-columns: 1fr; }
+  .product-image-preview { margin-top: 1.45rem; }
+  .dimension-row { grid-template-columns: 1fr auto; }
+  .dimension-row > strong { grid-column: 1 / -1; }
+  .dimension-values input { flex: 1 1 8rem; }
+  .variant-actions { flex-wrap: wrap; }
+}
+
 .barcode-lookup-card {
   padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
@@ -455,6 +522,17 @@ code {
 .field textarea:focus {
   border-color: var(--accent);
   outline: 2px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.field--error input,
+.field--error textarea,
+.field--error .p-inputtext,
+.field--error .p-select {
+  border-color: var(--danger);
+}
+
+.field--error .p-select {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 35%, transparent);
 }
 
 .field small,
@@ -574,6 +652,9 @@ code {
     flex: 1;
   }
 
+  .family-card,
+  .barcode-lookup-card { padding: 1rem; }
+
   .products-header h1 {
     font-size: 26px;
   }
@@ -581,6 +662,18 @@ code {
   .form-grid {
     grid-template-columns: 1fr;
   }
+
+  .shared-data-layout, .shared-data-fields, .simple-product-fields { grid-template-columns: 1fr; }
+  .product-image-preview { min-height: 8rem; margin-top: 0; }
+  .product-image-preview img { height: 10rem; }
+  .dimension-row { grid-template-columns: 1fr auto; }
+  .dimension-row > strong { grid-column: 1 / -1; }
+  .dimension-new { max-width: none; }
+  .dimension-new .secondary-button { flex: 0 0 auto; }
+  .variant-editor-header,
+  .variant-actions { align-items: stretch; flex-direction: column; }
+  .variant-actions .primary-button { width: 100%; }
+  .variant-table-wrap { margin-inline: -.15rem; }
 
   .products-filters-grid {
     grid-template-columns: 1fr;
@@ -602,6 +695,8 @@ code {
   .barcode-input-row {
     grid-template-columns: 1fr;
   }
+
+  .barcode-input-row .secondary-button { width: 100%; }
 
   .dialog-actions {
     flex-direction: column-reverse;

@@ -90,22 +90,29 @@ type CreateProductInput struct {
 	Variantes         []CreateProductVariantInput `json:"variantes"`
 }
 
-// UpdateProductInput intentionally excludes stock and branch assignment: inventory
-// movements are managed separately from commercial product data.
+// UpdateProductInput intentionally excludes stock and branch assignment: inventory movements are managed separately from commercial product data.
 type UpdateProductInput struct {
-	Nombre          string     `json:"nombre" binding:"required"`
-	SKUInterno      string     `json:"sku_interno" binding:"required"`
-	MarcaID         *uuid.UUID `json:"marca_id"`
-	ProveedorID     *uuid.UUID `json:"proveedor_id"`
-	CategoriaID     uuid.UUID  `json:"categoria_id" binding:"required"`
-	Descripcion     *string    `json:"descripcion"`
-	Contenido       *float64   `json:"contenido"`
-	UnidadContenido *string    `json:"unidad_contenido"`
-	UnidadMedidaID  *uuid.UUID `json:"unidad_medida_id"`
-	Presentacion    *string    `json:"presentacion"`
-	PrecioVenta     float64    `json:"precio_venta"`
-	CodigoBarras    *string    `json:"codigo_barras"`
-	ImagenURL       *string    `json:"imagen_url"`
+	Nombre          string                      `json:"nombre" binding:"required"`
+	MarcaID         *uuid.UUID                  `json:"marca_id"`
+	ProveedorID     *uuid.UUID                  `json:"proveedor_id"`
+	CategoriaID     *uuid.UUID                  `json:"categoria_id"`
+	Descripcion     *string                     `json:"descripcion"`
+	Contenido       *float64                    `json:"contenido"`
+	UnidadContenido *string                     `json:"unidad_contenido"`
+	UnidadMedidaID  *uuid.UUID                  `json:"unidad_medida_id"`
+	Presentacion    *string                     `json:"presentacion"`
+	PrecioVenta     float64                     `json:"precio_venta"`
+	CodigoBarras    *string                     `json:"codigo_barras"`
+	ImagenURL       *string                     `json:"imagen_url"`
+	Variantes       []UpdateProductVariantInput `json:"variantes"`
+}
+
+// UpdateProductVariantInput only changes commercial variant data. SKU and inventory stay owned by their respective flows.
+type UpdateProductVariantInput struct {
+	ID           *uuid.UUID                     `json:"id"`
+	Atributos    []ProductVariantAttributeInput `json:"atributos" binding:"required"`
+	PrecioVenta  float64                        `json:"precio_venta"`
+	CodigoBarras *string                        `json:"codigo_barras"`
 }
 
 type ProductLookup struct {
@@ -143,6 +150,7 @@ type CatalogImportResult struct {
 	Omitidas                  int                  `json:"omitidas"`
 	Invalidas                 int                  `json:"invalidas"`
 	SKUsGenerados             int                  `json:"skus_generados"`
+	ProductosSimplesCreados   int                  `json:"productos_simples_creados"`
 	ProductosBaseCreados      int                  `json:"productos_base_creados"`
 	ProductosBaseReutilizados int                  `json:"productos_base_reutilizados"`
 	VariantesCreadas          int                  `json:"variantes_creadas"`
@@ -161,7 +169,6 @@ type ProductImportPreview struct {
 type ProductImportRow struct {
 	Fila            int
 	Nombre          string
-	SKUInterno      string
 	Categoria       string
 	Marca           string
 	Proveedor       string
@@ -185,7 +192,6 @@ type ValidatedProductImportRow struct {
 // CreateImportedProductInput permits the optional fields supported
 type CreateImportedProductInput struct {
 	Nombre          string
-	SKUInterno      *string
 	MarcaID         *uuid.UUID
 	ProveedorID     *uuid.UUID
 	CategoriaID     *uuid.UUID

@@ -72,4 +72,20 @@ func TestFallbackLookupUsesSecondaryAndCombinesErrors(t *testing.T) {
 	if _, err := missing.LookupProduct("2"); !errors.Is(err, application.ErrProductNotFound) {
 		t.Fatalf("error combinado = %v", err)
 	}
+
+	primaryUnavailable := NewFallbackProductLookup(
+		&productLookupStub{err: application.ErrLookupUnavailable},
+		&productLookupStub{err: application.ErrProductNotFound},
+	)
+	if _, err := primaryUnavailable.LookupProduct("3"); !errors.Is(err, application.ErrProductNotFound) {
+		t.Fatalf("sin proveedor principal y producto ausente, error = %v", err)
+	}
+
+	bothUnavailable := NewFallbackProductLookup(
+		&productLookupStub{err: application.ErrLookupUnavailable},
+		&productLookupStub{err: application.ErrLookupUnavailable},
+	)
+	if _, err := bothUnavailable.LookupProduct("4"); !errors.Is(err, application.ErrLookupUnavailable) {
+		t.Fatalf("ambos proveedores no disponibles, error = %v", err)
+	}
 }

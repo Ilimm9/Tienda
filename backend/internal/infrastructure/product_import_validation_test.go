@@ -6,20 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestProductImportIdentityKeyNormalizesValues(t *testing.T) {
-	first := productImportIdentityKey("  Café molido ", " SKU-01 ", " Caja ")
-	second := productImportIdentityKey("cafe MOLIDO", "sku-01", "caja")
-	if first != second {
-		t.Fatalf("keys = %q and %q, want equal normalized keys", first, second)
-	}
-	if first == productImportIdentityKey("Café molido", "sku-01", "Bolsa") {
-		t.Fatal("different presentations must not share a duplicate key")
-	}
-	if first == productImportIdentityKey("Café molido", "sku-02", "Caja") {
-		t.Fatal("different SKUs must not share a duplicate key")
-	}
-}
-
 func TestProductImportNamePresentationKeyNormalizesValues(t *testing.T) {
 	first := productImportNamePresentationKey("  Café molido ", " Caja ")
 	second := productImportNamePresentationKey("cafe MOLIDO", "caja")

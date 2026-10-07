@@ -67,21 +67,29 @@ p-table.app-table .p-datatable-tbody > tr:last-child > td {
   border-bottom: 0;
 }
 
-/* Products: image | name | sku | price | stock | category | status | actions */
+/* Products: expander | image | name | price | stock | category | provider | status | actions */
 p-table.app-table--products th:first-child,
 p-table.app-table--products td:first-child {
-  width: 5.5rem;
+  width: 3rem;
+  min-width: 3rem;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
   text-align: center;
 }
 
 p-table.app-table--products th:nth-child(2),
 p-table.app-table--products td:nth-child(2) {
-  min-width: 13rem;
+  width: 4rem;
+  min-width: 4rem;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+  text-align: center;
 }
 
 p-table.app-table--products th:nth-child(3),
 p-table.app-table--products td:nth-child(3) {
-  width: 10rem;
+  min-width: 13rem;
+  padding-left: 0.5rem;
 }
 
 p-table.app-table--products th:nth-child(4),
@@ -100,6 +108,30 @@ p-table.app-table--products th:last-child,
 p-table.app-table--products td:last-child {
   width: 7rem;
   text-align: center;
+}
+
+@media (max-width: 1024px) {
+  p-table.app-table--products th:first-child,
+  p-table.app-table--products td:first-child {
+    width: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  p-table.app-table--products th:nth-child(2),
+  p-table.app-table--products td:nth-child(2) {
+    width: 3.75rem;
+    min-width: 3.75rem;
+  }
+
+  p-table.app-table--products th:nth-child(3),
+  p-table.app-table--products td:nth-child(3) {
+    min-width: 11rem;
+  }
+
+  p-table.app-table--products .product-image {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
 }
 
 /* Categories: name | description | status | actions */
@@ -319,5 +351,32 @@ p-table.app-table .p-paginator .p-select {
   p-table.app-table .p-datatable-tbody > tr > td {
     padding-right: 1rem;
     padding-left: 1rem;
+  }
+
+  p-table.app-table--products th:first-child,
+  p-table.app-table--products td:first-child {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    padding-right: 0.4rem;
+    padding-left: 0.4rem;
+  }
+
+  p-table.app-table--products th:nth-child(2),
+  p-table.app-table--products td:nth-child(2) {
+    width: 3.5rem;
+    min-width: 3.5rem;
+    padding-right: 0.4rem;
+    padding-left: 0.4rem;
+  }
+
+  p-table.app-table--products th:nth-child(3),
+  p-table.app-table--products td:nth-child(3) {
+    min-width: 10rem;
+    padding-left: 0.4rem;
+  }
+
+  p-table.app-table--products .product-image {
+    width: 1.75rem;
+    height: 1.75rem;
   }
 }

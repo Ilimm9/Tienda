@@ -74,11 +74,11 @@
             <label
               >Proveedor<p-select
                 formControlName="proveedor_id"
-                [options]="providers()"
+                [options]="providerOptions()"
                 optionLabel="nombre"
                 optionValue="id"
                 placeholder="Selecciona"
-                (onChange)="loadProducts()" /></label
+                (onChange)="selectProvider($event.value)" /></label
             ><label
               >Sucursal receptora<p-select
                 formControlName="sucursal_id"
@@ -109,6 +109,22 @@
             ><label class="purchase-field-wide"
               >Observaciones<textarea pTextarea formControlName="observaciones" rows="3"></textarea>
             </label>
+            @if (creatingProvider()) {
+              <section *appPuede="P.catalogoGestionar" class="purchase-provider-form" [formGroup]="providerForm">
+                <h3>Nuevo proveedor</h3>
+                <div class="purchase-grid">
+                  <label>Nombre del proveedor<input pInputText formControlName="nombre" /></label>
+                </div>
+                @if (providerError()) {
+                  <p class="form-error" role="alert">{{ providerError() }}</p>
+                }
+                <div class="purchase-actions">
+                  <button class="primary-button" type="button" (click)="createProvider()" [disabled]="providerForm.invalid || providerSaving()">
+                    {{ providerSaving() ? 'Guardando…' : 'Guardar proveedor' }}
+                  </button>
+                </div>
+              </section>
+            }
           </section>
           <section class="purchase-card purchase-form-card">
             <div class="purchase-section-heading">

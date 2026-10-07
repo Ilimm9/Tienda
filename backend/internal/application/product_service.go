@@ -75,12 +75,7 @@ func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.
 	if err != nil {
 		return result, err
 	}
-	result.Creadas += imported.Creadas
-	result.Omitidas += imported.Omitidas
-	result.Invalidas += imported.Invalidas
-	result.SKUsGenerados += imported.SKUsGenerados
-	result.Errores = append(result.Errores, imported.Errores...)
-	return result, nil
+	return mergeImportResults(result, imported), nil
 }
 
 func (s *ProductService) StartProductImport(businessID, branchID uuid.UUID, content []byte) (domain.ProductImportJob, error) {
@@ -109,11 +104,7 @@ func (s *ProductService) GetProductImportJob(businessID, jobID uuid.UUID) (domai
 
 func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
 	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
-	for _, row := range prepared {
-		if row.Input.SKUInterno == nil || strings.TrimSpace(*row.Input.SKUInterno) == "" {
-			result.SKUsGenerados++
-		}
-	}
+	result.SKUsGenerados += len(prepared)
 	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared)}, err
 }
 

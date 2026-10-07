@@ -103,7 +103,9 @@ func appendUnique(values []string, candidates ...string) []string {
 }
 
 func combinedLookupError(primaryErr, fallbackErr error) error {
-	if errors.Is(primaryErr, application.ErrProductNotFound) && errors.Is(fallbackErr, application.ErrProductNotFound) {
+	// A completed fallback lookup that found no product is authoritative even when
+	// the optional primary catalog is misconfigured or temporarily unavailable.
+	if errors.Is(fallbackErr, application.ErrProductNotFound) {
 		return application.ErrProductNotFound
 	}
 	if errors.Is(primaryErr, application.ErrLookupRateLimited) || errors.Is(fallbackErr, application.ErrLookupRateLimited) {

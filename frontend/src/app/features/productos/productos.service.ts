@@ -5,11 +5,13 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CatalogOption,
+  CreateUnitRequest,
   CreateProductRequest,
   ProductImportJob,
   ProductImportPreview,
   ProductListResponse,
   ProductLookup,
+  UnitOption,
   UpdateProductRequest,
 } from './product.models';
 
@@ -41,13 +43,21 @@ export class ProductosService {
     });
   }
 
+  createCategory(businessId: string, nombre: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/negocios/${businessId}/catalogo/categorias`, { nombre });
+  }
+
+  createUnit(businessId: string, payload: CreateUnitRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/negocios/${businessId}/catalogo/unidades-medida`, payload);
+  }
+
   listBranches(businessId: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(
       `${environment.apiUrl}/negocios/${businessId}/sucursales`,
     );
   }
-  listUnits(businessId: string): Observable<CatalogOption[]> {
-    return this.http.get<CatalogOption[]>(
+  listUnits(businessId: string): Observable<UnitOption[]> {
+    return this.http.get<UnitOption[]>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/unidades-medida`,
     );
   }

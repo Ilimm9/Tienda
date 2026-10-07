@@ -74,7 +74,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 	}
 	if section == "productos" {
 		sheet = "Productos"
-		headers = []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+		headers = []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	}
 	book.SetSheetName(book.GetSheetName(0), sheet)
 	for index, header := range headers {
@@ -100,13 +100,13 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		instructionRows := [][]string{
 			{"Carga masiva de productos", "Completa una fila por producto. La hoja Productos debe conservar sus encabezados."},
 			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
-			{"Campos opcionales", "SKU interno, Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
+			{"Campos opcionales", "Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
 			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
 			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida solo se validan si se indican y deben existir activos."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
-			{"SKU interno", "Es opcional. Si se omite, se generará un identificador automático al importar."},
-			{"Variantes", "Opcional. Usa Atributo=Valor; por ejemplo Colección=Dinosaurios o Sabor=Fresa; Color=Rojo."},
-			{"Duplicados", "Con SKU se comparan Nombre, SKU interno y Presentación. Sin SKU se comparan Nombre y Presentación. El código de barras no puede repetirse."},
+			{"SKU interno", "Se genera automáticamente al importar y no debe incluirse como columna en el archivo."},
+			{"Variantes", "Opcional. Usa Atributo: valor; por ejemplo Colección: Dinosaurios o Sabor: Fresa; Color: Rojo."},
+			{"Duplicados", "Los productos simples se comparan por Nombre y Presentación. Las variantes se comparan por producto base y atributos. El código de barras no puede repetirse."},
 			{"Resultado", "Las filas inválidas se reportan con fila, campo y motivo; las válidas se crean."},
 		}
 		for rowIndex, row := range instructionRows {
@@ -129,7 +129,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 }
 
 func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.CatalogImportResult, error) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	rows, result, err := readImportRows(file, headers)
 	if err != nil {
 		return nil, result, err
@@ -148,7 +148,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 		if cell(row, 0) == "" {
 			addError("Nombre", "es obligatorio")
 		}
-		contenidoText := cell(row, 6)
+		contenidoText := cell(row, 5)
 		var contenido *float64
 		if contenidoText != "" {
 			value, parseErr := strconv.ParseFloat(contenidoText, 64)
@@ -158,7 +158,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 				contenido = &value
 			}
 		}
-		precioText, stockText := cell(row, 9), cell(row, 10)
+		precioText, stockText := cell(row, 8), cell(row, 9)
 		precio, precioErr := strconv.ParseFloat(precioText, 64)
 		stock, stockErr := strconv.ParseFloat(stockText, 64)
 		if precioText == "" {
@@ -171,13 +171,13 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 		} else if stockErr != nil || stock < 0 {
 			addError("Stock inicial", "debe ser un número mayor o igual a cero")
 		}
-		barcode := cell(row, 11)
+		barcode := cell(row, 10)
 		if barcode != "" && !barcodePattern.MatchString(barcode) && !shortBarcodePattern.MatchString(barcode) {
 			addError("Código de barras", "debe contener solo de 1 a 14 dígitos")
 		} else if shortBarcodePattern.MatchString(barcode) {
 			addWarning("Código de barras", "tiene menos de 8 dígitos; se importará sin búsqueda automática de imagen")
 		}
-		variantes, variantErr := parseVariantAttributes(cell(row, 12))
+		variantes, variantErr := parseVariantAttributes(cell(row, 11))
 		if variantErr != nil {
 			addError("Variantes", variantErr.Error())
 		}
@@ -185,7 +185,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			result.Invalidas++
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), SKUInterno: cell(row, 1), Categoria: cell(row, 2), Marca: cell(row, 3), Descripcion: cell(row, 4), Presentacion: cell(row, 5), Contenido: contenido, UnidadContenido: cell(row, 7), UnidadMedida: cell(row, 8), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), Categoria: cell(row, 1), Marca: cell(row, 2), Descripcion: cell(row, 3), Presentacion: cell(row, 4), Contenido: contenido, UnidadContenido: cell(row, 6), UnidadMedida: cell(row, 7), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 12)})
 	}
 	return valid, result, nil
 }
@@ -198,9 +198,9 @@ func parseVariantAttributes(value string) ([]domain.ProductVariantAttributeInput
 	attributes := make([]domain.ProductVariantAttributeInput, 0)
 	seen := make(map[string]struct{})
 	for _, item := range strings.Split(value, ";") {
-		parts := strings.SplitN(item, "=", 2)
+		parts := strings.SplitN(item, ":", 2)
 		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
-			return nil, errors.New("usa el formato Atributo=Valor separado por punto y coma")
+			return nil, errors.New("usa el formato Atributo: valor separado por punto y coma")
 		}
 		name, attributeValue := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
 		key := strings.ToLower(strings.TrimSpace(name))
@@ -340,5 +340,17 @@ func isEmptyRow(row []string) bool {
 }
 
 func mergeImportResults(first, second domain.CatalogImportResult) domain.CatalogImportResult {
-	return domain.CatalogImportResult{Procesadas: first.Procesadas, Creadas: second.Creadas, Omitidas: first.Omitidas + second.Omitidas, Invalidas: first.Invalidas + second.Invalidas, Errores: append(first.Errores, second.Errores...), Advertencias: append(first.Advertencias, second.Advertencias...)}
+	return domain.CatalogImportResult{
+		Procesadas:                first.Procesadas,
+		Creadas:                   first.Creadas + second.Creadas,
+		Omitidas:                  first.Omitidas + second.Omitidas,
+		Invalidas:                 first.Invalidas + second.Invalidas,
+		SKUsGenerados:             first.SKUsGenerados + second.SKUsGenerados,
+		ProductosSimplesCreados:   first.ProductosSimplesCreados + second.ProductosSimplesCreados,
+		ProductosBaseCreados:      first.ProductosBaseCreados + second.ProductosBaseCreados,
+		ProductosBaseReutilizados: first.ProductosBaseReutilizados + second.ProductosBaseReutilizados,
+		VariantesCreadas:          first.VariantesCreadas + second.VariantesCreadas,
+		Errores:                   append(first.Errores, second.Errores...),
+		Advertencias:              append(first.Advertencias, second.Advertencias...),
+	}
 }

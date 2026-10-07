@@ -20,11 +20,13 @@ import { TextareaModule } from 'primeng/textarea';
 import { ContextoService } from '../../contexto/contexto.service';
 import {
   CatalogOption,
+  CreateUnitRequest,
   ProductImportPreview,
   ProductImportResult,
   ProductLookup,
   ProductRow,
   ProductVariantRow,
+  UnitOption,
 } from './product.models';
 import { ProductosService } from './productos.service';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
@@ -32,6 +34,7 @@ import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
 
 type VariantFormGroup = FormGroup<{
+  id: FormControl<string>;
   atributos: FormControl<string>;
   sku_interno: FormControl<string>;
   generar_sku_interno: FormControl<boolean>;
@@ -39,6 +42,12 @@ type VariantFormGroup = FormGroup<{
   stock_inicial: FormControl<number>;
   codigo_barras: FormControl<string>;
 }>;
+
+interface VariantDimension {
+  nombre: string;
+  valores: string[];
+  nuevoValor: string;
+}
 
 @Component({
   selector: 'app-productos',
@@ -103,19 +112,27 @@ export class ProductosComponent {
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
+  readonly categoryOptions = computed(() => [...this.categories(), { id: '__new_category__', nombre: 'Crear nueva…' }]);
   readonly brandOptions = computed(() => [
     ...this.brands(),
     { id: '__new_brand__', nombre: 'Crear nueva…' },
   ]);
   readonly providers = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
-  readonly units = signal<CatalogOption[]>([]);
+  readonly units = signal<UnitOption[]>([]);
+  readonly unitOptions = computed(() => [...this.units(), { id: '__new_unit__', nombre: 'Crear nueva…', codigo: '', simbolo: '' }]);
   readonly catalogLoadErrors = signal<string[]>([]);
   readonly branchReady = signal(false);
   readonly saving = signal(false);
   readonly brandCreating = signal(false);
   readonly brandCreationVisible = signal(false);
   readonly brandCreationError = signal<string | null>(null);
+  readonly categoryCreating = signal(false);
+  readonly categoryCreationVisible = signal(false);
+  readonly categoryCreationError = signal<string | null>(null);
+  readonly unitCreating = signal(false);
+  readonly unitCreationVisible = signal(false);
+  readonly unitCreationError = signal<string | null>(null);
   readonly imageLookupLoading = signal(false);
   readonly imageLookupError = signal<string | null>(null);
   readonly previewImageURL = signal<string | null>(null);
@@ -128,6 +145,8 @@ export class ProductosComponent {
   readonly importResult = signal<ProductImportResult | null>(null);
   readonly importPreview = signal<ProductImportPreview | null>(null);
   readonly editingProduct = signal<ProductRow | null>(null);
+  readonly variantDimensions = signal<VariantDimension[]>([]);
+  readonly newDimensionName = signal('');
   readonly deletingProductId = signal<string | null>(null);
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
@@ -139,7 +158,7 @@ export class ProductosComponent {
 
   readonly productForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
-    sku_interno: ['', [Validators.required, Validators.maxLength(120)]],
+    sku_interno: ['', Validators.maxLength(120)],
     generar_sku_interno: [false],
     tiene_variantes: [false],
     variantes: this.formBuilder.array<VariantFormGroup>([]),
@@ -160,8 +179,17 @@ export class ProductosComponent {
   readonly brandForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(180)]],
   });
+  readonly categoryForm = this.formBuilder.nonNullable.group({ nombre: ['', [Validators.required, Validators.maxLength(180)]] });
+  readonly unitForm = this.formBuilder.nonNullable.group({
+    nombre: ['', [Validators.required, Validators.maxLength(100)]],
+    simbolo: ['', [Validators.required, Validators.maxLength(20)]],
+    tipo: ['VOLUMEN', Validators.required],
+  });
 
   constructor() {
+    this.productForm.controls.precio_venta.valueChanges.subscribe(() => {
+      if (this.productForm.controls.tiene_variantes.value) this.applyBasePrice();
+    });
     if (this.pageMode === 'list') {
       this.loadProducts();
     } else if (this.pageMode === 'create') {
@@ -238,7 +266,7 @@ export class ProductosComponent {
     this.productForm.reset({
       nombre: '',
       sku_interno: '',
-      generar_sku_interno: false,
+      generar_sku_interno: true,
       tiene_variantes: false,
       marca_id: '',
       proveedor_id: '',
@@ -256,10 +284,12 @@ export class ProductosComponent {
     });
     this.productForm.controls.sucursal_id.enable();
     this.productForm.controls.stock_inicial.enable();
-    this.productForm.controls.sku_interno.enable();
+    this.productForm.controls.sku_interno.disable();
+    this.onGenerateSKUChanged();
     this.productForm.controls.precio_venta.enable();
     this.productForm.controls.stock_inicial.enable();
     this.productForm.controls.variantes.clear();
+    this.variantDimensions.set([]);
     this.editingProduct.set(null);
     this.categories.set([]);
     this.brands.set([]);
@@ -337,7 +367,7 @@ export class ProductosComponent {
       nombre: product.nombre,
       sku_interno: product.sku ?? '',
       generar_sku_interno: false,
-      tiene_variantes: false,
+      tiene_variantes: product.variantes.length > 0,
       codigo_barras: product.codigo_barras ?? '',
       imagen_url: product.imagen_url ?? '',
       marca_id: product.marca_id ?? '',
@@ -354,8 +384,26 @@ export class ProductosComponent {
     });
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
-    this.productForm.controls.sku_interno.enable();
+    this.productForm.controls.sku_interno.disable();
     this.productForm.controls.variantes.clear();
+    if (product.variantes.length > 0) {
+      const dimensions = new Map<string, string[]>();
+      product.variantes.forEach((variant) => variant.atributos.forEach((attribute) => {
+        const values = dimensions.get(attribute.nombre) ?? [];
+        if (!values.includes(attribute.valor)) values.push(attribute.valor);
+        dimensions.set(attribute.nombre, values);
+      }));
+      this.variantDimensions.set([...dimensions.entries()].map(([nombre, valores]) => ({ nombre, valores, nuevoValor: '' })));
+      product.variantes.forEach((variant) => {
+        const control = this.createVariantForm();
+        control.patchValue({ id: variant.id, atributos: this.serializeVariantAttributes(variant.atributos), sku_interno: variant.sku ?? '', precio_venta: variant.precio, stock_inicial: variant.stock, codigo_barras: variant.codigo_barras ?? '', generar_sku_interno: !variant.sku });
+        control.controls.stock_inicial.disable();
+        this.variantControls.push(control);
+      });
+      this.onVariantsChanged();
+    }
+    this.productForm.markAsPristine();
+    this.productForm.markAsUntouched();
     this.productosService.listCategories(this.negocioID).subscribe({
       next: (items) => this.categories.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las categorías.'),
@@ -552,7 +600,7 @@ export class ProductosComponent {
           Swal.fire({
             icon: partial ? 'warning' : 'success',
             title: 'Importación terminada',
-            text: `${job.resultado.productos_base_creados} productos base nuevos · ${job.resultado.productos_base_reutilizados} reutilizados · ${job.resultado.variantes_creadas} variantes registradas · ${job.resultado.omitidas} omitidas · ${job.resultado.invalidas} inválidas`,
+            text: `${job.resultado.creadas} filas importadas correctamente · ${job.resultado.productos_simples_creados ?? 0} productos simples · ${job.resultado.productos_base_creados} familias nuevas · ${job.resultado.productos_base_reutilizados} familias reutilizadas · ${job.resultado.variantes_creadas} variantes · ${job.resultado.omitidas} omitidas · ${job.resultado.invalidas} inválidas`,
           });
           return;
         }
@@ -579,6 +627,55 @@ export class ProductosComponent {
     this.branchReady.set(!!this.productForm.controls.sucursal_id.value);
   }
 
+  onUnitContentSelected(unitID: string): void {
+    if (unitID === '__new_unit__') {
+      this.productForm.controls.unidad_medida_id.setValue('');
+      this.unitCreationVisible.set(true);
+      this.unitCreationError.set(null);
+      return;
+    }
+    const unit = this.units().find((item) => item.id === unitID);
+    this.productForm.controls.unidad_contenido.setValue(unit?.simbolo ?? '');
+  }
+
+  onCategorySelected(categoryID: string): void {
+    if (categoryID === '__new_category__') {
+      this.productForm.controls.categoria_id.setValue('');
+      this.categoryCreationVisible.set(true);
+      this.categoryCreationError.set(null);
+    }
+  }
+
+  createCategory(): void {
+    this.categoryForm.markAllAsTouched();
+    if (this.categoryForm.invalid || this.categoryCreating()) return;
+    const nombre = this.categoryForm.controls.nombre.value.trim();
+    this.categoryCreating.set(true);
+    this.productosService.createCategory(this.negocioID, nombre).subscribe({
+      next: () => this.productosService.listCategories(this.negocioID).subscribe({
+        next: (items) => { this.categories.set(items); this.categoryCreating.set(false); const created = items.find((item) => this.normalizeCatalogText(item.nombre) === this.normalizeCatalogText(nombre)); if (!created) { this.categoryCreationError.set('La categoría fue creada, pero no fue posible seleccionarla.'); return; } this.productForm.controls.categoria_id.setValue(created.id); this.categoryCreationVisible.set(false); this.categoryForm.reset(); },
+        error: () => { this.categoryCreating.set(false); this.categoryCreationError.set('La categoría fue creada, pero no fue posible recargarla.'); },
+      }),
+      error: (response) => { this.categoryCreating.set(false); this.categoryCreationError.set(response.error?.mensaje ?? 'No fue posible crear la categoría.'); },
+    });
+  }
+
+  createUnit(): void {
+    this.unitForm.markAllAsTouched();
+    if (this.unitForm.invalid || this.unitCreating()) return;
+    const value = this.unitForm.getRawValue();
+    const simbolo = value.simbolo.trim();
+    const payload: CreateUnitRequest = { ...value, codigo: this.normalizeCatalogText(simbolo).replaceAll(' ', '-'), nombre: value.nombre.trim(), simbolo, factor_a_base: 1, permite_fraccion: true, decimales: 2 };
+    this.unitCreating.set(true);
+    this.productosService.createUnit(this.negocioID, payload).subscribe({
+      next: () => this.productosService.listUnits(this.negocioID).subscribe({
+        next: (items) => { this.units.set(items); this.unitCreating.set(false); const created = items.find((item) => item.codigo === payload.codigo); if (!created) { this.unitCreationError.set('La unidad fue creada, pero no fue posible seleccionarla.'); return; } this.productForm.controls.unidad_medida_id.setValue(created.id); this.productForm.controls.unidad_contenido.setValue(created.simbolo); this.unitCreationVisible.set(false); this.unitForm.reset({ nombre: '', simbolo: '', tipo: 'VOLUMEN' }); },
+        error: () => { this.unitCreating.set(false); this.unitCreationError.set('La unidad fue creada, pero no fue posible recargarla.'); },
+      }),
+      error: (response) => { this.unitCreating.set(false); this.unitCreationError.set(response.error?.mensaje ?? 'No fue posible crear la unidad.'); },
+    });
+  }
+
   onGenerateSKUChanged(): void {
     const controls = this.productForm.controls;
     if (controls.generar_sku_interno.value) {
@@ -586,7 +683,8 @@ export class ProductosComponent {
       controls.sku_interno.disable();
       return;
     }
-    controls.sku_interno.enable();
+    if (this.editingProduct()) controls.sku_interno.disable();
+    else controls.sku_interno.enable();
   }
 
   get variantControls(): FormArray<VariantFormGroup> {
@@ -597,23 +695,87 @@ export class ProductosComponent {
     const controls = this.productForm.controls;
     if (controls.tiene_variantes.value) {
       controls.sku_interno.disable();
-      controls.precio_venta.disable();
       controls.stock_inicial.disable();
-      if (this.variantControls.length === 0) this.addVariant();
+      controls.codigo_barras.setValue('');
       return;
     }
-    controls.sku_interno.enable();
-    controls.precio_venta.enable();
+    if (this.editingProduct()) controls.sku_interno.disable();
+    else controls.sku_interno.enable();
     controls.stock_inicial.enable();
     this.variantControls.clear();
+    this.variantDimensions.set([]);
   }
 
   addVariant(): void {
     this.variantControls.push(this.createVariantForm());
   }
 
+  addDimension(): void {
+    const nombre = this.newDimensionName().trim();
+    if (!nombre || this.variantDimensions().some((dimension) => dimension.nombre.toLocaleLowerCase() === nombre.toLocaleLowerCase())) return;
+    this.variantDimensions.update((items) => [...items, { nombre, valores: [], nuevoValor: '' }]);
+    this.newDimensionName.set('');
+  }
+
+  removeDimension(index: number): void {
+    this.variantDimensions.update((items) => items.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  setDimensionValue(index: number, value: string): void {
+    this.variantDimensions.update((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, nuevoValor: value } : item));
+  }
+
+  addDimensionValue(index: number): void {
+    this.variantDimensions.update((items) => items.map((item, itemIndex) => {
+      if (itemIndex !== index) return item;
+      const value = item.nuevoValor.trim();
+      return !value || item.valores.some((current) => current.toLocaleLowerCase() === value.toLocaleLowerCase())
+        ? item
+        : { ...item, valores: [...item.valores, value], nuevoValor: '' };
+    }));
+  }
+
+  removeDimensionValue(dimensionIndex: number, valueIndex: number): void {
+    this.variantDimensions.update((items) => items.map((item, itemIndex) => itemIndex === dimensionIndex ? { ...item, valores: item.valores.filter((_, index) => index !== valueIndex) } : item));
+  }
+
+  canGenerateCombinations(): boolean {
+    return this.variantDimensions().length > 0 && this.variantDimensions().every((dimension) => dimension.valores.length > 0);
+  }
+
+  generateCombinations(): void {
+    if (!this.canGenerateCombinations()) return;
+    const dimensions = this.variantDimensions();
+    const combinations = dimensions.reduce<{ nombre: string; valor: string }[][]>((rows, dimension) => rows.flatMap((row) => dimension.valores.map((valor) => [...row, { nombre: dimension.nombre, valor }])), [[]]);
+    const existing = new Set(this.variantControls.controls.map((control) => control.controls.atributos.value));
+    for (const attributes of combinations) {
+      const serialized = this.serializeVariantAttributes(attributes);
+      if (!existing.has(serialized)) {
+        const control = this.createVariantForm();
+        control.controls.atributos.setValue(serialized);
+        control.controls.precio_venta.setValue(this.productForm.controls.precio_venta.value);
+        if (this.editingProduct()) control.controls.stock_inicial.disable();
+        this.variantControls.push(control);
+      }
+    }
+  }
+
+  applyBasePrice(): void {
+    const price = this.productForm.controls.precio_venta.value;
+    this.variantControls.controls.forEach((control) => control.controls.precio_venta.setValue(price));
+  }
+
+  variantAttributeValues(index: number): { nombre: string; valor: string }[] {
+    return this.parseVariantAttributes(this.variantControls.at(index).controls.atributos.value);
+  }
+
+  private serializeVariantAttributes(attributes: { nombre: string; valor: string }[]): string {
+    return attributes.map((attribute) => `${attribute.nombre}=${attribute.valor}`).join(';');
+  }
+
   private createVariantForm(): VariantFormGroup {
     return this.formBuilder.nonNullable.group({
+      id: [''],
       atributos: ['', Validators.required],
       sku_interno: ['', Validators.maxLength(120)],
       generar_sku_interno: [true],
@@ -638,7 +800,9 @@ export class ProductosComponent {
   }
 
   canSubmitProduct(): boolean {
-    return !this.saving() && (this.editingProduct() !== null || this.branchReady());
+    if (this.saving()) return false;
+    if (this.editingProduct()) return this.productForm.dirty;
+    return this.branchReady();
   }
 
   canLookupProduct(): boolean {
@@ -646,6 +810,11 @@ export class ProductosComponent {
       /^\d{8,14}$/.test(this.productForm.controls.codigo_barras.value.trim()) &&
       !this.imageLookupLoading()
     );
+  }
+
+  onBarcodeEnter(event: Event): void {
+    event.preventDefault();
+    if (this.canLookupProduct()) this.lookupProduct();
   }
 
   onBarcodeChanged(): void {
@@ -728,9 +897,6 @@ export class ProductosComponent {
       (controls.unidad_contenido.pristine || !controls.unidad_contenido.value.trim())
     ) {
       controls.unidad_contenido.setValue(product.unidad_contenido);
-    }
-    if (!controls.sku_interno.value.trim()) {
-      controls.sku_interno.setValue(product.codigo_barras);
     }
   }
 
@@ -1018,6 +1184,7 @@ export class ProductosComponent {
       imagen_url: value.imagen_url || null,
       variantes: value.tiene_variantes
         ? value.variantes.map((variant) => ({
+            id: variant.id || null,
             atributos: this.parseVariantAttributes(variant.atributos),
             sku_interno: variant.sku_interno.trim(),
             generar_sku_interno: variant.generar_sku_interno,
@@ -1031,10 +1198,9 @@ export class ProductosComponent {
     const request = editing
       ? this.productosService.update(this.negocioID, editing.id, {
           nombre: payload.nombre,
-          sku_interno: payload.sku_interno,
           marca_id: payload.marca_id,
           proveedor_id: payload.proveedor_id,
-          categoria_id: payload.categoria_id as string,
+          categoria_id: payload.categoria_id,
           descripcion: payload.descripcion,
           contenido: payload.contenido,
           unidad_contenido: payload.unidad_contenido,
@@ -1043,6 +1209,14 @@ export class ProductosComponent {
           precio_venta: payload.precio_venta,
           codigo_barras: payload.codigo_barras,
           imagen_url: payload.imagen_url,
+          variantes: payload.tiene_variantes
+            ? payload.variantes!.map((variant) => ({
+                id: variant.id,
+                atributos: variant.atributos,
+                precio_venta: variant.precio_venta,
+                codigo_barras: variant.codigo_barras,
+              }))
+            : [],
         })
       : this.productosService.create(this.negocioID, payload);
     request.subscribe({
@@ -1052,9 +1226,19 @@ export class ProductosComponent {
       },
       error: (response) => {
         this.saving.set(false);
-        this.formError = response.error?.mensaje ?? 'No fue posible guardar el producto.';
+        this.formError = this.productSaveError(response);
       },
     });
+  }
+
+  private productSaveError(response: { error?: unknown; message?: string }): string {
+    const error = response.error;
+    if (error && typeof error === 'object' && 'mensaje' in error) {
+      const message = (error as { mensaje?: unknown }).mensaje;
+      if (typeof message === 'string' && message.trim()) return message;
+    }
+    if (typeof error === 'string' && error.trim()) return error;
+    return response.message?.trim() || 'No fue posible guardar el producto.';
   }
 
   private parseVariantAttributes(value: string): { nombre: string; valor: string }[] {

@@ -12,6 +12,10 @@ Formato visual de producto nuevo aprobado explícitamente por el usuario el 2026
 
 Validación visual de compra aprobada explícitamente por el usuario el 2026-09-29 mediante la instrucción: “Implement the plan”.
 
+Alta rápida de proveedor aprobada explícitamente por el usuario el 2026-10-07 mediante la instrucción: “Implement the plan”. Solo se habilita a usuarios con `catalogo.gestionar`.
+
+Separación visual del resumen de productos aprobada explícitamente por el usuario el 2026-10-07 mediante la instrucción: “Implement the plan”.
+
 ## Alcance
 
 - Registrar compras recibidas de proveedores por sucursal y documento.
@@ -21,9 +25,10 @@ Validación visual de compra aprobada explícitamente por el usuario el 2026-09-
 - Permitir alta rápida de producto simple y de unidad de medida durante la recepción.
 - Calcular IVA (16 %) a partir de su check de inclusión y permitir ajustar el importe de IEPS cuando se incluya.
 - Derivar las piezas por empaque desde la unidad de empaque y mostrar anomalías solo cuando se soliciten.
-- Mostrar la captura en una sola superficie blanca, con el formulario y los productos a la izquierda y un resumen global fijo a la derecha en escritorio.
+- Mostrar el formulario y el resumen global en tarjetas visualmente independientes, con el resumen fijo a la derecha en escritorio.
 - Mostrar el alta rápida de producto con el mismo panel visual usado para la nueva unidad de empaque, conservando su creación al confirmar la compra.
 - Marcar en rojo los campos obligatorios inválidos después de interactuar con ellos y desactivar las acciones de guardar o confirmar hasta que sus formularios sean válidos.
+- Permitir crear y seleccionar un proveedor desde Compras con solo su nombre, cuando el usuario tenga `catalogo.gestionar`.
 
 ## Reglas y contratos
 
@@ -39,8 +44,9 @@ Validación visual de compra aprobada explícitamente por el usuario el 2026-09-
 - Una compra confirmada es inmutable.
 - La sucursal receptora se toma del contexto activo y no se puede cambiar desde el formulario de compra.
 - El lateral fijo contiene únicamente un resumen de los productos capturados, sin impuestos ni total.
-- Los impuestos, totales y la confirmación se muestran al final del formulario. En móvil el resumen deja de ser fijo y se muestra después del formulario.
+- Los impuestos, totales y la confirmación se muestran al final del formulario. En móvil el resumen deja de ser fijo y se muestra debajo del formulario, como tarjeta independiente.
 - Nombre y código de barras son obligatorios únicamente para un producto nuevo; al elegir un producto existente dejan de bloquear la compra.
+- La opción “Crear nuevo…” de proveedores se muestra solo con `catalogo.gestionar`; al guardar, se recarga el catálogo y se selecciona el proveedor creado.
 
 ## Tareas
 
@@ -60,6 +66,8 @@ Validación visual de compra aprobada explícitamente por el usuario el 2026-09-
 - [x] Calcular IVA sobre subtotal más IEPS cuando ambos aplican.
 - [x] Aplicar al producto nuevo el formato visual del formulario de nueva unidad.
 - [x] Mostrar validación visual y bloquear acciones con campos obligatorios inválidos.
+- [x] Añadir alta rápida de proveedor restringida a `catalogo.gestionar`.
+- [x] Separar visualmente la tarjeta de resumen del formulario de compra.
 
 ## Criterios de aceptación
 
@@ -70,7 +78,9 @@ Validación visual de compra aprobada explícitamente por el usuario el 2026-09-
 - El usuario puede crear producto o unidad desde su select y el formulario respectivo aparece inmediatamente debajo.
 - El panel de nuevo producto muestra nombre y código de barras con la misma estructura visual que el panel de nueva unidad.
 - Los campos obligatorios tocados se muestran en rojo y los botones de guardar unidad o confirmar compra permanecen desactivados mientras sean inválidos.
+- El proveedor creado desde Compras solicita solo nombre y queda seleccionado automáticamente.
 - El resumen lateral muestra cada producto capturado; los impuestos y total aparecen al final del formulario.
+- En escritorio, formulario y resumen son tarjetas separadas; en móvil, el resumen aparece debajo del formulario.
 
 ## Resultados visuales
 
@@ -97,3 +107,5 @@ Validación visual de compra aprobada explícitamente por el usuario el 2026-09-
 - Regla IVA sobre IEPS: compilación TypeScript, revisión de espacios y paquetes Go de compras correctos.
 - Formato visual de producto nuevo: `frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.spec.json` y `git diff --check` correctos. La prueba Angular del panel permanece pendiente por Node `v14.15.0`.
 - Validación visual: `frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.spec.json` y `git diff --check` correctos. `npm test -- --watch=false --runInBand` continúa bloqueado por Node `v14.15.0`.
+- Alta rápida de proveedor: `frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.spec.json` y `git diff --check` correctos. Las pruebas Angular siguen pendientes por Node `v14.15.0`.
+- Separación visual del resumen: `frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.spec.json` y `git diff --check` correctos; grafo actualizado sin cambios de topología.

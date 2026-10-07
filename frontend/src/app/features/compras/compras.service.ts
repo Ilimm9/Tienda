@@ -22,6 +22,9 @@ export class ComprasService {
   providers(id: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(`${this.base(id)}/catalogo/proveedores`);
   }
+  createProvider(id: string, request: { nombre: string }): Observable<void> {
+    return this.http.post<void>(`${this.base(id)}/catalogo/proveedores`, request);
+  }
   branches(id: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(`${this.base(id)}/sucursales`);
   }

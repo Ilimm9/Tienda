@@ -78,11 +78,11 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 			jabon = p.ID
 		}
 	}
-	upd := domain.UpdateProductInput{Nombre: "Jabón 2", SKUInterno: "SKU-X", CategoriaID: ctxs[0].categoria, PrecioVenta: 12, CodigoBarras: &code}
+	upd := domain.UpdateProductInput{Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12, CodigoBarras: &code}
 	if err := repo.Update(ctxs[0].negocio, jabon, upd); err != nil {
 		t.Fatalf("update propio: %v", err)
 	}
-	upd.CategoriaID = ctxs[1].categoria
+	upd.CategoriaID = &ctxs[1].categoria
 	if err := repo.Update(ctxs[0].negocio, jabon, upd); err == nil {
 		t.Fatal("aceptó categoría de otro negocio")
 	}
