@@ -1,36 +1,91 @@
 <div class="asistente">
   <header class="barra-minima">
     <span class="barra-minima__marca">
-      <img src="stockion-logo.svg" alt="" width="34" height="34" />
+      <img src="trace.svg" alt="" width="34" height="34" />
       Stockion
     </span>
     <span class="barra-minima__titulo">Configuración inicial</span>
-    @if (paso() !== 'listo') {
-      <button type="button" class="barra-minima__accion ml-auto" (click)="posponer()">Salir al panel</button>
-    }
   </header>
 
   <div class="asistente__cuerpo">
     <main class="asistente__principal">
       <div class="asistente__columna">
         <ol class="pasos" aria-label="Progreso">
-          <li class="paso" [class.paso--activo]="paso() === 'empresa'" [class.paso--hecho]="paso() !== 'empresa'" [attr.aria-current]="paso() === 'empresa' ? 'step' : null">
-            <span class="paso__numero">
-              @if (paso() === 'empresa') { 1 } @else { <i class="pi pi-check" aria-hidden="true"></i> }
-            </span>
-            Empresa
+          <li
+            class="paso"
+            [class.paso--activo]="paso() === 'empresa'"
+            [class.paso--hecho]="altaCompletada() || paso() !== 'empresa'"
+            [attr.aria-current]="paso() === 'empresa' ? 'step' : null"
+          >
+            <button
+              type="button"
+              class="paso__boton"
+              [disabled]="guardando() || (!altaCompletada() && paso() === 'sucursal' && empresa())"
+              (click)="irPaso('empresa')"
+            >
+              <span class="paso__numero">
+                @if (paso() === 'empresa') {
+                  1
+                } @else {
+                  <i class="pi pi-check" aria-hidden="true"></i>
+                }
+              </span>
+              Empresa
+            </button>
           </li>
-          <li class="paso__linea" [class.paso__linea--hecha]="paso() !== 'empresa'" aria-hidden="true"></li>
-          <li class="paso" [class.paso--activo]="paso() === 'sucursal'" [class.paso--hecho]="paso() === 'listo'" [attr.aria-current]="paso() === 'sucursal' ? 'step' : null">
-            <span class="paso__numero">
-              @if (paso() === 'listo') { <i class="pi pi-check" aria-hidden="true"></i> } @else { 2 }
-            </span>
-            Sucursal
+          <li
+            class="paso__linea"
+            [class.paso__linea--hecha]="altaCompletada() || paso() !== 'empresa'"
+            aria-hidden="true"
+          ></li>
+          <li
+            class="paso"
+            [class.paso--activo]="paso() === 'sucursal'"
+            [class.paso--hecho]="altaCompletada()"
+            [attr.aria-current]="paso() === 'sucursal' ? 'step' : null"
+          >
+            <button
+              type="button"
+              class="paso__boton"
+              [disabled]="guardando()"
+              (click)="irPaso('sucursal')"
+            >
+              <span class="paso__numero">
+                @if (altaCompletada()) {
+                  <i class="pi pi-check" aria-hidden="true"></i>
+                } @else {
+                  2
+                }
+              </span>
+              Sucursal
+            </button>
           </li>
-          <li class="paso__linea" [class.paso__linea--hecha]="paso() === 'listo'" aria-hidden="true"></li>
-          <li class="paso" [class.paso--activo]="paso() === 'listo'" [attr.aria-current]="paso() === 'listo' ? 'step' : null">
-            <span class="paso__numero">3</span>
-            Listo
+          <li
+            class="paso__linea"
+            [class.paso__linea--hecha]="altaCompletada()"
+            aria-hidden="true"
+          ></li>
+          <li
+            class="paso"
+            [class.paso--activo]="paso() === 'listo'"
+            [class.paso--hecho]="altaCompletada()"
+            [attr.aria-current]="paso() === 'listo' ? 'step' : null"
+          >
+            <button
+              type="button"
+              class="paso__boton"
+              [disabled]="guardando() || !altaCompletada()"
+              (click)="irPaso('listo')"
+            >
+              <span class="paso__numero">
+                @if (altaCompletada()) {
+                  <i class="pi pi-check" aria-hidden="true"></i>
+                } @else {
+                  3
+                }
+              </span>
+              Listo
+            </button>
           </li>
         </ol>
 
@@ -38,26 +93,47 @@
           @case ('empresa') {
             <div>
               <h1 class="titulo-asistente">Tu empresa</h1>
-              <p class="asistente__texto">Con el nombre comercial basta para empezar. Lo demás se completa después en Negocios.</p>
+              <p class="asistente__texto">
+                Con el nombre comercial basta para empezar. Lo demás se completa después en
+                Negocios.
+              </p>
             </div>
 
             @if (archivadas().length) {
               <div class="aviso aviso--atencion" role="status">
                 <i class="pi pi-info-circle" aria-hidden="true"></i>
                 <div class="flex min-w-0 flex-1 flex-col gap-2">
-                  <span><strong>Ya tienes una empresa archivada</strong>Puedes restaurarla en lugar de registrar otra.</span>
+                  <span
+                    ><strong>Ya tienes una empresa archivada</strong>Puedes restaurarla en lugar de
+                    registrar otra.</span
+                  >
                   @for (negocio of archivadas(); track negocio.id) {
-                    <button type="button" class="boton boton--secundario boton--compacto self-start" [disabled]="guardando()" (click)="restaurar(negocio)">
-                      <i class="pi pi-refresh" aria-hidden="true"></i>Restaurar {{ negocio.nombre_comercial }}
+                    <button
+                      type="button"
+                      class="boton boton--secundario boton--compacto self-start"
+                      [disabled]="guardando() || modoConsulta()"
+                      (click)="restaurar(negocio)"
+                    >
+                      <i class="pi pi-refresh" aria-hidden="true"></i>Restaurar
+                      {{ negocio.nombre_comercial }}
                     </button>
                   }
                 </div>
               </div>
             }
 
-            <form class="tarjeta flex flex-col gap-4.5 p-6.5" [formGroup]="empresaForm" (ngSubmit)="guardarEmpresa()" novalidate>
+            <form
+              class="tarjeta formulario-alta flex flex-col gap-4.5 p-6.5"
+              [class.formulario-alta--compacto]="masDatosEmpresa()"
+              [formGroup]="empresaForm"
+              (ngSubmit)="guardarEmpresa()"
+              novalidate
+            >
+              <fieldset class="formulario-alta__campos" [disabled]="modoConsulta()">
               <div class="campo-bloque">
-                <label class="etiqueta" for="nombre_comercial">Nombre comercial <span class="obligatorio" aria-hidden="true">*</span></label>
+                <label class="etiqueta" for="nombre_comercial"
+                  >Nombre comercial <span class="obligatorio" aria-hidden="true">*</span></label
+                >
                 <span class="campo-grupo">
                   <i class="pi pi-building" aria-hidden="true"></i>
                   <input
@@ -73,10 +149,13 @@
                 </span>
                 @if (invalidoEmpresa('nombre_comercial')) {
                   <small id="nombre-comercial-ayuda" class="error-campo">
-                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ campos()['nombre_comercial'] || 'Escribe entre 2 y 180 caracteres.' }}
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i
+                    >{{ campos()['nombre_comercial'] || 'Escribe entre 2 y 180 caracteres.' }}
                   </small>
                 } @else {
-                  <small id="nombre-comercial-ayuda" class="ayuda">Así aparecerá en tickets, invitaciones y reportes.</small>
+                  <small id="nombre-comercial-ayuda" class="ayuda"
+                    >Así aparecerá en tickets, invitaciones y reportes.</small
+                  >
                 }
               </div>
 
@@ -105,8 +184,19 @@
                 </div>
               </div>
 
-              <button type="button" class="plegable" [attr.aria-expanded]="masDatosEmpresa()" aria-controls="mas-datos-empresa" (click)="masDatosEmpresa.set(!masDatosEmpresa())">
-                <i class="pi" [class.pi-plus]="!masDatosEmpresa()" [class.pi-minus]="masDatosEmpresa()" aria-hidden="true"></i>
+              <button
+                type="button"
+                class="plegable"
+                [attr.aria-expanded]="masDatosEmpresa()"
+                aria-controls="mas-datos-empresa"
+                (click)="masDatosEmpresa.set(!masDatosEmpresa())"
+              >
+                <i
+                  class="pi"
+                  [class.pi-plus]="!masDatosEmpresa()"
+                  [class.pi-minus]="masDatosEmpresa()"
+                  aria-hidden="true"
+                ></i>
                 {{ masDatosEmpresa() ? 'Ocultar datos opcionales' : 'Agregar más datos' }}
                 <span class="plegable__nota">RFC, razón social, contacto</span>
               </button>
@@ -114,77 +204,192 @@
                 <div id="mas-datos-empresa" class="grid gap-4 sm:grid-cols-2">
                   <div class="campo-bloque sm:col-span-2">
                     <label class="etiqueta" for="razon_social">Razón social</label>
-                    <input id="razon_social" class="campo" type="text" formControlName="razon_social" [attr.aria-invalid]="invalidoEmpresa('razon_social')" />
+                    <input
+                      id="razon_social"
+                      class="campo"
+                      type="text"
+                      formControlName="razon_social"
+                      [attr.aria-invalid]="invalidoEmpresa('razon_social')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="rfc">RFC</label>
-                    <input id="rfc" class="campo campo--monoespacio campo--mayusculas" type="text" maxlength="13" formControlName="rfc" [attr.aria-invalid]="invalidoEmpresa('rfc')" aria-describedby="rfc-error" />
+                    <input
+                      id="rfc"
+                      class="campo campo--monoespacio campo--mayusculas"
+                      type="text"
+                      maxlength="13"
+                      formControlName="rfc"
+                      [attr.aria-invalid]="invalidoEmpresa('rfc')"
+                      aria-describedby="rfc-error"
+                    />
                     @if (invalidoEmpresa('rfc')) {
-                      <small id="rfc-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ campos()['rfc'] || 'Escribe un RFC válido de 12 o 13 caracteres.' }}</small>
+                      <small id="rfc-error" class="error-campo"
+                        ><i class="pi pi-exclamation-circle" aria-hidden="true"></i
+                        >{{
+                          campos()['rfc'] || 'Escribe un RFC válido de 12 o 13 caracteres.'
+                        }}</small
+                      >
                     }
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="telefono_empresa">Teléfono</label>
-                    <input id="telefono_empresa" class="campo" type="tel" autocomplete="tel" formControlName="telefono" [attr.aria-invalid]="invalidoEmpresa('telefono')" />
+                    <input
+                      id="telefono_empresa"
+                      class="campo"
+                      type="tel"
+                      autocomplete="tel"
+                      formControlName="telefono"
+                      [attr.aria-invalid]="invalidoEmpresa('telefono')"
+                    />
                   </div>
                   <div class="campo-bloque sm:col-span-2">
                     <label class="etiqueta" for="correo_empresa">Correo electrónico</label>
-                    <input id="correo_empresa" class="campo" type="email" autocomplete="email" formControlName="correo" [attr.aria-invalid]="invalidoEmpresa('correo')" aria-describedby="correo-empresa-error" />
+                    <input
+                      id="correo_empresa"
+                      class="campo"
+                      type="email"
+                      autocomplete="email"
+                      formControlName="correo"
+                      [attr.aria-invalid]="invalidoEmpresa('correo')"
+                      aria-describedby="correo-empresa-error"
+                    />
                     @if (invalidoEmpresa('correo')) {
-                      <small id="correo-empresa-error" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ campos()['correo'] || 'Escribe un correo válido.' }}</small>
+                      <small id="correo-empresa-error" class="error-campo"
+                        ><i class="pi pi-exclamation-circle" aria-hidden="true"></i
+                        >{{ campos()['correo'] || 'Escribe un correo válido.' }}</small
+                      >
                     }
                   </div>
                 </div>
               }
 
               @if (error()) {
-                <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+                <p class="aviso aviso--error" role="alert">
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+                </p>
               }
 
-              <button type="submit" class="boton ancho" [disabled]="guardando()" [attr.aria-busy]="guardando()">
-                {{ guardando() ? 'Guardando…' : 'Guardar y continuar' }}
-                <i class="pi" [class.pi-arrow-right]="!guardando()" [class.pi-spinner]="guardando()" [class.pi-spin]="guardando()" aria-hidden="true"></i>
+              <button
+                type="submit"
+                class="boton ancho"
+                [disabled]="guardando() || modoConsulta()"
+                [attr.aria-busy]="guardando()"
+              >
+                Continuar a sucursal
+                <i
+                  class="pi"
+                  [class.pi-arrow-right]="!guardando()"
+                  [class.pi-spinner]="guardando()"
+                  [class.pi-spin]="guardando()"
+                  aria-hidden="true"
+                ></i>
               </button>
+              </fieldset>
             </form>
-            <p class="asistente__pie">¿Prefieres hacerlo luego? <button type="button" class="boton-enlace boton-enlace--chico" (click)="posponer()">Seguir explorando</button></p>
+            <p class="asistente__pie">
+              ¿Prefieres hacerlo luego?
+              <button type="button" class="boton-enlace boton-enlace--chico" (click)="posponer()">
+                Seguir explorando
+              </button>
+            </p>
           }
 
           @case ('sucursal') {
             <div>
               <h1 class="titulo-asistente">Tu primera sucursal</h1>
-              <p class="asistente__texto">Es el lugar donde vendes y guardas mercancía. Podrás agregar más cuando quieras.</p>
+              <p class="asistente__texto">
+                Es el lugar donde vendes y guardas mercancía. Podrás agregar más cuando quieras.
+              </p>
             </div>
 
-            <form class="tarjeta flex flex-col gap-4.5 p-6.5" [formGroup]="sucursalForm" (ngSubmit)="crearSucursal()" novalidate>
+            <form
+              class="tarjeta formulario-alta flex flex-col gap-4.5 p-6.5"
+              [class.formulario-alta--compacto]="masDatosSucursal()"
+              [formGroup]="sucursalForm"
+              (ngSubmit)="crearSucursal()"
+              novalidate
+            >
+              <fieldset class="formulario-alta__campos" [disabled]="modoConsulta()">
               <div class="campo-bloque">
-                <label class="etiqueta" for="nombre_sucursal">Nombre de la sucursal <span class="obligatorio" aria-hidden="true">*</span></label>
+                <label class="etiqueta" for="nombre_sucursal"
+                  >Nombre de la sucursal
+                  <span class="obligatorio" aria-hidden="true">*</span></label
+                >
                 <span class="campo-grupo">
                   <i class="pi pi-shop" aria-hidden="true"></i>
-                  <input id="nombre_sucursal" type="text" formControlName="nombre" maxlength="160" placeholder="Ej. Centro" aria-required="true" aria-describedby="nombre-sucursal-ayuda" [attr.aria-invalid]="invalidoSucursal('nombre')" />
+                  <input
+                    id="nombre_sucursal"
+                    type="text"
+                    formControlName="nombre"
+                    maxlength="160"
+                    placeholder="Ej. Centro"
+                    aria-required="true"
+                    aria-describedby="nombre-sucursal-ayuda"
+                    [attr.aria-invalid]="invalidoSucursal('nombre')"
+                  />
                 </span>
                 @if (invalidoSucursal('nombre')) {
-                  <small id="nombre-sucursal-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ campos()['nombre'] || 'Escribe entre 2 y 160 caracteres.' }}</small>
+                  <small id="nombre-sucursal-ayuda" class="error-campo"
+                    ><i class="pi pi-exclamation-circle" aria-hidden="true"></i
+                    >{{ campos()['nombre'] || 'Escribe entre 2 y 160 caracteres.' }}</small
+                  >
                 } @else if (correctoSucursal('nombre')) {
-                  <small id="nombre-sucursal-ayuda" class="correcto-campo"><i class="pi pi-check" aria-hidden="true"></i>Correcto</small>
+                  <small id="nombre-sucursal-ayuda" class="correcto-campo"
+                    ><i class="pi pi-check" aria-hidden="true"></i>Correcto</small
+                  >
                 }
               </div>
               <div class="campo-bloque">
-                <label class="etiqueta" for="codigo_sucursal">Código <span class="obligatorio" aria-hidden="true">*</span></label>
+                <label class="etiqueta" for="codigo_sucursal"
+                  >Código <span class="obligatorio" aria-hidden="true">*</span></label
+                >
                 <span class="campo-grupo campo-grupo--monoespacio">
                   <i class="pi pi-hashtag" aria-hidden="true"></i>
-                  <input id="codigo_sucursal" class="campo--mayusculas" type="text" formControlName="codigo" maxlength="40" placeholder="CEN-01" aria-required="true" aria-describedby="codigo-sucursal-ayuda" [attr.aria-invalid]="invalidoSucursal('codigo')" />
+                  <input
+                    id="codigo_sucursal"
+                    class="campo--mayusculas"
+                    type="text"
+                    formControlName="codigo"
+                    maxlength="40"
+                    placeholder="CEN-01"
+                    aria-required="true"
+                    aria-describedby="codigo-sucursal-ayuda"
+                    [attr.aria-invalid]="invalidoSucursal('codigo')"
+                  />
                 </span>
                 @if (invalidoSucursal('codigo')) {
-                  <small id="codigo-sucursal-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ campos()['codigo'] || 'Usa letras, números y guiones, sin espacios. Ejemplo: CEN-01.' }}</small>
+                  <small id="codigo-sucursal-ayuda" class="error-campo"
+                    ><i class="pi pi-exclamation-circle" aria-hidden="true"></i
+                    >{{
+                      campos()['codigo'] ||
+                        'Usa letras, números y guiones, sin espacios. Ejemplo: CEN-01.'
+                    }}</small
+                  >
                 } @else if (correctoSucursal('codigo')) {
-                  <small id="codigo-sucursal-ayuda" class="correcto-campo"><i class="pi pi-check" aria-hidden="true"></i>Correcto</small>
+                  <small id="codigo-sucursal-ayuda" class="correcto-campo"
+                    ><i class="pi pi-check" aria-hidden="true"></i>Correcto</small
+                  >
                 } @else {
-                  <small id="codigo-sucursal-ayuda" class="ayuda">Identificador corto. No podrá cambiarse después.</small>
+                  <small id="codigo-sucursal-ayuda" class="ayuda"
+                    >Identificador corto. No podrá cambiarse después.</small
+                  >
                 }
               </div>
 
-              <button type="button" class="plegable" [attr.aria-expanded]="masDatosSucursal()" aria-controls="mas-datos-sucursal" (click)="masDatosSucursal.set(!masDatosSucursal())">
-                <i class="pi" [class.pi-plus]="!masDatosSucursal()" [class.pi-minus]="masDatosSucursal()" aria-hidden="true"></i>
+              <button
+                type="button"
+                class="plegable"
+                [attr.aria-expanded]="masDatosSucursal()"
+                aria-controls="mas-datos-sucursal"
+                (click)="masDatosSucursal.set(!masDatosSucursal())"
+              >
+                <i
+                  class="pi"
+                  [class.pi-plus]="!masDatosSucursal()"
+                  [class.pi-minus]="masDatosSucursal()"
+                  aria-hidden="true"
+                ></i>
                 {{ masDatosSucursal() ? 'Ocultar datos opcionales' : 'Agregar más datos' }}
                 <span class="plegable__nota">Teléfono y dirección</span>
               </button>
@@ -192,58 +397,135 @@
                 <div id="mas-datos-sucursal" class="grid gap-4 sm:grid-cols-2">
                   <div class="campo-bloque sm:col-span-2">
                     <label class="etiqueta" for="telefono_sucursal">Teléfono</label>
-                    <input id="telefono_sucursal" class="campo" type="tel" autocomplete="tel" formControlName="telefono" [attr.aria-invalid]="invalidoSucursal('telefono')" />
+                    <input
+                      id="telefono_sucursal"
+                      class="campo"
+                      type="tel"
+                      autocomplete="tel"
+                      formControlName="telefono"
+                      [attr.aria-invalid]="invalidoSucursal('telefono')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="calle">Calle</label>
-                    <input id="calle" class="campo" type="text" formControlName="calle" [attr.aria-invalid]="invalidoSucursal('calle')" />
+                    <input
+                      id="calle"
+                      class="campo"
+                      type="text"
+                      formControlName="calle"
+                      [attr.aria-invalid]="invalidoSucursal('calle')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="numero_exterior">Número exterior</label>
-                    <input id="numero_exterior" class="campo" type="text" formControlName="numero_exterior" [attr.aria-invalid]="invalidoSucursal('numero_exterior')" />
+                    <input
+                      id="numero_exterior"
+                      class="campo"
+                      type="text"
+                      formControlName="numero_exterior"
+                      [attr.aria-invalid]="invalidoSucursal('numero_exterior')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="colonia">Colonia</label>
-                    <input id="colonia" class="campo" type="text" formControlName="colonia" [attr.aria-invalid]="invalidoSucursal('colonia')" />
+                    <input
+                      id="colonia"
+                      class="campo"
+                      type="text"
+                      formControlName="colonia"
+                      [attr.aria-invalid]="invalidoSucursal('colonia')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="codigo_postal">Código postal</label>
-                    <input id="codigo_postal" class="campo" type="text" inputmode="numeric" formControlName="codigo_postal" [attr.aria-invalid]="invalidoSucursal('codigo_postal')" />
+                    <input
+                      id="codigo_postal"
+                      class="campo"
+                      type="text"
+                      inputmode="numeric"
+                      formControlName="codigo_postal"
+                      [attr.aria-invalid]="invalidoSucursal('codigo_postal')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="ciudad">Ciudad</label>
-                    <input id="ciudad" class="campo" type="text" formControlName="ciudad" [attr.aria-invalid]="invalidoSucursal('ciudad')" />
+                    <input
+                      id="ciudad"
+                      class="campo"
+                      type="text"
+                      formControlName="ciudad"
+                      [attr.aria-invalid]="invalidoSucursal('ciudad')"
+                    />
                   </div>
                   <div class="campo-bloque">
                     <label class="etiqueta" for="estado">Estado</label>
-                    <input id="estado" class="campo" type="text" formControlName="estado" [attr.aria-invalid]="invalidoSucursal('estado')" />
+                    <input
+                      id="estado"
+                      class="campo"
+                      type="text"
+                      formControlName="estado"
+                      [attr.aria-invalid]="invalidoSucursal('estado')"
+                    />
                   </div>
                 </div>
               }
 
-              <p class="aviso aviso--salvia"><i class="pi pi-star" aria-hidden="true"></i>Al ser la primera sucursal activa, queda como principal automáticamente.</p>
+              <p class="aviso aviso--salvia">
+                <i class="pi pi-star" aria-hidden="true"></i>Al ser la primera sucursal activa,
+                queda como principal automáticamente.
+              </p>
 
               @if (error()) {
-                <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+                <p class="aviso aviso--error" role="alert">
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}
+                </p>
               }
 
-              <button type="submit" class="boton ancho" [disabled]="guardando()" [attr.aria-busy]="guardando()">
-                {{ guardando() ? 'Creando…' : 'Crear sucursal' }}
-                <i class="pi" [class.pi-arrow-right]="!guardando()" [class.pi-spinner]="guardando()" [class.pi-spin]="guardando()" aria-hidden="true"></i>
+              <button
+                type="submit"
+                class="boton ancho"
+                [disabled]="guardando() || modoConsulta()"
+                [attr.aria-busy]="guardando()"
+              >
+                {{
+                  guardando()
+                    ? 'Guardando…'
+                    : empresa()
+                      ? 'Crear sucursal'
+                      : 'Guardar empresa y sucursal'
+                }}
+                <i
+                  class="pi"
+                  [class.pi-arrow-right]="!guardando()"
+                  [class.pi-spinner]="guardando()"
+                  [class.pi-spin]="guardando()"
+                  aria-hidden="true"
+                ></i>
               </button>
+              </fieldset>
             </form>
-            <p class="asistente__pie">Tu empresa ya quedó guardada. <button type="button" class="boton-enlace boton-enlace--chico" (click)="posponer()">Terminar después</button></p>
+            <p class="asistente__pie">
+              Tu empresa ya quedó guardada.
+              <button type="button" class="boton-enlace boton-enlace--chico" (click)="posponer()">
+                Terminar después
+              </button>
+            </p>
           }
 
           @case ('listo') {
             <div>
               <h1 class="titulo-asistente">Ya puedes operar</h1>
-              <p class="asistente__texto">Dejamos seleccionadas tu empresa y tu sucursal. Las verás en la barra superior en todo el panel.</p>
+              <p class="asistente__texto">
+                Dejamos seleccionadas tu empresa y tu sucursal. Las verás en la barra superior en
+                todo el panel.
+              </p>
             </div>
 
             <dl class="tarjeta m-0 overflow-hidden">
               <div class="tarjeta-encabezado">
-                <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-building"></i></span>
+                <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"
+                  ><i class="pi pi-building"></i
+                ></span>
                 <div class="min-w-0 flex-1">
                   <dt class="secundario">Empresa</dt>
                   <dd class="tabla-principal m-0 truncate">{{ empresa()?.nombre }}</dd>
@@ -254,16 +536,22 @@
                 <span class="seccion-icono" aria-hidden="true"><i class="pi pi-shop"></i></span>
                 <div class="min-w-0 flex-1">
                   <dt class="secundario">Sucursal principal</dt>
-                  <dd class="tabla-principal m-0 truncate">{{ sucursalCreada()?.nombre }} · {{ sucursalCreada()?.codigo }}</dd>
+                  <dd class="tabla-principal m-0 truncate">
+                    {{ sucursalCreada()?.nombre }} · {{ sucursalCreada()?.codigo }}
+                  </dd>
                 </div>
                 <span class="pastilla pastilla--info">Activa</span>
               </div>
             </dl>
 
             <div class="flex flex-col gap-2.5">
-              <a class="boton ancho" routerLink="/inicio">Ir a Inicio<i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+              <a class="boton ancho" routerLink="/inicio"
+                >Ir a Inicio<i class="pi pi-arrow-right" aria-hidden="true"></i
+              ></a>
               @if (puedeRegistrarEquipo()) {
-                <a class="boton boton--secundario ancho" routerLink="/equipo/empleados/nuevo"><i class="pi pi-users" aria-hidden="true"></i>Registrar a mi equipo</a>
+                <a class="boton boton--secundario ancho" routerLink="/equipo/empleados/nuevo"
+                  ><i class="pi pi-users" aria-hidden="true"></i>Registrar a mi equipo</a
+                >
               }
             </div>
           }
@@ -271,60 +559,95 @@
       </div>
     </main>
 
-    <aside class="asistente__lateral" aria-label="Resumen">
-      @switch (paso()) {
-        @case ('empresa') {
-          <div class="mosaico">
-            <div class="mosaico__celda mosaico__celda--salvia [grid-area:1/1/4/5]">
-              <span class="rotulo">Tu empresa</span>
-              <span class="mosaico__valor mosaico__valor--grande mt-auto">{{ nombreEmpresaVista() }}</span>
-              <span class="mosaico__nota">{{ monedaVista() }} · {{ zonaVista() }}</span>
-            </div>
-            <div class="mosaico__celda mosaico__celda--lavanda mosaico__celda--centro [grid-area:1/5/3/7]" aria-hidden="true"><i class="pi pi-building"></i></div>
-            <div class="mosaico__celda mosaico__celda--violeta mosaico__celda--centro [grid-area:3/5/5/6]"><span class="mosaico__cuenta">1/2</span></div>
-            <div class="mosaico__celda mosaico__celda--lavanda-2 [grid-area:3/6/5/7]" aria-hidden="true"></div>
-            <div class="mosaico__celda mosaico__celda--tinte [grid-area:4/1/7/4]">
-              <span class="rotulo">Primera sucursal</span>
-              <i class="pi pi-shop my-auto" aria-hidden="true"></i>
-              <span class="mosaico__nota mosaico__nota--fuerte">Sigue después de guardar</span>
-            </div>
-            <div class="mosaico__celda mosaico__celda--salvia-2 [grid-area:4/4/5/5]" aria-hidden="true"></div>
-            <div class="mosaico__celda mosaico__celda--blanca [grid-area:5/4/7/7]">
-              <span class="mosaico__nota mosaico__nota--fuerte mt-auto">Tendrás el rol de propietario</span>
-              <span class="mosaico__nota">Con acceso a todas las sucursales activas de esta empresa.</span>
-            </div>
-          </div>
-        }
-        @case ('sucursal') {
-          <div class="mosaico">
-            <div class="mosaico__celda mosaico__celda--salvia [grid-area:1/1/3/5]">
-              <span class="rotulo"><i class="pi pi-check" aria-hidden="true"></i> Empresa guardada</span>
-              <span class="mosaico__valor mt-auto">{{ nombreEmpresaVista() }}</span>
-            </div>
-            <div class="mosaico__celda mosaico__celda--lavanda-2 [grid-area:1/5/3/7]" aria-hidden="true"></div>
-            <div class="mosaico__celda mosaico__celda--lavanda [grid-area:3/1/7/5]">
-              <span class="rotulo">Primera sucursal</span>
-              <i class="pi pi-shop my-auto" aria-hidden="true"></i>
-              <span class="mosaico__valor mosaico__valor--grande">{{ nombreSucursalVista() }}</span>
-              <span class="mosaico__nota flex flex-wrap items-center gap-2"><span class="pastilla pastilla--plana pastilla--solida">Principal</span>{{ codigoSucursalVista() }}</span>
-            </div>
-            <div class="mosaico__celda mosaico__celda--verde mosaico__celda--centro [grid-area:3/5/5/6]"><span class="mosaico__cuenta">2/2</span></div>
-            <div class="mosaico__celda mosaico__celda--salvia-2 [grid-area:3/6/5/7]" aria-hidden="true"></div>
-            <div class="mosaico__celda mosaico__celda--violeta [grid-area:5/5/7/7]" aria-hidden="true"></div>
-          </div>
-        }
-        @case ('listo') {
-          <div class="mosaico" aria-hidden="true">
-            <div class="mosaico__celda mosaico__celda--salvia mosaico__celda--centro [grid-area:1/1/4/3]"><i class="pi pi-building"></i></div>
-            <div class="mosaico__celda mosaico__celda--lavanda-2 [grid-area:1/3/3/5]"></div>
-            <div class="mosaico__celda mosaico__celda--lavanda mosaico__celda--centro [grid-area:1/5/3/7]"><i class="pi pi-box"></i></div>
-            <div class="mosaico__celda mosaico__celda--violeta mosaico__celda--centro [grid-area:3/3/5/6]"><i class="pi pi-check"></i></div>
-            <div class="mosaico__celda mosaico__celda--salvia-2 [grid-area:3/6/5/7]"></div>
-            <div class="mosaico__celda mosaico__celda--verde [grid-area:4/1/7/3]"></div>
-            <div class="mosaico__celda mosaico__celda--tinte mosaico__celda--centro [grid-area:5/3/7/7]"><i class="pi pi-shop"></i></div>
-          </div>
-        }
-      }
+    <aside #vistaPreviaLateral class="asistente__lateral" aria-label="Pasos del alta inicial">
+      <section class="vista-previa vista-previa--navegacion" aria-label="Navegación del alta">
+        <div class="vista-previa__halo" aria-hidden="true"></div>
+        <img
+          class="vista-previa__ilustracion vista-previa__ilustracion--tienda"
+          src="alta-inicial-tienda.png"
+          alt=""
+          aria-hidden="true"
+        />
+        <div class="vista-previa__cards vista-previa__cards--carrusel">
+          <span class="vista-previa__ancla vista-previa__ancla--superior" aria-hidden="true"></span>
+          <span
+            class="vista-previa__ancla vista-previa__ancla--superior-intermedia"
+            aria-hidden="true"
+          ></span>
+          <span class="vista-previa__ancla vista-previa__ancla--activa" aria-hidden="true"></span>
+          <span
+            class="vista-previa__ancla vista-previa__ancla--intermedia"
+            aria-hidden="true"
+          ></span>
+          <span class="vista-previa__ancla vista-previa__ancla--inferior" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="vista-previa__card"
+            data-paso="empresa"
+            [attr.data-relativo]="posicionRelativa('empresa')"
+            [class.vista-previa__card--activo]="paso() === 'empresa'"
+            [class.vista-previa__card--hecho]="empresa() !== null || paso() === 'listo'"
+            [disabled]="guardando()"
+            [attr.aria-current]="paso() === 'empresa' ? 'step' : null"
+            (click)="irPaso('empresa')"
+          >
+            <span class="vista-previa__card-numero">1</span>
+            <span class="vista-previa__card-contenido">
+              <span class="vista-previa__rotulo">Empresa</span>
+              <strong>{{ nombreEmpresaVista() }}</strong>
+              <span>{{ monedaVista() }} · {{ zonaVista() }}</span>
+            </span>
+            @if (empresa() !== null || paso() === 'listo') {
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+            }
+          </button>
+          <button
+            type="button"
+            class="vista-previa__card"
+            data-paso="sucursal"
+            [attr.data-relativo]="posicionRelativa('sucursal')"
+            [class.vista-previa__card--activo]="paso() === 'sucursal'"
+            [class.vista-previa__card--hecho]="paso() === 'listo'"
+            [disabled]="guardando()"
+            [attr.aria-current]="paso() === 'sucursal' ? 'step' : null"
+            (click)="irPaso('sucursal')"
+          >
+            <span class="vista-previa__card-numero">2</span>
+            <span class="vista-previa__card-contenido">
+              <span class="vista-previa__rotulo">Sucursal</span>
+              <strong>{{ nombreSucursalVista() }}</strong>
+              <span>{{ codigoSucursalVista() }}</span>
+            </span>
+            @if (altaCompletada()) {
+              <i class="pi pi-check-circle" aria-hidden="true"></i>
+            }
+          </button>
+          <button
+            type="button"
+            class="vista-previa__card"
+            data-paso="listo"
+            [attr.data-relativo]="posicionRelativa('listo')"
+            [class.vista-previa__card--activo]="paso() === 'listo'"
+            [class.vista-previa__card--hecho]="altaCompletada()"
+            [disabled]="guardando() || !altaCompletada()"
+            [attr.aria-current]="paso() === 'listo' ? 'step' : null"
+            (click)="irPaso('listo')"
+          >
+            <span class="vista-previa__card-numero">3</span>
+            <span class="vista-previa__card-contenido">
+              <span class="vista-previa__rotulo">Listo</span>
+              <strong>{{ altaCompletada() ? 'Ya puedes operar' : 'Pendiente' }}</strong>
+              <span>Empresa y sucursal configuradas</span>
+            </span>
+            <i
+              class="pi"
+              [class.pi-check-circle]="altaCompletada()"
+              [class.pi-lock]="!altaCompletada()"
+              aria-hidden="true"
+            ></i>
+          </button>
+        </div>
+      </section>
     </aside>
   </div>
 </div>

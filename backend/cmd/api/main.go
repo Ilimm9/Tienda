@@ -41,11 +41,6 @@ func main() {
 	if err := database.Init(db); err != nil {
 		log.Fatal(err)
 	}
-	if cfg.AppEnv == "development" {
-		if err := database.SeedDevelopment(db); err != nil {
-			log.Fatal(err)
-		}
-	}
 	cuentaRepo := cuentainfra.NewUserRepository(db)
 	sessionRepo := cuentainfra.NewSessionRepository(db)
 	verificationRepo := cuentainfra.NewVerificationRepository(db)

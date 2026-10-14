@@ -13,6 +13,7 @@ describe('ProductosComponent', () => {
   let component: ProductosComponent;
   let http: HttpTestingController;
   const router = { navigate: vi.fn().mockResolvedValue(true) };
+  const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -23,7 +24,7 @@ describe('ProductosComponent', () => {
         {
           provide: ContextoService,
           useValue: {
-            negocio: signal({ id: environment.defaultBusinessId }),
+            negocio: signal({ id: negocioId }),
             sucursal: signal(null),
             puede: () => true,
           },
@@ -35,27 +36,21 @@ describe('ProductosComponent', () => {
     http = TestBed.inject(HttpTestingController);
 
     http
-      .expectOne(
-        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos`,
-      )
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
       .flush({ items: [], total: 0 });
 
     component.openCreateDialog();
     http
-      .expectOne(
-        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/categorias`,
-      )
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/categorias`)
       .flush([{ id: 'categoria-bebidas', nombre: 'Bebidas' }]);
     http
-      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`)
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`)
       .flush([{ id: 'marca-coca-cola', nombre: 'Coca Cola' }]);
     http
-      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/sucursales`)
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/sucursales`)
       .flush([{ id: 'sucursal-1', nombre: 'Tienda prueba' }]);
     http
-      .expectOne(
-        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/unidades-medida`,
-      )
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/unidades-medida`)
       .flush([{ id: 'unidad-ml', nombre: 'Mililitro', codigo: 'ml', simbolo: 'ml' }]);
     router.navigate.mockClear();
   });
@@ -70,7 +65,7 @@ describe('ProductosComponent', () => {
 
     http
       .expectOne(
-        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501055303038`,
+        `${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/consulta-codigo/7501055303038`,
       )
       .flush({
         codigo_barras: '7501055303038',
@@ -116,15 +111,13 @@ describe('ProductosComponent', () => {
     http
       .expectOne({
         method: 'POST',
-        url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`,
+        url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`,
       })
       .flush(null);
-    http
-      .expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`)
-      .flush([
-        { id: 'marca-coca-cola', nombre: 'Coca Cola' },
-        { id: 'marca-naranjax', nombre: 'Naranjax' },
-      ]);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([
+      { id: 'marca-coca-cola', nombre: 'Coca Cola' },
+      { id: 'marca-naranjax', nombre: 'Naranjax' },
+    ]);
 
     expect(controls.marca_id.value).toBe('marca-naranjax');
     expect(component.brandCreationVisible()).toBe(false);
@@ -146,7 +139,7 @@ describe('ProductosComponent', () => {
     http
       .expectOne({
         method: 'POST',
-        url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`,
+        url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`,
       })
       .flush({ mensaje: 'La marca ya existe.' }, { status: 400, statusText: 'Bad Request' });
 
@@ -163,7 +156,7 @@ describe('ProductosComponent', () => {
 
     http
       .expectOne(
-        `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/productos/consulta-codigo/7501234567890`,
+        `${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/consulta-codigo/7501234567890`,
       )
       .flush({
         codigo_barras: '7501234567890',

@@ -47,7 +47,7 @@ describe('NegocioService', () => {
   });
 
   it('usa endpoints de detalle, edición, archivado y restauración', () => {
-    const id = '11111111-1111-4111-8111-111111111111';
+	const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
     service.obtener(id).subscribe();
     expect(http.expectOne(`${environment.apiUrl}/negocios/${id}`).request.method).toBe('GET');

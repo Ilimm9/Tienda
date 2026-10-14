@@ -12,6 +12,7 @@ describe('CatalogoComponent', () => {
   let component: CatalogoComponent;
   let http: HttpTestingController;
   const router = { navigate: vi.fn().mockResolvedValue(true) };
+  const negocioId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -25,14 +26,14 @@ describe('CatalogoComponent', () => {
         },
         {
           provide: ContextoService,
-          useValue: { negocio: signal({ id: environment.defaultBusinessId }), puede: () => true },
+          useValue: { negocio: signal({ id: negocioId }), puede: () => true },
         },
         { provide: Router, useValue: router },
       ],
     });
     component = TestBed.createComponent(CatalogoComponent).componentInstance;
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas`).flush([]);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
     router.navigate.mockClear();
   });
   afterEach(() => http.verify());
@@ -44,7 +45,10 @@ describe('CatalogoComponent', () => {
     component.save();
 
     http
-      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas/marca-1` })
+      .expectOne({
+        method: 'PATCH',
+        url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/marca-1`,
+      })
       .flush({ mensaje: 'La marca ya existe.' }, { status: 400, statusText: 'Bad Request' });
 
     expect(component.saving()).toBe(false);
@@ -56,7 +60,10 @@ describe('CatalogoComponent', () => {
     component.save();
 
     http
-      .expectOne({ method: 'PATCH', url: `${environment.apiUrl}/negocios/${environment.defaultBusinessId}/catalogo/marcas/marca-1` })
+      .expectOne({
+        method: 'PATCH',
+        url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/marca-1`,
+      })
       .error(new ProgressEvent('error'));
 
     expect(component.formError()).toBe(
@@ -95,9 +102,7 @@ describe('CatalogoComponent', () => {
     ]);
     component.editingId = 'categoria-2';
 
-    expect(component.parentCategoryOptions).toEqual([
-      { label: 'Bebidas', value: 'categoria-1' },
-    ]);
+    expect(component.parentCategoryOptions).toEqual([{ label: 'Bebidas', value: 'categoria-1' }]);
   });
 
   it('marks a dropped file as ready and clears it from the remove control', () => {
@@ -106,9 +111,18 @@ describe('CatalogoComponent', () => {
     });
     const preventDefault = vi.fn();
     component.importError.set('Error anterior');
-    component.importResult.set({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, errores: [] });
+    component.importResult.set({
+      procesadas: 1,
+      creadas: 1,
+      omitidas: 0,
+      invalidas: 0,
+      errores: [],
+    });
 
-    component.onImportDrop({ preventDefault, dataTransfer: { files: [file] } } as unknown as DragEvent);
+    component.onImportDrop({
+      preventDefault,
+      dataTransfer: { files: [file] },
+    } as unknown as DragEvent);
 
     expect(preventDefault).toHaveBeenCalled();
     expect(component.importFile).toBe(file);
@@ -116,7 +130,10 @@ describe('CatalogoComponent', () => {
     expect(component.importResult()).toBeNull();
 
     const stopPropagation = vi.fn();
-    component.removeImportFile({ stopPropagation } as unknown as MouseEvent, document.createElement('input'));
+    component.removeImportFile(
+      { stopPropagation } as unknown as MouseEvent,
+      document.createElement('input'),
+    );
 
     expect(stopPropagation).toHaveBeenCalled();
     expect(component.importFile).toBeNull();
