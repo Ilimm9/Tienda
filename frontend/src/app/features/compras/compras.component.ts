@@ -75,7 +75,6 @@ export class ComprasComponent {
     detalles: this.fb.array([this.newDetail()]),
   });
   readonly unitForm = this.fb.nonNullable.group({
-    codigo: ['', Validators.required],
     nombre: ['', Validators.required],
     simbolo: ['', Validators.required],
     tipo: ['EMPAQUE', Validators.required],
@@ -300,7 +299,6 @@ export class ComprasComponent {
   startUnit(index: number): void {
     this.unitDetailIndex.set(index);
     this.unitForm.reset({
-      codigo: '',
       nombre: '',
       simbolo: '',
       tipo: 'EMPAQUE',

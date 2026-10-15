@@ -58,11 +58,73 @@
       </div>
     </section>
   } @else {
+    <section class="catalog-filters" aria-label="Filtros de catálogo">
+      <div class="catalog-filters-grid">
+        <label class="catalog-filter-search">
+          <span>Buscar</span>
+          <div class="catalog-filter-search-input">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input
+              pInputText
+              [ngModel]="catalogSearch()"
+              (ngModelChange)="setCatalogSearch($event)"
+              [placeholder]="section === 'proveedores' ? 'Nombre, RFC, correo o teléfono...' : 'Buscar...'"
+            />
+          </div>
+        </label>
+        <label class="catalog-filter-field">
+          <span>Estado</span>
+          <p-select
+            [ngModel]="catalogStatusFilter()"
+            (ngModelChange)="setCatalogStatusFilter($event)"
+            [options]="catalogStatusOptions"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </label>
+        @if (isCategory()) {
+          <label class="catalog-filter-field">
+            <span>Categoría padre</span>
+            <p-select
+              [ngModel]="categoryParentFilter()"
+              (ngModelChange)="setCategoryParentFilter($event)"
+              [options]="categoryParentFilterOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Todas"
+              [showClear]="true"
+            />
+          </label>
+        }
+        @if (isUnit()) {
+          <label class="catalog-filter-field">
+            <span>Tipo</span>
+            <p-select
+              [ngModel]="unitTypeFilter()"
+              (ngModelChange)="setUnitTypeFilter($event)"
+              [options]="unitTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Todos"
+              [showClear]="true"
+            />
+          </label>
+        }
+      </div>
+      <div class="catalog-filters-summary">
+        <p>{{ filteredItems().length }} de {{ items().length }} registros</p>
+        <button class="secondary-button" type="button" (click)="clearCatalogFilters()">
+          <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
+        </button>
+      </div>
+    </section>
     <section class="catalog-card data-table-card">
       <p-table
-        [value]="items()"
+        [value]="filteredItems()"
         [paginator]="true"
         [rows]="10"
+        [first]="catalogPageFirst()"
+        (onPage)="onCatalogTablePage($event.first)"
         [rowsPerPageOptions]="[10, 25, 50]"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
@@ -76,7 +138,6 @@
           <tr>
             <th>Nombre</th>
             @if (isUnit()) {
-              <th>Código</th>
               <th>Símbolo</th>
               <th>Tipo</th>
             }
@@ -94,7 +155,6 @@
           <tr>
             <td>{{ item.nombre }}</td>
             @if (isUnit()) {
-              <td>{{ $any(item).codigo }}</td>
               <td>{{ $any(item).simbolo }}</td>
               <td>{{ $any(item).tipo }}</td>
             }
@@ -110,17 +170,36 @@
                 item.activo ? 'Activo' : 'Inactivo'
               }}</span>
             </td>
-            <td>
-              <button *appPuede="P.catalogoGestionar"
-                class="icon-button"
-                type="button"
-                (click)="navigateToEdit(item)"
-                aria-label="Editar"
-              >
-                <i class="pi pi-pencil"></i>
-              </button>
+            <td class="catalog-actions-cell">
+              <div class="catalog-row-actions">
+                <button *appPuede="P.catalogoGestionar"
+                  class="icon-button"
+                  type="button"
+                  (click)="navigateToEdit(item)"
+                  aria-label="Editar"
+                >
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button *appPuede="P.catalogoGestionar"
+                  class="icon-button icon-button--danger"
+                  type="button"
+                  [disabled]="deletingId() === item.id"
+                  (click)="deleteCatalogItem(item)"
+                  [attr.aria-label]="'Eliminar ' + item.nombre"
+                  title="Eliminar"
+                >
+                  <i class="pi" [class.pi-trash]="deletingId() !== item.id" [class.pi-spinner]="deletingId() === item.id" [class.pi-spin]="deletingId() === item.id"></i>
+                </button>
+              </div>
             </td>
           </tr> </ng-template
+        ><ng-template #emptymessage>
+          <tr>
+            <td [attr.colspan]="isProvider() || isUnit() ? 5 : isCategory() ? 4 : 3" class="catalog-filter-empty">
+              No hay registros que coincidan con los filtros.
+            </td>
+          </tr>
+        </ng-template
       ></p-table>
     </section>
   }
@@ -149,7 +228,6 @@
         @if (hasError('nombre')) { <small>El nombre es obligatorio.</small> }
         @if (isUnit()) {
           <div class="form-grid">
-            <label>Código *<input pInputText formControlName="codigo" placeholder="g" /></label>
             <label>Símbolo *<input pInputText formControlName="simbolo" placeholder="g" /></label>
             <label>Tipo *<p-select formControlName="tipo" [options]="unitTypeOptions" optionLabel="label" optionValue="value" placeholder="Selecciona un tipo" [style]="{ width: '100%' }"></p-select></label>
             <label>Factor a unidad base *<input pInputText type="number" formControlName="factor_a_base" min="0.000001" /></label>

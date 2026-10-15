@@ -1,6 +1,20 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
+
+var (
+	ErrCatalogItemInUse    = errors.New("catalog item is in use")
+	ErrCatalogItemNotFound = errors.New("catalog item not found")
+)
+
+type CatalogDeletionCheck struct {
+	PuedeEliminarse bool     `json:"puede_eliminarse"`
+	Vinculaciones   []string `json:"vinculaciones"`
+}
 
 type ProductImportJob struct {
 	ID           uuid.UUID            `json:"id"`
@@ -57,6 +71,7 @@ type ProductVariantRow struct {
 	Stock        float64                        `json:"stock"`
 	CodigoBarras *string                        `json:"codigo_barras"`
 	Atributos    []ProductVariantAttributeInput `json:"atributos"`
+	Inventario   []ProductBranchStock           `json:"inventario"`
 }
 
 type ProductBranchStock struct {
@@ -113,6 +128,12 @@ type UpdateProductVariantInput struct {
 	Atributos    []ProductVariantAttributeInput `json:"atributos" binding:"required"`
 	PrecioVenta  float64                        `json:"precio_venta"`
 	CodigoBarras *string                        `json:"codigo_barras"`
+}
+
+type AdjustInventoryInput struct {
+	SucursalID uuid.UUID  `json:"sucursal_id" binding:"required"`
+	VarianteID *uuid.UUID `json:"variante_id"`
+	Stock      float64    `json:"stock" binding:"gte=0"`
 }
 
 type ProductLookup struct {
@@ -230,7 +251,6 @@ type CatalogImportProviderRow struct {
 }
 type CatalogImportUnitRow struct {
 	Fila        int
-	Codigo      string
 	Nombre      string
 	Simbolo     string
 	Tipo        string
@@ -267,7 +287,6 @@ type UpdateProveedorInput struct {
 }
 
 type CreateUnidadMedidaInput struct {
-	Codigo          string     `json:"codigo" binding:"required"`
 	Nombre          string     `json:"nombre" binding:"required"`
 	Simbolo         string     `json:"simbolo" binding:"required"`
 	Tipo            string     `json:"tipo" binding:"required"`
@@ -277,7 +296,6 @@ type CreateUnidadMedidaInput struct {
 	Decimales       int        `json:"decimales"`
 }
 type UpdateUnidadMedidaInput struct {
-	Codigo          *string    `json:"codigo"`
 	Nombre          *string    `json:"nombre"`
 	Simbolo         *string    `json:"simbolo"`
 	Tipo            *string    `json:"tipo"`

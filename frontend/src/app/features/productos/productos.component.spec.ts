@@ -8,6 +8,7 @@ import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { ProductRow } from './product.models';
 import { ProductosComponent } from './productos.component';
+import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 
 describe('ProductosComponent', () => {
   let component: ProductosComponent;
@@ -38,6 +39,9 @@ describe('ProductosComponent', () => {
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
       .flush({ items: [], total: 0 });
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`)
+      .flush([]);
 
     component.openCreateDialog();
     http
@@ -47,11 +51,14 @@ describe('ProductosComponent', () => {
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`)
       .flush([{ id: 'marca-coca-cola', nombre: 'Coca Cola' }]);
     http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`)
+      .flush([]);
+    http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/sucursales`)
       .flush([{ id: 'sucursal-1', nombre: 'Tienda prueba' }]);
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/unidades-medida`)
-      .flush([{ id: 'unidad-ml', nombre: 'Mililitro', codigo: 'ml', simbolo: 'ml' }]);
+      .flush([{ id: 'unidad-ml', nombre: 'Mililitro', simbolo: 'ml' }]);
     router.navigate.mockClear();
   });
 
@@ -215,6 +222,52 @@ describe('ProductosComponent', () => {
     expect(component.canSubmitProduct()).toBe(true);
   });
 
+  it('leaves a simple product conversion empty when variants are enabled', () => {
+    component.editingProduct.set({
+      id: 'producto-1',
+      nombre: 'Café',
+      presentacion: '500 g',
+      precio: 85,
+      stock: 4,
+      variantes: [],
+    } as unknown as ProductRow);
+    component.productForm.controls.tiene_variantes.setValue(true);
+    component.onVariantsChanged();
+
+    expect(component.variantControls.length).toBe(0);
+    expect(component.variantDimensions()).toEqual([]);
+    expect(component.productForm.controls.codigo_barras.value).toBe('');
+    expect(component.canSubmitProduct()).toBe(false);
+  });
+
+  it('keeps stock editable for variants generated after stock editing is enabled', () => {
+    component.editingProduct.set({ id: 'familia-1', variantes: [{}] } as unknown as ProductRow);
+    component.productForm.controls.tiene_variantes.setValue(true);
+    component.stockEditing.set(true);
+    component.variantDimensions.set([{ nombre: 'Talla', valores: ['M'], nuevoValor: '' }]);
+
+    component.generateCombinations();
+
+    expect(component.variantControls.length).toBe(1);
+    expect(component.variantControls.at(0).controls.stock_inicial.enabled).toBe(true);
+  });
+
+  it('does not allow saving variants with duplicate combinations', () => {
+    component.productForm.controls.tiene_variantes.setValue(true);
+    component.variantDimensions.set([{ nombre: 'Color', valores: ['Rojo'], nuevoValor: '' }]);
+    component.generateCombinations();
+    component.generateCombinations();
+
+    expect(component.variantControls.length).toBe(1);
+    expect(component.canSubmitProduct()).toBe(true);
+
+    const duplicate = component['createVariantForm']();
+    duplicate.controls.atributos.setValue('Color=Rojo');
+    component.variantControls.push(duplicate);
+
+    expect(component.canSubmitProduct()).toBe(false);
+  });
+
   it('replaces a dropped import file and clears its preview when removed', () => {
     const firstFile = new File(['primero'], 'productos-inicial.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -271,6 +324,49 @@ describe('ProductosComponent', () => {
       'producto-1',
       'editar',
     ]);
+  });
+
+  it('returns to the product table after confirming a completed import summary', async () => {
+    const fire = vi.spyOn(Swal, 'fire').mockResolvedValue({ isConfirmed: true } as never);
+
+    (component as any).pollProductImport('importacion-1');
+
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/importaciones/importacion-1`)
+      .flush({
+        id: 'importacion-1',
+        estado: 'completada',
+        etapa: 'Importación terminada',
+        porcentaje: 100,
+        resultado: {
+          procesadas: 2,
+          creadas: 2,
+          omitidas: 0,
+          invalidas: 0,
+          productos_simples_creados: 2,
+          productos_base_creados: 0,
+          productos_base_reutilizados: 0,
+          variantes_creadas: 0,
+          errores: [],
+          advertencias: [],
+        },
+      });
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
+      .flush({ items: [], total: 0 });
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`)
+      .flush([]);
+
+    await Promise.resolve();
+
+    expect(fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Importación terminada',
+        confirmButtonText: 'Ver registros',
+      }),
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/catalogo/productos']);
   });
 
   it('filters a product base by attributes and identifiers of its variants', () => {

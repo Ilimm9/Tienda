@@ -66,7 +66,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 	}
 	if section == "unidades" {
 		sheet = "Unidades"
-		headers = []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}
+		headers = []string{"Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}
 	}
 	if section == "proveedores" {
 		sheet = "Proveedores"
@@ -214,20 +214,20 @@ func parseVariantAttributes(value string) ([]domain.ProductVariantAttributeInput
 }
 
 func parseUnitImport(file io.Reader) ([]domain.CatalogImportUnitRow, domain.CatalogImportResult, error) {
-	rows, result, err := readImportRows(file, []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"})
+	rows, result, err := readImportRows(file, []string{"Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"})
 	if err != nil {
 		return nil, result, err
 	}
 	valid := make([]domain.CatalogImportUnitRow, 0, len(rows))
 	for index, row := range rows {
-		factor, factorErr := strconv.ParseFloat(cell(row, 4), 64)
-		decimals, decimalsErr := strconv.Atoi(cell(row, 5))
-		if cell(row, 0) == "" || cell(row, 1) == "" || cell(row, 2) == "" || cell(row, 3) == "" || factorErr != nil || decimalsErr != nil || factor <= 0 || decimals < 0 || decimals > 6 {
+		factor, factorErr := strconv.ParseFloat(cell(row, 3), 64)
+		decimals, decimalsErr := strconv.Atoi(cell(row, 4))
+		if cell(row, 0) == "" || cell(row, 1) == "" || cell(row, 2) == "" || factorErr != nil || decimalsErr != nil || factor <= 0 || decimals < 0 || decimals > 6 {
 			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "La unidad requiere código, nombre, símbolo, tipo, factor válido y decimales entre 0 y 6"})
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "La unidad requiere nombre, símbolo, tipo, factor válido y decimales entre 0 y 6"})
 			continue
 		}
-		valid = append(valid, domain.CatalogImportUnitRow{Fila: index + 2, Codigo: cell(row, 0), Nombre: cell(row, 1), Simbolo: cell(row, 2), Tipo: cell(row, 3), FactorABase: factor, Decimales: decimals})
+		valid = append(valid, domain.CatalogImportUnitRow{Fila: index + 2, Nombre: cell(row, 0), Simbolo: cell(row, 1), Tipo: cell(row, 2), FactorABase: factor, Decimales: decimals})
 	}
 	return valid, result, nil
 }

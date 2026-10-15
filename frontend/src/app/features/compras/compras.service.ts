@@ -42,7 +42,6 @@ export class ComprasService {
   createUnit(
     id: string,
     request: {
-      codigo: string;
       nombre: string;
       simbolo: string;
       tipo: string;

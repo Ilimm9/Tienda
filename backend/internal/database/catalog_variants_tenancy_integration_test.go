@@ -92,6 +92,43 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 	if err := repo.Deactivate(ctxs[1].negocio, jabon); err == nil {
 		t.Fatal("otro negocio desactivó producto ajeno")
 	}
+	conversion := domain.UpdateProductInput{
+		Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12,
+		Variantes: []domain.UpdateProductVariantInput{
+			{Atributos: []domain.ProductVariantAttributeInput{{Nombre: "Aroma", Valor: "Neutro"}}, PrecioVenta: 12},
+			{Atributos: []domain.ProductVariantAttributeInput{{Nombre: "Aroma", Valor: "Lavanda"}}, PrecioVenta: 13},
+		},
+	}
+	if err := repo.Update(ctxs[0].negocio, jabon, conversion); err != nil {
+		t.Fatalf("conversión explícita: %v", err)
+	}
+	var historical domain.ProductoNegocio
+	if err := db.Where("negocio_id = ? AND producto_id = ?", ctxs[0].negocio, jabon).First(&historical).Error; err != nil {
+		t.Fatalf("registro histórico simple: %v", err)
+	}
+	if historical.Activo {
+		t.Fatal("el producto simple histórico quedó como registro comercial activo")
+	}
+	converted, err := repo.ListByBusiness(ctxs[0].negocio)
+	if err != nil {
+		t.Fatalf("listar producto convertido: %v", err)
+	}
+	for _, product := range converted {
+		if product.ID != jabon {
+			continue
+		}
+		if len(product.Variantes) != 2 {
+			t.Fatalf("variantes creadas = %d, se esperaban 2", len(product.Variantes))
+		}
+		for _, variant := range product.Variantes {
+			for _, attribute := range variant.Atributos {
+				if attribute.Nombre == "Tipo" && attribute.Valor == "General" {
+					t.Fatal("la conversión creó una variante automática Tipo=General")
+				}
+			}
+		}
+		break
+	}
 	job, err := repo.CreateProductImportJob(ctxs[0].negocio, ctxs[0].sucursal)
 	if err != nil {
 		t.Fatal(err)

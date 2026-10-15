@@ -32,14 +32,19 @@ type ProductRepository interface {
 	ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	Create(businessID uuid.UUID, input domain.CreateProductInput) error
 	Update(businessID, productID uuid.UUID, input domain.UpdateProductInput) error
+	AdjustInventory(businessID, productID, userID uuid.UUID, input domain.AdjustInventoryInput) error
 	Deactivate(businessID, productID uuid.UUID) error
 	ListBrandsAdmin(businessID uuid.UUID) ([]domain.Marca, error)
 	CreateBrand(businessID uuid.UUID, input domain.CreateMarcaInput) error
 	UpdateBrand(businessID, brandID uuid.UUID, input domain.UpdateMarcaInput) error
+	CheckBrandDeletion(businessID, brandID uuid.UUID) (domain.CatalogDeletionCheck, error)
+	DeleteBrand(businessID, brandID uuid.UUID) error
 	ImportBrands(businessID uuid.UUID, rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error)
 	ListCategoriesAdmin(businessID uuid.UUID) ([]domain.Categoria, error)
 	CreateCategory(businessID uuid.UUID, input domain.CreateCategoriaInput) error
 	UpdateCategory(businessID, categoryID uuid.UUID, input domain.UpdateCategoriaInput) error
+	CheckCategoryDeletion(businessID, categoryID uuid.UUID) (domain.CatalogDeletionCheck, error)
+	DeleteCategory(businessID, categoryID uuid.UUID) error
 	ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ImportProviders(businessID uuid.UUID, rows []domain.CatalogImportProviderRow) (domain.CatalogImportResult, error)
 	ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
@@ -51,9 +56,13 @@ type ProductRepository interface {
 	ListProviders(uuid.UUID) ([]domain.Proveedor, error)
 	CreateProvider(uuid.UUID, domain.CreateProveedorInput) error
 	UpdateProvider(uuid.UUID, uuid.UUID, domain.UpdateProveedorInput) error
+	CheckProviderDeletion(businessID, providerID uuid.UUID) (domain.CatalogDeletionCheck, error)
+	DeleteProvider(businessID, providerID uuid.UUID) error
 	ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida, error)
 	CreateUnit(businessID uuid.UUID, input domain.CreateUnidadMedidaInput) error
 	UpdateUnit(businessID, unitID uuid.UUID, input domain.UpdateUnidadMedidaInput) error
+	CheckUnitDeletion(businessID, unitID uuid.UUID) (domain.CatalogDeletionCheck, error)
+	DeleteUnit(businessID, unitID uuid.UUID) error
 }
 
 func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
@@ -137,6 +146,12 @@ func (s *ProductService) CreateBrand(businessID uuid.UUID, i domain.CreateMarcaI
 func (s *ProductService) UpdateBrand(businessID, id uuid.UUID, i domain.UpdateMarcaInput) error {
 	return s.products.UpdateBrand(businessID, id, i)
 }
+func (s *ProductService) DeleteBrand(businessID, id uuid.UUID) error {
+	return s.products.DeleteBrand(businessID, id)
+}
+func (s *ProductService) CheckBrandDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return s.products.CheckBrandDeletion(businessID, id)
+}
 func (s *ProductService) ListCategoriesAdmin(businessID uuid.UUID) ([]domain.Categoria, error) {
 	return s.products.ListCategoriesAdmin(businessID)
 }
@@ -145,6 +160,12 @@ func (s *ProductService) CreateCategory(businessID uuid.UUID, i domain.CreateCat
 }
 func (s *ProductService) UpdateCategory(businessID, id uuid.UUID, i domain.UpdateCategoriaInput) error {
 	return s.products.UpdateCategory(businessID, id, i)
+}
+func (s *ProductService) DeleteCategory(businessID, id uuid.UUID) error {
+	return s.products.DeleteCategory(businessID, id)
+}
+func (s *ProductService) CheckCategoryDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return s.products.CheckCategoryDeletion(businessID, id)
 }
 func (s *ProductService) ListProviders(id uuid.UUID) ([]domain.Proveedor, error) {
 	return s.products.ListProviders(id)
@@ -155,6 +176,12 @@ func (s *ProductService) CreateProvider(id uuid.UUID, i domain.CreateProveedorIn
 func (s *ProductService) UpdateProvider(businessID, id uuid.UUID, i domain.UpdateProveedorInput) error {
 	return s.products.UpdateProvider(businessID, id, i)
 }
+func (s *ProductService) DeleteProvider(businessID, id uuid.UUID) error {
+	return s.products.DeleteProvider(businessID, id)
+}
+func (s *ProductService) CheckProviderDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return s.products.CheckProviderDeletion(businessID, id)
+}
 func (s *ProductService) ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida, error) {
 	return s.products.ListUnits(businessID)
 }
@@ -163,6 +190,12 @@ func (s *ProductService) CreateUnit(businessID uuid.UUID, i domain.CreateUnidadM
 }
 func (s *ProductService) UpdateUnit(businessID, id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
 	return s.products.UpdateUnit(businessID, id, i)
+}
+func (s *ProductService) DeleteUnit(businessID, id uuid.UUID) error {
+	return s.products.DeleteUnit(businessID, id)
+}
+func (s *ProductService) CheckUnitDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return s.products.CheckUnitDeletion(businessID, id)
 }
 
 func (s *ProductService) ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error) {
@@ -208,4 +241,8 @@ func NewProductService(products ProductRepository, productLookup ProductLookupPr
 
 func (s *ProductService) ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error) {
 	return s.products.ListByBusiness(businessID)
+}
+
+func (s *ProductService) AdjustInventory(businessID, productID, userID uuid.UUID, input domain.AdjustInventoryInput) error {
+	return s.products.AdjustInventory(businessID, productID, userID, input)
 }

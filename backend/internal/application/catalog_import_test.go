@@ -48,6 +48,46 @@ func TestParseProviderImportRejectsMissingNameAndInvalidEmail(t *testing.T) {
 	}
 }
 
+func TestParseUnitImportUsesSymbolWithoutCode(t *testing.T) {
+	file := workbook(t, []string{"Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}, [][]string{{"Kilogramo", "kg", "PESO", "1", "3"}})
+
+	rows, result, err := parseUnitImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseUnitImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].Nombre != "Kilogramo" || rows[0].Simbolo != "kg" || rows[0].Tipo != "PESO" {
+		t.Fatalf("rows = %#v, want one unit with symbol", rows)
+	}
+	if result.Invalidas != 0 || len(result.Errores) != 0 {
+		t.Fatalf("result = %#v, want valid import", result)
+	}
+}
+
+func TestParseUnitImportRejectsLegacyCodeHeader(t *testing.T) {
+	file := workbook(t, []string{"Código", "Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}, [][]string{{"kg", "Kilogramo", "kg", "PESO", "1", "3"}})
+
+	_, _, err := parseUnitImport(bytes.NewReader(file))
+	if !errors.Is(err, ErrInvalidImportFile) {
+		t.Fatalf("parseUnitImport() error = %v, want invalid legacy template", err)
+	}
+}
+
+func TestUnitImportTemplateExcludesCode(t *testing.T) {
+	content, err := CatalogImportTemplate("unidades")
+	if err != nil {
+		t.Fatalf("CatalogImportTemplate() error = %v", err)
+	}
+	book, err := excelize.OpenReader(bytes.NewReader(content))
+	if err != nil {
+		t.Fatalf("could not open template: %v", err)
+	}
+	defer book.Close()
+	rows, err := book.GetRows("Unidades")
+	if err != nil || len(rows) == 0 || !reflect.DeepEqual(rows[0], []string{"Nombre", "Símbolo", "Tipo", "Factor a base", "Decimales"}) {
+		t.Fatalf("unit headers = %#v, error = %v", rows, err)
+	}
+}
+
 func TestParseCategoryImportRejectsUnexpectedHeaders(t *testing.T) {
 	file := workbook(t, []string{"Nombre", "Padre"}, nil)
 	_, _, err := parseCategoryImport(bytes.NewReader(file))

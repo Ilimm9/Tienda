@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { CatalogImportResult, Categoria, Marca, Proveedor, UnidadMedida } from './catalogo.models';
+import { CatalogDeletionCheck, CatalogImportResult, Categoria, Marca, Proveedor, UnidadMedida } from './catalogo.models';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogoService {
@@ -25,6 +25,12 @@ export class CatalogoService {
   }
   actualizar(negocioId: string, path: string, id: string, payload: object): Observable<void> {
     return this.http.patch<void>(`${this.api}/negocios/${negocioId}/catalogo/${path}/${id}`, payload);
+  }
+  eliminar(negocioId: string, path: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/negocios/${negocioId}/catalogo/${path}/${id}`);
+  }
+  comprobarEliminacion(negocioId: string, path: string, id: string): Observable<CatalogDeletionCheck> {
+    return this.http.get<CatalogDeletionCheck>(`${this.api}/negocios/${negocioId}/catalogo/${path}/${id}/uso`);
   }
   importar(negocioId: string, section: 'marcas' | 'categorias' | 'proveedores' | 'unidades', file: File): Observable<CatalogImportResult> {
     const data = new FormData();

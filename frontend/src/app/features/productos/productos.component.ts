@@ -30,6 +30,7 @@ import {
 } from './product.models';
 import { ProductosService } from './productos.service';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
 
@@ -120,7 +121,7 @@ export class ProductosComponent {
   readonly providers = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
   readonly units = signal<UnitOption[]>([]);
-  readonly unitOptions = computed(() => [...this.units(), { id: '__new_unit__', nombre: 'Crear nueva…', codigo: '', simbolo: '' }]);
+  readonly unitOptions = computed(() => [...this.units(), { id: '__new_unit__', nombre: 'Crear nueva…', simbolo: '' }]);
   readonly catalogLoadErrors = signal<string[]>([]);
   readonly branchReady = signal(false);
   readonly saving = signal(false);
@@ -148,6 +149,7 @@ export class ProductosComponent {
   readonly variantDimensions = signal<VariantDimension[]>([]);
   readonly newDimensionName = signal('');
   readonly deletingProductId = signal<string | null>(null);
+  readonly stockEditing = signal(false);
   private lastLookup: ProductLookup | null = null;
   private categoriesLoaded = false;
   private brandsLoaded = false;
@@ -291,6 +293,7 @@ export class ProductosComponent {
     this.productForm.controls.variantes.clear();
     this.variantDimensions.set([]);
     this.editingProduct.set(null);
+    this.stockEditing.set(false);
     this.categories.set([]);
     this.brands.set([]);
     this.providers.set([]);
@@ -362,7 +365,10 @@ export class ProductosComponent {
     this.formError = null;
     this.resetBrandCreation();
     this.editingProduct.set(product);
+    this.stockEditing.set(false);
     this.branchReady.set(true);
+    const branchID = this.contexto.sucursal()?.id;
+    const currentStock = product.inventario?.find((item) => item.sucursal_id === branchID)?.stock ?? product.stock;
     this.productForm.reset({
       nombre: product.nombre,
       sku_interno: product.sku ?? '',
@@ -380,12 +386,13 @@ export class ProductosComponent {
       unidad_medida_id: product.unidad_medida_id ?? '',
       presentacion: product.presentacion ?? '',
       precio_venta: product.precio,
-      stock_inicial: 0,
+      stock_inicial: currentStock,
     });
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
     this.productForm.controls.sku_interno.disable();
     this.productForm.controls.variantes.clear();
+    this.variantDimensions.set([]);
     if (product.variantes.length > 0) {
       const dimensions = new Map<string, string[]>();
       product.variantes.forEach((variant) => variant.atributos.forEach((attribute) => {
@@ -396,7 +403,8 @@ export class ProductosComponent {
       this.variantDimensions.set([...dimensions.entries()].map(([nombre, valores]) => ({ nombre, valores, nuevoValor: '' })));
       product.variantes.forEach((variant) => {
         const control = this.createVariantForm();
-        control.patchValue({ id: variant.id, atributos: this.serializeVariantAttributes(variant.atributos), sku_interno: variant.sku ?? '', precio_venta: variant.precio, stock_inicial: variant.stock, codigo_barras: variant.codigo_barras ?? '', generar_sku_interno: !variant.sku });
+        const variantStock = variant.inventario?.find((item) => item.sucursal_id === branchID)?.stock ?? variant.stock;
+        control.patchValue({ id: variant.id, atributos: this.serializeVariantAttributes(variant.atributos), sku_interno: variant.sku ?? '', precio_venta: variant.precio, stock_inicial: variantStock, codigo_barras: variant.codigo_barras ?? '', generar_sku_interno: !variant.sku });
         control.controls.stock_inicial.disable();
         this.variantControls.push(control);
       });
@@ -419,6 +427,32 @@ export class ProductosComponent {
     this.productosService.listUnits(this.negocioID).subscribe({
       next: (items) => this.units.set(items),
       error: () => this.addCatalogLoadError('No fue posible cargar las unidades de medida.'),
+    });
+  }
+
+  enableStockEditing(): void {
+    if (!this.editingProduct()) return;
+    if (!this.contexto.puede(PERMISOS.inventarioAjustar)) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'Sin permiso para ajustar inventario',
+        text: 'Necesitas el permiso inventario.ajustar para modificar el stock.',
+      });
+      return;
+    }
+    Swal.fire({
+      icon: 'warning',
+      title: 'Ajustar existencias',
+      text: 'Este cambio modificará el inventario de la sucursal activa y quedará registrado. ¿Deseas continuar?',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, editar stock',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      this.stockEditing.set(true);
+      this.productForm.controls.stock_inicial.enable();
+      this.syncVariantStockEditing();
     });
   }
 
@@ -601,6 +635,9 @@ export class ProductosComponent {
             icon: partial ? 'warning' : 'success',
             title: 'Importación terminada',
             text: `${job.resultado.creadas} filas importadas correctamente · ${job.resultado.productos_simples_creados ?? 0} productos simples · ${job.resultado.productos_base_creados} familias nuevas · ${job.resultado.productos_base_reutilizados} familias reutilizadas · ${job.resultado.variantes_creadas} variantes · ${job.resultado.omitidas} omitidas · ${job.resultado.invalidas} inválidas`,
+            confirmButtonText: 'Ver registros',
+          }).then(() => {
+            this.navigate(['/catalogo/productos']);
           });
           return;
         }
@@ -665,11 +702,11 @@ export class ProductosComponent {
     if (this.unitForm.invalid || this.unitCreating()) return;
     const value = this.unitForm.getRawValue();
     const simbolo = value.simbolo.trim();
-    const payload: CreateUnitRequest = { ...value, codigo: this.normalizeCatalogText(simbolo).replaceAll(' ', '-'), nombre: value.nombre.trim(), simbolo, factor_a_base: 1, permite_fraccion: true, decimales: 2 };
+    const payload: CreateUnitRequest = { ...value, nombre: value.nombre.trim(), simbolo, factor_a_base: 1, permite_fraccion: true, decimales: 2 };
     this.unitCreating.set(true);
     this.productosService.createUnit(this.negocioID, payload).subscribe({
       next: () => this.productosService.listUnits(this.negocioID).subscribe({
-        next: (items) => { this.units.set(items); this.unitCreating.set(false); const created = items.find((item) => item.codigo === payload.codigo); if (!created) { this.unitCreationError.set('La unidad fue creada, pero no fue posible seleccionarla.'); return; } this.productForm.controls.unidad_medida_id.setValue(created.id); this.productForm.controls.unidad_contenido.setValue(created.simbolo); this.unitCreationVisible.set(false); this.unitForm.reset({ nombre: '', simbolo: '', tipo: 'VOLUMEN' }); },
+        next: (items) => { this.units.set(items); this.unitCreating.set(false); const created = items.find((item) => this.normalizeCatalogText(item.simbolo) === this.normalizeCatalogText(payload.simbolo)); if (!created) { this.unitCreationError.set('La unidad fue creada, pero no fue posible seleccionarla.'); return; } this.productForm.controls.unidad_medida_id.setValue(created.id); this.productForm.controls.unidad_contenido.setValue(created.simbolo); this.unitCreationVisible.set(false); this.unitForm.reset({ nombre: '', simbolo: '', tipo: 'VOLUMEN' }); },
         error: () => { this.unitCreating.set(false); this.unitCreationError.set('La unidad fue creada, pero no fue posible recargarla.'); },
       }),
       error: (response) => { this.unitCreating.set(false); this.unitCreationError.set(response.error?.mensaje ?? 'No fue posible crear la unidad.'); },
@@ -697,6 +734,11 @@ export class ProductosComponent {
       controls.sku_interno.disable();
       controls.stock_inicial.disable();
       controls.codigo_barras.setValue('');
+      const editing = this.editingProduct();
+      if (editing && editing.variantes.length === 0 && this.variantControls.length === 0) {
+        this.variantDimensions.set([]);
+      }
+      this.syncVariantStockEditing();
       return;
     }
     if (this.editingProduct()) controls.sku_interno.disable();
@@ -754,7 +796,7 @@ export class ProductosComponent {
         const control = this.createVariantForm();
         control.controls.atributos.setValue(serialized);
         control.controls.precio_venta.setValue(this.productForm.controls.precio_venta.value);
-        if (this.editingProduct()) control.controls.stock_inicial.disable();
+        if (this.editingProduct()) this.syncVariantControlStockEditing(control);
         this.variantControls.push(control);
       }
     }
@@ -801,6 +843,7 @@ export class ProductosComponent {
 
   canSubmitProduct(): boolean {
     if (this.saving()) return false;
+    if (this.productForm.controls.tiene_variantes.value && !this.hasValidVariants()) return false;
     if (this.editingProduct()) return this.productForm.dirty;
     return this.branchReady();
   }
@@ -1167,6 +1210,25 @@ export class ProductosComponent {
       this.productForm.markAllAsTouched();
       return;
     }
+    const editing = this.editingProduct();
+    if (editing && editing.variantes.length === 0 && this.productForm.controls.tiene_variantes.value) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Convertir a producto con variantes',
+        text: 'El stock, SKU y código de barras actuales no se copiarán. Deberás asignarlos manualmente a las nuevas variantes; el historial anterior se conservará.',
+        showCancelButton: true,
+        confirmButtonText: 'Convertir y guardar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.isConfirmed) this.persistProduct();
+      });
+      return;
+    }
+    this.persistProduct();
+  }
+
+  private persistProduct(): void {
     this.saving.set(true);
     this.formError = null;
     const value = this.productForm.getRawValue();
@@ -1219,7 +1281,17 @@ export class ProductosComponent {
             : [],
         })
       : this.productosService.create(this.negocioID, payload);
-    request.subscribe({
+    const directStockRequests = this.stockEditing() && editing && !payload.tiene_variantes
+      ? this.inventoryAdjustments(editing, payload)
+      : [];
+    const stockRequests$ = this.stockEditing() && editing
+      ? payload.tiene_variantes
+        ? this.inventoryAdjustmentsAfterSave(editing, payload)
+        : (directStockRequests.length ? forkJoin(directStockRequests) : of([]))
+      : of([]);
+    request.pipe(
+      switchMap(() => stockRequests$),
+    ).subscribe({
       next: () => {
         this.saving.set(false);
         this.navigate(['/catalogo/productos']);
@@ -1229,6 +1301,83 @@ export class ProductosComponent {
         this.formError = this.productSaveError(response);
       },
     });
+  }
+
+  private inventoryAdjustments(editing: ProductRow | null, payload: { stock_inicial: number; tiene_variantes: boolean; variantes?: Array<{ id: string | null; stock_inicial: number }> }) {
+    if (!editing) return [];
+    const branchID = this.contexto.sucursal()?.id;
+    if (!branchID) return [];
+    const requests = [] as ReturnType<ProductosService['adjustInventory']>[];
+    if (!payload.tiene_variantes) {
+      const current = editing.inventario?.find((item) => item.sucursal_id === branchID)?.stock ?? editing.stock;
+      if (payload.stock_inicial !== current) requests.push(this.productosService.adjustInventory(this.negocioID, editing.id, { sucursal_id: branchID, stock: payload.stock_inicial }));
+    } else {
+      payload.variantes?.forEach((variant, index) => {
+        const current = editing.variantes[index]?.inventario?.find((item) => item.sucursal_id === branchID)?.stock ?? editing.variantes[index]?.stock ?? 0;
+        if (variant.id && variant.stock_inicial !== current) requests.push(this.productosService.adjustInventory(this.negocioID, editing.id, { sucursal_id: branchID, variante_id: variant.id, stock: variant.stock_inicial }));
+      });
+    }
+    return requests;
+  }
+
+  private inventoryAdjustmentsAfterSave(
+    editing: ProductRow,
+    payload: { tiene_variantes: boolean; variantes?: Array<{ id: string | null; atributos: { nombre: string; valor: string }[]; stock_inicial: number }> },
+  ) {
+    const branchID = this.contexto.sucursal()?.id;
+    if (!branchID || !payload.tiene_variantes) return of([]);
+    return this.productosService.listByBusiness(this.negocioID).pipe(
+      switchMap(({ items }) => {
+        const saved = (items ?? []).find((product) => product.id === editing.id);
+        if (!saved) throw new Error('No fue posible recargar las variantes del producto.');
+        const requests = (payload.variantes ?? []).flatMap((variant) => {
+          const savedVariant = variant.id
+            ? saved.variantes.find((item) => item.id === variant.id)
+            : saved.variantes.find((item) => this.variantKey(item.atributos) === this.variantKey(variant.atributos));
+          if (!savedVariant) return [];
+          const current = savedVariant.inventario?.find((item) => item.sucursal_id === branchID)?.stock ?? (variant.id ? savedVariant.stock : 0);
+          if (variant.stock_inicial === current) return [];
+          return [this.productosService.adjustInventory(this.negocioID, saved.id, {
+            sucursal_id: branchID,
+            variante_id: savedVariant.id,
+            stock: variant.stock_inicial,
+          })];
+        });
+        return requests.length ? forkJoin(requests) : of([]);
+      }),
+    );
+  }
+
+  private variantKey(attributes: { nombre: string; valor: string }[]): string {
+    return attributes
+      .map((attribute) => `${this.normalizeCatalogText(attribute.nombre)}=${this.normalizeCatalogText(attribute.valor)}`)
+      .sort()
+      .join(';');
+  }
+
+  private hasValidVariants(): boolean {
+    if (this.variantControls.length === 0) return false;
+    const keys = new Set<string>();
+    return this.variantControls.controls.every((control) => {
+      const attributes = this.parseVariantAttributes(control.controls.atributos.value);
+      if (attributes.length === 0) return false;
+      const names = new Set(attributes.map((attribute) => this.normalizeCatalogText(attribute.nombre)));
+      if (names.size !== attributes.length) return false;
+      const key = this.variantKey(attributes);
+      if (keys.has(key)) return false;
+      keys.add(key);
+      return true;
+    });
+  }
+
+  private syncVariantStockEditing(): void {
+    this.variantControls.controls.forEach((control) => this.syncVariantControlStockEditing(control));
+  }
+
+  private syncVariantControlStockEditing(control: VariantFormGroup): void {
+    if (!this.editingProduct()) return;
+    if (this.stockEditing()) control.controls.stock_inicial.enable();
+    else control.controls.stock_inicial.disable();
   }
 
   private productSaveError(response: { error?: unknown; message?: string }): string {

@@ -46,6 +46,72 @@
     color: var(--text-muted);
 }
 
+.catalog-filters {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: .55rem;
+    background: var(--surface-raised);
+}
+
+.catalog-filters-grid {
+    display: grid;
+    grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(10rem, 1fr));
+    gap: .75rem;
+}
+
+.catalog-filter-field,
+.catalog-filter-search {
+    display: grid;
+    gap: .35rem;
+    color: var(--text-muted);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.catalog-filter-search-input {
+    position: relative;
+}
+
+.catalog-filter-search-input i {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: .7rem;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+}
+
+.catalog-filter-search-input input,
+.catalog-filter-field p-select {
+    width: 100%;
+}
+
+.catalog-filter-search-input input {
+    padding-left: 2rem;
+}
+
+.catalog-filters-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.catalog-filters-summary p,
+.catalog-filter-empty {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: .8rem;
+}
+
+.catalog-filter-empty {
+    padding: 2rem;
+    text-align: center;
+}
+
 .eyebrow {
     margin: 0;
     color: var(--primary);
@@ -151,6 +217,23 @@
     background: var(--primary-soft);
 }
 
+.icon-button--danger:hover {
+    color: var(--danger);
+    background: var(--danger-soft, var(--surface-hover));
+}
+
+.catalog-actions-cell {
+    white-space: nowrap;
+}
+
+.catalog-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    white-space: nowrap;
+}
+
 .status {
     display: inline-flex;
     min-height: 1.75rem;
@@ -231,5 +314,14 @@
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .catalog-filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .catalog-filters-summary {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }

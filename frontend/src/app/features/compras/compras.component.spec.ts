@@ -94,4 +94,29 @@ describe('ComprasComponent', () => {
     component.providerForm.controls.nombre.setValue('Distribuidora Norte');
     expect(component.providerForm.valid).toBe(true);
   });
+
+  it('crea una unidad de empaque sin código y la selecciona en el detalle', async () => {
+    const component = (await createFixture()).componentInstance;
+    service.createUnit.mockReturnValue(of(undefined));
+    service.units.mockReturnValue(
+      of([
+        { id: 'caja-1', nombre: 'Caja', tipo: 'EMPAQUE', factor_a_base: 12 },
+        { id: 'paquete-24', nombre: 'Paquete', tipo: 'EMPAQUE', factor_a_base: 24 },
+      ]),
+    );
+
+    component.startUnit(0);
+    component.unitForm.patchValue({ nombre: 'Paquete', simbolo: 'paq', factor_a_base: 24 });
+    component.createUnit();
+
+    expect(service.createUnit).toHaveBeenCalledWith('negocio-1', {
+      nombre: 'Paquete',
+      simbolo: 'paq',
+      tipo: 'EMPAQUE',
+      factor_a_base: 24,
+      decimales: 0,
+    });
+    expect(component.details.at(0).get('unidad_medida_id')?.value).toBe('paquete-24');
+    expect(component.unitDetailIndex()).toBeNull();
+  });
 });

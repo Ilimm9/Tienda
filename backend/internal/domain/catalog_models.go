@@ -31,7 +31,6 @@ type Marca struct {
 type UnidadMedida struct {
 	ID              uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	NegocioID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
-	Codigo          string     `gorm:"type:varchar(30);not null" json:"codigo"`
 	Nombre          string     `gorm:"type:varchar(100);not null" json:"nombre"`
 	Simbolo         string     `gorm:"type:varchar(20);not null" json:"simbolo"`
 	Tipo            string     `gorm:"type:varchar(30);not null" json:"tipo"`

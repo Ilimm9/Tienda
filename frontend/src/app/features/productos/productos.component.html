@@ -539,12 +539,18 @@
 
         <section class="family-card product-mode-card">
           <label class="variants-switch" for="tiene-variantes">
-            <p-checkbox formControlName="tiene_variantes" [binary]="true" inputId="tiene-variantes" [disabled]="!!editingProduct()" (onChange)="onVariantsChanged()" />
+            <p-checkbox formControlName="tiene_variantes" [binary]="true" inputId="tiene-variantes" [disabled]="!!editingProduct()?.variantes.length" (onChange)="onVariantsChanged()" />
             <span><strong>Este producto tiene variantes</strong><small>Por ejemplo: sabores, tamaños o colores.</small></span>
           </label>
           @if (!productForm.controls.tiene_variantes.value) {
             <div class="simple-product-fields">
-              <label class="field"><span>Stock inicial <b>*</b></span><input pInputText type="number" formControlName="stock_inicial" min="0" /></label>
+              <label class="field"><span>{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }} <b>*</b></span><input pInputText type="number" formControlName="stock_inicial" min="0" /></label>
+              @if (editingProduct()) {
+                <div class="stock-edit-actions">
+                  <small>El stock corresponde a la sucursal activa.</small>
+                  <button type="button" class="secondary-button" (click)="enableStockEditing()" [disabled]="stockEditing()">{{ stockEditing() ? 'Edición habilitada' : 'Editar stock' }}</button>
+                </div>
+              }
               <span class="auto-sku">El SKU interno se genera automáticamente.</span>
             </div>
           } @else {
@@ -556,6 +562,7 @@
               }
               <div class="variant-actions"><span>El precio base se aplica automáticamente a las variantes.</span><button type="button" class="primary-button" [disabled]="!canGenerateCombinations()" (click)="generateCombinations()">Generar combinaciones</button></div>
               @if (variantControls.length > 0) {<div class="variant-table-wrap"><table class="variant-edit-table"><thead><tr>@for (dimension of variantDimensions(); track dimension.nombre) {<th>{{ dimension.nombre }}</th>}<th>Código de barras</th><th>Precio</th><th>{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }}</th><th></th></tr></thead><tbody>@for (variant of variantControls.controls; track $index; let index = $index) {<tr [formGroupName]="index">@for (attribute of variantAttributeValues(index); track attribute.nombre) {<td>{{ attribute.valor }}</td>}<td><input pInputText formControlName="codigo_barras" /></td><td><input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" /></td><td><input pInputText type="number" formControlName="stock_inicial" min="0" /></td><td><button type="button" class="icon-button danger" (click)="removeVariant(index)">×</button></td></tr>}</tbody></table></div>}
+              @if (editingProduct()) { <button type="button" class="secondary-button" (click)="enableStockEditing()" [disabled]="stockEditing()">{{ stockEditing() ? 'Edición de stock habilitada' : 'Editar stock de variantes' }}</button> }
             </div>
           }
         </section>

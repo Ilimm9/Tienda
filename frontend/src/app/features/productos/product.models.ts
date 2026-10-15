@@ -37,6 +37,7 @@ export interface ProductVariantRow {
   stock: number;
   codigo_barras: string | null;
   atributos: ProductVariantAttribute[];
+  inventario?: ProductBranchStock[];
 }
 
 export interface UpdateProductVariantRequest {
@@ -72,12 +73,10 @@ export interface CatalogOption {
 }
 
 export interface UnitOption extends CatalogOption {
-  codigo: string;
   simbolo: string;
 }
 
 export interface CreateUnitRequest {
-  codigo: string;
   nombre: string;
   simbolo: string;
   tipo: string;
@@ -120,6 +119,12 @@ export interface UpdateProductRequest {
   codigo_barras: string | null;
   imagen_url: string | null;
   variantes: UpdateProductVariantRequest[];
+}
+
+export interface AdjustInventoryRequest {
+  sucursal_id: string;
+  variante_id?: string | null;
+  stock: number;
 }
 
 export interface ProductLookup {

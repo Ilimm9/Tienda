@@ -48,6 +48,7 @@ const (
 	PermisoCompraRegistrar   = "compras.registrar"
 	PermisoPrecioVer         = "precios.ver"
 	PermisoPrecioAutorizar   = "precios.autorizar"
+	PermisoInventarioAjustar = "inventario.ajustar"
 )
 
 // CatalogoPermisos es la fuente del sembrado idempotente del catálogo global.
@@ -74,4 +75,5 @@ var CatalogoPermisos = []Permiso{
 	{Codigo: PermisoCompraRegistrar, CodigoModulo: "compras", Nombre: "Registrar compras"},
 	{Codigo: PermisoPrecioVer, CodigoModulo: "precios", Nombre: "Ver propuestas de costos y precios"},
 	{Codigo: PermisoPrecioAutorizar, CodigoModulo: "precios", Nombre: "Autorizar costos y precios"},
+	{Codigo: PermisoInventarioAjustar, CodigoModulo: "inventario", Nombre: "Ajustar existencias"},
 }

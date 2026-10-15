@@ -168,6 +168,35 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *ProductHandler) AdjustInventory(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	productID, ok := parseID(c, "productoId")
+	if !ok {
+		return
+	}
+	userID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	var input domain.AdjustInventoryInput
+	if err := c.ShouldBindJSON(&input); err != nil || input.Stock < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El stock y la sucursal son obligatorios y válidos"})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, input.SucursalID) {
+		return
+	}
+	if err := h.products.AdjustInventory(businessID, productID, userID, input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func (h *ProductHandler) Deactivate(c *gin.Context) {
 	businessID, ok := parseID(c, "negocioId")
 	if !ok {
@@ -253,6 +282,12 @@ func (h *ProductHandler) UpdateBrand(c *gin.Context) {
 	}
 	c.Status(204)
 }
+func (h *ProductHandler) DeleteBrand(c *gin.Context) {
+	h.deleteCatalog(c, "marca", h.products.DeleteBrand)
+}
+func (h *ProductHandler) CheckBrandDeletion(c *gin.Context) {
+	h.checkCatalogDeletion(c, h.products.CheckBrandDeletion)
+}
 func (h *ProductHandler) ListCategoriesAdmin(c *gin.Context) {
 	businessID, ok := parseID(c, "negocioId")
 	if !ok {
@@ -300,6 +335,56 @@ func (h *ProductHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 	c.Status(204)
+}
+func (h *ProductHandler) DeleteCategory(c *gin.Context) {
+	h.deleteCatalog(c, "categoría", h.products.DeleteCategory)
+}
+func (h *ProductHandler) CheckCategoryDeletion(c *gin.Context) {
+	h.checkCatalogDeletion(c, h.products.CheckCategoryDeletion)
+}
+
+func (h *ProductHandler) deleteCatalog(c *gin.Context, label string, deleteFn func(uuid.UUID, uuid.UUID) error) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := deleteFn(businessID, id); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrCatalogItemInUse):
+			c.JSON(http.StatusConflict, gin.H{"mensaje": err.Error()})
+		case errors.Is(err, domain.ErrCatalogItemNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"mensaje": "No se encontró el " + label + " solicitado"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible eliminar el " + label})
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *ProductHandler) checkCatalogDeletion(c *gin.Context, checkFn func(uuid.UUID, uuid.UUID) (domain.CatalogDeletionCheck, error)) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	result, err := checkFn(businessID, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrCatalogItemNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"mensaje": "No se encontró el registro solicitado"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible comprobar las vinculaciones"})
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 const maxCatalogImportSize = 5 << 20
@@ -544,6 +629,12 @@ func (h *ProductHandler) UpdateProvider(c *gin.Context) {
 	}
 	c.Status(204)
 }
+func (h *ProductHandler) DeleteProvider(c *gin.Context) {
+	h.deleteCatalog(c, "proveedor", h.products.DeleteProvider)
+}
+func (h *ProductHandler) CheckProviderDeletion(c *gin.Context) {
+	h.checkCatalogDeletion(c, h.products.CheckProviderDeletion)
+}
 
 func (h *ProductHandler) ListUnits(c *gin.Context) {
 	businessID, ok := parseID(c, "negocioId")
@@ -594,4 +685,11 @@ func (h *ProductHandler) UpdateUnit(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *ProductHandler) DeleteUnit(c *gin.Context) {
+	h.deleteCatalog(c, "unidad de medida", h.products.DeleteUnit)
+}
+func (h *ProductHandler) CheckUnitDeletion(c *gin.Context) {
+	h.checkCatalogDeletion(c, h.products.CheckUnitDeletion)
 }

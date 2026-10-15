@@ -156,14 +156,13 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		`ALTER TABLE producto_categorias ALTER COLUMN negocio_id SET NOT NULL`,
 		`ALTER TABLE producto_codigos ALTER COLUMN negocio_id SET NOT NULL`,
 
-		`DROP INDEX IF EXISTS idx_unidades_medida_codigo`,
 		`DROP INDEX IF EXISTS idx_unidades_medida_nombre`,
 		`DROP INDEX IF EXISTS idx_unidades_medida_simbolo`,
+		`DROP INDEX IF EXISTS idx_unidades_negocio_codigo_ci`,
 		`DROP INDEX IF EXISTS idx_producto_codigos_codigo`,
 		`DROP INDEX IF EXISTS idx_familia_producto_codigo`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_marcas_negocio_nombre_ci ON marcas (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_categorias_negocio_nombre_ci ON categorias (negocio_id, lower(btrim(nombre)))`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_unidades_negocio_codigo_ci ON unidades_medida (negocio_id, lower(btrim(codigo)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_unidades_negocio_nombre_ci ON unidades_medida (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_unidades_negocio_simbolo_ci ON unidades_medida (negocio_id, lower(btrim(simbolo)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_productos_negocio_id ON productos (negocio_id, id)`,
@@ -173,6 +172,7 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_producto_codigos_negocio_codigo ON producto_codigos (negocio_id, codigo)`,
 
 		catalogTenantConstraints,
+		`ALTER TABLE unidades_medida DROP COLUMN IF EXISTS codigo`,
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {

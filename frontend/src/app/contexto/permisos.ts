@@ -25,6 +25,7 @@ export const PERMISOS = {
   compraRegistrar: 'compras.registrar',
   precioVer: 'precios.ver',
   precioAutorizar: 'precios.autorizar',
+  inventarioAjustar: 'inventario.ajustar',
 } as const;
 
 export type CodigoPermiso = (typeof PERMISOS)[keyof typeof PERMISOS];

@@ -13,6 +13,7 @@ import {
   ProductLookup,
   UnitOption,
   UpdateProductRequest,
+  AdjustInventoryRequest,
 } from './product.models';
 
 @Injectable({ providedIn: 'root' })
@@ -83,6 +84,13 @@ export class ProductosService {
   update(businessId: string, productId: string, payload: UpdateProductRequest): Observable<void> {
     return this.http.patch<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}`,
+      payload,
+    );
+  }
+
+  adjustInventory(businessId: string, productId: string, payload: AdjustInventoryRequest): Observable<void> {
+    return this.http.patch<void>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}/inventario`,
       payload,
     );
   }

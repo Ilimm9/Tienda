@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var productBarcodePattern = regexp.MustCompile(`^\d{8,14}$`)
@@ -45,11 +46,10 @@ func (r *ProductRepository) ListUnits(businessID uuid.UUID) ([]domain.UnidadMedi
 }
 
 func (r *ProductRepository) CreateUnit(businessID uuid.UUID, i domain.CreateUnidadMedidaInput) error {
-	i.Codigo = strings.TrimSpace(strings.ToLower(i.Codigo))
 	i.Nombre = strings.TrimSpace(i.Nombre)
 	i.Simbolo = strings.TrimSpace(i.Simbolo)
 	i.Tipo = strings.TrimSpace(strings.ToUpper(i.Tipo))
-	if i.Codigo == "" || i.Nombre == "" || i.Simbolo == "" || i.Tipo == "" || i.FactorABase <= 0 || i.Decimales < 0 || i.Decimales > 6 {
+	if i.Nombre == "" || i.Simbolo == "" || i.Tipo == "" || i.FactorABase <= 0 || i.Decimales < 0 || i.Decimales > 6 {
 		return errors.New("los datos de la unidad no son válidos")
 	}
 	fraccion := true
@@ -65,14 +65,11 @@ func (r *ProductRepository) CreateUnit(businessID uuid.UUID, i domain.CreateUnid
 			return errors.New("la unidad base no pertenece al negocio")
 		}
 	}
-	return r.db.Create(&domain.UnidadMedida{NegocioID: businessID, Codigo: i.Codigo, Nombre: i.Nombre, Simbolo: i.Simbolo, Tipo: i.Tipo, UnidadBaseID: i.UnidadBaseID, FactorABase: i.FactorABase, PermiteFraccion: fraccion, Decimales: i.Decimales, Activo: true}).Error
+	return r.db.Create(&domain.UnidadMedida{NegocioID: businessID, Nombre: i.Nombre, Simbolo: i.Simbolo, Tipo: i.Tipo, UnidadBaseID: i.UnidadBaseID, FactorABase: i.FactorABase, PermiteFraccion: fraccion, Decimales: i.Decimales, Activo: true}).Error
 }
 
 func (r *ProductRepository) UpdateUnit(businessID, id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
 	values := map[string]interface{}{}
-	if i.Codigo != nil {
-		values["codigo"] = strings.TrimSpace(strings.ToLower(*i.Codigo))
-	}
 	if i.Nombre != nil {
 		values["nombre"] = strings.TrimSpace(*i.Nombre)
 	}
@@ -114,6 +111,26 @@ func (r *ProductRepository) UpdateUnit(businessID, id uuid.UUID, i domain.Update
 	return result.Error
 }
 
+func (r *ProductRepository) DeleteUnit(businessID, id uuid.UUID) error {
+	return r.deleteCatalogItem(&domain.UnidadMedida{}, businessID, id, func(tx *gorm.DB) error {
+		if err := r.ensureCatalogReference(tx, `SELECT count(*) FROM productos WHERE negocio_id = ? AND unidad_medida_id = ?`, businessID, id, "productos"); err != nil {
+			return err
+		}
+		if err := r.ensureCatalogReference(tx, `SELECT count(*) FROM compras_proveedor_detalles d JOIN compras_proveedor c ON c.id = d.compra_id WHERE c.negocio_id = ? AND d.unidad_medida_id = ?`, businessID, id, "compras"); err != nil {
+			return err
+		}
+		return r.ensureCatalogReference(tx, `SELECT count(*) FROM unidades_medida WHERE negocio_id = ? AND unidad_base_id = ?`, businessID, id, "unidades derivadas")
+	})
+}
+
+func (r *ProductRepository) CheckUnitDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return r.catalogDeletionCheck(&domain.UnidadMedida{}, businessID, id, []catalogReference{
+		{query: `SELECT count(*) FROM productos WHERE negocio_id = ? AND unidad_medida_id = ?`, label: "productos"},
+		{query: `SELECT count(*) FROM compras_proveedor_detalles d JOIN compras_proveedor c ON c.id = d.compra_id WHERE c.negocio_id = ? AND d.unidad_medida_id = ?`, label: "compras"},
+		{query: `SELECT count(*) FROM unidades_medida WHERE negocio_id = ? AND unidad_base_id = ?`, label: "unidades derivadas"},
+	})
+}
+
 func (r *ProductRepository) ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
 	err := r.db.Transaction(func(tx *gorm.DB) error {
@@ -123,14 +140,13 @@ func (r *ProductRepository) ImportUnits(businessID uuid.UUID, rows []domain.Cata
 		}
 		existing := make(map[string]struct{}, len(current)*3)
 		for _, unit := range current {
-			existing[catalogImportKey(unit.Codigo)] = struct{}{}
 			existing[catalogImportKey(unit.Nombre)] = struct{}{}
 			existing[catalogImportKey(unit.Simbolo)] = struct{}{}
 		}
 		seen := make(map[string]struct{}, len(rows))
 		created := make([]domain.UnidadMedida, 0, len(rows))
 		for _, row := range rows {
-			key := catalogImportKey(row.Codigo)
+			key := catalogImportKey(row.Simbolo)
 			if _, duplicate := seen[key]; duplicate {
 				result.Omitidas++
 				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La unidad está repetida en el archivo"})
@@ -139,10 +155,10 @@ func (r *ProductRepository) ImportUnits(businessID uuid.UUID, rows []domain.Cata
 			seen[key] = struct{}{}
 			if _, exists := existing[key]; exists || containsUnitKey(existing, row.Nombre, row.Simbolo) {
 				result.Omitidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El código, nombre o símbolo de la unidad ya existe"})
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "El nombre o símbolo de la unidad ya existe"})
 				continue
 			}
-			created = append(created, domain.UnidadMedida{NegocioID: businessID, Codigo: strings.ToLower(strings.TrimSpace(row.Codigo)), Nombre: strings.TrimSpace(row.Nombre), Simbolo: strings.TrimSpace(row.Simbolo), Tipo: strings.ToUpper(strings.TrimSpace(row.Tipo)), FactorABase: row.FactorABase, Decimales: row.Decimales, PermiteFraccion: true, Activo: true})
+			created = append(created, domain.UnidadMedida{NegocioID: businessID, Nombre: strings.TrimSpace(row.Nombre), Simbolo: strings.TrimSpace(row.Simbolo), Tipo: strings.ToUpper(strings.TrimSpace(row.Tipo)), FactorABase: row.FactorABase, Decimales: row.Decimales, PermiteFraccion: true, Activo: true})
 			existing[key] = struct{}{}
 			existing[catalogImportKey(row.Nombre)] = struct{}{}
 			existing[catalogImportKey(row.Simbolo)] = struct{}{}
@@ -196,6 +212,18 @@ func (r *ProductRepository) UpdateBrand(businessID, id uuid.UUID, i domain.Updat
 		return errors.New("marca no encontrada")
 	}
 	return result.Error
+}
+
+func (r *ProductRepository) DeleteBrand(businessID, id uuid.UUID) error {
+	return r.deleteCatalogItem(&domain.Marca{}, businessID, id, func(tx *gorm.DB) error {
+		return r.ensureCatalogReference(tx, `SELECT count(*) FROM productos WHERE negocio_id = ? AND marca_id = ?`, businessID, id, "productos")
+	})
+}
+
+func (r *ProductRepository) CheckBrandDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return r.catalogDeletionCheck(&domain.Marca{}, businessID, id, []catalogReference{
+		{query: `SELECT count(*) FROM productos WHERE negocio_id = ? AND marca_id = ?`, label: "productos"},
+	})
 }
 
 func (r *ProductRepository) ImportBrands(businessID uuid.UUID, rows []domain.CatalogImportBrandRow) (domain.CatalogImportResult, error) {
@@ -279,6 +307,22 @@ func (r *ProductRepository) UpdateCategory(businessID, id uuid.UUID, i domain.Up
 		return errors.New("categoría no encontrada")
 	}
 	return result.Error
+}
+
+func (r *ProductRepository) DeleteCategory(businessID, id uuid.UUID) error {
+	return r.deleteCatalogItem(&domain.Categoria{}, businessID, id, func(tx *gorm.DB) error {
+		if err := r.ensureCatalogReference(tx, `SELECT count(*) FROM producto_categorias WHERE negocio_id = ? AND categoria_id = ?`, businessID, id, "productos"); err != nil {
+			return err
+		}
+		return r.ensureCatalogReference(tx, `SELECT count(*) FROM categorias WHERE negocio_id = ? AND categoria_padre_id = ?`, businessID, id, "categorías hijas")
+	})
+}
+
+func (r *ProductRepository) CheckCategoryDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return r.catalogDeletionCheck(&domain.Categoria{}, businessID, id, []catalogReference{
+		{query: `SELECT count(*) FROM producto_categorias WHERE negocio_id = ? AND categoria_id = ?`, label: "productos"},
+		{query: `SELECT count(*) FROM categorias WHERE negocio_id = ? AND categoria_padre_id = ?`, label: "categorías hijas"},
+	})
 }
 
 func (r *ProductRepository) ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error) {
@@ -499,6 +543,87 @@ func (r *ProductRepository) UpdateProvider(businessID, id uuid.UUID, i domain.Up
 		return errors.New("proveedor no encontrado")
 	}
 	return result.Error
+}
+
+func (r *ProductRepository) DeleteProvider(businessID, id uuid.UUID) error {
+	return r.deleteCatalogItem(&domain.Proveedor{}, businessID, id, func(tx *gorm.DB) error {
+		if err := r.ensureCatalogReference(tx, `SELECT count(*) FROM producto_proveedor pp JOIN producto_negocio pn ON pn.id = pp.producto_negocio_id WHERE pn.negocio_id = ? AND pp.proveedor_id = ?`, businessID, id, "productos"); err != nil {
+			return err
+		}
+		if err := r.ensureCatalogReference(tx, `SELECT count(*) FROM compras_proveedor WHERE negocio_id = ? AND proveedor_id = ?`, businessID, id, "compras"); err != nil {
+			return err
+		}
+		return r.ensureCatalogReference(tx, `SELECT count(*) FROM lotes l JOIN sucursales s ON s.id = l.sucursal_id WHERE s.negocio_id = ? AND l.proveedor_id = ?`, businessID, id, "lotes de inventario")
+	})
+}
+
+func (r *ProductRepository) CheckProviderDeletion(businessID, id uuid.UUID) (domain.CatalogDeletionCheck, error) {
+	return r.catalogDeletionCheck(&domain.Proveedor{}, businessID, id, []catalogReference{
+		{query: `SELECT count(*) FROM producto_proveedor pp JOIN producto_negocio pn ON pn.id = pp.producto_negocio_id WHERE pn.negocio_id = ? AND pp.proveedor_id = ?`, label: "productos"},
+		{query: `SELECT count(*) FROM compras_proveedor WHERE negocio_id = ? AND proveedor_id = ?`, label: "compras"},
+		{query: `SELECT count(*) FROM lotes l JOIN sucursales s ON s.id = l.sucursal_id WHERE s.negocio_id = ? AND l.proveedor_id = ?`, label: "lotes de inventario"},
+	})
+}
+
+func (r *ProductRepository) deleteCatalogItem(model interface{}, businessID, id uuid.UUID, check func(*gorm.DB) error) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var exists int64
+		if err := tx.Model(model).Where("id = ? AND negocio_id = ?", id, businessID).Count(&exists).Error; err != nil {
+			return err
+		}
+		if exists == 0 {
+			return domain.ErrCatalogItemNotFound
+		}
+		if err := check(tx); err != nil {
+			return err
+		}
+		result := tx.Where("id = ? AND negocio_id = ?", id, businessID).Delete(model)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return domain.ErrCatalogItemNotFound
+		}
+		return nil
+	})
+}
+
+func (r *ProductRepository) ensureCatalogReference(tx *gorm.DB, query string, businessID, id uuid.UUID, relation string) error {
+	var count int64
+	if err := tx.Raw(query, businessID, id).Scan(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("%w: el registro está vinculado a %s", domain.ErrCatalogItemInUse, relation)
+	}
+	return nil
+}
+
+type catalogReference struct {
+	query string
+	label string
+}
+
+func (r *ProductRepository) catalogDeletionCheck(model interface{}, businessID, id uuid.UUID, references []catalogReference) (domain.CatalogDeletionCheck, error) {
+	var exists int64
+	if err := r.db.Model(model).Where("id = ? AND negocio_id = ?", id, businessID).Count(&exists).Error; err != nil {
+		return domain.CatalogDeletionCheck{}, err
+	}
+	if exists == 0 {
+		return domain.CatalogDeletionCheck{}, domain.ErrCatalogItemNotFound
+	}
+	result := domain.CatalogDeletionCheck{Vinculaciones: make([]string, 0)}
+	for _, reference := range references {
+		var count int64
+		if err := r.db.Raw(reference.query, businessID, id).Scan(&count).Error; err != nil {
+			return domain.CatalogDeletionCheck{}, err
+		}
+		if count > 0 {
+			result.Vinculaciones = append(result.Vinculaciones, reference.label)
+		}
+	}
+	result.PuedeEliminarse = len(result.Vinculaciones) == 0
+	return result, nil
 }
 
 func (r *ProductRepository) ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error) {
@@ -999,6 +1124,9 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			if err := tx.Where("negocio_id = ? AND producto_id = ? AND activo = TRUE", businessID, productID).First(&commercial).Error; err != nil {
 				return errors.New("producto no encontrado")
 			}
+			if len(input.Variantes) > 0 {
+				return r.convertSimpleProductToFamily(tx, businessID, product, commercial, input)
+			}
 			if err := tx.Model(&domain.ProductoNegocio{}).Where("id = ?", commercial.ID).Update("precio_venta", input.PrecioVenta).Error; err != nil {
 				return err
 			}
@@ -1012,6 +1140,107 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 			return errors.New("el código de barras de una familia se captura en cada variante")
 		}
 		return r.updateProductFamily(tx, businessID, product, input)
+	})
+}
+
+func (r *ProductRepository) convertSimpleProductToFamily(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, commercial domain.ProductoNegocio, input domain.UpdateProductInput) error {
+	if len(input.Variantes) == 0 {
+		return errors.New("se requiere al menos una variante")
+	}
+	seenKeys := make(map[string]struct{}, len(input.Variantes))
+	for _, variant := range input.Variantes {
+		if variant.ID != nil || variant.PrecioVenta < 0 {
+			return errors.New("los datos de cada variante deben ser válidos")
+		}
+		key, err := productVariantKey(variant.Atributos)
+		if err != nil {
+			return err
+		}
+		if _, duplicate := seenKeys[key]; duplicate {
+			return errors.New("no puede repetir la misma combinación de variantes")
+		}
+		seenKeys[key] = struct{}{}
+	}
+	familyKey := productBaseKey(input.Nombre, input.Presentacion, input.MarcaID, input.CategoriaID)
+	var duplicate int64
+	if err := tx.Model(&domain.FamiliaProducto{}).Where("negocio_id = ? AND clave = ?", businessID, familyKey).Count(&duplicate).Error; err != nil {
+		return err
+	}
+	if duplicate > 0 {
+		return errors.New("ya existe una familia con el mismo nombre, marca, categoría y presentación")
+	}
+	code, err := reserveGeneratedFamilyCode(tx, businessID, input.Nombre)
+	if err != nil {
+		return err
+	}
+	family := domain.FamiliaProducto{NegocioID: businessID, Nombre: input.Nombre, Codigo: code, Clave: familyKey, Activo: true}
+	if err := tx.Create(&family).Error; err != nil {
+		return err
+	}
+	// The former simple commercial record remains as historical data.  It is not a
+	// sellable variant: stock, SKU and barcode must be deliberately assigned to a
+	// new variant by the user.
+	if err := tx.Where("negocio_id = ? AND producto_id = ?", businessID, product.ID).Delete(&domain.ProductoCodigo{}).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&domain.ProductoNegocio{}).Where("id = ?", commercial.ID).Update("activo", false).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&domain.Producto{}).Where("id = ?", product.ID).Update("familia_producto_id", family.ID).Error; err != nil {
+		return err
+	}
+	for _, variant := range input.Variantes {
+		key, err := productVariantKey(variant.Atributos)
+		if err != nil {
+			return err
+		}
+		if err := r.createFamilyVariantOnUpdate(tx, businessID, product, family, variant, key, input.ProveedorID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *ProductRepository) AdjustInventory(businessID, productID, userID uuid.UUID, input domain.AdjustInventoryInput) error {
+	if input.Stock < 0 {
+		return errors.New("el stock no puede ser negativo")
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var product domain.Producto
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", productID, businessID).First(&product).Error; err != nil {
+			return errors.New("producto no encontrado")
+		}
+		query := tx.Table("producto_negocio AS pn").Where("pn.negocio_id = ? AND pn.activo = TRUE", businessID)
+		if input.VarianteID != nil {
+			query = query.Where("pn.producto_variante_id = ? AND pn.producto_variante_id IN (SELECT id FROM producto_variantes WHERE producto_id = ? AND activo = TRUE)", *input.VarianteID, productID)
+		} else {
+			query = query.Where("pn.producto_id = ?", productID)
+		}
+		var commercial domain.ProductoNegocio
+		if err := query.First(&commercial).Error; err != nil {
+			return errors.New("la variante o presentación del producto no existe")
+		}
+		var inventory domain.InventarioSucursal
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("sucursal_id = ? AND producto_negocio_id = ?", input.SucursalID, commercial.ID).First(&inventory).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			inventory = domain.InventarioSucursal{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, StockActual: 0}
+		} else if err != nil {
+			return err
+		}
+		previous := inventory.StockActual
+		if previous == input.Stock {
+			return nil
+		}
+		if inventory.ID == uuid.Nil {
+			inventory.StockActual = input.Stock
+			if err := tx.Create(&inventory).Error; err != nil {
+				return err
+			}
+		} else if err := tx.Model(&inventory).Update("stock_actual", input.Stock).Error; err != nil {
+			return err
+		}
+		delta := input.Stock - previous
+		return tx.Create(&domain.MovimientoInventario{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, Tipo: "AJUSTE_MANUAL", Cantidad: delta, StockAnterior: previous, StockNuevo: input.Stock, UsuarioID: &userID}).Error
 	})
 }
 
@@ -1904,9 +2133,26 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 		key := attribute.ProductoVarianteID.String()
 		attributesByVariant[key] = append(attributesByVariant[key], domain.ProductVariantAttributeInput{Nombre: attribute.Nombre, Valor: attribute.Valor})
 	}
+	variantStockByID := make(map[string][]domain.ProductBranchStock)
+	var variantBranches []struct {
+		VarianteID uuid.UUID `gorm:"column:variante_id"`
+		SucursalID uuid.UUID `gorm:"column:sucursal_id"`
+		Sucursal   string    `gorm:"column:sucursal"`
+		Stock      float64   `gorm:"column:stock"`
+	}
+	if err := r.db.Table("inventario_sucursal AS i").
+		Select("pn.producto_variante_id AS variante_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
+		Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id AND pn.negocio_id = ? AND pn.activo = TRUE AND pn.producto_variante_id IS NOT NULL", businessID).
+		Joins("JOIN sucursales s ON s.id = i.sucursal_id").Scan(&variantBranches).Error; err != nil {
+		return nil, err
+	}
+	for _, branch := range variantBranches {
+		key := branch.VarianteID.String()
+		variantStockByID[key] = append(variantStockByID[key], domain.ProductBranchStock{SucursalID: branch.SucursalID.String(), Sucursal: branch.Sucursal, Stock: branch.Stock})
+	}
 	for _, variant := range variants {
 		key := variant.ProductoID.String()
-		variantsByProduct[key] = append(variantsByProduct[key], domain.ProductVariantRow{ID: variant.ID, SKU: variant.SKU, Precio: variant.Precio, Stock: variant.Stock, CodigoBarras: variant.CodigoBarras, Atributos: attributesByVariant[variant.ID.String()]})
+		variantsByProduct[key] = append(variantsByProduct[key], domain.ProductVariantRow{ID: variant.ID, SKU: variant.SKU, Precio: variant.Precio, Stock: variant.Stock, CodigoBarras: variant.CodigoBarras, Atributos: attributesByVariant[variant.ID.String()], Inventario: variantStockByID[variant.ID.String()]})
 	}
 	for index := range products {
 		products[index].Inventario = stockByProduct[products[index].ID.String()]
