@@ -1,0 +1,21 @@
+<div class="platform-shell">
+  <header class="platform-topbar">
+    <a class="platform-brand" routerLink="/administracion-plataforma">
+      <span class="platform-brand-mark"><img src="trace.svg" alt="" width="32" height="32" /></span>
+      <span><strong>Stockion</strong><small>Administración de plataforma</small></span>
+    </a>
+    <nav aria-label="Administración de plataforma">
+      <a routerLink="/administracion-plataforma" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active">
+        <i class="pi pi-chart-bar" aria-hidden="true"></i>Resumen
+      </a>
+      <a routerLink="/administracion-plataforma/negocios" routerLinkActive="active">
+        <i class="pi pi-building" aria-hidden="true"></i>Tiendas
+      </a>
+    </nav>
+    <div class="platform-account">
+      <span>{{ auth.currentUser()?.correo }}</span>
+      <button type="button" (click)="logout()"><i class="pi pi-sign-out" aria-hidden="true"></i>Salir</button>
+    </div>
+  </header>
+  <main class="platform-content"><router-outlet /></main>
+</div>

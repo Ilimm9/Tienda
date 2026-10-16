@@ -3,6 +3,8 @@ import { permisoGuard } from './contexto/permiso.guard';
 import { PERMISOS } from './contexto/permisos';
 import { CATALOGO_ROUTES } from './features/catalogo/catalogo.routes';
 import { routes } from './app.routes';
+import { authGuard } from './features/auth/auth.guard';
+import { plataformaGuard } from './features/plataforma/plataforma.guard';
 
 describe('rutas principales', () => {
   it('agrupa login y registro bajo el shell de acceso persistente', () => {
@@ -43,5 +45,11 @@ describe('rutas principales', () => {
       'proveedores/importar',
       'proveedores/:id/editar',
     ]);
+  });
+
+  it('declara el backoffice fuera del shell tenant y con guard global', () => {
+    const plataforma = routes.find((route) => route.path === 'administracion-plataforma');
+    expect(plataforma).toMatchObject({ path: 'administracion-plataforma', canActivate: [authGuard, plataformaGuard] });
+    expect(plataforma?.loadChildren).toBeDefined();
   });
 });

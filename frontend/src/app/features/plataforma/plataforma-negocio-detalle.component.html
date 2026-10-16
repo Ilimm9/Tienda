@@ -1,0 +1,22 @@
+<section class="platform-page">
+  <a class="back-link" routerLink="/administracion-plataforma/negocios"><i class="pi pi-arrow-left"></i>Volver a tiendas</a>
+  @if (loading()) { <div class="state-card"><i class="pi pi-spin pi-spinner"></i> Cargando detalle…</div> }
+  @else if (error()) { <div class="state-card error">{{ error() }}</div> }
+  @else if (negocio(); as item) {
+    <header class="page-heading detail-heading"><div><span class="eyebrow">{{ item.slug }}</span><h1>{{ item.nombre_comercial }}</h1><p>{{ item.razon_social || 'Sin razón social' }} · {{ item.rfc || 'Sin RFC' }}</p></div><span class="status" [class.inactive]="item.estado !== 'activo'">{{ item.estado }}</span></header>
+    <div class="metric-grid compact">
+      <article class="metric-card"><span>Sucursales activas</span><strong>{{ item.total_sucursales }}</strong></article>
+      <article class="metric-card"><span>Personal activo</span><strong>{{ item.total_personal }}</strong></article>
+      <article class="metric-card"><span>Cuentas vinculadas</span><strong>{{ item.cuentas_vinculadas }}</strong></article>
+      <article class="metric-card"><span>Propietarios</span><strong>{{ item.total_propietarios }}</strong></article>
+    </div>
+    <section class="panel"><header><div><h2>Usuarios por sucursal</h2><p>Personal asignado y subconjunto con cuenta activa.</p></div></header><div class="table-wrap"><table>
+      <thead><tr><th>Sucursal</th><th>Estado</th><th>Personal asignado</th><th>Con cuenta activa</th></tr></thead>
+      <tbody>@for (branch of item.sucursales; track branch.id) { <tr><td><strong>{{ branch.nombre }}</strong><small>{{ branch.codigo }}{{ branch.es_principal ? ' · Principal' : '' }}</small></td><td><span class="status" [class.inactive]="branch.estado !== 'activo'">{{ branch.estado }}</span></td><td>{{ branch.personal_asignado }}</td><td>{{ branch.con_cuenta_activa }}</td></tr> } @empty { <tr><td colspan="4" class="empty-cell">Esta tienda no tiene sucursales.</td></tr> }</tbody>
+    </table></div></section>
+    <section class="panel"><header><div><h2>Cuentas del negocio</h2><p>Datos mínimos para soporte; los propietarios tienen acceso total al negocio.</p></div></header><div class="table-wrap"><table>
+      <thead><tr><th>Usuario</th><th>Tipo</th><th>Roles</th><th>Sucursales asignadas</th><th>Último acceso</th></tr></thead>
+      <tbody>@for (user of usuarios(); track user.id) { <tr><td><strong>{{ user.nombre || 'Sin nombre' }}</strong><small>{{ user.correo }}</small></td><td>{{ user.tipo_miembro }}</td><td>{{ user.roles.length ? user.roles.join(', ') : 'Sin rol' }}</td><td>{{ user.tipo_miembro === 'propietario' ? 'Acceso total' : (user.sucursales.length ? user.sucursales.join(', ') : 'Sin asignación') }}</td><td>{{ user.ultimo_inicio_sesion_en ? (user.ultimo_inicio_sesion_en | date: 'dd/MM/yyyy HH:mm':'America/Mexico_City') : 'Nunca' }}</td></tr> } @empty { <tr><td colspan="5" class="empty-cell">No hay cuentas vinculadas.</td></tr> }</tbody>
+    </table></div></section>
+  }
+</section>

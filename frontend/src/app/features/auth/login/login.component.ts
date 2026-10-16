@@ -50,9 +50,12 @@ export class LoginComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         // Quien llegó desde un enlace de invitación vuelve a él para confirmar su acceso.
-        next: () => {
+        next: ({ usuario }) => {
           const retorno = consumirRetornoInvitacion();
-          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate(['/inicio']));
+          const destino = usuario.roles_plataforma?.includes('ADMIN_LECTURA')
+            ? '/administracion-plataforma'
+            : '/inicio';
+          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate([destino]));
         },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible iniciar sesión.'),

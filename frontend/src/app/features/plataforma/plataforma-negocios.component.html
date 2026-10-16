@@ -1,0 +1,30 @@
+<section class="platform-page">
+  <header class="page-heading"><div><span class="eyebrow">Directorio</span><h1>Tiendas registradas</h1><p>Consulta el estado, tamaño y actividad reciente de cada negocio.</p></div></header>
+  <form class="filter-bar" (ngSubmit)="buscar()">
+    <label><span>Buscar</span><input name="query" [(ngModel)]="query" placeholder="Nombre, slug o RFC" /></label>
+    <label><span>Estado</span><select name="estado" [(ngModel)]="estado"><option value="">Todos</option><option value="activo">Activas</option><option value="archivado">Archivadas</option></select></label>
+    <button class="primary-action" type="submit"><i class="pi pi-search"></i>Buscar</button>
+  </form>
+  @if (loading()) { <div class="state-card"><i class="pi pi-spin pi-spinner"></i> Cargando tiendas…</div> }
+  @else if (error()) { <div class="state-card error">{{ error() }}</div> }
+  @else {
+    <section class="panel">
+      <header><div><h2>{{ total() | number }} tiendas</h2><p>Los conteos consideran solamente personal y sucursales activas.</p></div></header>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tienda</th><th>Estado</th><th>Sucursales</th><th>Personal</th><th>Con cuenta</th><th>Última actividad</th><th></th></tr></thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td><strong>{{ item.nombre_comercial }}</strong><small>{{ item.rfc || item.slug }}</small></td>
+              <td><span class="status" [class.inactive]="item.estado !== 'activo'">{{ item.estado }}</span></td>
+              <td>{{ item.total_sucursales }}</td><td>{{ item.total_personal }}</td><td>{{ item.cuentas_vinculadas }}</td>
+              <td>{{ item.ultima_actividad_en ? (item.ultima_actividad_en | date: 'dd/MM/yyyy HH:mm':'America/Mexico_City') : 'Sin actividad' }}</td>
+              <td><a class="row-link" [routerLink]="['/administracion-plataforma/negocios', item.id]" aria-label="Ver detalle"><i class="pi pi-arrow-right"></i></a></td>
+            </tr>
+          } @empty { <tr><td colspan="7" class="empty-cell">No hay tiendas que coincidan con los filtros.</td></tr> }
+        </tbody>
+      </table></div>
+      <footer class="pagination"><span>Página {{ page() }}</span><div><button type="button" (click)="anterior()" [disabled]="page() === 1">Anterior</button><button type="button" (click)="siguiente()" [disabled]="page() * pageSize >= total()">Siguiente</button></div></footer>
+    </section>
+  }
+</section>

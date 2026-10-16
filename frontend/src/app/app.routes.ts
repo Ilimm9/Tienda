@@ -5,6 +5,7 @@ import { altaInicialGuard, asistenteGuard } from './contexto/alta-inicial.guard'
 import { contextoGuard } from './contexto/contexto.guard';
 import { permisoGuard } from './contexto/permiso.guard';
 import { PERMISOS } from './contexto/permisos';
+import { plataformaGuard } from './features/plataforma/plataforma.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
@@ -61,6 +62,12 @@ export const routes: Routes = [
     path: 'configuracion-inicial',
     canActivate: [authGuard, asistenteGuard],
     loadComponent: () => import('./features/alta-inicial/alta-inicial').then((module) => module.AltaInicial),
+  },
+  {
+    path: 'administracion-plataforma',
+    canActivate: [authGuard, plataformaGuard],
+    loadChildren: () =>
+      import('./features/plataforma/plataforma.routes').then((module) => module.PLATAFORMA_ROUTES),
   },
   {
     path: '',

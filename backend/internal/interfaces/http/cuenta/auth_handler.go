@@ -1,6 +1,7 @@
 package cuenta
 
 import (
+	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -12,14 +13,24 @@ import (
 )
 
 type AuthHandler struct {
-	auth         *application.AuthService
-	sessions     *application.SessionService
-	verification *application.VerificationService
-	cfg          config.Config
+	auth          *application.AuthService
+	sessions      *application.SessionService
+	verification  *application.VerificationService
+	cfg           config.Config
+	platformRoles interface {
+		RolesUsuario(ctx context.Context, usuarioID uuid.UUID) ([]string, error)
+	}
 }
 
 func NewAuthHandler(auth *application.AuthService, sessions *application.SessionService, verification *application.VerificationService, cfg config.Config) *AuthHandler {
 	return &AuthHandler{auth: auth, sessions: sessions, verification: verification, cfg: cfg}
+}
+
+func (h *AuthHandler) WithPlatformRoles(roles interface {
+	RolesUsuario(ctx context.Context, usuarioID uuid.UUID) ([]string, error)
+}) *AuthHandler {
+	h.platformRoles = roles
+	return h
 }
 
 type loginRequest struct {
@@ -111,7 +122,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 	h.setCookies(c, session)
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Correo verificado correctamente", "usuario": gin.H{"id": user.ID, "correo": user.Correo}})
+	c.JSON(http.StatusOK, gin.H{"mensaje": "Correo verificado correctamente", "usuario": h.usuarioResponse(c, user.ID, user.Correo)})
 }
 
 type resendRequest struct {
@@ -171,7 +182,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	h.setCookies(c, session)
-	c.JSON(http.StatusOK, gin.H{"usuario": gin.H{"id": user.ID, "correo": user.Correo}})
+	c.JSON(http.StatusOK, gin.H{"usuario": h.usuarioResponse(c, user.ID, user.Correo)})
 }
 func (h *AuthHandler) Logout(c *gin.Context) {
 	if token, err := c.Cookie(h.cfg.SessionCookieName()); err == nil {
@@ -190,7 +201,17 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"autenticado": false})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"autenticado": true, "usuario": gin.H{"id": userID, "correo": email}})
+	c.JSON(http.StatusOK, gin.H{"autenticado": true, "usuario": h.usuarioResponse(c, userID, email)})
+}
+
+func (h *AuthHandler) usuarioResponse(c *gin.Context, userID uuid.UUID, email string) gin.H {
+	roles := []string{}
+	if h.platformRoles != nil {
+		if current, err := h.platformRoles.RolesUsuario(c.Request.Context(), userID); err == nil {
+			roles = current
+		}
+	}
+	return gin.H{"id": userID, "correo": email, "roles_plataforma": roles}
 }
 
 func (h *AuthHandler) setCookies(c *gin.Context, session application.CreatedSession) {

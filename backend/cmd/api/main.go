@@ -10,6 +10,7 @@ import (
 	correoapplication "tienda/backend/internal/application/correo"
 	cuentaapplication "tienda/backend/internal/application/cuenta"
 	negocioapplication "tienda/backend/internal/application/negocio"
+	plataformaapplication "tienda/backend/internal/application/plataforma"
 	precioapplication "tienda/backend/internal/application/precio"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
@@ -19,11 +20,13 @@ import (
 	correoinfra "tienda/backend/internal/infrastructure/correo"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
+	plataformainfra "tienda/backend/internal/infrastructure/plataforma"
 	precioinfra "tienda/backend/internal/infrastructure/precio"
 	transporthttp "tienda/backend/internal/interfaces/http"
 	comprahttp "tienda/backend/internal/interfaces/http/compra"
 	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
 	negociohttp "tienda/backend/internal/interfaces/http/negocio"
+	plataformahttp "tienda/backend/internal/interfaces/http/plataforma"
 	preciohttp "tienda/backend/internal/interfaces/http/precio"
 
 	"github.com/gin-gonic/gin"
@@ -71,7 +74,18 @@ func main() {
 		HMACSecret: cfg.OTPHMACSecret, TTL: cfg.PasswordResetTTL, MaxAttempts: cfg.OTPMaxAttempts,
 		ResendWait: cfg.OTPResendWait, HourlySendMax: cfg.OTPHourlySendMax,
 	}))
-	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, verificationService, cfg)
+	plataformaRepo := plataformainfra.NewRepository(db)
+	plataformaService := plataformaapplication.NewService(plataformaRepo)
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := plataformaService.LimpiarActividad(); err != nil {
+				log.Printf("no fue posible depurar actividad de plataforma: %v", err)
+			}
+		}
+	}()
+	cuentaHandler := cuentahttp.NewAuthHandler(cuentaapplication.NewAuthService(cuentaRepo), sessionService, verificationService, cfg).WithPlatformRoles(plataformaService)
 	productRepo := infrastructure.NewProductRepository(db)
 	precioCheckClient := infrastructure.NewPrecioCheckClient(cfg.PrecioCheckBaseURL, cfg.PrecioCheckAPIKey)
 	upcItemDBClient := infrastructure.NewUPCItemDBClient(cfg.UPCItemDBBaseURL)
@@ -96,6 +110,7 @@ func main() {
 	productHandler := transporthttp.NewProductHandler(productService, contextoService)
 	compraHandler := comprahttp.NewHandler(compraapplication.NewService(comprainfra.NewRepository(db)), contextoService)
 	precioHandler := preciohttp.NewHandler(precioapplication.NewService(precioinfra.NewRepository(db)), contextoService)
+	plataformaHandler := plataformahttp.NewHandler(plataformaService)
 	router := gin.Default()
 	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
 		log.Fatal(err)
@@ -117,6 +132,8 @@ func main() {
 	authProtected.GET("/me", cuentaHandler.Me)
 	negocios := router.Group("/api/v1/negocios")
 	negocios.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
+	negocios.Use(plataformahttp.RejectPlatformAdmin(plataformaService))
+	negocios.Use(plataformahttp.RegistrarActividadNegocio(plataformaService))
 	negocios.GET("", negocioHandler.Listar)
 	negocios.POST("", negocioHandler.Crear)
 	negocios.GET("/:negocioId", negocioHandler.Obtener)
@@ -157,7 +174,14 @@ func main() {
 	// Aceptar sí exige sesión verificada con el correo invitado.
 	invitaciones := router.Group("/api/v1/invitaciones")
 	invitaciones.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF())
+	invitaciones.Use(plataformahttp.RejectPlatformAdmin(plataformaService))
 	invitaciones.POST("/:token/aceptar", invitacionHandler.Aceptar)
+	plataforma := router.Group("/api/v1/plataforma")
+	plataforma.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), plataformahttp.RequireAdminLectura(plataformaService))
+	plataforma.GET("/resumen", plataformaHandler.Resumen)
+	plataforma.GET("/negocios", plataformaHandler.ListarNegocios)
+	plataforma.GET("/negocios/:negocioId", plataformaHandler.ObtenerNegocio)
+	plataforma.GET("/negocios/:negocioId/usuarios", plataformaHandler.ListarUsuarios)
 
 	contexto := router.Group("/api/v1/contexto")
 	contexto.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()))

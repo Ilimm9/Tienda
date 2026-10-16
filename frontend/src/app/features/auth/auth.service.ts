@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { finalize, Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -23,6 +23,9 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/auth`;
   readonly currentUser = signal<AuthenticatedUser | null>(null);
+  readonly isPlatformAdmin = computed(() =>
+    this.currentUser()?.roles_plataforma?.includes('ADMIN_LECTURA') ?? false,
+  );
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http

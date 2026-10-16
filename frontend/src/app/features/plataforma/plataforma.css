@@ -1,0 +1,55 @@
+:host { display: block; }
+.platform-shell { min-height: 100vh; background: var(--background); }
+.platform-topbar { min-height: 74px; padding: .75rem clamp(1rem, 3vw, 2.5rem); display: grid; grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr); align-items: center; gap: 1.5rem; color: #fff; background: var(--brand-ink); border-bottom: 1px solid var(--brand-ink-line); }
+.platform-brand { display: flex; align-items: center; gap: .7rem; color: #fff; width: fit-content; }
+.platform-brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #fff; }
+.platform-brand span:last-child { display: grid; gap: .1rem; }
+.platform-brand strong { font-size: 1rem; }
+.platform-brand small { color: var(--brand-ink-muted); font-size: .72rem; }
+.platform-topbar nav { display: flex; gap: .35rem; }
+.platform-topbar nav a { display: flex; align-items: center; gap: .45rem; padding: .65rem .9rem; border-radius: 10px; color: var(--brand-ink-text); font-weight: 650; font-size: .88rem; }
+.platform-topbar nav a:hover, .platform-topbar nav a.active { color: #fff; background: var(--brand-ink-hover); }
+.platform-account { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; font-size: .8rem; color: var(--brand-ink-text); }
+.platform-account button { display: flex; gap: .4rem; align-items: center; border: 1px solid var(--brand-ink-line); border-radius: 9px; padding: .55rem .75rem; color: #fff; background: transparent; cursor: pointer; }
+.platform-content { width: min(1440px, 100%); margin: 0 auto; padding: 2rem var(--section-padding-inline) 4rem; }
+.platform-page { display: grid; gap: 1.4rem; }
+.page-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.page-heading h1 { margin: .2rem 0 .4rem; font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.page-heading p, .panel header p { margin: 0; color: var(--text-muted); }
+.eyebrow { color: var(--primary); font-size: .74rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.primary-action { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 42px; border: 0; border-radius: 10px; padding: .7rem 1rem; color: #fff; background: var(--primary); font-weight: 750; cursor: pointer; }
+.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .85rem; }
+.metric-grid.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.metric-card { min-height: 132px; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised); }
+.metric-card.featured { color: var(--tone-sage-text); background: var(--tone-sage); border-color: var(--tone-sage-strong); }
+.metric-card span { color: inherit; font-size: .82rem; font-weight: 700; }
+.metric-card strong { font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1; }
+.metric-card small { color: var(--text-muted); }
+.panel, .filter-bar, .state-card { border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised); }
+.panel > header { padding: 1.15rem 1.25rem; border-bottom: 1px solid var(--border-soft); }
+.panel h2 { margin: 0 0 .25rem; font-size: 1.05rem; }
+.panel header p { font-size: .84rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: .78rem 1rem; color: var(--text-muted); background: var(--surface-hover); font-size: .7rem; text-align: left; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+td { padding: .9rem 1rem; border-top: 1px solid var(--border-soft); color: var(--text-body); font-size: .86rem; vertical-align: middle; }
+td strong, td small { display: block; }
+td strong { color: var(--text); }
+td small { margin-top: .2rem; color: var(--text-muted); }
+.empty-cell { padding: 2.5rem; text-align: center; color: var(--text-muted); }
+.status { display: inline-flex; padding: .25rem .55rem; border-radius: 999px; color: var(--success); background: var(--success-soft); font-size: .72rem; font-weight: 750; text-transform: capitalize; }
+.status.inactive { color: var(--text-muted); background: var(--tone-neutral); }
+.row-link { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--primary-soft); }
+.filter-bar { padding: 1rem; display: grid; grid-template-columns: minmax(240px, 1fr) 190px auto; gap: .8rem; align-items: end; }
+.filter-bar label { display: grid; gap: .35rem; color: var(--text-muted); font-size: .75rem; font-weight: 700; }
+.filter-bar input, .filter-bar select { min-height: 42px; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: #fff; }
+.pagination { padding: .85rem 1rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-soft); color: var(--text-muted); font-size: .8rem; }
+.pagination div { display: flex; gap: .5rem; }
+.pagination button { padding: .5rem .75rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
+.pagination button:disabled { opacity: .45; cursor: default; }
+.state-card { padding: 2.5rem; color: var(--text-muted); text-align: center; }
+.state-card.error { color: var(--danger); background: var(--danger-soft); border-color: var(--danger-border); }
+.back-link { display: inline-flex; gap: .45rem; align-items: center; width: fit-content; color: var(--text-muted); font-size: .85rem; font-weight: 650; }
+.detail-heading { align-items: center; }
+@media (max-width: 980px) { .platform-topbar { grid-template-columns: 1fr auto; } .platform-topbar nav { order: 3; grid-column: 1 / -1; } .platform-account span { display: none; } .metric-grid, .metric-grid.compact { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .platform-topbar { padding: .7rem 1rem; gap: .75rem; } .platform-brand small { display: none; } .platform-topbar nav a { padding: .55rem .65rem; } .platform-content { padding-top: 1.25rem; } .page-heading { align-items: stretch; flex-direction: column; } .metric-grid, .metric-grid.compact { grid-template-columns: 1fr; } .filter-bar { grid-template-columns: 1fr; } }

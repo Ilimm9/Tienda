@@ -7,6 +7,7 @@ export interface LoginRequest {
 export interface AuthenticatedUser {
   id: string;
   correo: string;
+  roles_plataforma: string[];
 }
 
 export interface LoginResponse {

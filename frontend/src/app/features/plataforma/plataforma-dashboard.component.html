@@ -1,0 +1,34 @@
+<section class="platform-page">
+  <header class="page-heading">
+    <div><span class="eyebrow">Vista global</span><h1>Resumen de la plataforma</h1><p>Tiendas registradas, cuentas y actividad autenticada de los últimos 30 días.</p></div>
+    <a class="primary-action" routerLink="/administracion-plataforma/negocios">Ver tiendas <i class="pi pi-arrow-right"></i></a>
+  </header>
+
+  @if (loading()) { <div class="state-card"><i class="pi pi-spin pi-spinner"></i> Cargando métricas…</div> }
+  @else if (error()) { <div class="state-card error">{{ error() }}</div> }
+  @else if (resumen(); as data) {
+    <div class="metric-grid">
+      <article class="metric-card featured"><span>Tiendas registradas</span><strong>{{ data.negocios_total | number }}</strong><small>{{ data.negocios_activos }} activas · {{ data.negocios_archivados }} archivadas</small></article>
+      <article class="metric-card"><span>Sucursales activas</span><strong>{{ data.sucursales_activas | number }}</strong><small>Ubicaciones operativas</small></article>
+      <article class="metric-card"><span>Cuentas registradas</span><strong>{{ data.cuentas_registradas | number }}</strong><small>Cuentas globales</small></article>
+      <article class="metric-card"><span>Activos en 7 días</span><strong>{{ data.usuarios_activos_7d | number }}</strong><small>Usuarios distintos</small></article>
+      <article class="metric-card"><span>Activos en 30 días</span><strong>{{ data.usuarios_activos_30d | number }}</strong><small>Usuarios distintos</small></article>
+    </div>
+
+    <section class="panel">
+      <header><div><h2>Actividad diaria</h2><p>Solicitudes autenticadas exitosas, agregadas sin IP ni agente del navegador.</p></div></header>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Usuarios activos</th><th>Solicitudes</th></tr></thead>
+          <tbody>
+            @for (item of data.actividad; track item.fecha) {
+              <tr><td>{{ item.fecha | date: 'dd MMM yyyy':'UTC':'es-MX' }}</td><td>{{ item.usuarios | number }}</td><td>{{ item.solicitudes | number }}</td></tr>
+            } @empty {
+              <tr><td colspan="3" class="empty-cell">La medición comenzará con la primera actividad posterior a esta actualización.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

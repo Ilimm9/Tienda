@@ -8,9 +8,11 @@ import (
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
 	preciodomain "tienda/backend/internal/domain/precio"
+	plataformadomain "tienda/backend/internal/domain/plataforma"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
+	plataformainfra "tienda/backend/internal/infrastructure/plataforma"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -56,6 +58,8 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
 		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
 		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
+		&plataformadomain.RolPlataforma{}, &plataformadomain.RolUsuarioPlataforma{},
+		&plataformadomain.AuditoriaPlataforma{}, &plataformadomain.ActividadUsuarioDiaria{},
 	}
 	for _, model := range models {
 		if !db.Migrator().HasTable(model) {
@@ -68,6 +72,9 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := cuentainfra.MigrateSessionBaseline(db); err != nil {
+		return err
+	}
+	if err := plataformainfra.Migrate(db); err != nil {
 		return err
 	}
 	if err := infrastructure.MigrateCatalogTenancy(db); err != nil {
