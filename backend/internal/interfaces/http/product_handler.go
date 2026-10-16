@@ -474,7 +474,8 @@ func (h *ProductHandler) ImportProducts(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "No fue posible leer el archivo"})
 		return
 	}
-	job, err := h.products.StartProductImport(businessID, branchID, content)
+	authorizeNewCatalogs := strings.EqualFold(strings.TrimSpace(c.PostForm("autorizar_catalogos_nuevos")), "true")
+	job, err := h.products.StartProductImport(businessID, branchID, content, authorizeNewCatalogs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible iniciar la importación"})
 		return

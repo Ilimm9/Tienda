@@ -624,7 +624,7 @@
             (click)="importExistingProducts()"
             [disabled]="preview.insertables === 0 || importing()"
           >
-            {{ importing() ? 'Importando...' : 'Importar lo existente' }}
+            {{ importing() ? 'Importando...' : preview.catalogos_nuevos.length ? 'Autorizar e importar' : 'Importar productos' }}
           </button>
         } @else {
           <button
@@ -749,6 +749,20 @@
               {{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas ·
               {{ preview.invalidas }} inválidas · {{ preview.skus_generados }} SKU se generarían
             </p>
+            @if (preview.catalogos_nuevos.length) {
+              <p class="import-warnings-title">Catálogos nuevos detectados</p>
+              <p>Al autorizar la importación se crearán con sus datos mínimos y podrás editarlos después.</p>
+              <div class="variant-table-wrap">
+                <table class="variant-edit-table">
+                  <thead><tr><th>Tipo</th><th>Nombre</th><th>Productos</th></tr></thead>
+                  <tbody>
+                    @for (catalogo of preview.catalogos_nuevos; track catalogo.tipo + catalogo.nombre) {
+                      <tr><td>{{ catalogo.tipo }}</td><td>{{ catalogo.nombre }}</td><td>{{ catalogo.productos }}</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
             @if (preview.errores.length) {
               <ul>
                 @for (

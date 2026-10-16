@@ -162,6 +162,13 @@ export interface ProductImportResult {
 
 export interface ProductImportPreview extends ProductImportResult {
   insertables: number;
+  catalogos_nuevos: ProductImportCatalogProposal[];
+}
+
+export interface ProductImportCatalogProposal {
+  tipo: string;
+  nombre: string;
+  productos: number;
 }
 
 export interface ProductImportJob {

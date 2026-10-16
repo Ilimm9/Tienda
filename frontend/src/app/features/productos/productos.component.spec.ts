@@ -286,6 +286,7 @@ describe('ProductosComponent', () => {
       productos_base_creados: 0,
       productos_base_reutilizados: 0,
       variantes_creadas: 0,
+      catalogos_nuevos: [],
       errores: [],
       advertencias: [],
     });

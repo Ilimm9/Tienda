@@ -105,10 +105,16 @@ export class ProductosService {
     return `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importacion/plantilla`;
   }
 
-  importProducts(businessId: string, branchId: string, file: File): Observable<ProductImportJob> {
+  importProducts(
+    businessId: string,
+    branchId: string,
+    file: File,
+    authorizeNewCatalogs = false,
+  ): Observable<ProductImportJob> {
     const data = new FormData();
     data.append('archivo', file);
     data.append('sucursal_id', branchId);
+    if (authorizeNewCatalogs) data.append('autorizar_catalogos_nuevos', 'true');
     return this.http.post<ProductImportJob>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importar`,
       data,

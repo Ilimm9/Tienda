@@ -183,7 +183,16 @@ type CatalogImportResult struct {
 // is confirmed. Insertables have passed all local validation.
 type ProductImportPreview struct {
 	CatalogImportResult
-	Insertables int `json:"insertables"`
+	Insertables     int                            `json:"insertables"`
+	CatalogosNuevos []ProductImportCatalogProposal `json:"catalogos_nuevos"`
+}
+
+// ProductImportCatalogProposal is a new optional catalog value found in a
+// product spreadsheet. It must be explicitly approved before import.
+type ProductImportCatalogProposal struct {
+	Tipo      string `json:"tipo"`
+	Nombre    string `json:"nombre"`
+	Productos int    `json:"productos"`
 }
 
 // ProductImportRow is the spreadsheet representation of a product.

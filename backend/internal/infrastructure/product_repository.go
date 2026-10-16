@@ -1474,27 +1474,27 @@ func (r *ProductRepository) Deactivate(businessID, productID uuid.UUID) error {
 	return nil
 }
 
-func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error) {
+func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID, rows []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error) {
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
 	var branch domain.Sucursal
 	if err := r.db.Where("id = ? AND negocio_id = ? AND activo = TRUE", branchID, businessID).First(&branch).Error; err != nil {
-		return nil, result, errors.New("la sucursal no pertenece al negocio o está inactiva")
+		return nil, result, nil, errors.New("la sucursal no pertenece al negocio o está inactiva")
 	}
 	var categories []domain.Categoria
 	var brands []domain.Marca
 	var providers []domain.Proveedor
 	var units []domain.UnidadMedida
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&categories).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&brands).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&providers).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&units).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	categoryIDs := make(map[string]uuid.UUID, len(categories))
 	brandIDs := make(map[string]uuid.UUID, len(brands))
@@ -1514,7 +1514,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	}
 	var existingCodes []string
 	if err := r.db.Model(&domain.ProductoCodigo{}).Where("negocio_id = ?", businessID).Pluck("codigo", &existingCodes).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	type productIdentity struct {
 		Nombre            string
@@ -1526,7 +1526,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id").
 		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
 		Scan(&existingProducts).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	existingCodeSet := make(map[string]struct{}, len(existingCodes))
 	seenFileCodes := make(map[string]struct{})
@@ -1553,7 +1553,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		Joins("LEFT JOIN producto_categorias pc ON pc.producto_id = p.id AND pc.es_principal = TRUE").
 		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ?", businessID).
 		Where("pv.activo = TRUE").Scan(&existingVariants).Error; err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
 	for _, variant := range existingVariants {
 		seenVariantIdentities[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = struct{}{}
@@ -1561,10 +1561,12 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	seenVariantBases := make(map[string]variantBaseInput)
 	seenVariantProviders := make(map[string]*uuid.UUID)
 	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
+	proposals := make(map[string]domain.ProductImportCatalogProposal)
 
 	for _, row := range rows {
 		hasError := false
 		hasDuplicate := false
+		pendingCatalogs := make([]domain.ProductImportCatalogProposal, 0, 4)
 		addError := func(field, reason string) {
 			hasError = true
 			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: field, Motivo: reason})
@@ -1576,7 +1578,8 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if len(row.Variantes) == 0 {
 			if _, exists := seenNamePresentations[namePresentationKey]; exists {
 				hasDuplicate = true
-				addError("Producto", "ya existe en el negocio o está repetido en el archivo")
+				field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
+				addError(field, reason)
 			}
 		}
 		if row.CodigoBarras != "" {
@@ -1592,7 +1595,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if row.Categoria != "" {
 			id, ok := categoryIDs[catalogImportKey(row.Categoria)]
 			if !ok {
-				addError("Categoría", "no existe o está inactiva")
+				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Categoría", Nombre: strings.TrimSpace(row.Categoria)})
 			} else {
 				categoryID = &id
 			}
@@ -1601,7 +1604,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if row.Marca != "" {
 			id, ok := brandIDs[catalogImportKey(row.Marca)]
 			if !ok {
-				addError("Marca", "no existe o está inactiva")
+				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Marca", Nombre: strings.TrimSpace(row.Marca)})
 			} else {
 				brandID = &id
 			}
@@ -1610,7 +1613,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if row.Proveedor != "" {
 			id, ok := providerIDs[catalogImportKey(row.Proveedor)]
 			if !ok {
-				addError("Proveedor", "no existe o está inactivo")
+				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Proveedor", Nombre: strings.TrimSpace(row.Proveedor)})
 			} else {
 				providerID = &id
 			}
@@ -1619,7 +1622,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if row.UnidadMedida != "" {
 			id, ok := unitIDs[catalogImportKey(row.UnidadMedida)]
 			if !ok {
-				addError("Unidad de medida", "no existe o está inactiva")
+				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Unidad de medida", Nombre: strings.TrimSpace(row.UnidadMedida)})
 			} else {
 				unitID = &id
 			}
@@ -1657,6 +1660,14 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			}
 			continue
 		}
+		for _, proposal := range pendingCatalogs {
+			key := proposal.Tipo + "\x00" + catalogImportKey(proposal.Nombre)
+			current := proposals[key]
+			current.Tipo = proposal.Tipo
+			current.Nombre = proposal.Nombre
+			current.Productos++
+			proposals[key] = current
+		}
 		input := domain.CreateImportedProductInput{Nombre: row.Nombre, CategoriaID: categoryID, MarcaID: brandID, ProveedorID: providerID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, StockInicial: row.StockInicial}
 		input.Descripcion = importOptionalString(row.Descripcion)
 		input.Presentacion = importOptionalString(row.Presentacion)
@@ -1673,7 +1684,121 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		}
 		prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input})
 	}
-	return prepared, result, nil
+	items := make([]domain.ProductImportCatalogProposal, 0, len(proposals))
+	for _, proposal := range proposals {
+		items = append(items, proposal)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Tipo == items[j].Tipo {
+			return catalogImportKey(items[i].Nombre) < catalogImportKey(items[j].Nombre)
+		}
+		return items[i].Tipo < items[j].Tipo
+	})
+	return prepared, result, items, nil
+}
+
+func simpleProductDuplicateIssue(barcode string, existingCodes, fileCodes map[string]struct{}) (string, string) {
+	if barcode != "" {
+		_, existsInBusiness := existingCodes[barcode]
+		_, existsInFile := fileCodes[barcode]
+		if !existsInBusiness && !existsInFile {
+			return "Variantes", "el producto tiene otro código de barras; indica la variante con el formato Atributo: valor"
+		}
+	}
+	return "Producto", "ya existe en el negocio o está repetido en el archivo"
+}
+
+func (r *ProductRepository) CreateImportedCatalogs(businessID uuid.UUID, proposals []domain.ProductImportCatalogProposal) error {
+	if len(proposals) == 0 {
+		return nil
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var categories []domain.Categoria
+		var brands []domain.Marca
+		var providers []domain.Proveedor
+		var units []domain.UnidadMedida
+		if err := tx.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&categories).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&brands).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&providers).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&units).Error; err != nil {
+			return err
+		}
+		categoryKeys, brandKeys, providerKeys, unitKeys := map[string]struct{}{}, map[string]struct{}{}, map[string]struct{}{}, map[string]struct{}{}
+		for _, item := range categories {
+			categoryKeys[catalogImportKey(item.Nombre)] = struct{}{}
+		}
+		for _, item := range brands {
+			brandKeys[catalogImportKey(item.Nombre)] = struct{}{}
+		}
+		for _, item := range providers {
+			providerKeys[catalogImportKey(item.Nombre)] = struct{}{}
+		}
+		for _, item := range units {
+			unitKeys[catalogImportKey(item.Nombre)] = struct{}{}
+			unitKeys[catalogImportKey(item.Simbolo)] = struct{}{}
+		}
+		for _, proposal := range proposals {
+			name, key := strings.TrimSpace(proposal.Nombre), catalogImportKey(proposal.Nombre)
+			if name == "" {
+				continue
+			}
+			switch proposal.Tipo {
+			case "Categoría":
+				if _, exists := categoryKeys[key]; !exists {
+					if err := tx.Create(&domain.Categoria{NegocioID: businessID, Nombre: name, Activo: true}).Error; err != nil {
+						return err
+					}
+					categoryKeys[key] = struct{}{}
+				}
+			case "Marca":
+				if _, exists := brandKeys[key]; !exists {
+					if err := tx.Create(&domain.Marca{NegocioID: businessID, Nombre: name, Activo: true}).Error; err != nil {
+						return err
+					}
+					brandKeys[key] = struct{}{}
+				}
+			case "Proveedor":
+				if _, exists := providerKeys[key]; !exists {
+					if err := tx.Create(&domain.Proveedor{NegocioID: businessID, Nombre: name, Activo: true}).Error; err != nil {
+						return err
+					}
+					providerKeys[key] = struct{}{}
+				}
+			case "Unidad de medida":
+				if _, exists := unitKeys[key]; !exists {
+					symbol := importedUnitSymbol(name, unitKeys)
+					if err := tx.Create(&domain.UnidadMedida{NegocioID: businessID, Nombre: name, Simbolo: symbol, Tipo: "CANTIDAD", FactorABase: 1, PermiteFraccion: true, Decimales: 2, Activo: true}).Error; err != nil {
+						return err
+					}
+					unitKeys[key] = struct{}{}
+					unitKeys[catalogImportKey(symbol)] = struct{}{}
+				}
+			default:
+				return fmt.Errorf("tipo de catálogo de importación no reconocido: %s", proposal.Tipo)
+			}
+		}
+		return nil
+	})
+}
+
+func importedUnitSymbol(name string, used map[string]struct{}) string {
+	sum := sha256.Sum256([]byte(catalogImportKey(name)))
+	hexValue := strings.ToUpper(hex.EncodeToString(sum[:]))
+	for suffix := 0; ; suffix++ {
+		symbol := "IMP-" + hexValue[:12]
+		if suffix > 0 {
+			symbol = fmt.Sprintf("IMP-%s%d", hexValue[:10], suffix)
+		}
+		if _, exists := used[catalogImportKey(symbol)]; !exists {
+			return symbol
+		}
+	}
 }
 
 func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error) {

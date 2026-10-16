@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	ErrInvalidBarcode    = errors.New("el código de barras debe contener entre 8 y 14 dígitos")
-	ErrProductNotFound   = errors.New("no se encontró el producto en los catálogos externos")
-	ErrLookupRateLimited = errors.New("se alcanzó el límite de consultas de los catálogos externos")
-	ErrLookupUnavailable = errors.New("los catálogos externos no están disponibles")
+	ErrInvalidBarcode           = errors.New("el código de barras debe contener entre 8 y 14 dígitos")
+	ErrProductNotFound          = errors.New("no se encontró el producto en los catálogos externos")
+	ErrLookupRateLimited        = errors.New("se alcanzó el límite de consultas de los catálogos externos")
+	ErrLookupUnavailable        = errors.New("los catálogos externos no están disponibles")
+	ErrNewImportCatalogsPending = errors.New("autoriza los catálogos nuevos detectados antes de importar")
 )
 
 var barcodePattern = regexp.MustCompile(`^\d{8,14}$`)
@@ -48,7 +49,8 @@ type ProductRepository interface {
 	ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ImportProviders(businessID uuid.UUID, rows []domain.CatalogImportProviderRow) (domain.CatalogImportResult, error)
 	ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
-	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error)
+	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error)
+	CreateImportedCatalogs(uuid.UUID, []domain.ProductImportCatalogProposal) error
 	CreateImportedProducts(uuid.UUID, []domain.ValidatedProductImportRow) (domain.CatalogImportResult, error)
 	CreateProductImportJob(uuid.UUID, uuid.UUID) (domain.ProductImportJob, error)
 	GetProductImportJob(uuid.UUID, uuid.UUID) (domain.ProductImportJob, error)
@@ -65,14 +67,17 @@ type ProductRepository interface {
 	DeleteUnit(businessID, unitID uuid.UUID) error
 }
 
-func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
-	return s.importProducts(businessID, branchID, file, nil)
+func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) (domain.CatalogImportResult, error) {
+	return s.importProducts(businessID, branchID, file, authorizeNewCatalogs, nil)
 }
 
-func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.Reader, progress func(string, int)) (domain.CatalogImportResult, error) {
-	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
+func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool, progress func(string, int)) (domain.CatalogImportResult, error) {
+	prepared, result, proposals, err := s.prepareProductImport(businessID, branchID, file, authorizeNewCatalogs)
 	if err != nil {
 		return result, err
+	}
+	if len(proposals) > 0 && !authorizeNewCatalogs {
+		return result, ErrNewImportCatalogsPending
 	}
 	if progress != nil {
 		progress("Archivo validado", 20)
@@ -87,14 +92,14 @@ func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.
 	return mergeImportResults(result, imported), nil
 }
 
-func (s *ProductService) StartProductImport(businessID, branchID uuid.UUID, content []byte) (domain.ProductImportJob, error) {
+func (s *ProductService) StartProductImport(businessID, branchID uuid.UUID, content []byte, authorizeNewCatalogs bool) (domain.ProductImportJob, error) {
 	job, err := s.products.CreateProductImportJob(businessID, branchID)
 	if err != nil {
 		return domain.ProductImportJob{}, err
 	}
 	go func() {
 		_ = s.products.UpdateProductImportJob(job.ID, "procesando", "Validando archivo", 10, nil, nil)
-		result, importErr := s.importProducts(businessID, branchID, bytes.NewReader(content), func(stage string, progress int) {
+		result, importErr := s.importProducts(businessID, branchID, bytes.NewReader(content), authorizeNewCatalogs, func(stage string, progress int) {
 			_ = s.products.UpdateProductImportJob(job.ID, "procesando", stage, progress, nil, nil)
 		})
 		if importErr != nil {
@@ -112,24 +117,36 @@ func (s *ProductService) GetProductImportJob(businessID, jobID uuid.UUID) (domai
 }
 
 func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
-	prepared, result, err := s.prepareProductImport(businessID, branchID, file)
+	prepared, result, proposals, err := s.prepareProductImport(businessID, branchID, file, false)
 	result.SKUsGenerados += len(prepared)
-	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared)}, err
+	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals}, err
 }
 
-func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, file io.Reader) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, error) {
+func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error) {
 	rows, result, err := parseProductImport(file)
 	if err != nil {
-		return nil, result, err
+		return nil, result, nil, err
 	}
-	prepared, validation, err := s.products.ValidateProductImport(businessID, branchID, rows)
+	prepared, validation, proposals, err := s.products.ValidateProductImport(businessID, branchID, rows)
 	if err != nil {
-		return nil, result, err
+		return nil, result, nil, err
+	}
+	if len(proposals) > 0 && authorizeNewCatalogs {
+		if err := s.products.CreateImportedCatalogs(businessID, proposals); err != nil {
+			return nil, result, proposals, err
+		}
+		prepared, validation, _, err = s.products.ValidateProductImport(businessID, branchID, rows)
+		if err != nil {
+			return nil, result, proposals, err
+		}
 	}
 	result.Omitidas += validation.Omitidas
 	result.Invalidas += validation.Invalidas
 	result.Errores = append(result.Errores, validation.Errores...)
-	return prepared, result, nil
+	if len(proposals) == 0 {
+		return prepared, result, nil, nil
+	}
+	return prepared, result, proposals, nil
 }
 
 func validImportImageURL(value string) bool {

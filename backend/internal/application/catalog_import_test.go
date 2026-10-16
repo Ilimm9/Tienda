@@ -168,6 +168,22 @@ func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
 	}
 }
 
+func TestParseProductImportTreatsVisuallyEmptyBarcodeAsAbsent(t *testing.T) {
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Producto sin código", "", "", "", "", "", "", "", "10", "2", "\u200B\u200C\u200D\u2060\uFEFF", "", ""}})
+
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].CodigoBarras != "" {
+		t.Fatalf("rows = %#v, want one product without barcode", rows)
+	}
+	if result.Invalidas != 0 || len(result.Errores) != 0 || len(result.Advertencias) != 0 {
+		t.Fatalf("result = %#v, want valid import without barcode issues", result)
+	}
+}
+
 func TestParseProductImportRejectsLegacySKUHeader(t *testing.T) {
 	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "4", "", "", ""}})

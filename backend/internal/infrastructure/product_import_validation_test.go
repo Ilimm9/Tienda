@@ -53,3 +53,27 @@ func TestSameVariantBaseInputRejectsSharedDataConflicts(t *testing.T) {
 		t.Fatal("different shared descriptions must be rejected")
 	}
 }
+
+func TestImportedUnitSymbolIsStableAndAvoidsExistingSymbols(t *testing.T) {
+	used := map[string]struct{}{}
+	first := importedUnitSymbol("Pieza", used)
+	if first == "" || len(first) > 20 {
+		t.Fatalf("symbol = %q, want a generated symbol within the database limit", first)
+	}
+	used[catalogImportKey(first)] = struct{}{}
+	second := importedUnitSymbol("Pieza", used)
+	if second == first {
+		t.Fatalf("symbol = %q, want a distinct value when the generated symbol is already used", second)
+	}
+}
+
+func TestSimpleProductDuplicateIssueRequiresVariantForDifferentBarcode(t *testing.T) {
+	field, reason := simpleProductDuplicateIssue("7501055303038", map[string]struct{}{}, map[string]struct{}{})
+	if field != "Variantes" || reason == "" {
+		t.Fatalf("issue = %q, %q; want a variant instruction", field, reason)
+	}
+	field, _ = simpleProductDuplicateIssue("7501055303038", map[string]struct{}{"7501055303038": {}}, map[string]struct{}{})
+	if field != "Producto" {
+		t.Fatalf("field = %q, want Producto for a repeated barcode", field)
+	}
+}

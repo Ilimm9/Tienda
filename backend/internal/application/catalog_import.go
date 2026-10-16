@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"tienda/backend/internal/domain"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
@@ -102,11 +103,11 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
 			{"Campos opcionales", "Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
 			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
-			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida solo se validan si se indican y deben existir activos."},
+			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida son opcionales. Si indicas uno nuevo, revísalo y autoriza su creación en la vista previa."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
 			{"SKU interno", "Se genera automáticamente al importar y no debe incluirse como columna en el archivo."},
 			{"Variantes", "Opcional. Usa Atributo: valor; por ejemplo Colección: Dinosaurios o Sabor: Fresa; Color: Rojo."},
-			{"Duplicados", "Los productos simples se comparan por Nombre y Presentación. Las variantes se comparan por producto base y atributos. El código de barras no puede repetirse."},
+			{"Duplicados", "Los productos simples se comparan por Nombre y Presentación. Si cambia el código de barras, indica la variante con el formato Atributo: valor. El código de barras no puede repetirse."},
 			{"Resultado", "Las filas inválidas se reportan con fila, campo y motivo; las válidas se crean."},
 		}
 		for rowIndex, row := range instructionRows {
@@ -171,7 +172,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 		} else if stockErr != nil || stock < 0 {
 			addError("Stock inicial", "debe ser un número mayor o igual a cero")
 		}
-		barcode := cell(row, 10)
+		barcode := optionalBarcodeCell(row, 10)
 		if barcode != "" && !barcodePattern.MatchString(barcode) && !shortBarcodePattern.MatchString(barcode) {
 			addError("Código de barras", "debe contener solo de 1 a 14 dígitos")
 		} else if shortBarcodePattern.MatchString(barcode) {
@@ -328,6 +329,32 @@ func cell(row []string, index int) string {
 		return ""
 	}
 	return strings.TrimSpace(row[index])
+}
+
+// optionalBarcodeCell treats cells that only contain whitespace or invisible
+// Unicode marks as empty. Spreadsheet exports can leave these marks behind
+// even when a barcode cell looks blank to the user.
+func optionalBarcodeCell(row []string, index int) string {
+	value := cell(row, index)
+	if value == "" || !containsVisibleRune(value) {
+		return ""
+	}
+	return value
+}
+
+func containsVisibleRune(value string) bool {
+	for _, runeValue := range value {
+		if unicode.IsSpace(runeValue) {
+			continue
+		}
+		switch runeValue {
+		case '\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF':
+			continue
+		default:
+			return true
+		}
+	}
+	return false
 }
 
 func isEmptyRow(row []string) bool {

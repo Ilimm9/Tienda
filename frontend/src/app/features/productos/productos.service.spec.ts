@@ -105,6 +105,15 @@ describe('ProductosService', () => {
     request.flush({ procesadas: 1, creadas: 1, omitidas: 0, invalidas: 0, skus_generados: 0, errores: [], advertencias: [] });
   });
 
+  it('sends catalog authorization only when the preview requires it', () => {
+    const file = new File(['spreadsheet'], 'productos.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    service.importProducts('negocio-1', 'sucursal-1', file, true).subscribe();
+
+    const request = http.expectOne(`${environment.apiUrl}/negocios/negocio-1/catalogo/productos/importar`);
+    expect(request.request.body.get('autorizar_catalogos_nuevos')).toBe('true');
+    request.flush({ id: 'importacion-1', estado: 'pendiente', etapa: 'Preparando importación', porcentaje: 0, mensaje_error: null, resultado: null });
+  });
+
   it('validates the spreadsheet before importing it', () => {
     const file = new File(['spreadsheet'], 'productos.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     service.previewProductImport('negocio-1', 'sucursal-1', file).subscribe((result) => {

@@ -587,11 +587,11 @@ export class ProductosComponent {
       return;
     this.importing.set(true);
     this.importError.set(null);
-    this.executeProductImport(this.importFile, this.importBranchId);
+    this.executeProductImport(this.importFile, this.importBranchId, this.importPreview()!.catalogos_nuevos.length > 0);
   }
 
-  private executeProductImport(file: File, branchId: string): void {
-    this.productosService.importProducts(this.negocioID, branchId, file).subscribe({
+  private executeProductImport(file: File, branchId: string, authorizeNewCatalogs: boolean): void {
+    this.productosService.importProducts(this.negocioID, branchId, file, authorizeNewCatalogs).subscribe({
       next: (job) => {
         Swal.fire({
           title: 'Importando archivo',
