@@ -3,10 +3,11 @@ const { existsSync } = require('node:fs');
 const { resolve } = require('node:path');
 
 const frontendRoot = resolve(__dirname, '..');
-const envPath = resolve(frontendRoot, '..', 'backend', '.env');
-
-if (existsSync(envPath)) {
-  process.loadEnvFile(envPath);
+// loadEnvFile no sobrescribe variables ya definidas: frontend/.env gana sobre backend/.env.
+for (const envPath of [resolve(frontendRoot, '.env'), resolve(frontendRoot, '..', 'backend', '.env')]) {
+  if (existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+  }
 }
 
 function port(name, fallback) {
@@ -20,7 +21,11 @@ function port(name, fallback) {
 }
 
 const frontendPort = port('FRONTEND_PORT', '4200');
-const backendPort = port('APP_PORT', '8080');
+const backendURL = process.env.BACKEND_URL || `http://localhost:${port('APP_PORT', '8080')}`;
+if (!URL.canParse(backendURL)) {
+  console.error(`BACKEND_URL debe ser una URL válida; se recibió "${backendURL}".`);
+  process.exit(1);
+}
 const angularCLI = require.resolve('@angular/cli/bin/ng.js');
 const extraArguments = process.argv.slice(2);
 
@@ -29,7 +34,7 @@ const child = spawn(
   [angularCLI, 'serve', '--port', frontendPort, '--proxy-config', 'proxy.conf.cjs', ...extraArguments],
   {
     cwd: frontendRoot,
-    env: { ...process.env, APP_PORT: backendPort },
+    env: { ...process.env, BACKEND_URL: backendURL },
     stdio: 'inherit',
   },
 );

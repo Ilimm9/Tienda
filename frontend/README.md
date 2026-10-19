@@ -15,7 +15,11 @@ npm install
 npm start
 ```
 
-Abrir el puerto `FRONTEND_PORT` configurado en `backend/.env` (`http://localhost:4200` por defecto).
+Abrir el puerto `FRONTEND_PORT` (`http://localhost:4200` por defecto).
+
+`npm start` lee, en este orden de prioridad: variables exportadas, `frontend/.env`
+(opcional, ver `.env.example`), `backend/.env` y valores por defecto.
+`frontend/.env` acepta `FRONTEND_PORT` y `BACKEND_URL` (destino del proxy `/api`).
 
 Los puertos y el origen CORS se configuran juntos:
 
@@ -25,11 +29,12 @@ FRONTEND_PORT=4200
 FRONTEND_URL=http://localhost:4200
 ```
 
-`npm start` lee ese archivo. Angular consume `/api/v1` y reenvía `/api/*` al backend mediante el proxy de desarrollo.
+Angular consume `/api/v1` y reenvía `/api/*` al backend mediante el proxy de desarrollo.
 
 ## Variables y secretos
 
-El frontend no usa un archivo `.env` propio. Su configuración pública vive en
+`frontend/.env` solo configura el servidor de desarrollo; no entra al bundle.
+La configuración pública de la app vive en
 `src/environments/environment.ts` y `src/environments/environment.prod.ts`.
 
 Nunca poner en el frontend `SMTP_USERNAME`, `SMTP_PASSWORD`, claves AWS,

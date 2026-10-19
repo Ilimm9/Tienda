@@ -1,8 +1,6 @@
-const backendPort = Number.parseInt(process.env.APP_PORT ?? '8080', 10);
-
 module.exports = {
   '/api': {
-    target: `http://localhost:${backendPort}`,
+    target: process.env.BACKEND_URL ?? `http://localhost:${process.env.APP_PORT ?? '8080'}`,
     secure: false,
   },
 };
