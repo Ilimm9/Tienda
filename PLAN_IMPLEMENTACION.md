@@ -1,67 +1,33 @@
 # Plan de implementación
 
-Este archivo registra el orden, dependencia y estado de las capabilities del proyecto Tienda. Ninguna funcionalidad puede implementarse sin especificación aprobada.
+Índice general actualizado el 2026-10-19. Reorganización documental solicitada por el usuario; conserva aprobaciones y estados anteriores sin cerrar entregas automáticamente.
 
-## Flujo de trabajo
+## Contexto por tema
 
-1. Describir la funcionalidad.
-2. Crear `capabilities/NN-nombre/CAPABILITY.md` con estado `Borrador`.
-3. Completar alcance, decisiones, contratos, pruebas y criterios de aceptación.
-4. Revisar la propuesta con el usuario.
-5. Registrar aprobación explícita y cambiar estado a `Aprobada`.
-6. Implementar y cambiar estado a `En implementación`.
-7. Ejecutar verificaciones y registrar resultados.
-8. Cambiar estado a `Verificada` cuando todos los criterios pasen.
-9. Cambiar estado a `Cerrada` después de la revisión final del usuario.
+- [Registro y alta inicial](capabilities/flujo-registro.md).
+- [Gestión de colaboradores](capabilities/gestion-colaboradores.md).
+- [Productos y catálogos](capabilities/registro-productos.md).
+- [Compras, inventario y precios](capabilities/modulo-compras.md).
 
-## Estados permitidos
+## Estado del trabajo
 
-- `Borrador`: definición inicial incompleta o no revisada.
-- `En revisión`: lista para recibir decisiones o correcciones.
-- `Aprobada`: autorizada explícitamente para implementación.
-- `En implementación`: trabajo de código activo.
-- `Verificada`: implementación terminada y pruebas registradas.
-- `Cerrada`: aceptada finalmente por el usuario.
+[Planes actuales](capabilities/planes-actuales.md) concentra pendientes, fuentes y límites de autorización: producción segura, correo real/revisión Resend, verificación de plataforma, marca, sistema visual y revisiones de entregas.
 
-## Registro de capabilities
+Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 
-| ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 01  | [Identidad, negocios, sucursales y RBAC](capabilities/01-identidad-negocio-sucursales-rbac/CAPABILITY.md)          | En implementación | Autenticación actual                                                        | Fases 1, 1.5, 1.6, 2 y 3 aprobadas                                           | Fases 1, 1.5 y 1.6 cerradas; fase 2 verificada y pendiente de aceptación; fase 3 en implementación por autorización explícita con excepción documentada; documentos separados por fase; `base.MD` preservado |
-| 02  | [Configuración del entorno local](capabilities/02-configuracion-entorno-local/CAPABILITY.md)                       | Verificada        | Configuración Go y Angular CLI                                              | Aprobada el 2026-09-11                                                       | Implementación verificada; pendiente de aceptación final                                                                                                                                                     |
-| 03  | [Carga de archivos unificada](capabilities/03-carga-archivos-unificada/CAPABILITY.md)                              | En implementación | Carga masiva existente de productos y catálogo                              | Aprobada explícitamente por el usuario el 2026-09-14                         | Estado índigo al preparar archivo, eliminación y arrastrar/soltar                                                                                                                                            |
-| 04  | [Resumen de cambios de productos](capabilities/04-productos-importacion-variantes/CAPABILITY.md)                   | —                 | Catálogo de productos e importación XLSX existentes                         | —                                                                            | Resumen consolidado de los cambios antes documentados en las capabilities 04–14                                                                                                                              |
-| 05  | [Tailwind y sistema visual](capabilities/05-tailwind-sistema-visual/CAPABILITY.md)                                 | Verificada        | Tema, layout y estilos actuales del frontend                                | Aprobada explícitamente el 2026-10-02 con alcance ajustado                   | Tailwind 4 sin Preflight con tokens G; sección Equipo migrada                                                                                                                                                |
-| 06  | [Preparación segura para producción en AWS Lightsail](capabilities/06-preparacion-produccion-segura/CAPABILITY.md) | En implementación | Autorización, configuración, contenedores, datos e infraestructura actuales | Fases 1, 2 y 3 y demo aprobadas; revisión Resend en revisión                 | Demo publicada por el usuario; propuesta Resend Free + compatibilidad SES documentada en la 06; contratos de correo canónicos en la 07; respaldos y gates generales pendientes                               |
-| 08  | [Proveedores como sección independiente](capabilities/08-proveedores-seccion-independiente/CAPABILITY.md)          | En implementación | Navegación, rutas y pantalla de catálogo actuales                           | Aprobada explícitamente el 2026-09-22                                        | Proveedores se separa de Catálogo, usa `/proveedores` y elimina la ruta anterior                                                                                                                             |
-| 09  | [Proveedor opcional en productos](capabilities/09-productos-proveedores/CAPABILITY.md)                             | En implementación | Productos, proveedores e importación XLSX                                   | Aprobada explícitamente el 2026-09-23                                        | Un proveedor opcional por producto, incluidos filtros, formulario y carga masiva; pendiente de pruebas Angular con Node compatible                                                                           |
-| 10  | [Compras y recepción de mercancía](capabilities/10-compras-proveedores/CAPABILITY.md)                              | En implementación | Proveedores, productos, unidades e inventario                               | Revisiones aprobadas explícitamente el 2026-09-28                            | Mercancía antes de impuestos y pago; total e importe pagado automáticos                                                                                                                                      |
-| 11  | [Fechas de auditoría y presentación en Ciudad de México](capabilities/10-fechas-auditoria/CAPABILITY.md)           | En implementación | Timestamps UTC expuestos por la API y vistas Angular                        | Aprobada explícitamente el 2026-09-23                                        | UTC desde Go para auditoría y presentación fija en `America/Mexico_City`; pendiente ejecutar Angular con Node compatible                                                                                     |
-| 12  | [Validación de costos y precios por sucursal](capabilities/12-validacion-costos-precios-sucursal/CAPABILITY.md)    | En implementación | Compras, productos, sucursales y RBAC                                       | Aprobada explícitamente el 2026-09-30                                        | Recepción crea propuestas; administrador de sucursal edita y autoriza por renglón                                                                                                                            |
-| 13  | [Acceso y registro Stockion](capabilities/13-acceso-animado-stockion/CAPABILITY.md)                                | Verificada        | Registro, verificación de correo y API de cuentas actuales                  | Aprobada explícitamente el 2026-10-01 y ampliaciones aprobadas el 2026-10-06 | Paleta de login aplicada a verificación y recuperación; runner Angular pendiente de Node 22                                                                                                                  |
-| 14  | [Panel editorial de alta inicial](capabilities/14-panel-editorial-alta-inicial/CAPABILITY.md) | En implementación | Asistente de alta inicial, identidad/contexto 01 y sistema visual 05        | Aprobada explícitamente el 2026-10-07 | Sustituye el mosaico derecho por una vista previa editorial de empresa, sucursal y cierre
-| 15  | [Administración de plataforma y métricas de uso](capabilities/15-administracion-plataforma-metricas/CAPABILITY.md) | En implementación | Identidad, negocios, sucursales, sesiones y RBAC 01                         | Aprobada explícitamente el 2026-10-15 mediante “Implement the plan” | Código implementado; verificaciones focalizadas en verde; suite global conserva bloqueos preexistentes de entorno y alta inicial |
-| 16  | [Código de barras opcional en importación](capabilities/16-productos-codigo-barras-opcional/CAPABILITY.md) | Verificada | Importación XLSX de productos existente | Aprobada explícitamente el 2026-10-16 mediante “Implement the plan” | Celdas visualmente vacías se interpretan como ausencia de código; el encabezado permanece obligatorio |
-| 17  | [Alta autorizada de catálogos durante importación](capabilities/17-catalogos-nuevos-importacion-productos/CAPABILITY.md) | Verificada | Importación XLSX de productos y catálogos existentes | Aprobada explícitamente el 2026-10-16 mediante “Implement the plan” | Vista previa agrupa catálogos nuevos; autorización global antes de crearlos e importar productos |
-| 18  | [Variantes para productos repetidos en importación](capabilities/18-variantes-importacion-productos-repetidos/CAPABILITY.md) | Verificada | Importación XLSX y variantes de productos existentes | Aprobada explícitamente el 2026-10-16 mediante “Implement the plan” | Un código distinto para el mismo nombre y presentación requiere atributo de variante |
+## Convención y ciclo
 
-## Borradores solicitados en `capabilities/thrs`
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID: `19`), sin nuevas carpetas.
+2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
+3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
+4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.
+5. Actualizar base temática y pendientes; archivar plan terminado como `historial/NN-nombre.md`. Estado `Cerrada` solo tras aceptación final explícita.
 
-Ubicación directa autorizada por el usuario el 2026-10-01 para planeación, sin carpetas adicionales ni implementación. Antes de implementar deben contar con capability aprobada conforme a `AGENTS.md`; estos borradores no autorizan cambios de código.
-
-| Orden | Plan                                                                                                                                     | Estado                                                                      | Dependencias                                           |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 1     | [Alta inicial de empresa y sucursal](capabilities/thrs/01-alta-inicial-empresa-sucursal.md)                                              | Verificada; aprobada el 2026-10-05, pendiente de aceptación final           | Identidad/contexto 01, seguridad 06 y acceso visual 13 |
-| 2     | [Invitaciones de empleados por sucursal](capabilities/thrs/02-invitaciones-empleados-sucursal.md)                                        | Aprobada el 2026-10-01; flujo de invitación implementado                    | Plan 1, empleados/RBAC/invitaciones 01 y correo 07     |
-| 3     | [Paleta clara y tipografía global](capabilities/thrs/03-paleta-tipografia-global.md)                                                     | Aprobada e implementada el 2026-10-02; colores sustituidos por el plan 4    | Opción A, plan 2 y acceso 13                           |
-| 4     | [Adaptar la app a la opción G](capabilities/thrs/04-adaptacion-opcion-g.md)                                                              | Verificada; pendiente de revisión final                                     | Plan 3                                                 |
-| 5     | [Nombres, correos únicos, permisos en frontend y cierre de Equipo y Roles](capabilities/thrs/05-permisos-frontend-formularios-equipo.md) | Verificada; aprobada el 2026-10-04, pendiente de aceptación final           | Plan 2, plan 4, RBAC 01, registro 06 y precios 12      |
-| 6     | [Equipo y Roles con el kit visual](capabilities/thrs/06-equipo-roles-con-kit.md)                                                         | Verificada; aprobada el 2026-10-04, pendiente de aceptación final           | Kit del plan 4, Tailwind 05 y plan 5                   |
-| 7     | [Marca Stockion, correos y envío a producción](capabilities/thrs/07-marca-stockion-correos-produccion.md)                                | Aprobada el 2026-10-05; código implementado, envío a `production` pendiente | Correo 07, plan 4 y capability 06                      |
+Bases de conocimiento se actualizan con cada cambio del tema; no sustituyen planes ni autorizaciones. Organización detallada en [capabilities/README.md](capabilities/README.md).
 
 ## Restricciones vigentes
 
 - Git solo lectura hasta confirmación final del usuario.
-- Sin commits, push, despliegues ni publicaciones.
-- Código real permanece en `backend/` y `frontend/`.
-- Cualquier desviación de una capability aprobada detiene esa parte del trabajo hasta revisión.
+- Sin commits, push, despliegues ni publicaciones sin autorización explícita.
+- Código ejecutable permanece en `backend/` y `frontend/`.
+- Desviaciones de un plan aprobado requieren revisión antes de implementarse.

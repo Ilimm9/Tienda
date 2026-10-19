@@ -4,7 +4,7 @@ Estas reglas aplican a cualquier agente o colaborador automatizado que trabaje e
 
 ## Planeación obligatoria
 
-- No implementar una funcionalidad nueva sin un archivo `capabilities/NN-nombre/CAPABILITY.md`.
+- No implementar una funcionalidad nueva sin un archivo `capabilities/NN-nombre.md`.
 - La capability debe describir alcance, reglas, contratos, pruebas y criterios de aceptación.
 - No comenzar la implementación mientras su estado no sea `Aprobada`.
 - Solo una aprobación explícita del usuario permite cambiar el estado a `Aprobada`.
@@ -30,6 +30,9 @@ Estas reglas aplican a cualquier agente o colaborador automatizado que trabaje e
 
 - Usar `PLAN_IMPLEMENTACION.md` como índice y estado general.
 - Mantener especificaciones funcionales dentro de `capabilities/`.
+- Mantener únicamente planes actuales, bases de conocimiento y `README.md` en la raíz de `capabilities/`. La única subcarpeta es `historial/`, sin subcarpetas internas; los documentos históricos conservan número y nombre descriptivo.
+- Actualizar las bases `flujo-registro.md`, `gestion-colaboradores.md`, `registro-productos.md` (incluye catálogos) y `modulo-compras.md` cuando cambien sus flujos, reglas o tablas. Los resúmenes no autorizan implementación.
+- Archivar una entrega no equivale a aprobarla ni cerrarla; conservar aprobaciones, verificaciones y pendientes explícitos en los planes actuales y su historial.
 - Mantener código ejecutable dentro de `backend/` y `frontend/`; no duplicarlo en `capabilities/`.
 - Organizar backend por dominio dentro de cada capa. Un dominio aprobado debe usar el mismo nombre de carpeta en `domain`, `application`, `infrastructure` e `interfaces/http` cuando tenga responsabilidades en esas capas.
 - Usar nombres de dominio singulares, descriptivos y en minúsculas, por ejemplo `cuenta`, `negocio`, `catalogo` o `inventario`.
