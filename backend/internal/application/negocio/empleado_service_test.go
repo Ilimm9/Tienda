@@ -266,3 +266,7 @@ func TestEmpleadoServiceActualizarRechazaCorreoDuplicadoExcluyendoAlEmpleado(t *
 		t.Fatal("la búsqueda debe excluir al empleado que se edita")
 	}
 }
+
+func (r *empleadoRepositoryStub) Reactivar(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, domain.ReactivarEmpleadoInput) error {
+	return nil
+}

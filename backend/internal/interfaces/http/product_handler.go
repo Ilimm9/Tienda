@@ -54,8 +54,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 		return
 	}
 
-	// validar que la sesión tenga membresía y permiso sobre este negocio.
-	products, err := h.products.ListByBusiness(businessID)
+	branchID, err := uuid.Parse(c.Query("sucursal_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"codigo": "SUCURSAL_REQUERIDA", "mensaje": "Selecciona una sucursal activa válida."})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, branchID) {
+		return
+	}
+	products, err := h.products.ListByBusiness(businessID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar los productos"})
 		return

@@ -4,6 +4,7 @@ export interface Permiso {
   codigo_modulo: string;
   nombre: string;
   descripcion?: string | null;
+  requiere?: string[];
 }
 
 export interface RolResumen {
@@ -18,6 +19,22 @@ export interface RolResumen {
   total_miembros: number;
   creado_en: string;
   actualizado_en: string;
+  permisos?: string[];
+  permisos_faltantes?: string[];
+  permisos_detalle?: Permiso[];
+}
+
+export function completarDependencias(seleccionados: ReadonlySet<string>, catalogo: Permiso[]): Set<string> {
+  const resultado = new Set(seleccionados);
+  const porCodigo = new Map(catalogo.map(permiso => [permiso.codigo, permiso.id]));
+  for (const id of resultado) {
+    const permiso = catalogo.find(item => item.id === id);
+    for (const codigo of permiso?.requiere ?? []) {
+      const requerido = porCodigo.get(codigo);
+      if (requerido) resultado.add(requerido);
+    }
+  }
+  return resultado;
 }
 
 export interface RolDetalle extends Omit<RolResumen, 'total_permisos'> {
@@ -48,6 +65,7 @@ export interface CrearRolPayload {
 }
 
 export interface ActualizarRolPayload {
+  autorizar_dependencias_existentes?: boolean;
   nombre?: string;
   descripcion?: string | null;
   activo?: boolean;

@@ -70,18 +70,23 @@ type ActualizarEmpleadoInput struct {
 	TerminadoEn     Optional[string] `json:"terminado_en"`
 }
 
+type ReactivarEmpleadoInput struct {
+	Roles      []uuid.UUID `json:"roles"`
+	Sucursales []uuid.UUID `json:"sucursales"`
+}
+
 type EmpleadoResumen struct {
-	ID             uuid.UUID  `json:"id"`
-	NegocioID      uuid.UUID  `json:"negocio_id"`
-	NumeroEmpleado *string    `json:"numero_empleado"`
-	NombreCompleto string     `json:"nombre_completo"`
-	Correo         *string    `json:"correo"`
-	Telefono       *string    `json:"telefono"`
-	Puesto         *string    `json:"puesto"`
-	Estado         string     `json:"estado"`
-	TieneCuenta    bool       `json:"tiene_cuenta"`
-	CreadoEn       time.Time  `json:"creado_en"`
-	ActualizadoEn  time.Time  `json:"actualizado_en"`
+	ID             uuid.UUID `json:"id"`
+	NegocioID      uuid.UUID `json:"negocio_id"`
+	NumeroEmpleado *string   `json:"numero_empleado"`
+	NombreCompleto string    `json:"nombre_completo"`
+	Correo         *string   `json:"correo"`
+	Telefono       *string   `json:"telefono"`
+	Puesto         *string   `json:"puesto"`
+	Estado         string    `json:"estado"`
+	TieneCuenta    bool      `json:"tiene_cuenta"`
+	CreadoEn       time.Time `json:"creado_en"`
+	ActualizadoEn  time.Time `json:"actualizado_en"`
 }
 
 type EmpleadoDetalle struct {

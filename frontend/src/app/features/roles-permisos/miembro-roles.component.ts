@@ -67,6 +67,7 @@ export class MiembroRolesComponent {
     this.rolService.asignarRoles(this.negocioId, this.membresiaId, [...this.seleccionados()]).subscribe({
       next: () => {
         this.saving.set(false);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Roles actualizados');
         void this.router.navigate(['/roles-permisos']);
       },

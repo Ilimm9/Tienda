@@ -1,6 +1,6 @@
 # Capabilities
 
-Contexto rápido y planeación vigente. Actualizado: 2026-10-19.
+Contexto rápido y planeación vigente. Actualizado: 2026-10-20.
 
 ## Leer por tema
 
@@ -14,7 +14,7 @@ Contexto rápido y planeación vigente. Actualizado: 2026-10-19.
 
 - Única subcarpeta: [historial/](historial/), plana. Conserva planes anteriores, fases, respaldos, guías, modelo inicial y capturas; nada se elimina.
 - Cada `NN-nombre/CAPABILITY.md` anterior ahora es `historial/NN-nombre.md`. Fases y anexos agregan un sufijo; los planes personales conservan número y prefijo `thrs` para evitar colisiones.
-- Los planes nuevos se escriben directamente como `NN-nombre.md`; continuar desde `19`. Incluir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones.
+- Los planes nuevos se escriben directamente como `NN-nombre.md`; continuar desde `21`; `19` reservado para precios y `20` cerrado. Incluir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones.
 - Solo aprobación explícita del usuario permite estado `Aprobada` e implementación. Estados: `Borrador`, `En revisión`, `Aprobada`, `En implementación`, `Verificada` y `Cerrada`.
 - Al terminar una entrega, actualizar su base temática y mover su plan a `historial/`. Los pendientes y la aceptación final siguen explícitos; archivar no cambia estados.
 

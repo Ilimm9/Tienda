@@ -76,6 +76,15 @@ export class InvitacionNueva {
     () => this.sucursales().find((item) => item.id === this.sucursalId()) ?? null,
   );
   readonly rol = computed(() => this.roles().find((item) => item.id === this.rolId()) ?? null);
+  readonly permisosDelRol = computed(() => {
+    const nombres: Record<string, string> = { negocios: 'Negocios', sucursales: 'Sucursales', roles: 'Roles y permisos', equipo: 'Equipo', catalogo: 'Catálogo', compras: 'Compras', precios: 'Costos y precios', inventario: 'Inventario' };
+    const grupos = new Map<string, string[]>();
+    for (const permiso of this.rol()?.permisos_detalle ?? []) {
+      const seccion = nombres[permiso.codigo_modulo] ?? permiso.codigo_modulo;
+      grupos.set(seccion, [...(grupos.get(seccion) ?? []), permiso.nombre]);
+    }
+    return [...grupos].map(([seccion, permisos]) => ({ seccion, permisos }));
+  });
   readonly completa = computed(() => Boolean(this.empleado() && this.sucursal() && this.rol()));
   /** Iniciales del empleado elegido para el resumen; sin elección, un signo neutro. */
   readonly inicialesEmpleado = computed(() => iniciales(this.empleado()?.nombre_completo));
@@ -155,7 +164,7 @@ export class InvitacionNueva {
     }
     forkJoin({
       empleados: this.empleadoService.listar(negocio.id),
-      roles: this.rolService.listar(negocio.id),
+      roles: this.rolService.listar(negocio.id, false, true),
     }).subscribe({
       next: ({ empleados, roles }) => {
         // Solo tiene sentido invitar a quien ya está registrado, tiene correo y aún no tiene cuenta.

@@ -25,6 +25,7 @@ func (r *RolRepository) ObtenerContextoNegocio(ctx context.Context, usuarioID, n
 	err := r.db.WithContext(ctx).Table("negocios AS n").
 		Select("n.estado AS estado_negocio, m.tipo_miembro").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.id = ?", negocioID).
 		Take(&contexto).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -48,6 +49,7 @@ func permisosEfectivos(ctx context.Context, db *gorm.DB, usuarioID, negocioID uu
 		Joins("JOIN permisos_rol pr ON pr.rol_id = r.id").
 		Joins("JOIN permisos p ON p.id = pr.permiso_id").
 		Where("m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo'", usuarioID, negocioID).
+		Where(membresiaHabilitada).
 		Pluck("p.codigo", &codigos).Error
 	return codigos, err
 }
@@ -70,7 +72,7 @@ func rolesDelegables(ctx context.Context, db *gorm.DB, usuarioID, negocioID uuid
 			JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id
 			JOIN roles r2 ON r2.id = rm.rol_id AND r2.activo = TRUE AND r2.negocio_id = m.negocio_id
 			JOIN permisos_rol pr2 ON pr2.rol_id = r2.id
-			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo')`, usuarioID, negocioID)
+			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo' AND `+membresiaHabilitada+`)`, usuarioID, negocioID)
 	if membresiaDestino != nil {
 		query = query.Where(`NOT EXISTS (SELECT 1 FROM roles_membresia actual
 			WHERE actual.membresia_negocio_id = ? AND actual.rol_id = pr.rol_id)`, *membresiaDestino)
@@ -92,7 +94,7 @@ func (r *RolRepository) PermisosOtorgables(ctx context.Context, usuarioID, negoc
 			JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id
 			JOIN roles r ON r.id = rm.rol_id AND r.activo = TRUE AND r.negocio_id = m.negocio_id
 			JOIN permisos_rol pr ON pr.rol_id = r.id
-			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo')`, usuarioID, negocioID).
+			WHERE m.usuario_id = ? AND m.negocio_id = ? AND m.estado = 'activo' AND `+membresiaHabilitada+`)`, usuarioID, negocioID).
 		Count(&fuera).Error
 	return fuera == 0, err
 }
@@ -100,6 +102,9 @@ func (r *RolRepository) PermisosOtorgables(ctx context.Context, usuarioID, negoc
 func (r *RolRepository) ListarPermisos(ctx context.Context) ([]domain.Permiso, error) {
 	permisos := make([]domain.Permiso, 0)
 	err := r.db.WithContext(ctx).Order("codigo_modulo ASC, codigo ASC").Find(&permisos).Error
+	for i := range permisos {
+		permisos[i].Requiere = domain.DependenciasPermiso(permisos[i].Codigo)
+	}
 	return permisos, err
 }
 
@@ -115,7 +120,49 @@ func (r *RolRepository) ListarRoles(ctx context.Context, negocioID uuid.UUID, in
 		query = query.Where("r.activo = TRUE")
 	}
 	err := query.Order("r.es_rol_sistema DESC, r.nombre ASC, r.id ASC").Scan(&items).Error
-	return items, err
+	if err != nil {
+		return nil, err
+	}
+	var codigos []struct {
+		RolID uuid.UUID
+		domain.Permiso
+	}
+	if err := r.db.WithContext(ctx).Table("permisos_rol AS pr").Select("pr.rol_id, p.id, p.codigo, p.codigo_modulo, p.nombre").
+		Joins("JOIN permisos p ON p.id = pr.permiso_id").Joins("JOIN roles r ON r.id = pr.rol_id AND r.negocio_id = ?", negocioID).
+		Order("p.codigo").Scan(&codigos).Error; err != nil {
+		return nil, err
+	}
+	porRol := make(map[uuid.UUID][]string)
+	detalles := make(map[uuid.UUID][]domain.Permiso)
+	for _, p := range codigos {
+		porRol[p.RolID] = append(porRol[p.RolID], p.Codigo)
+		detalles[p.RolID] = append(detalles[p.RolID], p.Permiso)
+	}
+	for i := range items {
+		items[i].Permisos = porRol[items[i].ID]
+		items[i].PermisosDetalle = detalles[items[i].ID]
+		if items[i].PermisosDetalle == nil {
+			items[i].PermisosDetalle = []domain.Permiso{}
+		}
+		if items[i].Permisos == nil {
+			items[i].Permisos = []string{}
+		}
+		items[i].PermisosFaltantes = []string{}
+		presentes := make(map[string]bool)
+		for _, codigo := range items[i].Permisos {
+			presentes[codigo] = true
+		}
+		for j := 0; j < len(items[i].Permisos)+len(items[i].PermisosFaltantes); j++ {
+			lista := append(append([]string{}, items[i].Permisos...), items[i].PermisosFaltantes...)
+			for _, requerido := range domain.DependenciasPermiso(lista[j]) {
+				if !presentes[requerido] {
+					presentes[requerido] = true
+					items[i].PermisosFaltantes = append(items[i].PermisosFaltantes, requerido)
+				}
+			}
+		}
+	}
+	return items, nil
 }
 
 func (r *RolRepository) ObtenerRol(ctx context.Context, negocioID, rolID uuid.UUID) (domain.RolDetalle, error) {
@@ -154,6 +201,9 @@ func (r *RolRepository) CrearRol(ctx context.Context, negocioID, creadoPor uuid.
 		CreadoPorUsuarioID: &creadoPor,
 	}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
 		if err := tx.Create(&rol).Error; err != nil {
 			return err
 		}
@@ -164,6 +214,9 @@ func (r *RolRepository) CrearRol(ctx context.Context, negocioID, creadoPor uuid.
 
 func (r *RolRepository) ActualizarRol(ctx context.Context, negocioID, rolID uuid.UUID, input domain.ActualizarRolInput) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
 		cambios := map[string]any{}
 		if input.Nombre.Set && input.Nombre.Value != nil {
 			cambios["nombre"] = *input.Nombre.Value
@@ -190,6 +243,9 @@ func (r *RolRepository) ActualizarRol(ctx context.Context, negocioID, rolID uuid
 
 func (r *RolRepository) EliminarRol(ctx context.Context, negocioID, rolID uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
 		if err := tx.Exec(`DELETE FROM permisos_rol WHERE rol_id = ?`, rolID).Error; err != nil {
 			return err
 		}
@@ -279,6 +335,7 @@ func (r *RolRepository) QuedaPropietarioConRolSistema(ctx context.Context, negoc
 	var otros int64
 	err = r.db.WithContext(ctx).Table("roles_membresia AS rm").
 		Joins("JOIN membresias_negocio m ON m.id = rm.membresia_negocio_id").
+		Where(membresiaHabilitada).
 		Where("rm.rol_id = ? AND m.negocio_id = ? AND m.estado = 'activo' AND m.id <> ?",
 			rolSistemaID, negocioID, membresiaID).
 		Count(&otros).Error
@@ -287,6 +344,9 @@ func (r *RolRepository) QuedaPropietarioConRolSistema(ctx context.Context, negoc
 
 func (r *RolRepository) ReemplazarRolesDeMembresia(ctx context.Context, negocioID, membresiaID uuid.UUID, roles []uuid.UUID, asignadoPor uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
 		if err := tx.Exec(`DELETE FROM roles_membresia WHERE membresia_negocio_id = ?`, membresiaID).Error; err != nil {
 			return err
 		}

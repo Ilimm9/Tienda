@@ -27,7 +27,7 @@ type ProductLookupProvider interface {
 }
 
 type ProductRepository interface {
-	ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error)
+	ListByBusiness(businessID, branchID uuid.UUID) ([]domain.ProductRow, error)
 	ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	ListBrands(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error)
@@ -256,8 +256,8 @@ func NewProductService(products ProductRepository, productLookup ProductLookupPr
 	return &ProductService{products: products, productLookup: productLookup}
 }
 
-func (s *ProductService) ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error) {
-	return s.products.ListByBusiness(businessID)
+func (s *ProductService) ListByBusiness(businessID, branchID uuid.UUID) ([]domain.ProductRow, error) {
+	return s.products.ListByBusiness(businessID, branchID)
 }
 
 func (s *ProductService) AdjustInventory(businessID, productID, userID uuid.UUID, input domain.AdjustInventoryInput) error {

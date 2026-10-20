@@ -25,8 +25,10 @@ export class RolService {
     return this.http.get<ListaRespuesta<string>>(`${this.baseUrl(negocioId)}/mis-permisos`);
   }
 
-  listar(negocioId: string, incluirInactivos = false): Observable<ListaRespuesta<RolResumen>> {
-    const params = incluirInactivos ? new HttpParams().set('estado', 'todos') : undefined;
+  listar(negocioId: string, incluirInactivos = false, delegables = false): Observable<ListaRespuesta<RolResumen>> {
+    let params = new HttpParams();
+    if (incluirInactivos) params = params.set('estado', 'todos');
+    if (delegables) params = params.set('delegables', 'true');
     return this.http.get<ListaRespuesta<RolResumen>>(`${this.baseUrl(negocioId)}/roles`, { params });
   }
 

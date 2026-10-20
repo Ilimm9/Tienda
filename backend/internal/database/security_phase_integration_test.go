@@ -94,7 +94,11 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 			t.Fatalf("variantes del negocio %d: %v", index+1, err)
 		}
 	}
-	firstProducts, err := repository.ListByBusiness(first.ID)
+	var firstBranch negociodomain.Sucursal
+	if err := db.First(&firstBranch, "negocio_id = ?", first.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	firstProducts, err := repository.ListByBusiness(first.ID, firstBranch.ID)
 	if err != nil || len(firstProducts) != 1 {
 		t.Fatalf("productos primer negocio=%+v error=%v", firstProducts, err)
 	}

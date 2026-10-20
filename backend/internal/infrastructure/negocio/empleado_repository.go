@@ -26,6 +26,7 @@ func (r *EmpleadoRepository) ObtenerContextoNegocio(ctx context.Context, usuario
 	err := r.db.WithContext(ctx).Table("negocios AS n").
 		Select("n.estado AS estado_negocio, m.tipo_miembro").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.id = ?", negocioID).
 		Take(&contexto).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -183,8 +184,37 @@ func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleado
 		return nil
 	}
 	cambios["actualizado_en"] = time.Now().UTC()
-	return errorCorreoDuplicado(r.db.WithContext(ctx).Table("empleados").
-		Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Updates(cambios).Error)
+	return errorCorreoDuplicado(r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
+		empleado, err := bloquearEmpleado(tx, negocioID, empleadoID)
+		if err != nil {
+			return err
+		}
+		if input.Estado.Set && input.Estado.Value != nil {
+			estado := *input.Estado.Value
+			if empleado.Estado == domain.EstadoEmpleadoTerminado && estado != domain.EstadoEmpleadoTerminado && !(empleado.MembresiaID == nil && estado == domain.EstadoEmpleadoPendiente) {
+				return &application.ErrorValidacion{Campos: map[string]string{"estado": "una baja requiere reasignar roles y sucursales desde Reactivar acceso"}}
+			}
+			if estado != domain.EstadoEmpleadoActivo && empleado.MembresiaID != nil {
+				queda, err := NewRolRepository(tx).QuedaPropietarioConRolSistema(ctx, negocioID, *empleado.MembresiaID, nil)
+				if err != nil {
+					return err
+				}
+				if !queda {
+					return application.ErrPropietarioSinRol
+				}
+			}
+			if estado == domain.EstadoEmpleadoTerminado {
+				if err := tx.Table("asignaciones_empleado_sucursal").Where("empleado_id = ? AND activo = TRUE", empleadoID).
+					Updates(map[string]any{"activo": false, "es_principal": false, "finalizado_en": time.Now().UTC()}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return tx.Table("empleados").Where("id = ? AND negocio_id = ?", empleadoID, negocioID).Updates(cambios).Error
+	}))
 }
 
 func asignarOpcional(cambios map[string]any, columna string, campo domain.Optional[string]) {
@@ -207,4 +237,92 @@ func parsearFecha(valor *string) *time.Time {
 		return nil
 	}
 	return &fecha
+}
+
+func (r *EmpleadoRepository) Reactivar(ctx context.Context, usuarioID, negocioID, empleadoID uuid.UUID, input domain.ReactivarEmpleadoInput) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
+			return err
+		}
+		empleado, err := bloquearEmpleado(tx, negocioID, empleadoID)
+		if err != nil {
+			return err
+		}
+		if empleado.Estado != domain.EstadoEmpleadoTerminado || empleado.MembresiaID == nil {
+			return &application.ErrorValidacion{Campos: map[string]string{"estado": "solo se reactiva acceso de un empleado dado de baja con cuenta"}}
+		}
+		var membresia domain.MembresiaNegocio
+		if err := tx.First(&membresia, "id = ?", *empleado.MembresiaID).Error; err != nil {
+			return err
+		}
+		if membresia.Estado != "activo" {
+			return application.ErrInvitacionMembresiaInactiva
+		}
+		permisos, err := permisosEfectivos(ctx, tx, usuarioID, negocioID)
+		if err != nil {
+			return err
+		}
+		for _, requerido := range []string{domain.PermisoEmpleadoGestionar, domain.PermisoRolAsignar, domain.PermisoAsignacionEditar} {
+			ok := false
+			for _, codigo := range permisos {
+				if codigo == requerido {
+					ok = true
+				}
+			}
+			if !ok {
+				return application.ErrEmpleadoProhibido
+			}
+		}
+		roles := rolesSinDuplicados(input.Roles)
+		if len(roles) == 0 || len(input.Sucursales) == 0 {
+			return &application.ErrorValidacion{Campos: map[string]string{"reactivacion": "selecciona roles y sucursales"}}
+		}
+		var existentes int64
+		if err := tx.Table("roles").Where("id IN ? AND negocio_id = ? AND activo = TRUE", roles, negocioID).Count(&existentes).Error; err != nil {
+			return err
+		}
+		if int(existentes) != len(roles) {
+			return application.ErrRolNoEncontrado
+		}
+		delegables, err := rolesDelegables(ctx, tx, usuarioID, negocioID, roles, nil)
+		if err != nil {
+			return err
+		}
+		if !delegables {
+			return application.ErrRolNoDelegable
+		}
+		for _, sucursalID := range rolesSinDuplicados(input.Sucursales) {
+			activa, err := sucursalActiva(tx, negocioID, sucursalID)
+			if err != nil {
+				return err
+			}
+			if !activa {
+				return application.ErrAsignacionSucursalAjena
+			}
+		}
+		if err := NewRolRepository(tx).ReemplazarRolesDeMembresia(ctx, negocioID, membresia.ID, roles, usuarioID); err != nil {
+			return err
+		}
+		if err := tx.Table("asignaciones_empleado_sucursal").Where("empleado_id = ? AND activo = TRUE", empleadoID).Updates(map[string]any{"activo": false, "es_principal": false, "finalizado_en": time.Now().UTC()}).Error; err != nil {
+			return err
+		}
+		for _, sucursalID := range rolesSinDuplicados(input.Sucursales) {
+			if err := asignarSucursalInvitada(tx, negocioID, empleadoID, sucursalID); err != nil {
+				return err
+			}
+		}
+		return tx.Table("empleados").Where("id = ?", empleadoID).Updates(map[string]any{"estado": domain.EstadoEmpleadoActivo, "terminado_en": nil, "actualizado_en": time.Now().UTC()}).Error
+	})
+}
+
+func rolesSinDuplicados(ids []uuid.UUID) []uuid.UUID {
+	vistos := make(map[uuid.UUID]bool, len(ids))
+	lista := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if !vistos[id] {
+			vistos[id] = true
+			lista = append(lista, id)
+		}
+	}
+	return lista
 }

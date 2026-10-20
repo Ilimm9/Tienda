@@ -52,7 +52,13 @@ func (h *RolHandler) Listar(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, err := h.roles.Listar(c.Request.Context(), usuarioID, negocioID, c.Query("estado") == "todos")
+	var items []domain.RolResumen
+	var err error
+	if c.Query("delegables") == "true" {
+		items, err = h.roles.ListarDelegables(c.Request.Context(), usuarioID, negocioID)
+	} else {
+		items, err = h.roles.Listar(c.Request.Context(), usuarioID, negocioID, c.Query("estado") == "todos")
+	}
 	if err != nil {
 		responderErrorRol(c, err)
 		return

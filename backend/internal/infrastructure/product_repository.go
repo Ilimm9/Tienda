@@ -2156,7 +2156,7 @@ func productImportJobView(job domain.ImportacionProducto) domain.ProductImportJo
 	return view
 }
 
-func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.ProductRow, error) {
+func (r *ProductRepository) ListByBusiness(businessID, branchID uuid.UUID) ([]domain.ProductRow, error) {
 	products := make([]domain.ProductRow, 0)
 	query := r.db.Table("productos AS p").
 		Select(`
@@ -2165,7 +2165,7 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 			(SELECT pi.url FROM producto_imagenes pi WHERE pi.producto_id = p.id ORDER BY pi.es_principal DESC, pi.orden ASC LIMIT 1) AS imagen_url,
 			pn.sku_interno AS sku,
 			pn.precio_venta AS precio,
-			COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) AS stock,
+			COALESCE(existencias.stock, 0) AS stock,
 			(SELECT c.nombre FROM producto_categorias pc JOIN categorias c ON c.id = pc.categoria_id WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC, c.nombre ASC LIMIT 1) AS categoria,
 			(SELECT pc.categoria_id FROM producto_categorias pc WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC LIMIT 1) AS categoria_id,
 			m.nombre AS marca,
@@ -2180,8 +2180,8 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 			p.unidad_medida_id,
 			(SELECT pcodigo.codigo FROM producto_codigos pcodigo WHERE pcodigo.producto_id = p.id ORDER BY pcodigo.es_principal DESC LIMIT 1) AS codigo_barras,
 			CASE
-				WHEN COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) <= 0 THEN 'Agotado'
-				WHEN COALESCE((SELECT SUM(isu.stock_actual) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) <= COALESCE((SELECT SUM(isu.stock_minimo) FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id), 0) THEN 'Bajo stock'
+				WHEN COALESCE(existencias.stock, 0) <= 0 THEN 'Agotado'
+				WHEN COALESCE(existencias.stock, 0) <= COALESCE(existencias.minimo, 0) THEN 'Bajo stock'
 				ELSE 'En stock'
 			END AS estado`).
 		Joins(`JOIN LATERAL (
@@ -2191,7 +2191,14 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 				AND (pn.producto_id = p.id OR pn.producto_variante_id IN (SELECT pv.id FROM producto_variantes pv WHERE pv.producto_id = p.id AND pv.activo = TRUE))
 			ORDER BY CASE WHEN pn.producto_id IS NOT NULL THEN 0 ELSE 1 END, pn.creado_en ASC
 			LIMIT 1
-		) pn ON TRUE`, businessID).
+		 ) pn ON TRUE`, businessID).
+		Joins(`LEFT JOIN LATERAL (
+			SELECT SUM(i.stock_actual) AS stock, SUM(i.stock_minimo) AS minimo
+			FROM inventario_sucursal i
+			JOIN producto_negocio oferta ON oferta.id = i.producto_negocio_id AND oferta.negocio_id = ? AND oferta.activo = TRUE
+			LEFT JOIN producto_variantes variante ON variante.id = oferta.producto_variante_id AND variante.activo = TRUE
+			WHERE i.sucursal_id = ? AND (oferta.producto_id = p.id OR variante.producto_id = p.id)
+		) existencias ON TRUE`, businessID, branchID).
 		Joins("LEFT JOIN marcas m ON m.id = p.marca_id").
 		Joins("LEFT JOIN unidades_medida u ON u.id = p.unidad_medida_id").
 		Where("p.negocio_id = ? AND p.activo = TRUE", businessID).
@@ -2211,10 +2218,11 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 		Stock      float64   `gorm:"column:stock"`
 	}
 	if err := r.db.Table("inventario_sucursal AS i").
-		Select("COALESCE(pn.producto_id, pv.producto_id) AS producto_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
+		Select("COALESCE(pn.producto_id, pv.producto_id) AS producto_id, s.id AS sucursal_id, s.nombre AS sucursal, SUM(i.stock_actual) AS stock").
 		Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Joins("LEFT JOIN producto_variantes pv ON pv.id = pn.producto_variante_id").
-		Joins("JOIN sucursales s ON s.id = i.sucursal_id").
+		Joins("JOIN sucursales s ON s.id = i.sucursal_id").Where("i.sucursal_id = ? AND (pn.producto_variante_id IS NULL OR pv.activo = TRUE)", branchID).
+		Group("COALESCE(pn.producto_id, pv.producto_id), s.id, s.nombre").
 		Order("s.nombre ASC").Scan(&branches).Error; err != nil {
 		return nil, err
 	}
@@ -2233,8 +2241,8 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 	}
 	if err := r.db.Table("producto_variantes AS pv").
 		Select(`pv.producto_id, pv.id, pn.sku_interno AS sku, pn.precio_venta AS precio,
-			COALESCE((SELECT SUM(i.stock_actual) FROM inventario_sucursal i WHERE i.producto_negocio_id = pn.id), 0) AS stock,
-			(SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras`).
+			COALESCE((SELECT SUM(i.stock_actual) FROM inventario_sucursal i WHERE i.producto_negocio_id = pn.id AND i.sucursal_id = ?), 0) AS stock,
+			(SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras`, branchID).
 		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Where("pv.activo = TRUE").Scan(&variants).Error; err != nil {
 		return nil, err
@@ -2268,7 +2276,7 @@ func (r *ProductRepository) ListByBusiness(businessID uuid.UUID) ([]domain.Produ
 	if err := r.db.Table("inventario_sucursal AS i").
 		Select("pn.producto_variante_id AS variante_id, s.id AS sucursal_id, s.nombre AS sucursal, i.stock_actual AS stock").
 		Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id AND pn.negocio_id = ? AND pn.activo = TRUE AND pn.producto_variante_id IS NOT NULL", businessID).
-		Joins("JOIN sucursales s ON s.id = i.sucursal_id").Scan(&variantBranches).Error; err != nil {
+		Joins("JOIN sucursales s ON s.id = i.sucursal_id").Where("i.sucursal_id = ?", branchID).Scan(&variantBranches).Error; err != nil {
 		return nil, err
 	}
 	for _, branch := range variantBranches {

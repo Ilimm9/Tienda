@@ -9,7 +9,7 @@ import { CambiosPendientesService } from '../../contexto/cambios-pendientes.serv
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { enfocarPrimerInvalido, sinSoloEspacios } from '../../shared/formularios/formulario';
-import { Permiso, RolApiError, RolDetalle } from './rol.models';
+import { completarDependencias, Permiso, RolApiError, RolDetalle } from './rol.models';
 import { RolService } from './rol.service';
 
 interface ModuloPermisos {
@@ -86,20 +86,43 @@ export class RolFormComponent {
 
   alternarPermiso(permisoId: string): void {
     const copia = new Set(this.seleccionados());
-    if (copia.has(permisoId)) copia.delete(permisoId);
-    else copia.add(permisoId);
-    this.seleccionados.set(copia);
-    this.form.markAsDirty();
+    const quitar = copia.has(permisoId);
+    if (quitar) copia.delete(permisoId); else copia.add(permisoId);
+    void this.actualizarSeleccion(copia, quitar ? [permisoId] : []);
   }
 
   alternarModulo(modulo: ModuloPermisos): void {
     const copia = new Set(this.seleccionados());
-    const todos = modulo.permisos.every((permiso) => copia.has(permiso.id));
+    const quitar = modulo.permisos.every(permiso => copia.has(permiso.id));
     for (const permiso of modulo.permisos) {
-      if (todos) copia.delete(permiso.id);
-      else copia.add(permiso.id);
+      if (quitar) copia.delete(permiso.id); else copia.add(permiso.id);
     }
-    this.seleccionados.set(copia);
+    void this.actualizarSeleccion(copia, quitar ? modulo.permisos.map(permiso => permiso.id) : []);
+  }
+
+  private async actualizarSeleccion(copia: Set<string>, retirados: string[]): Promise<void> {
+    const catalogo = this.modulos().flatMap(modulo => modulo.permisos);
+    const quitados = new Set(retirados);
+    let cambio = true;
+    while (cambio) {
+      cambio = false;
+      for (const permiso of catalogo) {
+        if (!copia.has(permiso.id)) continue;
+        const requeridos = completarDependencias(new Set([permiso.id]), catalogo);
+        if ([...quitados].some(id => requeridos.has(id))) {
+          copia.delete(permiso.id); quitados.add(permiso.id); cambio = true;
+        }
+      }
+    }
+    if (quitados.size > retirados.length && !(await this.feedback.confirmDanger({
+      titulo: 'Quitar permisos dependientes',
+      descripcion: 'Al quitar lectura también se retirarán las acciones que la necesitan.',
+      textoConfirmar: 'Quitar lectura y acciones',
+    }))) return;
+    const completos = completarDependencias(copia, catalogo);
+    const agregados = catalogo.filter(permiso => completos.has(permiso.id) && !copia.has(permiso.id));
+    if (agregados.length) this.feedback.info('Lectura necesaria agregada', agregados.map(permiso => permiso.nombre).join(', '));
+    this.seleccionados.set(completos);
     this.form.markAsDirty();
   }
 
@@ -111,7 +134,7 @@ export class RolFormComponent {
     return modulo.permisos.length > 0 && modulo.permisos.every((permiso) => this.estaSeleccionado(permiso.id));
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.form.markAllAsTouched();
     this.error.set(null);
     this.fieldErrors.set({});
@@ -124,6 +147,17 @@ export class RolFormComponent {
 
     const value = this.form.getRawValue();
     const permisos = [...this.seleccionados()];
+    let autorizarDependencias = false;
+    const anteriores = new Set(this.rol()?.permisos ?? []);
+    const faltantes = [...completarDependencias(anteriores, this.modulos().flatMap(modulo => modulo.permisos))].filter(id => !anteriores.has(id));
+    if (this.editing && faltantes.some(id => this.seleccionados().has(id))) {
+      autorizarDependencias = await this.feedback.confirmDanger({
+        titulo: 'Autorizar ampliación de este rol existente',
+        descripcion: `Se completarán lecturas que antes no tenía. Afecta a ${this.rol()?.total_miembros ?? 0} miembros. Revisa el reporte de personas afectadas antes de confirmar.`,
+        textoConfirmar: 'Autorizar esta ampliación',
+      });
+      if (!autorizarDependencias) return;
+    }
     this.saving.set(true);
     const request = this.editing
       ? this.rolService.actualizar(this.negocioId, this.rolId, {
@@ -131,6 +165,7 @@ export class RolFormComponent {
           descripcion: value.descripcion.trim() || null,
           activo: value.activo,
           permisos,
+          autorizar_dependencias_existentes: autorizarDependencias,
         })
       : this.rolService.crear(this.negocioId, {
           codigo: value.codigo.trim().toUpperCase(),
@@ -143,6 +178,7 @@ export class RolFormComponent {
       next: () => {
         this.saving.set(false);
         this.form.markAsPristine();
+        this.contexto.recargar().subscribe();
         this.feedback.success(this.editing ? 'Rol actualizado' : 'Rol registrado');
         void this.router.navigate(['/roles-permisos']);
       },

@@ -35,6 +35,7 @@ func (r *ContextoRepository) ListarOpcionesContexto(ctx context.Context, usuario
 			s.id AS sucursal_id, s.codigo AS sucursal_codigo, s.nombre AS sucursal_nombre,
 			s.es_principal AS sucursal_principal`).
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Joins("LEFT JOIN sucursales s ON s.negocio_id = n.id AND s.activo = TRUE AND s.eliminado_en IS NULL AND " + sucursalAsignada).
 		Where("n.estado = 'activo'").
 		Order("n.nombre_comercial ASC, n.id ASC, s.es_principal DESC, s.nombre ASC, s.id ASC").
@@ -76,6 +77,7 @@ func (r *ContextoRepository) NegocioActivoAccesible(ctx context.Context, usuario
 	var total int64
 	err := r.db.WithContext(ctx).Table("negocios AS n").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.id = ? AND n.estado = 'activo'", negocioID).
 		Count(&total).Error
 	return total == 1, err
@@ -93,6 +95,7 @@ func (r *ContextoRepository) sucursalesAccesibles(ctx context.Context, usuarioID
 	return r.db.WithContext(ctx).Table("sucursales AS s").
 		Joins("JOIN negocios n ON n.id = s.negocio_id AND n.estado = 'activo'").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("s.negocio_id = ? AND s.activo = TRUE AND s.eliminado_en IS NULL AND "+sucursalAsignada, negocioID)
 }
 

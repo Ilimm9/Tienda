@@ -97,6 +97,24 @@ func idsEmpleado(c *gin.Context) (uuid.UUID, uuid.UUID, uuid.UUID, bool) {
 	return usuarioID, negocioID, empleadoID, true
 }
 
+func (h *EmpleadoHandler) Reactivar(c *gin.Context) {
+	usuarioID, negocioID, empleadoID, ok := idsEmpleado(c)
+	if !ok {
+		return
+	}
+	var input domain.ReactivarEmpleadoInput
+	if err := decodificarJSONSucursal(c, &input); err != nil {
+		responderDatosInvalidosSucursal(c)
+		return
+	}
+	detalle, err := h.empleados.Reactivar(c.Request.Context(), usuarioID, negocioID, empleadoID, input)
+	if err != nil {
+		responderErrorEmpleado(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, detalle)
+}
+
 func responderErrorEmpleado(c *gin.Context, err error) {
 	var validation *application.ErrorValidacion
 	switch {
@@ -112,7 +130,7 @@ func responderErrorEmpleado(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"codigo": "EMPLEADO_NO_ENCONTRADO", "mensaje": "No fue posible encontrar el empleado solicitado.", "campos": gin.H{},
 		})
-	case errors.Is(err, application.ErrEmpleadoProhibido):
+	case errors.Is(err, application.ErrEmpleadoProhibido), errors.Is(err, application.ErrRolNoDelegable), errors.Is(err, application.ErrPropietarioSinRol):
 		c.JSON(http.StatusForbidden, gin.H{
 			"codigo": "ACCESO_DENEGADO", "mensaje": err.Error(), "campos": gin.H{},
 		})
@@ -125,7 +143,7 @@ func responderErrorEmpleado(c *gin.Context, err error) {
 			"codigo": "CORREO_EMPLEADO_DUPLICADO", "mensaje": "Ese correo ya está registrado en este negocio.",
 			"campos": gin.H{"correo": "ya está registrado en este negocio"},
 		})
-	case errors.Is(err, application.ErrEmpleadoConflicto), errors.Is(err, application.ErrEstadoNegocio):
+	case errors.Is(err, application.ErrEmpleadoConflicto), errors.Is(err, application.ErrEstadoNegocio), errors.Is(err, application.ErrInvitacionMembresiaInactiva), errors.Is(err, application.ErrRolNoEncontrado), errors.Is(err, application.ErrAsignacionSucursalAjena):
 		c.JSON(http.StatusConflict, gin.H{
 			"codigo": "CONFLICTO_EMPLEADO", "mensaje": err.Error(), "campos": gin.H{},
 		})

@@ -19,6 +19,15 @@
   @if (loading()) {
     <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
   } @else if (!error()) {
+    @if (rolesIncompletos().length) {
+      <section class="tarjeta p-5" aria-label="Roles con dependencias pendientes">
+        <h2>Roles existentes con lecturas faltantes</h2>
+        <p>Este reporte no cambia permisos. Revisa las personas afectadas y solicita autorización específica antes de ampliarlos.</p>
+        @for (rol of rolesIncompletos(); track rol.id) {
+          <p><strong>{{ rol.nombre }}</strong>: faltan {{ rol.permisos_faltantes?.join(', ') }}.<br />Personas afectadas: {{ afectados(rol) }}</p>
+        }
+      </section>
+    }
     <section class="tabla-tarjeta" aria-labelledby="titulo-roles">
       <header class="tarjeta-encabezado">
         <div class="seccion-encabezado flex-1 items-center">

@@ -110,6 +110,10 @@ func (s *RolService) Crear(ctx context.Context, usuarioID, negocioID uuid.UUID, 
 	if existe {
 		return domain.RolDetalle{}, ErrRolConflicto
 	}
+	input.Permisos, err = s.completarPermisos(ctx, input.Permisos)
+	if err != nil {
+		return domain.RolDetalle{}, err
+	}
 	if err := s.otorgables(ctx, usuarioID, negocioID, input.Permisos); err != nil {
 		return domain.RolDetalle{}, err
 	}
@@ -139,25 +143,114 @@ func (s *RolService) Actualizar(ctx context.Context, usuarioID, negocioID, rolID
 		return domain.RolDetalle{}, err
 	}
 	if input.Permisos.Set && input.Permisos.Value != nil {
-		// Solo cuentan los permisos que se agregan: conservar los que el rol ya tenía no otorga nada nuevo.
-		previos := make(map[uuid.UUID]struct{}, len(actual.Permisos))
-		for _, id := range actual.Permisos {
-			previos[id] = struct{}{}
-		}
-		nuevos := make([]uuid.UUID, 0)
-		for _, id := range *input.Permisos.Value {
-			if _, ok := previos[id]; !ok {
-				nuevos = append(nuevos, id)
+		if mismosPermisos(actual.Permisos, *input.Permisos.Value) {
+			input.Permisos.Set = false
+		} else {
+			completos, err := s.completarPermisos(ctx, *input.Permisos.Value)
+			if err != nil {
+				return domain.RolDetalle{}, err
 			}
-		}
-		if err := s.otorgables(ctx, usuarioID, negocioID, nuevos); err != nil {
-			return domain.RolDetalle{}, err
+			input.Permisos.Value = &completos
+			// Solo cuentan los permisos que se agregan: conservar los que el rol ya tenía no otorga nada nuevo.
+			previos := make(map[uuid.UUID]struct{}, len(actual.Permisos))
+			for _, id := range actual.Permisos {
+				previos[id] = struct{}{}
+			}
+			anterioresCompletos, err := s.completarPermisos(ctx, actual.Permisos)
+			if err != nil {
+				return domain.RolDetalle{}, err
+			}
+			for _, id := range anterioresCompletos {
+				if _, existe := previos[id]; existe {
+					continue
+				}
+				for _, elegido := range completos {
+					if elegido == id && !input.AutorizarDependenciasExistentes {
+						return domain.RolDetalle{}, &ErrorValidacion{Campos: map[string]string{"permisos": "autoriza específicamente completar las lecturas faltantes de este rol existente"}}
+					}
+				}
+			}
+			nuevos := make([]uuid.UUID, 0)
+			for _, id := range *input.Permisos.Value {
+				if _, ok := previos[id]; !ok {
+					nuevos = append(nuevos, id)
+				}
+			}
+			if err := s.otorgables(ctx, usuarioID, negocioID, nuevos); err != nil {
+				return domain.RolDetalle{}, err
+			}
 		}
 	}
 	if err := s.roles.ActualizarRol(ctx, negocioID, rolID, input); err != nil {
 		return domain.RolDetalle{}, err
 	}
 	return s.roles.ObtenerRol(ctx, negocioID, rolID)
+}
+
+func mismosPermisos(a, b []uuid.UUID) bool {
+	a, b = rolesUnicos(a), rolesUnicos(b)
+	if len(a) != len(b) {
+		return false
+	}
+	vistos := make(map[uuid.UUID]bool, len(a))
+	for _, id := range a {
+		vistos[id] = true
+	}
+	for _, id := range b {
+		if !vistos[id] {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *RolService) completarPermisos(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	catalogo, err := s.roles.ListarPermisos(ctx)
+	if err != nil {
+		return nil, err
+	}
+	porID := make(map[uuid.UUID]domain.Permiso, len(catalogo))
+	porCodigo := make(map[string]uuid.UUID, len(catalogo))
+	for _, p := range catalogo {
+		porID[p.ID] = p
+		porCodigo[p.Codigo] = p.ID
+	}
+	completos := rolesUnicos(ids)
+	for i := 0; i < len(completos); i++ {
+		p, ok := porID[completos[i]]
+		if !ok {
+			return nil, &ErrorValidacion{Campos: map[string]string{"permisos": "contiene un permiso inexistente"}}
+		}
+		for _, codigo := range domain.DependenciasPermiso(p.Codigo) {
+			id, ok := porCodigo[codigo]
+			if !ok {
+				return nil, &ErrorValidacion{Campos: map[string]string{"permisos": "el catálogo de permisos requiere actualización"}}
+			}
+			completos = rolesUnicos(append(completos, id))
+		}
+	}
+	return completos, nil
+}
+
+func (s *RolService) ListarDelegables(ctx context.Context, usuarioID, negocioID uuid.UUID) ([]domain.RolResumen, error) {
+	roles, err := s.Listar(ctx, usuarioID, negocioID, false)
+	if err != nil {
+		return nil, err
+	}
+	lista := make([]domain.RolResumen, 0, len(roles))
+	for _, rol := range roles {
+		if rol.Codigo == domain.CodigoRolPropietario {
+			continue
+		}
+		ok, err := s.roles.RolesDelegables(ctx, usuarioID, negocioID, []uuid.UUID{rol.ID}, nil)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			lista = append(lista, rol)
+		}
+	}
+	return lista, nil
 }
 
 // otorgables impide que alguien con `roles.gestionar` se conceda permisos que no posee editando un rol.

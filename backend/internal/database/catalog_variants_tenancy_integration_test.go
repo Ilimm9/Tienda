@@ -65,13 +65,13 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 		if err != nil || res.Creadas != 3 || len(res.Errores) != 0 {
 			t.Fatalf("import negocio %d: %+v %v", i, res, err)
 		}
-		list, err := repo.ListByBusiness(c.negocio)
+		list, err := repo.ListByBusiness(c.negocio, c.sucursal)
 		if err != nil || len(list) != 2 {
 			t.Fatalf("list %d: %+v %v", i, list, err)
 		}
 	}
 	// Update y Deactivate no deben cruzar negocios.
-	list1, _ := repo.ListByBusiness(ctxs[0].negocio)
+	list1, _ := repo.ListByBusiness(ctxs[0].negocio, ctxs[0].sucursal)
 	var jabon uuid.UUID
 	for _, p := range list1 {
 		if p.Nombre == "Jabón" {
@@ -109,7 +109,7 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 	if historical.Activo {
 		t.Fatal("el producto simple histórico quedó como registro comercial activo")
 	}
-	converted, err := repo.ListByBusiness(ctxs[0].negocio)
+	converted, err := repo.ListByBusiness(ctxs[0].negocio, ctxs[0].sucursal)
 	if err != nil {
 		t.Fatalf("listar producto convertido: %v", err)
 	}

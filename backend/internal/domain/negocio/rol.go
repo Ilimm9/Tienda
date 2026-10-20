@@ -68,24 +68,28 @@ type CrearRolInput struct {
 }
 
 type ActualizarRolInput struct {
-	Nombre      Optional[string]      `json:"nombre"`
-	Descripcion Optional[string]      `json:"descripcion"`
-	Activo      Optional[bool]        `json:"activo"`
-	Permisos    Optional[[]uuid.UUID] `json:"permisos"`
+	Nombre                          Optional[string]      `json:"nombre"`
+	Descripcion                     Optional[string]      `json:"descripcion"`
+	Activo                          Optional[bool]        `json:"activo"`
+	Permisos                        Optional[[]uuid.UUID] `json:"permisos"`
+	AutorizarDependenciasExistentes bool                  `json:"autorizar_dependencias_existentes"`
 }
 
 type RolResumen struct {
-	ID            uuid.UUID `json:"id"`
-	NegocioID     uuid.UUID `json:"negocio_id"`
-	Codigo        string    `json:"codigo"`
-	Nombre        string    `json:"nombre"`
-	Descripcion   *string   `json:"descripcion"`
-	EsRolSistema  bool      `json:"es_rol_sistema"`
-	Activo        bool      `json:"activo"`
-	TotalPermisos int       `json:"total_permisos"`
-	TotalMiembros int       `json:"total_miembros"`
-	CreadoEn      time.Time `json:"creado_en"`
-	ActualizadoEn time.Time `json:"actualizado_en"`
+	ID                uuid.UUID `json:"id"`
+	NegocioID         uuid.UUID `json:"negocio_id"`
+	Codigo            string    `json:"codigo"`
+	Nombre            string    `json:"nombre"`
+	Descripcion       *string   `json:"descripcion"`
+	EsRolSistema      bool      `json:"es_rol_sistema"`
+	Activo            bool      `json:"activo"`
+	TotalPermisos     int       `json:"total_permisos"`
+	TotalMiembros     int       `json:"total_miembros"`
+	CreadoEn          time.Time `json:"creado_en"`
+	ActualizadoEn     time.Time `json:"actualizado_en"`
+	Permisos          []string  `gorm:"-" json:"permisos"`
+	PermisosDetalle   []Permiso `gorm:"-" json:"permisos_detalle"`
+	PermisosFaltantes []string  `gorm:"-" json:"permisos_faltantes"`
 }
 
 type RolDetalle struct {

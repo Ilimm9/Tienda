@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 
 import { ContextoService } from '../../contexto/contexto.service';
@@ -13,10 +13,13 @@ import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 describe('ProductosComponent', () => {
   let component: ProductosComponent;
   let http: HttpTestingController;
+  let fixture: ComponentFixture<ProductosComponent>;
+  const sucursal = signal({ id: 'sucursal-1' });
   const router = { navigate: vi.fn().mockResolvedValue(true) };
   const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
   beforeEach(() => {
+    sucursal.set({ id: 'sucursal-1' });
     TestBed.configureTestingModule({
       imports: [ProductosComponent],
       providers: [
@@ -26,18 +29,20 @@ describe('ProductosComponent', () => {
           provide: ContextoService,
           useValue: {
             negocio: signal({ id: negocioId }),
-            sucursal: signal(null),
+            sucursal,
             puede: () => true,
           },
         },
         { provide: Router, useValue: router },
       ],
     });
-    component = TestBed.createComponent(ProductosComponent).componentInstance;
+    fixture = TestBed.createComponent(ProductosComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
     http = TestBed.inject(HttpTestingController);
 
     http
-      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`)
       .flush({ items: [], total: 0 });
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`)
@@ -63,6 +68,24 @@ describe('ProductosComponent', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('descarta respuestas de la sucursal anterior y limpia al perder contexto', () => {
+    component.loadProducts();
+    const anterior = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+    sucursal.set({ id: 'sucursal-2' });
+    fixture.detectChanges();
+    const actual = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-2`);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+    expect(component.products()).toEqual([]);
+    actual.flush({ items: [{ id: 'actual', nombre: 'Sucursal actual', stock: 2 }], total: 1 });
+    anterior.flush({ items: [{ id: 'anterior', nombre: 'Sucursal anterior', stock: 99 }], total: 1 });
+    expect(component.products().map((p) => p.id)).toEqual(['actual']);
+    sucursal.set({ id: '' });
+    fixture.detectChanges();
+    expect(component.products()).toEqual([]);
+    expect(component.loading()).toBe(false);
+  });
 
   it('fills compatible fields and keeps them editable', () => {
     expect(component.loading()).toBe(false);
@@ -353,7 +376,7 @@ describe('ProductosComponent', () => {
         },
       });
     http
-      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`)
       .flush({ items: [], total: 0 });
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`)

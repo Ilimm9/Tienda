@@ -77,6 +77,8 @@ export class TopbarComponent {
     if (!(await this.confirmarDescartarCambios())) return;
     this.contexto.seleccionarSucursal(id);
     this.contextOpen.set(false);
+    // No conservar formularios ni inventario de la sucursal anterior.
+    void this.router.navigate(['/inicio']);
   }
 
   /** Solicita confirmación una sola vez cuando algún componente declara trabajo sin guardar. */

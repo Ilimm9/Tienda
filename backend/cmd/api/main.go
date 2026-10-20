@@ -159,6 +159,7 @@ func main() {
 	negocios.POST("/:negocioId/administracion/empleados", empleadoHandler.Crear)
 	negocios.GET("/:negocioId/administracion/empleados/:empleadoId", empleadoHandler.Obtener)
 	negocios.PATCH("/:negocioId/administracion/empleados/:empleadoId", empleadoHandler.Actualizar)
+	negocios.POST("/:negocioId/administracion/empleados/:empleadoId/reactivar", empleadoHandler.Reactivar)
 	negocios.GET("/:negocioId/administracion/invitaciones", invitacionHandler.Listar)
 	negocios.POST("/:negocioId/administracion/invitaciones", invitacionHandler.Crear)
 	negocios.DELETE("/:negocioId/administracion/invitaciones/:invitacionId", invitacionHandler.Cancelar)

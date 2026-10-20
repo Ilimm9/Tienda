@@ -1,6 +1,6 @@
 # Registro de productos y catálogos
 
-Base vigente según código local. Actualizado: 2026-10-19.
+Base vigente según código local. Actualizado: 2026-10-20.
 
 ## Flujo y reglas
 
@@ -9,6 +9,7 @@ Base vigente según código local. Actualizado: 2026-10-19.
 - La importación XLSX primero valida y muestra errores, advertencias y catálogos nuevos; después procesa una tarea con progreso. SKU vacío se genera por negocio. La columna de código de barras sigue obligatoria, pero sus celdas pueden estar vacías.
 - Marcas, categorías, unidades y proveedores vacíos no crean asociaciones. Si aparecen nombres nuevos, exigir confirmación global `autorizar_catalogos_nuevos=true`; sin ella no persistir la importación que los requiere.
 - Un producto simple se identifica por nombre y presentación normalizados. Otro código para esa identidad exige `Variantes` con `Atributo: valor`; cada variante conserva SKU, código, precio e inventario propios. Códigos repetidos conservan su error independiente.
+- El listado exige `sucursal_id` activa y accesible: stock, totales, estado y detalle de variantes muestran solo esa sucursal. Con varias asignadas se debe cambiar de contexto; sin selección válida no se usan existencias globales. Respuestas tardías no restauran datos del contexto anterior. El catálogo sigue siendo del negocio; precios por sucursal conservan su plan independiente.
 - Inventario inicial y ajustes pertenecen a sucursal autorizada. Las entradas por recepción se describen en [compras](modulo-compras.md).
 
 ## Tablas principales
@@ -31,3 +32,5 @@ Base vigente según código local. Actualizado: 2026-10-19.
 - Frontend: [Productos](../frontend/src/app/features/productos/), [Catálogo](../frontend/src/app/features/catalogo/) y [Proveedores](../frontend/src/app/features/proveedores/).
 - Comprobar duplicados, códigos vacíos, variantes, autorización de catálogos nuevos y aislamiento de negocio/sucursal; pendientes en [planes actuales](planes-actuales.md).
 - Antecedentes: [productos](historial/04-productos-importacion-variantes.md), [proveedor](historial/09-productos-proveedores.md), [código opcional](historial/16-productos-codigo-barras-opcional.md), [catálogos nuevos](historial/17-catalogos-nuevos-importacion-productos.md) y [variantes repetidas](historial/18-variantes-importacion-productos-repetidos.md).
+
+Aislamiento y totales verificados con PostgreSQL, API y navegador: [20 · Arreglos de invitaciones](historial/20-arreglos-invitaciones.md).

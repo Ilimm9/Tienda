@@ -3,6 +3,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { RolService } from '../roles-permisos/rol.service';
+import { RolResumen } from '../roles-permisos/rol.models';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { PERMISOS } from '../../contexto/permisos';
@@ -14,13 +17,13 @@ import { avatarDeEstado, ETIQUETA_ESTADO_EMPLEADO, iniciales, PASTILLA_ESTADO_EM
 
 @Component({
   selector: 'app-empleado-detalle',
-  imports: [CommonModule, FechaMexicoPipe, RouterLink],
+  imports: [CommonModule, FormsModule, FechaMexicoPipe, RouterLink],
   templateUrl: './empleado-detalle.component.html',
 })
 export class EmpleadoDetalleComponent {
   private readonly empleadoService = inject(EmpleadoService);
   private readonly feedback = inject(FeedbackService);
-  private readonly contexto = inject(ContextoService);
+  readonly contexto = inject(ContextoService);
   /** Permisos del negocio activo, resueltos una sola vez en el contexto. */
   readonly misPermisos = computed(() => [...this.contexto.permisos()]);
   private readonly route = inject(ActivatedRoute);
@@ -35,6 +38,29 @@ export class EmpleadoDetalleComponent {
   readonly avatarDeEstado = avatarDeEstado;
   readonly pastillaEstado = PASTILLA_ESTADO_EMPLEADO;
   readonly etiquetaEstado = ETIQUETA_ESTADO_EMPLEADO;
+
+  readonly reactivando = signal(false);
+  readonly rolesReactivacion = signal<RolResumen[]>([]);
+  rolesElegidos: string[] = [];
+  sucursalesElegidas: string[] = [];
+  private readonly rolService = inject(RolService);
+  readonly puedeReactivar = computed(() => this.contexto.puede([PERMISOS.empleadoGestionar, PERMISOS.rolAsignar, PERMISOS.asignacionEditar]));
+
+  prepararReactivacion(): void {
+    this.rolService.listar(this.negocioId, false, true).subscribe({
+      next: respuesta => { this.rolesReactivacion.set(respuesta.items); this.rolesElegidos = []; this.sucursalesElegidas = []; this.reactivando.set(true); },
+      error: () => this.feedback.error('No fue posible cargar los roles delegables'),
+    });
+  }
+
+  reactivar(): void {
+    if (!this.rolesElegidos.length || !this.sucursalesElegidas.length || this.processing()) return;
+    this.processing.set(true);
+    this.empleadoService.reactivar(this.negocioId, this.empleadoId, this.rolesElegidos, this.sucursalesElegidas).subscribe({
+      next: empleado => { this.empleado.set(empleado); this.processing.set(false); this.reactivando.set(false); this.contexto.recargar().subscribe(); this.feedback.success('Acceso reasignado'); },
+      error: (error: HttpErrorResponse) => { this.processing.set(false); this.feedback.error('No fue posible reactivar', error.error?.mensaje ?? 'Revisa roles y sucursales.'); },
+    });
+  }
 
   readonly puedeGestionar = computed(() => this.misPermisos().includes('equipo.empleados.gestionar'));
   /** Misma exigencia que la ruta de nueva invitación: emitir y leer empleados y roles. */
@@ -58,6 +84,7 @@ export class EmpleadoDetalleComponent {
       next: (empleado) => {
         this.processing.set(false);
         this.empleado.set(empleado);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Estado actualizado');
       },
       error: (response: HttpErrorResponse) => {

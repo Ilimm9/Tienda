@@ -1,17 +1,23 @@
 # Gestión de colaboradores
 
-Base vigente según código local. Actualizado: 2026-10-19.
+Base vigente según código local. Actualizado: 2026-10-20.
 
 ## Flujo y reglas
 
 1. El propietario o un miembro autorizado registra un empleado dentro del negocio; puede existir sin cuenta de acceso.
 2. Para invitarlo se eligen empleado con correo, sucursal y rol disponibles del mismo negocio. El enlace vence a las 72 horas y solo se persiste su hash.
 3. El destinatario inicia sesión o registra/verifica una cuenta con ese correo. La aceptación vincula empleado y membresía, otorga rol y asigna sucursal en una transacción.
-4. Reenviar reemplaza el token anterior; cancelar impide aceptar. Suspender/terminar personal y finalizar asignaciones afectan su acceso operativo.
+4. Reenviar reemplaza el token anterior; cancelar impide aceptar. Emisión, reenvío y aceptación comprueban que el emisor conserve acceso y pueda otorgar el rol actual; un rechazo no deja vínculos parciales.
 
 **Cuenta** identifica a la persona que inicia sesión; **membresía** permite entrar al negocio; **empleado** es su ficha laboral; **asignación** habilita sucursales. El rol aporta permisos mediante la membresía. El propietario tiene acceso total al negocio; un miembro opera según permisos y sucursales autorizadas.
 
 API e interfaz comprueban permisos; ocultar un botón no basta. No se pueden mezclar empleados, roles ni sucursales de otros negocios. Los roles de sistema y la continuidad de un propietario efectivo tienen protección específica. El rol global `ADMIN_LECTURA` pertenece al módulo de plataforma y no concede acceso operativo a tiendas.
+
+El selector ofrece solo roles delegables y resume permisos por sección. Crear o editar permisos agrega las lecturas necesarias; no puede otorgar permisos ajenos al emisor. Roles anteriores incompletos muestran lecturas faltantes y personas afectadas: corregirlos exige confirmación específica. Editar solo el nombre no amplía accesos.
+
+Suspensión o baja ocultan el negocio y todas sus asignaciones al empleado y bloquean API, conservando historial para administradores. Suspensión recupera accesos aún vigentes; baja exige reasignar roles/sucursales explícitos desde **Reactivar y reasignar acceso**. No restaura una membresía revocada por otra causa ni permite suspender al último propietario. Sin cuenta vinculada puede prepararse otra invitación, sin conceder acceso hasta aceptarla.
+
+El contexto se recarga tras cambiar roles/asignaciones y al volver a la pestaña; no hay sincronización instantánea mientras otra sesión permanece en primer plano. Implementación y pruebas: [20 · Arreglos de invitaciones](historial/20-arreglos-invitaciones.md).
 
 ## Tablas principales
 

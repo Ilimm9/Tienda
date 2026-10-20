@@ -171,6 +171,15 @@
               <dt class="dato__rotulo">Rol</dt>
               <dd class="dato__valor">{{ rol()?.nombre ?? '—' }}</dd>
             </div>
+            <div class="col-span-2">
+              <dt class="dato__rotulo">Permisos del rol seleccionado</dt>
+              <dd class="dato__valor">
+                <ul class="m-0 pl-4">
+                  @for (grupo of permisosDelRol(); track grupo.seccion) { <li><strong>{{ grupo.seccion }}</strong>: {{ grupo.permisos.join(', ') }}</li> }
+                  @empty { <li>Selecciona un rol para consultar sus permisos.</li> }
+                </ul>
+              </dd>
+            </div>
             <div>
               <dt class="dato__rotulo">Vigencia</dt>
               <dd class="dato__valor">72 horas desde la emisión</dd>

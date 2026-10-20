@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 
 import { environment } from '../../environments/environment';
 import { ContextoNegocio } from './contexto.models';
@@ -31,7 +32,7 @@ describe('ContextoService', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', storage());
     TestBed.configureTestingModule({
-      providers: [ContextoService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [ContextoService, provideHttpClient(), provideHttpClientTesting(), { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } }],
     });
     service = TestBed.inject(ContextoService);
     http = TestBed.inject(HttpTestingController);
@@ -46,6 +47,20 @@ describe('ContextoService', () => {
   function responder(items: ContextoNegocio[]): void {
     http.expectOne(opcionesUrl).flush({ items, total: items.length });
   }
+
+  it('revalida al recuperar foco, deduplica eventos y retira asignaciones revocadas', () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    service.inicializar().subscribe();
+    responder([negocio(negocioA, sucursales, ['precios.ver'])]);
+    window.dispatchEvent(new Event('focus'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    responder([]);
+    expect(service.negocio()).toBeNull();
+    expect(service.sucursal()).toBeNull();
+    expect(service.permisos().size).toBe(0);
+    expect(service.negocios()).toEqual([]);
+    vi.restoreAllMocks();
+  });
 
   it('selecciona automáticamente cuando solo existe un negocio y usa la sucursal principal', () => {
     service.inicializar().subscribe();

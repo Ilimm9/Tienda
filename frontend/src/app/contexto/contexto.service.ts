@@ -2,6 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
+import { Router } from '@angular/router';
+import { negocioDeRuta, nombreDeSeccion, permisosDeRuta } from './permiso.guard';
+
 import { environment } from '../../environments/environment';
 import { ContextoNegocio, ContextoOpcionesResponse, ContextoSucursal, EstadoAlta, EstadoContexto } from './contexto.models';
 import { comoLista, PermisoRequerido, PERMISOS } from './permisos';
@@ -25,6 +28,7 @@ export class ContextoService {
 
   // Deduplica inicializaciones concurrentes: varios guards pueden resolverse en la misma navegación.
   private enVuelo: Observable<EstadoContexto> | null = null;
+  private readonly router = inject(Router, { optional: true });
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -33,8 +37,30 @@ export class ContextoService {
       if (event.key !== negocioKey && event.key !== sucursalKey && event.key !== null) return;
       this.recargar().subscribe();
     };
+    const revalidar = () => {
+      if (document.visibilityState !== 'visible' || !this.inicializado() || this.enVuelo) return;
+      const negocioAnterior = this.negocio()?.id;
+      this.recargar().subscribe(() => {
+        if (negocioAnterior && !this.negocios().some(negocio => negocio.id === negocioAnterior)) {
+          void this.router?.navigate(['/inicio']);
+          return;
+        }
+        let ruta = this.router?.routerState?.snapshot?.root;
+        if (!ruta) return;
+        while (ruta.firstChild) ruta = ruta.firstChild;
+        const negocioID = negocioDeRuta(ruta);
+        const permitido = permisosDeRuta(ruta).every(permiso => negocioID ? this.puedeEn(negocioID, permiso, false) : this.puede(permiso));
+        if (!permitido) void this.router?.navigate(['/sin-acceso'], { queryParams: { seccion: nombreDeSeccion(ruta) }, skipLocationChange: true });
+      });
+    };
     window.addEventListener('storage', onStorage);
-    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+    window.addEventListener('focus', revalidar);
+    document.addEventListener('visibilitychange', revalidar);
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', revalidar);
+      document.removeEventListener('visibilitychange', revalidar);
+    });
   }
 
   /** Resuelve el contexto una sola vez; reutiliza el resultado en navegaciones posteriores. */

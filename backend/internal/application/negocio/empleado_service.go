@@ -43,6 +43,22 @@ type EmpleadoRepository interface {
 	CorreoEnUso(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) (bool, error)
 	Crear(ctx context.Context, negocioID, creadoPor uuid.UUID, input domain.CrearEmpleadoInput) (uuid.UUID, error)
 	Actualizar(ctx context.Context, negocioID, empleadoID uuid.UUID, input domain.ActualizarEmpleadoInput) error
+	Reactivar(ctx context.Context, usuarioID, negocioID, empleadoID uuid.UUID, input domain.ReactivarEmpleadoInput) error
+}
+
+func (s *EmpleadoService) Reactivar(ctx context.Context, usuarioID, negocioID, empleadoID uuid.UUID, input domain.ReactivarEmpleadoInput) (domain.EmpleadoDetalle, error) {
+	for _, permiso := range []string{domain.PermisoEmpleadoGestionar, domain.PermisoRolAsignar, domain.PermisoAsignacionEditar} {
+		if err := s.autorizar(ctx, usuarioID, negocioID, permiso, true); err != nil {
+			return domain.EmpleadoDetalle{}, err
+		}
+	}
+	if len(input.Roles) == 0 || len(input.Sucursales) == 0 {
+		return domain.EmpleadoDetalle{}, &ErrorValidacion{Campos: map[string]string{"reactivacion": "selecciona roles y sucursales explícitamente"}}
+	}
+	if err := s.empleados.Reactivar(ctx, usuarioID, negocioID, empleadoID, input); err != nil {
+		return domain.EmpleadoDetalle{}, err
+	}
+	return s.empleados.Obtener(ctx, negocioID, empleadoID)
 }
 
 type EmpleadoService struct {

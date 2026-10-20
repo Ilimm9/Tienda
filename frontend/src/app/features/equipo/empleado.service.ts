@@ -37,6 +37,10 @@ export class EmpleadoService {
     return this.http.patch<EmpleadoDetalle>(`${this.baseUrl(negocioId)}/${empleadoId}`, payload);
   }
 
+  reactivar(negocioId: string, empleadoId: string, roles: string[], sucursales: string[]): Observable<EmpleadoDetalle> {
+    return this.http.post<EmpleadoDetalle>(`${this.baseUrl(negocioId)}/${empleadoId}/reactivar`, { roles, sucursales });
+  }
+
   private baseUrl(negocioId: string): string {
     return `${environment.apiUrl}/negocios/${negocioId}/administracion/empleados`;
   }

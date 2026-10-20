@@ -37,6 +37,8 @@ export class RolesComponent {
   readonly error = signal<string | null>(null);
 
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
+  readonly rolesIncompletos = computed(() => this.roles().filter(rol => rol.permisos_faltantes?.length));
+  afectados(rol: RolResumen): string { return this.miembros().filter(miembro => miembro.roles.includes(rol.id)).map(miembro => miembro.nombre || miembro.correo).join(', ') || 'Sin miembros asignados'; }
   readonly puedeGestionar = computed(() => this.misPermisos().includes('roles.gestionar'));
   readonly puedeAsignar = computed(() => this.misPermisos().includes('roles.asignar'));
 
@@ -75,6 +77,7 @@ export class RolesComponent {
     this.rolService.eliminar(this.negocioId(), rol.id).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.contexto.recargar().subscribe();
         this.feedback.success('Rol eliminado');
         this.load();
       },

@@ -130,12 +130,18 @@
               </div>
             </div>
             <div class="flex flex-wrap gap-2.5">
-              @if (persona.estado !== 'activo') {
+              @if (persona.estado === 'terminado' && persona.membresia_id && puedeReactivar()) {
+                <button type="button" class="boton boton--secundario" (click)="prepararReactivacion()">Reactivar y reasignar acceso</button>
+              }
+              @if (persona.estado === 'terminado' && !persona.membresia_id) {
+                <button type="button" class="boton boton--secundario" [disabled]="processing()" (click)="cambiarEstado('pendiente')">Preparar nueva invitación</button>
+              }
+              @if (persona.estado !== 'activo' && persona.estado !== 'terminado') {
                 <button type="button" class="boton boton--secundario boton--compacto" [disabled]="processing()" (click)="cambiarEstado('activo')">
                   <i class="pi pi-check-circle" aria-hidden="true"></i>Marcar activo
                 </button>
               }
-              @if (persona.estado !== 'suspendido') {
+              @if (persona.estado !== 'suspendido' && persona.estado !== 'terminado') {
                 <button type="button" class="boton boton--secundario boton--compacto" [disabled]="processing()" (click)="cambiarEstado('suspendido')">
                   <i class="pi pi-pause-circle" aria-hidden="true"></i>Suspender
                 </button>
@@ -145,6 +151,24 @@
                   <i class="pi pi-user-minus" aria-hidden="true"></i>Dar de baja
                 </button>
               }
+            </div>
+          </section>
+        }
+        @if (reactivando()) {
+          <section class="tarjeta p-5" aria-label="Reasignar acceso">
+            <h2>Reasignar acceso</h2>
+            <p>Elige explícitamente los roles y sucursales. Los accesos anteriores no se recuperan automáticamente.</p>
+            <label class="etiqueta" for="roles-reactivar">Roles</label>
+            <select id="roles-reactivar" multiple [(ngModel)]="rolesElegidos" class="w-full">
+              @for (rol of rolesReactivacion(); track rol.id) { <option [value]="rol.id">{{ rol.nombre }}</option> }
+            </select>
+            <label class="etiqueta" for="sucursales-reactivar">Sucursales</label>
+            <select id="sucursales-reactivar" multiple [(ngModel)]="sucursalesElegidas" class="w-full">
+              @for (sucursal of contexto.negocio()?.sucursales ?? []; track sucursal.id) { <option [value]="sucursal.id">{{ sucursal.nombre }}</option> }
+            </select>
+            <div class="flex gap-3 mt-4">
+              <button type="button" class="boton" [disabled]="processing() || !rolesElegidos.length || !sucursalesElegidas.length" (click)="reactivar()">Confirmar acceso</button>
+              <button type="button" class="boton boton--fantasma" (click)="reactivando.set(false)">Cancelar</button>
             </div>
           </section>
         }

@@ -34,6 +34,7 @@ func (r *NegocioRepository) Listar(ctx context.Context, usuarioID uuid.UUID, est
 			EXISTS (SELECT 1 FROM sucursales s WHERE s.negocio_id = n.id AND s.activo = TRUE) AS tiene_sucursales,
 			(SELECT COUNT(*) FROM sucursales s WHERE s.negocio_id = n.id AND s.activo = TRUE) AS total_sucursales`).
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.estado = ?", estado).
 		Order("n.nombre_comercial ASC").
 		Scan(&items).Error
@@ -45,7 +46,8 @@ func (r *NegocioRepository) ObtenerAccesible(ctx context.Context, usuarioID, neg
 		TipoMiembro string
 	}
 	var access accessRow
-	if err := r.db.WithContext(ctx).Table("membresias_negocio").
+	if err := r.db.WithContext(ctx).Table("membresias_negocio AS m").
+		Where(membresiaHabilitada).
 		Select("tipo_miembro").
 		Where("negocio_id = ? AND usuario_id = ? AND estado = 'activo'", negocioID, usuarioID).
 		Take(&access).Error; err != nil {
@@ -70,7 +72,8 @@ func (r *NegocioRepository) MembresiasActivas(ctx context.Context, usuarioID uui
 		Total           int64
 		ComoPropietario int64
 	}
-	err := r.db.WithContext(ctx).Table("membresias_negocio").
+	err := r.db.WithContext(ctx).Table("membresias_negocio AS m").
+		Where(membresiaHabilitada).
 		Select("count(*) AS total, count(*) FILTER (WHERE tipo_miembro = 'propietario') AS como_propietario").
 		Where("usuario_id = ? AND estado = 'activo'", usuarioID).Scan(&conteo).Error
 	return conteo.Total, conteo.ComoPropietario, err

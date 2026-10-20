@@ -27,6 +27,7 @@ func (r *InvitacionRepository) ObtenerContextoNegocio(ctx context.Context, usuar
 	err := r.db.WithContext(ctx).Table("negocios AS n").
 		Select("n.estado AS estado_negocio, m.tipo_miembro").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.id = ?", negocioID).
 		Take(&contexto).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -150,6 +151,15 @@ func retirarPendientes(tx *gorm.DB, negocioID, empleadoID uuid.UUID, ahora time.
 func (r *InvitacionRepository) Emitir(ctx context.Context, invitacion domain.InvitacionNegocio) (domain.InvitacionResumen, error) {
 	var resumen domain.InvitacionResumen
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := bloquearAccesoNegocio(tx, invitacion.NegocioID); err != nil {
+			return err
+		}
+		if invitacion.RolPredeterminadoID == nil {
+			return application.ErrInvitacionRolNoDisponible
+		}
+		if err := validarDelegacionInvitacion(ctx, tx, invitacion.InvitadoPorUsuarioID, invitacion.NegocioID, *invitacion.RolPredeterminadoID); err != nil {
+			return err
+		}
 		if invitacion.EmpleadoID == nil {
 			return application.ErrEmpleadoNoEncontrado
 		}
@@ -184,6 +194,9 @@ func (r *InvitacionRepository) Reemitir(ctx context.Context, negocioID, invitaci
 			return application.ErrInvitacionNoEncontrada
 		}
 		if err != nil {
+			return err
+		}
+		if err := bloquearAccesoNegocio(tx, negocioID); err != nil {
 			return err
 		}
 		if referencia.EmpleadoID == nil {
@@ -233,6 +246,9 @@ func (r *InvitacionRepository) Reemitir(ctx context.Context, negocioID, invitaci
 			return application.ErrInvitacionRolNoDisponible
 		}
 
+		if err := validarDelegacionInvitacion(ctx, tx, usuarioID, negocioID, *anterior.RolPredeterminadoID); err != nil {
+			return err
+		}
 		ahora := time.Now().UTC()
 		destinatario := anterior.Correo
 		if correo != nil {
@@ -335,6 +351,9 @@ func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacionID, usuari
 		if err != nil {
 			return err
 		}
+		if err := bloquearAccesoNegocio(tx, referencia.NegocioID); err != nil {
+			return err
+		}
 		if referencia.EmpleadoID == nil || referencia.SucursalID == nil {
 			return application.ErrInvitacionNoVigente
 		}
@@ -385,6 +404,12 @@ func (r *InvitacionRepository) Aceptar(ctx context.Context, invitacionID, usuari
 			}
 		}
 
+		if invitacion.RolPredeterminadoID == nil {
+			return application.ErrInvitacionRolNoDisponible
+		}
+		if err := validarDelegacionInvitacion(ctx, tx, invitacion.InvitadoPorUsuarioID, invitacion.NegocioID, *invitacion.RolPredeterminadoID); err != nil {
+			return err
+		}
 		membresia, err := membresiaParaAceptar(tx, invitacion.NegocioID, usuarioID, ahora)
 		if err != nil {
 			return err

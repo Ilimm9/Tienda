@@ -25,6 +25,7 @@ func (r *AsignacionRepository) ObtenerContextoNegocio(ctx context.Context, usuar
 	err := r.db.WithContext(ctx).Table("negocios AS n").
 		Select("n.estado AS estado_negocio, m.tipo_miembro").
 		Joins("JOIN membresias_negocio m ON m.negocio_id = n.id AND m.usuario_id = ? AND m.estado = 'activo'", usuarioID).
+		Where(membresiaHabilitada).
 		Where("n.id = ?", negocioID).
 		Take(&contexto).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

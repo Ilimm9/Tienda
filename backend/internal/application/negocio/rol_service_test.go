@@ -11,19 +11,20 @@ import (
 )
 
 type rolRepositoryStub struct {
-	rolNoDelegable     bool
-	access             domain.ContextoNegocioSucursal
-	permisos           []string
-	detalle            domain.RolDetalle
-	existeCodigo       bool
-	miembrosConRol     int
-	perteneceMembresia bool
-	quedaPropietario   bool
-	creado             domain.CrearRolInput
-	actualizado        domain.ActualizarRolInput
-	rolesAsignados     []uuid.UUID
-	eliminado          bool
-	err                error
+	permisosNoOtorgables bool
+	rolNoDelegable       bool
+	access               domain.ContextoNegocioSucursal
+	permisos             []string
+	detalle              domain.RolDetalle
+	existeCodigo         bool
+	miembrosConRol       int
+	perteneceMembresia   bool
+	quedaPropietario     bool
+	creado               domain.CrearRolInput
+	actualizado          domain.ActualizarRolInput
+	rolesAsignados       []uuid.UUID
+	eliminado            bool
+	err                  error
 }
 
 func (r *rolRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UUID, uuid.UUID) (domain.ContextoNegocioSucursal, error) {
@@ -35,7 +36,11 @@ func (r *rolRepositoryStub) PermisosEfectivos(context.Context, uuid.UUID, uuid.U
 }
 
 func (r *rolRepositoryStub) ListarPermisos(context.Context) ([]domain.Permiso, error) {
-	return domain.CatalogoPermisos, nil
+	catalogo := append([]domain.Permiso{}, domain.CatalogoPermisos...)
+	for i := range catalogo {
+		catalogo[i].ID = uuid.NewSHA1(uuid.Nil, []byte(catalogo[i].Codigo))
+	}
+	return catalogo, nil
 }
 
 func (r *rolRepositoryStub) ListarRoles(context.Context, uuid.UUID, bool) ([]domain.RolResumen, error) {
@@ -135,7 +140,7 @@ func TestRolServiceMiembroConPermisoPuedeGestionar(t *testing.T) {
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearRolInput{
 		Codigo: "cajero", Nombre: "Cajero",
-		Permisos: []uuid.UUID{uuid.New()},
+		Permisos: []uuid.UUID{uuid.NewSHA1(uuid.Nil, []byte(domain.PermisoCatalogoVer))},
 	})
 
 	if err != nil {
@@ -314,8 +319,51 @@ func TestRolServiceAsignarRechazaRolConPermisosQueElEmisorNoTiene(t *testing.T) 
 	}
 }
 
-func (*rolRepositoryStub) PermisosOtorgables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID) (bool, error) {
-	return true, nil
+func (r *rolRepositoryStub) PermisosOtorgables(context.Context, uuid.UUID, uuid.UUID, []uuid.UUID) (bool, error) {
+	return !r.permisosNoOtorgables, nil
+}
+
+func TestRolCompletaLecturaYCompruebaDelegacion(t *testing.T) {
+	repository := negocioActivoCon(domain.PermisoRolGestionar)
+	repository.detalle = domain.RolDetalle{ID: uuid.New()}
+	entrada := domain.CrearRolInput{Codigo: "PRECIOS", Nombre: "Precios", Permisos: []uuid.UUID{uuid.NewSHA1(uuid.Nil, []byte(domain.PermisoPrecioAutorizar))}}
+	_, err := NewRolService(repository).Crear(context.Background(), uuid.New(), uuid.New(), entrada)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repository.creado.Permisos) != 2 {
+		t.Fatalf("lectura no agregada: %v", repository.creado.Permisos)
+	}
+	repository.permisosNoOtorgables = true
+	_, err = NewRolService(repository).Crear(context.Background(), uuid.New(), uuid.New(), entrada)
+	if !errors.Is(err, ErrRolNoDelegable) {
+		t.Fatalf("no se comprobó permiso agregado: %v", err)
+	}
+}
+
+func TestRolExistenteNoAmpliaLecturaSinConsentimiento(t *testing.T) {
+	repository := negocioActivoCon(domain.PermisoRolGestionar)
+	autorizar := uuid.NewSHA1(uuid.Nil, []byte(domain.PermisoPrecioAutorizar))
+	catalogo := uuid.NewSHA1(uuid.Nil, []byte(domain.PermisoCatalogoVer))
+	repository.detalle = domain.RolDetalle{ID: uuid.New(), Permisos: []uuid.UUID{autorizar}}
+	service := NewRolService(repository)
+	mismos := []uuid.UUID{autorizar}
+	_, err := service.Actualizar(context.Background(), uuid.New(), uuid.New(), repository.detalle.ID, domain.ActualizarRolInput{Permisos: domain.Optional[[]uuid.UUID]{Set: true, Value: &mismos}})
+	if err != nil || repository.actualizado.Permisos.Set {
+		t.Fatalf("se amplió un rol sin cambiar permisos: %v", err)
+	}
+	seleccion := []uuid.UUID{autorizar, catalogo}
+	entrada := domain.ActualizarRolInput{Permisos: domain.Optional[[]uuid.UUID]{Set: true, Value: &seleccion}}
+	_, err = service.Actualizar(context.Background(), uuid.New(), uuid.New(), repository.detalle.ID, entrada)
+	var validacion *ErrorValidacion
+	if !errors.As(err, &validacion) {
+		t.Fatalf("ampliación sin autorización: %v", err)
+	}
+	entrada.AutorizarDependenciasExistentes = true
+	_, err = service.Actualizar(context.Background(), uuid.New(), uuid.New(), repository.detalle.ID, entrada)
+	if err != nil || len(*repository.actualizado.Permisos.Value) != 3 {
+		t.Fatalf("ampliación explícita no aplicada: %v", err)
+	}
 }
 
 func TestRolServiceCrearExigeAlMenosUnPermiso(t *testing.T) {

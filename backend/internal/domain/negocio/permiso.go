@@ -15,6 +15,35 @@ type Permiso struct {
 	Nombre       string    `gorm:"type:varchar(160);not null" json:"nombre"`
 	Descripcion  *string   `gorm:"type:text" json:"descripcion,omitempty"`
 	CreadoEn     time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	Requiere     []string  `gorm:"-" json:"requiere"`
+}
+
+// DependenciasPermiso describe las lecturas que usan las rutas y formularios de cada acción.
+func DependenciasPermiso(codigo string) []string {
+	switch codigo {
+	case PermisoNegocioEditar, PermisoNegocioArchivar:
+		return []string{PermisoNegocioVer}
+	case PermisoSucursalCrear, PermisoSucursalEditar, PermisoSucursalArchivar:
+		return []string{PermisoSucursalVer}
+	case PermisoRolGestionar, PermisoRolAsignar:
+		return []string{PermisoRolVer}
+	case PermisoEmpleadoGestionar:
+		return []string{PermisoEmpleadoVer}
+	case PermisoInvitacionEnviar:
+		return []string{PermisoInvitacionVer, PermisoEmpleadoVer, PermisoRolVer}
+	case PermisoAsignacionVer:
+		return []string{PermisoEmpleadoVer}
+	case PermisoAsignacionEditar:
+		return []string{PermisoAsignacionVer, PermisoEmpleadoVer, PermisoSucursalVer}
+	case PermisoCatalogoGestionar, PermisoInventarioAjustar:
+		return []string{PermisoCatalogoVer}
+	case PermisoCompraRegistrar:
+		return []string{PermisoCompraVer, PermisoCatalogoVer}
+	case PermisoPrecioAutorizar:
+		return []string{PermisoPrecioVer}
+	default:
+		return []string{}
+	}
 }
 
 func (Permiso) TableName() string { return "permisos" }

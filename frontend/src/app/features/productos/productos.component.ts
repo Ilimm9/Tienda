@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -193,7 +193,11 @@ export class ProductosComponent {
       if (this.productForm.controls.tiene_variantes.value) this.applyBasePrice();
     });
     if (this.pageMode === 'list') {
-      this.loadProducts();
+      effect(() => {
+        this.contexto.negocio()?.id;
+        this.contexto.sucursal()?.id;
+        untracked(() => this.loadProducts());
+      });
     } else if (this.pageMode === 'create') {
       this.openCreateDialog();
     } else if (this.pageMode === 'import') {
@@ -207,15 +211,25 @@ export class ProductosComponent {
     return this.contexto.negocio()?.id ?? '';
   }
 
+  private cargaProductos = 0;
+
   loadProducts(): void {
+    const carga = ++this.cargaProductos;
+    const negocio = this.negocioID;
+    const sucursal = this.contexto.sucursal()?.id;
+    this.products.set([]);
+    if (!negocio || !sucursal) { this.loading.set(false); this.error.set('Selecciona un negocio y una sucursal activa.'); return; }
+    const vigente = () => carga === this.cargaProductos && negocio === this.negocioID && sucursal === this.contexto.sucursal()?.id;
     this.loading.set(true);
     this.error.set(null);
-    this.productosService.listByBusiness(this.negocioID).subscribe({
+    this.productosService.listByBusiness(this.negocioID, this.contexto.sucursal()?.id ?? '').subscribe({
       next: ({ items }) => {
+        if (!vigente()) return;
         this.products.set(items ?? []);
         this.loading.set(false);
       },
       error: () => {
+        if (!vigente()) return;
         this.error.set('No fue posible cargar los productos.');
         this.loading.set(false);
       },
@@ -245,7 +259,7 @@ export class ProductosComponent {
       return;
     }
     this.loading.set(true);
-    this.productosService.listByBusiness(this.negocioID).subscribe({
+    this.productosService.listByBusiness(this.negocioID, this.contexto.sucursal()?.id ?? '').subscribe({
       next: ({ items }) => {
         const product = (items ?? []).find((item) => item.id === productId);
         this.loading.set(false);
@@ -1326,7 +1340,7 @@ export class ProductosComponent {
   ) {
     const branchID = this.contexto.sucursal()?.id;
     if (!branchID || !payload.tiene_variantes) return of([]);
-    return this.productosService.listByBusiness(this.negocioID).pipe(
+    return this.productosService.listByBusiness(this.negocioID, this.contexto.sucursal()?.id ?? '').pipe(
       switchMap(({ items }) => {
         const saved = (items ?? []).find((product) => product.id === editing.id);
         if (!saved) throw new Error('No fue posible recargar las variantes del producto.');
