@@ -176,6 +176,7 @@ export class ProductosComponent {
     unidad_medida_id: [''],
     presentacion: ['', Validators.maxLength(100)],
     precio_venta: [0, [Validators.required, Validators.min(0)]],
+    costo_proveedor: [0, [Validators.required, Validators.min(0)]],
     stock_inicial: [0, [Validators.required, Validators.min(0)]],
   });
   readonly brandForm = this.formBuilder.nonNullable.group({
@@ -206,11 +207,12 @@ export class ProductosComponent {
   private get negocioID(): string {
     return this.contexto.negocio()?.id ?? '';
   }
+  private get sucursalID(): string { return this.contexto.sucursal()?.id ?? ''; }
 
   loadProducts(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.productosService.listByBusiness(this.negocioID).subscribe({
+    this.productosService.listByBusiness(this.negocioID, this.sucursalID).subscribe({
       next: ({ items }) => {
         this.products.set(items ?? []);
         this.loading.set(false);
@@ -245,7 +247,7 @@ export class ProductosComponent {
       return;
     }
     this.loading.set(true);
-    this.productosService.listByBusiness(this.negocioID).subscribe({
+    this.productosService.listByBusiness(this.negocioID, this.sucursalID).subscribe({
       next: ({ items }) => {
         const product = (items ?? []).find((item) => item.id === productId);
         this.loading.set(false);
@@ -282,6 +284,7 @@ export class ProductosComponent {
       presentacion: '',
       unidad_medida_id: '',
       precio_venta: 0,
+      costo_proveedor: 0,
       stock_inicial: 0,
     });
     this.productForm.controls.sucursal_id.enable();
@@ -567,7 +570,7 @@ export class ProductosComponent {
     const branchId = this.importBranchId;
     this.productosService.previewProductImport(this.negocioID, branchId, file).subscribe({
       next: (preview) => {
-        this.importPreview.set(preview);
+        this.importPreview.set(this.normalizeImportPreview(preview));
         this.importing.set(false);
       },
       error: (response) => {
@@ -587,7 +590,11 @@ export class ProductosComponent {
       return;
     this.importing.set(true);
     this.importError.set(null);
-    this.executeProductImport(this.importFile, this.importBranchId, this.importPreview()!.catalogos_nuevos.length > 0);
+    this.executeProductImport(
+      this.importFile,
+      this.importBranchId,
+      (this.importPreview()!.catalogos_nuevos ?? []).length > 0,
+    );
   }
 
   private executeProductImport(file: File, branchId: string, authorizeNewCatalogs: boolean): void {
@@ -625,16 +632,15 @@ export class ProductosComponent {
         this.importing.set(false);
         this.importPreview.set(null);
         if (job.estado === 'completada' && job.resultado) {
-          this.importResult.set(job.resultado);
-          if (job.resultado.creadas > 0) this.loadProducts();
+          const result = this.normalizeImportResult(job.resultado);
+          this.importResult.set(result);
+          if (result.creadas > 0) this.loadProducts();
           const partial =
-            job.resultado.omitidas > 0 ||
-            job.resultado.invalidas > 0 ||
-            job.resultado.advertencias.length > 0;
+            result.omitidas > 0 || result.invalidas > 0 || result.advertencias.length > 0;
           Swal.fire({
             icon: partial ? 'warning' : 'success',
             title: 'Importación terminada',
-            text: `${job.resultado.creadas} filas importadas correctamente · ${job.resultado.productos_simples_creados ?? 0} productos simples · ${job.resultado.productos_base_creados} familias nuevas · ${job.resultado.productos_base_reutilizados} familias reutilizadas · ${job.resultado.variantes_creadas} variantes · ${job.resultado.omitidas} omitidas · ${job.resultado.invalidas} inválidas`,
+            text: `${result.creadas} filas importadas correctamente · ${result.productos_simples_creados ?? 0} productos simples · ${result.productos_base_creados} familias nuevas · ${result.productos_base_reutilizados} familias reutilizadas · ${result.variantes_creadas} variantes · ${result.omitidas} omitidas · ${result.invalidas} inválidas`,
             confirmButtonText: 'Ver registros',
           }).then(() => {
             this.navigate(['/catalogo/productos']);
@@ -654,6 +660,23 @@ export class ProductosComponent {
         Swal.close();
       },
     });
+  }
+
+  private normalizeImportResult(result: ProductImportResult): ProductImportResult {
+    return {
+      ...result,
+      errores: result.errores ?? [],
+      advertencias: result.advertencias ?? [],
+    };
+  }
+
+  private normalizeImportPreview(preview: ProductImportPreview): ProductImportPreview {
+    return {
+      ...preview,
+      errores: preview.errores ?? [],
+      advertencias: preview.advertencias ?? [],
+      catalogos_nuevos: preview.catalogos_nuevos ?? [],
+    };
   }
 
   productImportTemplateUrl(): string {
@@ -1326,7 +1349,7 @@ export class ProductosComponent {
   ) {
     const branchID = this.contexto.sucursal()?.id;
     if (!branchID || !payload.tiene_variantes) return of([]);
-    return this.productosService.listByBusiness(this.negocioID).pipe(
+    return this.productosService.listByBusiness(this.negocioID, branchID).pipe(
       switchMap(({ items }) => {
         const saved = (items ?? []).find((product) => product.id === editing.id);
         if (!saved) throw new Error('No fue posible recargar las variantes del producto.');

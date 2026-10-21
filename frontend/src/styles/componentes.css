@@ -2016,6 +2016,14 @@ dd.dato__valor {
   flex-direction: column;
   gap: inherit;
 }
+.formulario-alta__select,
+p-select.formulario-alta__select {
+  width: 100%;
+}
+.formulario-alta__select .p-select {
+  min-height: 46px;
+  width: 100%;
+}
 .formulario-alta--compacto .campo-bloque {
   gap: 5px;
 }
@@ -2023,6 +2031,9 @@ dd.dato__valor {
 .formulario-alta--compacto .campo-grupo,
 .formulario-alta--compacto input,
 .formulario-alta--compacto select {
+  min-height: 40px;
+}
+.formulario-alta--compacto .formulario-alta__select .p-select {
   min-height: 40px;
 }
 .formulario-alta--compacto .plegable {

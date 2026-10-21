@@ -7,8 +7,8 @@ import (
 	compradomain "tienda/backend/internal/domain/compra"
 	cuentadomain "tienda/backend/internal/domain/cuenta"
 	negociodomain "tienda/backend/internal/domain/negocio"
-	preciodomain "tienda/backend/internal/domain/precio"
 	plataformadomain "tienda/backend/internal/domain/plataforma"
+	preciodomain "tienda/backend/internal/domain/precio"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
@@ -57,7 +57,7 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
 		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
-		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
+		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.HistorialCostoPrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
 		&plataformadomain.RolPlataforma{}, &plataformadomain.RolUsuarioPlataforma{},
 		&plataformadomain.AuditoriaPlataforma{}, &plataformadomain.ActividadUsuarioDiaria{},
 	}
@@ -70,6 +70,16 @@ func Init(db *gorm.DB) error {
 	}
 	if err := db.AutoMigrate(models...); err != nil {
 		return err
+	}
+	// Los importes vigentes pertenecen a precios_sucursal. borrar en caso de bd. creada, eliminar posterior
+	for _, statement := range []string{
+		`ALTER TABLE IF EXISTS producto_negocio DROP COLUMN IF EXISTS precio_venta`,
+		`ALTER TABLE IF EXISTS producto_negocio DROP COLUMN IF EXISTS costo_referencia`,
+		`ALTER TABLE IF EXISTS producto_negocio DROP COLUMN IF EXISTS precio_mayoreo`,
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			return err
+		}
 	}
 	if err := cuentainfra.MigrateSessionBaseline(db); err != nil {
 		return err

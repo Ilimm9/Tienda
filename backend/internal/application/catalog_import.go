@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/mail"
 	"regexp"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 var ErrInvalidImportFile = errors.New("el archivo no tiene el formato de plantilla esperado")
 
 var shortBarcodePattern = regexp.MustCompile(`^\d{1,7}$`)
+var costPattern = regexp.MustCompile(`^\d+(?:\.\d{1,4})?$`)
 
 func (s *ProductService) ImportBrands(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
 	rows, result, err := parseBrandImport(file)
@@ -75,7 +77,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 	}
 	if section == "productos" {
 		sheet = "Productos"
-		headers = []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+		headers = []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	}
 	book.SetSheetName(book.GetSheetName(0), sheet)
 	for index, header := range headers {
@@ -101,8 +103,10 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 		instructionRows := [][]string{
 			{"Carga masiva de productos", "Completa una fila por producto. La hoja Productos debe conservar sus encabezados."},
 			{"Campos obligatorios", "Nombre, Precio de venta y Stock inicial."},
-			{"Campos opcionales", "Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras y Variantes."},
-			{"Números", "Precio, stock y contenido deben ser números mayores o iguales a cero."},
+			{"Campos opcionales", "Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras, Variantes y Costo."},
+			{"Contenido y unidad de contenido", "Indican cuánto trae el empaque. Ejemplo: para una botella de 600 ml, escribe Contenido: 600 y Unidad de contenido: ml."},
+			{"Unidad de medida", "Es la unidad estandarizada del catálogo. Escribe su nombre completo, por ejemplo Mililitro. Si no existe, aparecerá en la vista previa para autorizar su creación."},
+			{"Números", "Precio, stock, contenido y costo deben ser números mayores o iguales a cero. El costo admite hasta 4 decimales."},
 			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida son opcionales. Si indicas uno nuevo, revísalo y autoriza su creación en la vista previa."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
 			{"SKU interno", "Se genera automáticamente al importar y no debe incluirse como columna en el archivo."},
@@ -130,8 +134,8 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 }
 
 func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.CatalogImportResult, error) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	rows, result, err := readImportRows(file, headers)
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	rows, result, err := readProductImportRows(file, headers)
 	if err != nil {
 		return nil, result, err
 	}
@@ -159,7 +163,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 				contenido = &value
 			}
 		}
-		precioText, stockText := cell(row, 8), cell(row, 9)
+		precioText, costText, stockText := cell(row, 8), cell(row, 9), cell(row, 10)
 		precio, precioErr := strconv.ParseFloat(precioText, 64)
 		stock, stockErr := strconv.ParseFloat(stockText, 64)
 		if precioText == "" {
@@ -167,18 +171,29 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 		} else if precioErr != nil || precio < 0 {
 			addError("Precio de venta", "debe ser un número mayor o igual a cero")
 		}
+		cost := 0.0
+		if costText == "" {
+			result.CostosFaltantes++
+		} else {
+			parsedCost, costErr := parseImportedCost(costText)
+			if costErr != nil {
+				addError("Costo", costErr.Error())
+			} else {
+				cost = parsedCost
+			}
+		}
 		if stockText == "" {
 			addError("Stock inicial", "es obligatorio")
 		} else if stockErr != nil || stock < 0 {
 			addError("Stock inicial", "debe ser un número mayor o igual a cero")
 		}
-		barcode := optionalBarcodeCell(row, 10)
+		barcode := optionalBarcodeCell(row, 11)
 		if barcode != "" && !barcodePattern.MatchString(barcode) && !shortBarcodePattern.MatchString(barcode) {
 			addError("Código de barras", "debe contener solo de 1 a 14 dígitos")
 		} else if shortBarcodePattern.MatchString(barcode) {
 			addWarning("Código de barras", "tiene menos de 8 dígitos; se importará sin búsqueda automática de imagen")
 		}
-		variantes, variantErr := parseVariantAttributes(cell(row, 11))
+		variantes, variantErr := parseVariantAttributes(cell(row, 12))
 		if variantErr != nil {
 			addError("Variantes", variantErr.Error())
 		}
@@ -186,9 +201,24 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			result.Invalidas++
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), Categoria: cell(row, 1), Marca: cell(row, 2), Descripcion: cell(row, 3), Presentacion: cell(row, 4), Contenido: contenido, UnidadContenido: cell(row, 6), UnidadMedida: cell(row, 7), PrecioVenta: precio, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 12)})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), Categoria: cell(row, 1), Marca: cell(row, 2), Descripcion: cell(row, 3), Presentacion: cell(row, 4), Contenido: contenido, UnidadContenido: cell(row, 6), UnidadMedida: cell(row, 7), PrecioVenta: precio, CostoProveedor: cost, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
 	}
 	return valid, result, nil
+}
+
+func parseImportedCost(value string) (float64, error) {
+	if !costPattern.MatchString(value) {
+		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales")
+	}
+	integerPart := strings.SplitN(value, ".", 2)[0]
+	if len(strings.TrimLeft(integerPart, "0")) > 10 {
+		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales dentro del rango permitido")
+	}
+	cost, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(cost) || math.IsInf(cost, 0) || cost < 0 {
+		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales dentro del rango permitido")
+	}
+	return cost, nil
 }
 
 func parseVariantAttributes(value string) ([]domain.ProductVariantAttributeInput, error) {
@@ -296,7 +326,15 @@ func parseProviderImport(file io.Reader) ([]domain.CatalogImportProviderRow, dom
 	return valid, result, nil
 }
 
+func readProductImportRows(file io.Reader, headers []string) ([][]string, domain.CatalogImportResult, error) {
+	return readImportRowsWithOptions(file, headers, excelize.Options{RawCellValue: true})
+}
+
 func readImportRows(file io.Reader, headers []string) ([][]string, domain.CatalogImportResult, error) {
+	return readImportRowsWithOptions(file, headers)
+}
+
+func readImportRowsWithOptions(file io.Reader, headers []string, options ...excelize.Options) ([][]string, domain.CatalogImportResult, error) {
 	book, err := excelize.OpenReader(file)
 	if err != nil {
 		return nil, domain.CatalogImportResult{}, fmt.Errorf("%w: no se pudo leer el archivo XLSX", ErrInvalidImportFile)
@@ -306,7 +344,7 @@ func readImportRows(file io.Reader, headers []string) ([][]string, domain.Catalo
 	if len(sheets) == 0 {
 		return nil, domain.CatalogImportResult{}, ErrInvalidImportFile
 	}
-	rows, err := book.GetRows(sheets[0])
+	rows, err := book.GetRows(sheets[0], options...)
 	if err != nil || len(rows) == 0 {
 		return nil, domain.CatalogImportResult{}, ErrInvalidImportFile
 	}
@@ -377,6 +415,7 @@ func mergeImportResults(first, second domain.CatalogImportResult) domain.Catalog
 		ProductosBaseCreados:      first.ProductosBaseCreados + second.ProductosBaseCreados,
 		ProductosBaseReutilizados: first.ProductosBaseReutilizados + second.ProductosBaseReutilizados,
 		VariantesCreadas:          first.VariantesCreadas + second.VariantesCreadas,
+		CostosFaltantes:           first.CostosFaltantes + second.CostosFaltantes,
 		Errores:                   append(first.Errores, second.Errores...),
 		Advertencias:              append(first.Advertencias, second.Advertencias...),
 	}

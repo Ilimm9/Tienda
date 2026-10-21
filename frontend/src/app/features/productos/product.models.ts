@@ -99,6 +99,7 @@ export interface CreateProductRequest {
   unidad_medida_id?: string | null;
   presentacion: string | null;
   precio_venta: number;
+  costo_proveedor: number;
   stock_inicial: number;
   codigo_barras: string | null;
   imagen_url: string | null;
@@ -156,6 +157,7 @@ export interface ProductImportResult {
   productos_base_creados: number;
   productos_base_reutilizados: number;
   variantes_creadas: number;
+  costos_faltantes: number;
   errores: ProductImportIssue[];
   advertencias: ProductImportIssue[];
 }

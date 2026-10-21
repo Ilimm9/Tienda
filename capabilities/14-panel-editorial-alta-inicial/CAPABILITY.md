@@ -54,6 +54,7 @@ Aprobada explícitamente por el usuario el 2026-10-07 mediante la instrucción: 
 - [x] Ejecutar verificaciones posteriores al ajuste de composición.
 - [x] Ampliar la composición de fondo y animar la transición entre pasos con GSAP.
 - [x] Ejecutar verificaciones posteriores a la animación.
+- [x] Sustituir los selects nativos de moneda y zona horaria por menús PrimeNG con panel de opciones uniforme.
 
 ## Verificación
 
@@ -65,3 +66,4 @@ Aprobada explícitamente por el usuario el 2026-10-07 mediante la instrucción: 
 - Integración de ilustraciones 2026-10-07: se añadieron PNG RGBA locales para tienda e inventario; `tsc --noEmit`, Prettier, `git diff --check` y `graphify update .` correctos.
 - Composición fiel a la referencia 2026-10-07: Empresa, Sucursal y Listo adoptaron tarjeta principal, ilustración protagonista y tarjeta inferior; `tsc --noEmit`, Prettier, `git diff --check` y `graphify update .` correctos.
 - Fondo protagonista y transición GSAP 2026-10-07: ilustraciones ampliadas, tarjetas reforzadas y entrada coordinada entre pasos; `tsc --noEmit`, Prettier, `git diff --check` y `graphify update .` correctos (2677 nodos y 7543 relaciones).
+- Menús de configuración regional 2026-10-20: Moneda y Zona horaria usan `p-select` con panel superpuesto en `body`, preservando los valores y la distribución original; `tsc --noEmit -p frontend/tsconfig.spec.json`, `git diff --check` y `graphify update .` correctos. Se agregó prueba de plantilla; Angular CLI no pudo ejecutarla porque el entorno usa Node 14.15.0 y requiere Node 22.22.3 o superior.

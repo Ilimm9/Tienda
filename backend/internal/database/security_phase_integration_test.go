@@ -81,10 +81,14 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 	}
 
 	barcode := "7501234567890"
+	firstBranchID := uuid.Nil
 	for index, business := range []negociodomain.Negocio{first, second} {
 		branch := negociodomain.Sucursal{ID: uuid.New(), NegocioID: business.ID, Codigo: "SUC-001", Nombre: "Principal", EsPrincipal: true, Activo: true}
 		if err := db.Create(&branch).Error; err != nil {
 			t.Fatal(err)
+		}
+		if index == 0 {
+			firstBranchID = branch.ID
 		}
 		variants := []domain.CreateProductVariantInput{{
 			Atributos:         []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "M"}},
@@ -94,7 +98,7 @@ func TestSecurityPhaseCatalogTenancyMigrationAndIsolation(t *testing.T) {
 			t.Fatalf("variantes del negocio %d: %v", index+1, err)
 		}
 	}
-	firstProducts, err := repository.ListByBusiness(first.ID)
+	firstProducts, err := repository.ListByBusiness(first.ID, firstBranchID)
 	if err != nil || len(firstProducts) != 1 {
 		t.Fatalf("productos primer negocio=%+v error=%v", firstProducts, err)
 	}

@@ -85,3 +85,50 @@ func (h *Handler) Authorize(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, item)
 }
+
+func (h *Handler) ListHistory(c *gin.Context) {
+	businessID, err := uuid.Parse(c.Param("negocioId"))
+	branchID, branchErr := uuid.Parse(c.Query("sucursal_id"))
+	productID, productErr := uuid.Parse(c.Query("producto_negocio_id"))
+	if err != nil || branchErr != nil || productErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El negocio, sucursal y producto son obligatorios"})
+		return
+	}
+	if !h.sucursalPermitida(c, businessID, branchID) {
+		return
+	}
+	items, err := h.service.ListHistory(businessID, branchID, productID, 50)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar el historial"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "total": len(items)})
+}
+
+func (h *Handler) AdjustPrice(c *gin.Context) {
+	businessID, err := uuid.Parse(c.Param("negocioId"))
+	productID, productErr := uuid.Parse(c.Param("productoNegocioId"))
+	userID, ok := transport.AuthenticatedUserID(c)
+	if err != nil || productErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El identificador no es válido"})
+		return
+	}
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	var input precioapp.AjustarPrecioInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa el precio y motivo"})
+		return
+	}
+	if !h.sucursalPermitida(c, businessID, input.SucursalID) {
+		return
+	}
+	item, err := h.service.AdjustPrice(businessID, userID, productID, input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}

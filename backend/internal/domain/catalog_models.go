@@ -180,9 +180,6 @@ type ProductoNegocio struct {
 	ProductoID             *uuid.UUID        `gorm:"type:uuid;uniqueIndex:idx_producto_negocio" json:"producto_id,omitempty"`
 	ProductoVarianteID     *uuid.UUID        `gorm:"type:uuid;index" json:"producto_variante_id,omitempty"`
 	SKUInterno             *string           `gorm:"type:varchar(120)" json:"sku_interno,omitempty"`
-	PrecioVenta            float64           `gorm:"type:numeric(14,2);not null" json:"precio_venta"`
-	PrecioMayoreo          *float64          `gorm:"type:numeric(14,2)" json:"precio_mayoreo,omitempty"`
-	CostoReferencia        *float64          `gorm:"type:numeric(14,2)" json:"costo_referencia,omitempty"`
 	PrecioIncluyeImpuestos bool              `gorm:"not null;default:true" json:"precio_incluye_impuestos"`
 	Activo                 bool              `gorm:"not null;default:true" json:"activo"`
 	CreadoEn               time.Time         `gorm:"autoCreateTime" json:"creado_en"`

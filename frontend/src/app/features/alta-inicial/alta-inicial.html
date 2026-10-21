@@ -162,25 +162,29 @@
               <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
                 <div class="campo-bloque">
                   <label class="etiqueta" for="codigo_moneda">Moneda</label>
-                  <span class="campo-grupo campo-grupo--select">
-                    <i class="pi pi-dollar" aria-hidden="true"></i>
-                    <select id="codigo_moneda" formControlName="codigo_moneda">
-                      @for (opcion of monedas; track opcion[0]) {
-                        <option [value]="opcion[0]">{{ opcion[1] }}</option>
-                      }
-                    </select>
-                  </span>
+                  <p-select
+                    inputId="codigo_moneda"
+                    formControlName="codigo_moneda"
+                    [options]="monedas"
+                    optionLabel="etiqueta"
+                    optionValue="valor"
+                    appendTo="body"
+                    [style]="{ width: '100%' }"
+                    styleClass="formulario-alta__select"
+                  />
                 </div>
                 <div class="campo-bloque">
                   <label class="etiqueta" for="zona_horaria">Zona horaria</label>
-                  <span class="campo-grupo campo-grupo--select">
-                    <i class="pi pi-globe" aria-hidden="true"></i>
-                    <select id="zona_horaria" formControlName="zona_horaria">
-                      @for (opcion of zonas; track opcion[0]) {
-                        <option [value]="opcion[0]">{{ opcion[1] }}</option>
-                      }
-                    </select>
-                  </span>
+                  <p-select
+                    inputId="zona_horaria"
+                    formControlName="zona_horaria"
+                    [options]="zonas"
+                    optionLabel="etiqueta"
+                    optionValue="valor"
+                    appendTo="body"
+                    [style]="{ width: '100%' }"
+                    styleClass="formulario-alta__select"
+                  />
                 </div>
               </div>
 
