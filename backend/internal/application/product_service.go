@@ -119,6 +119,15 @@ func (s *ProductService) GetProductImportJob(businessID, jobID uuid.UUID) (domai
 func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
 	prepared, result, proposals, err := s.prepareProductImport(businessID, branchID, file, false)
 	result.SKUsGenerados += len(prepared)
+	if result.Errores == nil {
+		result.Errores = make([]domain.CatalogImportIssue, 0)
+	}
+	if result.Advertencias == nil {
+		result.Advertencias = make([]domain.CatalogImportIssue, 0)
+	}
+	if proposals == nil {
+		proposals = make([]domain.ProductImportCatalogProposal, 0)
+	}
 	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals}, err
 }
 

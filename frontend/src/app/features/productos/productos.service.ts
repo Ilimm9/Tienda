@@ -20,10 +20,10 @@ import {
 export class ProductosService {
   private readonly http = inject(HttpClient);
 
-  listByBusiness(businessId: string, branchId: string): Observable<ProductListResponse> {
+  listByBusiness(businessId: string, branchId?: string): Observable<ProductListResponse> {
     return this.http.get<ProductListResponse>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos`,
-      { params: { sucursal_id: branchId } },
+      branchId ? { params: { sucursal_id: branchId } } : undefined,
     );
   }
 

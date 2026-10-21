@@ -533,6 +533,11 @@
               <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" />
               @if (hasError('precio_venta')) { <small>Captura un precio válido.</small> }
             </label>
+			<label class="field" [class.field--error]="hasError('costo_proveedor')">
+			  <span>Costo proveedor <b>*</b></span>
+			  <input pInputText type="number" formControlName="costo_proveedor" min="0" step="0.0001" />
+			  @if (hasError('costo_proveedor')) { <small>Captura un costo válido.</small> }
+			</label>
             </div>
           </div>
         </section>
@@ -551,7 +556,7 @@
                   <button type="button" class="secondary-button" (click)="enableStockEditing()" [disabled]="stockEditing()">{{ stockEditing() ? 'Edición habilitada' : 'Editar stock' }}</button>
                 </div>
               }
-              <span class="auto-sku">El SKU interno se genera automáticamente.</span>
+              <!-- <span class="auto-sku">El SKU interno se genera automáticamente.</span> -->
             </div>
           } @else {
             <div class="variant-editor" formArrayName="variantes">
@@ -624,7 +629,7 @@
             (click)="importExistingProducts()"
             [disabled]="preview.insertables === 0 || importing()"
           >
-            {{ importing() ? 'Importando...' : preview.catalogos_nuevos.length ? 'Autorizar e importar' : 'Importar productos' }}
+            {{ importing() ? 'Importando...' : (preview.catalogos_nuevos ?? []).length ? 'Autorizar e importar' : 'Importar productos' }}
           </button>
         } @else {
           <button
@@ -714,10 +719,10 @@
               {{ result.variantes_creadas }} variantes registradas · {{ result.omitidas }} omitidas
               · {{ result.invalidas }} inválidas · {{ result.skus_generados }} SKU generados
             </p>
-            @if (result.errores.length) {
+            @if ((result.errores ?? []).length) {
               <ul>
                 @for (
-                  issue of result.errores;
+                  issue of result.errores ?? [];
                   track issue.fila + (issue.campo ?? '') + issue.motivo
                 ) {
                   <li>
@@ -727,11 +732,11 @@
                 }
               </ul>
             }
-            @if (result.advertencias.length) {
+            @if ((result.advertencias ?? []).length) {
               <p class="import-warnings-title">Advertencias</p>
               <ul class="import-warnings">
                 @for (
-                  issue of result.advertencias;
+                  issue of result.advertencias ?? [];
                   track issue.fila + (issue.campo ?? '') + issue.motivo
                 ) {
                   <li>
@@ -746,27 +751,32 @@
           <section class="import-result">
             <strong>Vista previa de importación</strong>
             <p>
-              {{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas ·
-              {{ preview.invalidas }} inválidas · {{ preview.skus_generados }} SKU se generarían
+              {{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas
+              <!-- {{ preview.invalidas }} inválidas · {{ preview.skus_generados }} SKU se generarían -->
             </p>
-            @if (preview.catalogos_nuevos.length) {
+            @if (preview.costos_faltantes) {
+              <p class="form-error">
+                {{ preview.costos_faltantes }} productos no cuentan con costo.
+              </p>
+            }
+            @if ((preview.catalogos_nuevos ?? []).length) {
               <p class="import-warnings-title">Catálogos nuevos detectados</p>
               <p>Al autorizar la importación se crearán con sus datos mínimos y podrás editarlos después.</p>
               <div class="variant-table-wrap">
                 <table class="variant-edit-table">
                   <thead><tr><th>Tipo</th><th>Nombre</th><th>Productos</th></tr></thead>
                   <tbody>
-                    @for (catalogo of preview.catalogos_nuevos; track catalogo.tipo + catalogo.nombre) {
+                    @for (catalogo of preview.catalogos_nuevos ?? []; track catalogo.tipo + catalogo.nombre) {
                       <tr><td>{{ catalogo.tipo }}</td><td>{{ catalogo.nombre }}</td><td>{{ catalogo.productos }}</td></tr>
                     }
                   </tbody>
                 </table>
               </div>
             }
-            @if (preview.errores.length) {
+            @if ((preview.errores ?? []).length) {
               <ul>
                 @for (
-                  issue of preview.errores;
+                  issue of preview.errores ?? [];
                   track issue.fila + (issue.campo ?? '') + issue.motivo
                 ) {
                   <li>
@@ -776,11 +786,11 @@
                 }
               </ul>
             }
-            @if (preview.advertencias.length) {
+            @if ((preview.advertencias ?? []).length) {
               <p class="import-warnings-title">Advertencias</p>
               <ul class="import-warnings">
                 @for (
-                  issue of preview.advertencias;
+                  issue of preview.advertencias ?? [];
                   track issue.fila + (issue.campo ?? '') + issue.motivo
                 ) {
                   <li>

@@ -82,9 +82,27 @@
             >
               {{ saving() === item.id ? 'Actualizando…' : 'Actualizar costos' }}
             </button>
+            <button class="secondary-button" type="button" (click)="showHistory(item)">Historial</button>
           </footer>
         </article>
       }
+    </section>
+  }
+  @if (historyProduct()) {
+    <section class="proposal-card" aria-label="Historial de precios">
+      <h2>Historial de precio de sucursal</h2>
+      <div class="metrics-grid">
+        <label class="metric"><span>Nuevo precio</span><input pInputText type="number" min="0" step="0.01" [ngModel]="manualPrice()" (ngModelChange)="manualPrice.set($event)" /></label>
+        <label class="metric"><span>Motivo</span><input pInputText [ngModel]="manualReason()" (ngModelChange)="manualReason.set($event)" /></label>
+      </div>
+      <button *appPuede="P.precioAutorizar" class="primary-button" type="button" (click)="adjustPrice()" [disabled]="!manualReason().trim() || saving() === historyProduct()">Guardar precio</button>
+      @if (history().length) {
+        <ul class="history-list">
+          @for (entry of history(); track entry.id) {
+            <li><strong>{{ entry.origen }}</strong> · {{ entry.precio_anterior | currency: 'MXN' }} → {{ entry.precio_nuevo | currency: 'MXN' }} · {{ entry.creado_en | date: 'short' }} @if (entry.motivo) { · {{ entry.motivo }} }</li>
+          }
+        </ul>
+      } @else { <p>Aún no hay cambios registrados.</p> }
     </section>
   }
 </section>

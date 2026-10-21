@@ -99,10 +99,12 @@ type CreateProductInput struct {
 	UnidadMedidaID    *uuid.UUID                  `json:"unidad_medida_id"`
 	Presentacion      *string                     `json:"presentacion"`
 	PrecioVenta       float64                     `json:"precio_venta"`
+	CostoProveedor    float64                     `json:"costo_proveedor"`
 	StockInicial      float64                     `json:"stock_inicial"`
 	CodigoBarras      *string                     `json:"codigo_barras"`
 	ImagenURL         *string                     `json:"imagen_url"`
 	Variantes         []CreateProductVariantInput `json:"variantes"`
+	UsuarioID         uuid.UUID                   `json:"-"`
 }
 
 // UpdateProductInput intentionally excludes stock and branch assignment: inventory movements are managed separately from commercial product data.
@@ -175,6 +177,7 @@ type CatalogImportResult struct {
 	ProductosBaseCreados      int                  `json:"productos_base_creados"`
 	ProductosBaseReutilizados int                  `json:"productos_base_reutilizados"`
 	VariantesCreadas          int                  `json:"variantes_creadas"`
+	CostosFaltantes           int                  `json:"costos_faltantes"`
 	Errores                   []CatalogImportIssue `json:"errores"`
 	Advertencias              []CatalogImportIssue `json:"advertencias"`
 }
@@ -208,6 +211,7 @@ type ProductImportRow struct {
 	UnidadContenido string
 	UnidadMedida    string
 	PrecioVenta     float64
+	CostoProveedor  float64
 	StockInicial    float64
 	CodigoBarras    string
 	ImagenURL       string
@@ -232,6 +236,7 @@ type CreateImportedProductInput struct {
 	UnidadMedidaID  *uuid.UUID
 	Presentacion    *string
 	PrecioVenta     float64
+	CostoProveedor  float64
 	StockInicial    float64
 	CodigoBarras    *string
 	ImagenURL       *string

@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { gsap } from 'gsap';
+import { SelectModule } from 'primeng/select';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { PERMISOS } from '../../contexto/permisos';
@@ -65,7 +66,7 @@ const ZONAS: Record<string, string> = {
 /** Asistente de alta inicial: empresa, primera sucursal y cierre. solo se pide lo mínimo.*/
 @Component({
   selector: 'app-alta-inicial',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SelectModule],
   templateUrl: './alta-inicial.html',
 })
 export class AltaInicial {
@@ -89,8 +90,8 @@ export class AltaInicial {
   private angulosCardsActuales = new Map<string, number>();
   private cambioVistaPrevia = 0;
 
-  readonly monedas = Object.entries(MONEDAS);
-  readonly zonas = Object.entries(ZONAS);
+  readonly monedas = Object.entries(MONEDAS).map(([valor, etiqueta]) => ({ valor, etiqueta }));
+  readonly zonas = Object.entries(ZONAS).map(([valor, etiqueta]) => ({ valor, etiqueta }));
   /** Para invitar primero hay que registrar al empleado: el cierre lleva a ese formulario. */
   readonly puedeRegistrarEquipo = computed(() => this.contexto.puede(PERMISOS.empleadoGestionar));
 

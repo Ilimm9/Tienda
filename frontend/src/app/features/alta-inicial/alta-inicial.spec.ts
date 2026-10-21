@@ -58,6 +58,14 @@ describe('AltaInicial', () => {
     expect(fixture.componentInstance.invalidoEmpresa('nombre_comercial')).toBe(true);
   });
 
+  it('usa menus PrimeNG para moneda y zona horaria', () => {
+    const fixture = crear('requiere_empresa');
+    const selects = fixture.nativeElement.querySelectorAll('p-select');
+
+    expect(selects).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('#codigo_moneda select, #zona_horaria select')).toHaveLength(0);
+  });
+
   it('avanza a la sucursal sin guardar todavía la empresa', () => {
     const fixture = crear('requiere_empresa');
     const componente = fixture.componentInstance;

@@ -54,9 +54,10 @@ func (h *ProductHandler) List(c *gin.Context) {
 		return
 	}
 
+	// validar que la sesión tenga membresía y permiso sobre este negocio.
 	branchID, err := uuid.Parse(c.Query("sucursal_id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"codigo": "SUCURSAL_REQUERIDA", "mensaje": "Selecciona una sucursal activa válida."})
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "La sucursal activa es obligatoria"})
 		return
 	}
 	if !h.sucursalActiva(c, businessID, branchID) {
@@ -145,6 +146,12 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	if !h.sucursalActiva(c, businessID, input.SucursalID) {
 		return
 	}
+	userID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	input.UsuarioID = userID
 
 	// validar que la sesión tenga membresía y permiso sobre este negocio.
 	if err := h.products.Create(businessID, input); err != nil {

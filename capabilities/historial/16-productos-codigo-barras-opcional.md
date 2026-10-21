@@ -8,6 +8,8 @@ Verificada.
 
 Aprobada explícitamente por el usuario el 2026-10-16 mediante la instrucción: “Implement the plan”.
 
+La corrección para leer códigos numéricos de XLSX sin notación científica fue aprobada explícitamente por el usuario el 2026-10-21 mediante “Implement the plan”.
+
 ## Alcance
 
 - Conservar la columna `Código de barras` como parte obligatoria de la plantilla XLSX de productos.
@@ -19,6 +21,7 @@ Aprobada explícitamente por el usuario el 2026-10-16 mediante la instrucción: 
 - Un archivo sin el encabezado `Código de barras` continúa siendo inválido.
 - Un valor vacío, espacios o solo marcas invisibles no crea código de barras ni advertencia.
 - Los códigos con contenido visible conservan las validaciones vigentes: solo de 1 a 14 dígitos, advertencia si tienen menos de 8 y control de duplicados.
+- La importación de productos lee el valor crudo de las celdas XLSX para que Excel no transforme códigos numéricos válidos en notación científica antes de validarlos.
 - No cambian endpoints, contratos HTTP, base de datos, plantilla ni formulario manual de productos.
 
 ## Tareas y decisiones
@@ -28,6 +31,7 @@ Aprobada explícitamente por el usuario el 2026-10-16 mediante la instrucción: 
 - [x] Definir que las marcas invisibles solo equivalen a vacío si no hay contenido visible en la celda.
 - [x] Agregar prueba de regresión y ejecutar verificaciones focalizadas.
 - [x] Actualizar el grafo y registrar resultados.
+- [x] Leer valores crudos de XLSX exclusivamente durante la importación de productos y cubrir un código numérico de 13 dígitos.
 
 ## Criterios de aceptación
 
@@ -42,3 +46,6 @@ Aprobada explícitamente por el usuario el 2026-10-16 mediante la instrucción: 
 - `go test ./...` desde `backend/`: los paquetes relacionados y la nueva prueba son correctos. Conserva un fallo preexistente en `internal/config`: `TestProductionAcceptsStrongOTPSecret` rechaza su secreto OTP de prueba.
 - `git diff --check`: correcto.
 - `graphify update .`: correcto; grafo actualizado a 2,925 nodos y 8,291 relaciones. La herramienta informó cambios de comunidad y omitió 57 archivos sin extensión compatible, sin fallos de extracción.
+- `go test ./internal/application -run 'TestParseProductImport'`: correcto; incluye lectura de un código numérico de 13 dígitos sin notación científica.
+- `git diff --check`: correcto.
+- `graphify update .`: correcto; grafo actualizado a 2,956 nodos y 8,389 relaciones.

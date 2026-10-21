@@ -132,10 +132,10 @@ func TestProviderImportTemplateHasExpectedHeaders(t *testing.T) {
 }
 
 func TestParseProductImportGeneratesSKUAndReportsFieldErrors(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	file := workbook(t, headers, [][]string{
-		{"Refresco", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "4", "7501055303038", "Sabor: Cola", "Distribuidora Norte"},
-		{"", "", "", "", "", "-2", "", "", "-10", "texto", "123", "", ""},
+		{"Refresco", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "11.125", "4", "7501055303038", "Sabor: Cola", "Distribuidora Norte"},
+		{"", "", "", "", "", "-2", "", "", "-10", "0", "texto", "123", "", ""},
 	})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -153,8 +153,8 @@ func TestParseProductImportGeneratesSKUAndReportsFieldErrors(t *testing.T) {
 }
 
 func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "10", "2", "1234567", "", ""}})
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "10", "2", "2", "1234567", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -168,9 +168,24 @@ func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
 	}
 }
 
+func TestParseProductImportPreservesNumericBarcodeWithoutScientificNotation(t *testing.T) {
+	file := productWorkbookWithNumericBarcode(t, 7501064191909)
+
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].CodigoBarras != "7501064191909" {
+		t.Fatalf("rows = %#v, want the original 13-digit barcode", rows)
+	}
+	if result.Invalidas != 0 || len(result.Errores) != 0 {
+		t.Fatalf("result = %#v, want a valid numeric barcode", result)
+	}
+}
+
 func TestParseProductImportTreatsVisuallyEmptyBarcodeAsAbsent(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Producto sin código", "", "", "", "", "", "", "", "10", "2", "\u200B\u200C\u200D\u2060\uFEFF", "", ""}})
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Producto sin código", "", "", "", "", "", "", "", "10", "2", "2", "\u200B\u200C\u200D\u2060\uFEFF", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -185,8 +200,8 @@ func TestParseProductImportTreatsVisuallyEmptyBarcodeAsAbsent(t *testing.T) {
 }
 
 func TestParseProductImportRejectsLegacySKUHeader(t *testing.T) {
-	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "4", "", "", ""}})
+	headers := []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "", "Botella", "", "", "", "18.50", "2", "4", "", "", ""}})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err == nil || !isImportFormatError(err) || len(rows) != 0 || result.Invalidas != 0 {
 		t.Fatalf("rows = %#v, result = %#v, error = %v; want rejected legacy headers", rows, result, err)
@@ -194,8 +209,8 @@ func TestParseProductImportRejectsLegacySKUHeader(t *testing.T) {
 }
 
 func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "Kinder", "", "Unidad", "", "", "", "28", "0", "", "Colección: Dinosaurios; Color: Azul: intenso", ""}})
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "Kinder", "", "Unidad", "", "", "", "28", "12.5", "0", "", "Colección: Dinosaurios; Color: Azul: intenso", ""}})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
@@ -209,8 +224,8 @@ func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
 }
 
 func TestParseProductImportRejectsLegacyEqualsVariantFormat(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "Botella", "", "", "", "18.50", "4", "", "Sabor=Cola", ""}})
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "Botella", "", "", "", "18.50", "2", "4", "", "Sabor=Cola", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -221,13 +236,36 @@ func TestParseProductImportRejectsLegacyEqualsVariantFormat(t *testing.T) {
 	}
 }
 
+func TestParseProductImportRequiresValidCost(t *testing.T) {
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{
+		{"Sin costo", "", "", "", "", "", "", "", "10", "", "1", "", "", ""},
+		{"Cero", "", "", "", "", "", "", "", "10", "0", "1", "", "", ""},
+		{"Negativo", "", "", "", "", "", "", "", "10", "-1", "1", "", "", ""},
+		{"Precisión", "", "", "", "", "", "", "", "10", "1.12345", "1", "", "", ""},
+		{"Mayor al precio", "", "", "", "", "", "", "", "10", "25.1234", "1", "", "", ""},
+	})
+
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 3 || rows[0].CostoProveedor != 0 || rows[1].CostoProveedor != 0 || rows[2].CostoProveedor != 25.1234 {
+		t.Fatalf("rows = %#v, want the empty, zero, and positive cost rows", rows)
+	}
+	if result.Invalidas != 2 || result.CostosFaltantes != 1 {
+		t.Fatalf("result = %#v, want two invalid rows and one missing cost", result)
+	}
+}
+
 func TestMergeImportResultsPreservesProductSummary(t *testing.T) {
 	parsed := domain.CatalogImportResult{
-		Procesadas:   5,
-		Omitidas:     1,
-		Invalidas:    1,
-		Errores:      []domain.CatalogImportIssue{{Fila: 3, Campo: "Nombre", Motivo: "es obligatorio"}},
-		Advertencias: []domain.CatalogImportIssue{{Fila: 4, Campo: "Código de barras", Motivo: "es corto"}},
+		Procesadas:      5,
+		Omitidas:        1,
+		Invalidas:       1,
+		CostosFaltantes: 1,
+		Errores:         []domain.CatalogImportIssue{{Fila: 3, Campo: "Nombre", Motivo: "es obligatorio"}},
+		Advertencias:    []domain.CatalogImportIssue{{Fila: 4, Campo: "Código de barras", Motivo: "es corto"}},
 	}
 	created := domain.CatalogImportResult{
 		Creadas:                   3,
@@ -241,7 +279,7 @@ func TestMergeImportResultsPreservesProductSummary(t *testing.T) {
 	}
 
 	got := mergeImportResults(parsed, created)
-	if got.Procesadas != 5 || got.Creadas != 3 || got.Omitidas != 2 || got.Invalidas != 1 || got.SKUsGenerados != 3 || got.ProductosSimplesCreados != 1 || got.ProductosBaseCreados != 1 || got.ProductosBaseReutilizados != 1 || got.VariantesCreadas != 2 || len(got.Errores) != 2 || len(got.Advertencias) != 1 {
+	if got.Procesadas != 5 || got.Creadas != 3 || got.Omitidas != 2 || got.Invalidas != 1 || got.CostosFaltantes != 1 || got.SKUsGenerados != 3 || got.ProductosSimplesCreados != 1 || got.ProductosBaseCreados != 1 || got.ProductosBaseReutilizados != 1 || got.VariantesCreadas != 2 || len(got.Errores) != 2 || len(got.Advertencias) != 1 {
 		t.Fatalf("mergeImportResults() = %#v, want complete product import summary", got)
 	}
 }
@@ -260,15 +298,27 @@ func TestProductImportTemplateIncludesInstructions(t *testing.T) {
 		t.Fatalf("first sheet = %q, want Productos", book.GetSheetName(0))
 	}
 	productRows, err := book.GetRows("Productos")
-	if err != nil || len(productRows) == 0 || !reflect.DeepEqual(productRows[0], []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}) {
+	if err != nil || len(productRows) == 0 || !reflect.DeepEqual(productRows[0], []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}) {
 		t.Fatalf("product headers = %#v, error = %v", productRows, err)
 	}
 	rows, err := book.GetRows("Instrucciones")
 	if err != nil || len(rows) < 3 || rows[1][0] != "Campos obligatorios" {
 		t.Fatalf("instructions = %#v, error = %v", rows, err)
 	}
-	if rows[7][1] != "Opcional. Usa Atributo: valor; por ejemplo Colección: Dinosaurios o Sabor: Fresa; Color: Rojo." {
-		t.Fatalf("variant instruction = %q, want colon format", rows[7][1])
+	instructions := make(map[string]string, len(rows))
+	for _, row := range rows {
+		if len(row) >= 2 {
+			instructions[row[0]] = row[1]
+		}
+	}
+	if instructions["Contenido y unidad de contenido"] != "Indican cuánto trae el empaque. Ejemplo: para una botella de 600 ml, escribe Contenido: 600 y Unidad de contenido: ml." {
+		t.Fatalf("content unit instruction = %q", instructions["Contenido y unidad de contenido"])
+	}
+	if instructions["Unidad de medida"] != "Es la unidad estandarizada del catálogo. Escribe su nombre completo, por ejemplo Mililitro. Si no existe, aparecerá en la vista previa para autorizar su creación." {
+		t.Fatalf("measurement unit instruction = %q", instructions["Unidad de medida"])
+	}
+	if instructions["Variantes"] != "Opcional. Usa Atributo: valor; por ejemplo Colección: Dinosaurios o Sabor: Fresa; Color: Rojo." {
+		t.Fatalf("variant instruction = %q, want colon format", instructions["Variantes"])
 	}
 }
 
@@ -289,6 +339,34 @@ func workbook(t *testing.T, headers []string, data [][]string) []byte {
 				t.Fatal(err)
 			}
 		}
+	}
+	var buffer bytes.Buffer
+	if err := book.Write(&buffer); err != nil {
+		t.Fatal(err)
+	}
+	return buffer.Bytes()
+}
+
+func productWorkbookWithNumericBarcode(t *testing.T, barcode int64) []byte {
+	t.Helper()
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	book := excelize.NewFile()
+	defer book.Close()
+	for index, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(index+1, 1)
+		if err := book.SetCellValue("Sheet1", cell, header); err != nil {
+			t.Fatal(err)
+		}
+	}
+	values := []string{"Producto numérico", "", "", "", "", "", "", "", "10", "", "1", "", "", ""}
+	for index, value := range values {
+		cell, _ := excelize.CoordinatesToCellName(index+1, 2)
+		if err := book.SetCellValue("Sheet1", cell, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := book.SetCellValue("Sheet1", "L2", barcode); err != nil {
+		t.Fatal(err)
 	}
 	var buffer bytes.Buffer
 	if err := book.Write(&buffer); err != nil {

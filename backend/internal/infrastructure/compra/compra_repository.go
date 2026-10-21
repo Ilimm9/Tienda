@@ -213,7 +213,7 @@ func (r *Repository) createPriceProposal(tx *gorm.DB, purchase compradomain.Comp
 		if err := tx.Where("id = ?", detail.ProductoNegocioID).First(&product).Error; err != nil {
 			return err
 		}
-		price = product.PrecioVenta
+		price = 0
 		var configuration preciodomain.ConfiguracionSucursal
 		if configErr := tx.Where("sucursal_id = ?", purchase.SucursalID).First(&configuration).Error; configErr == nil {
 			margin = configuration.MargenPredeterminado
@@ -270,7 +270,7 @@ func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.U
 		return uuid.Nil, err
 	}
 	sku := fmt.Sprintf("COMP-%s", strings.ToUpper(uuid.NewString()[:8]))
-	pn := domain.ProductoNegocio{NegocioID: businessID, ProductoID: &p.ID, SKUInterno: &sku, PrecioVenta: 0, PrecioIncluyeImpuestos: true, Activo: true}
+	pn := domain.ProductoNegocio{NegocioID: businessID, ProductoID: &p.ID, SKUInterno: &sku, PrecioIncluyeImpuestos: true, Activo: true}
 	if err := tx.Create(&pn).Error; err != nil {
 		return uuid.Nil, err
 	}

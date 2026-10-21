@@ -57,9 +57,9 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 	for i, c := range ctxs {
 		cat := c.categoria
 		rows := []domain.ValidatedProductImportRow{
-			{Fila: 2, Input: domain.CreateImportedProductInput{Nombre: "Jabón", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 10, StockInicial: 3, CodigoBarras: &code}},
-			{Fila: 3, Input: domain.CreateImportedProductInput{Nombre: "Playera", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 99, Variantes: []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "M"}}}},
-			{Fila: 4, Input: domain.CreateImportedProductInput{Nombre: "Playera", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 99, Variantes: []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "G"}}}},
+			{Fila: 2, Input: domain.CreateImportedProductInput{Nombre: "Jabón", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 10, CostoProveedor: 5, StockInicial: 3, CodigoBarras: &code}},
+			{Fila: 3, Input: domain.CreateImportedProductInput{Nombre: "Playera", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 99, CostoProveedor: 50, Variantes: []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "M"}}}},
+			{Fila: 4, Input: domain.CreateImportedProductInput{Nombre: "Playera", CategoriaID: &cat, SucursalID: c.sucursal, PrecioVenta: 99, CostoProveedor: 50, Variantes: []domain.ProductVariantAttributeInput{{Nombre: "Talla", Valor: "G"}}}},
 		}
 		res, err := repo.CreateImportedProducts(c.negocio, rows)
 		if err != nil || res.Creadas != 3 || len(res.Errores) != 0 {

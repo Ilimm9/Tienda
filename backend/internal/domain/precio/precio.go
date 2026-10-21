@@ -10,6 +10,12 @@ import (
 const EstadoPendiente = "PENDIENTE"
 const EstadoAutorizada = "AUTORIZADA"
 
+const (
+	OrigenAltaInicial        = "ALTA_INICIAL"
+	OrigenCompraAutorizada   = "COMPRA_AUTORIZADA"
+	OrigenAjustePrecioManual = "AJUSTE_PRECIO_MANUAL"
+)
+
 type Propuesta struct {
 	ID                     uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	NegocioID              uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
@@ -54,6 +60,32 @@ func (PrecioSucursal) TableName() string { return "precios_sucursal" }
 func (p *PrecioSucursal) BeforeCreate(*gorm.DB) error {
 	if p.ID == uuid.Nil {
 		p.ID = uuid.New()
+	}
+	return nil
+}
+
+// HistorialCostoPrecioSucursal is the append-only audit trail of effective
+// branch pricing. Proposals remain the approval workflow for purchases.
+type HistorialCostoPrecioSucursal struct {
+	ID                uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	NegocioID         uuid.UUID  `gorm:"type:uuid;not null;index" json:"negocio_id"`
+	SucursalID        uuid.UUID  `gorm:"type:uuid;not null;index:idx_historial_precio_consulta,priority:1" json:"sucursal_id"`
+	ProductoNegocioID uuid.UUID  `gorm:"type:uuid;not null;index:idx_historial_precio_consulta,priority:2" json:"producto_negocio_id"`
+	Origen            string     `gorm:"type:varchar(32);not null" json:"origen"`
+	CostoAnterior     *float64   `gorm:"type:numeric(14,4)" json:"costo_anterior,omitempty"`
+	CostoNuevo        *float64   `gorm:"type:numeric(14,4)" json:"costo_nuevo,omitempty"`
+	PrecioAnterior    *float64   `gorm:"type:numeric(14,2)" json:"precio_anterior,omitempty"`
+	PrecioNuevo       *float64   `gorm:"type:numeric(14,2)" json:"precio_nuevo,omitempty"`
+	PropuestaID       *uuid.UUID `gorm:"type:uuid;uniqueIndex" json:"propuesta_id,omitempty"`
+	UsuarioID         *uuid.UUID `gorm:"type:uuid;index" json:"usuario_id,omitempty"`
+	Motivo            *string    `gorm:"type:varchar(500)" json:"motivo,omitempty"`
+	CreadoEn          time.Time  `gorm:"autoCreateTime;index:idx_historial_precio_consulta,priority:3,sort:desc" json:"creado_en"`
+}
+
+func (HistorialCostoPrecioSucursal) TableName() string { return "historial_costo_precio_sucursal" }
+func (h *HistorialCostoPrecioSucursal) BeforeCreate(*gorm.DB) error {
+	if h.ID == uuid.Nil {
+		h.ID = uuid.New()
 	}
 	return nil
 }

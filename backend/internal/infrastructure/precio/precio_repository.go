@@ -3,9 +3,11 @@ package precio
 import (
 	"errors"
 	"math"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	precioapp "tienda/backend/internal/application/precio"
 	preciodomain "tienda/backend/internal/domain/precio"
 )
@@ -18,7 +20,7 @@ func (r *Repository) ListPending(businessID, branchID uuid.UUID) ([]precioapp.Pr
 	err := r.db.Table("propuestas_costo_precio p").Select(`
 		p.id, p.negocio_id, p.sucursal_id, p.compra_detalle_id, p.producto_negocio_id,
 		d.piezas_buenas, ROUND((d.subtotal + CASE WHEN c.subtotal > 0 THEN c.impuestos * d.subtotal / c.subtotal ELSE 0 END) / NULLIF(d.piezas_buenas, 0), 4) AS costo_capturado,
-		ps.costo_vigente AS costo_anterior, COALESCE(NULLIF(ps.precio_venta, 0), NULLIF(pn.precio_venta, 0), p.precio_anterior) AS precio_anterior,
+		ps.costo_vigente AS costo_anterior, COALESCE(ps.precio_venta, 0) AS precio_anterior,
 		COALESCE(ps.margen, p.margen_sugerido) AS margen_sugerido, p.precio_sugerido, p.estado,
 		p.costo_autorizado, p.precio_autorizado, p.margen_autorizado, p.autorizado_por_usuario_id, p.autorizado_en, p.creado_en,
 		COALESCE(pr.nombre, vp.nombre) AS producto`).
@@ -46,9 +48,49 @@ func (r *Repository) Authorize(businessID, userID, proposalID uuid.UUID, input p
 			return err
 		}
 		current := preciodomain.PrecioSucursal{NegocioID: businessID, SucursalID: proposal.SucursalID, ProductoNegocioID: proposal.ProductoNegocioID, CostoVigente: cost, PrecioVenta: price, Margen: &margin}
-		return tx.Where("sucursal_id = ? AND producto_negocio_id = ?", proposal.SucursalID, proposal.ProductoNegocioID).Assign(current).FirstOrCreate(&current).Error
+		if err := tx.Where("sucursal_id = ? AND producto_negocio_id = ?", proposal.SucursalID, proposal.ProductoNegocioID).Assign(current).FirstOrCreate(&current).Error; err != nil {
+			return err
+		}
+		return tx.Create(&preciodomain.HistorialCostoPrecioSucursal{NegocioID: businessID, SucursalID: proposal.SucursalID, ProductoNegocioID: proposal.ProductoNegocioID, Origen: preciodomain.OrigenCompraAutorizada, CostoAnterior: proposal.CostoAnterior, CostoNuevo: &cost, PrecioAnterior: &proposal.PrecioAnterior, PrecioNuevo: &price, PropuestaID: &proposal.ID, UsuarioID: &userID}).Error
 	})
 	return proposal, err
+}
+
+func (r *Repository) ListHistory(businessID, branchID, productID uuid.UUID, limit int) ([]preciodomain.HistorialCostoPrecioSucursal, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	items := make([]preciodomain.HistorialCostoPrecioSucursal, 0)
+	err := r.db.Where("negocio_id = ? AND sucursal_id = ? AND producto_negocio_id = ?", businessID, branchID, productID).Order("creado_en DESC").Limit(limit).Find(&items).Error
+	return items, err
+}
+
+func (r *Repository) AdjustPrice(businessID, userID, productID uuid.UUID, input precioapp.AjustarPrecioInput) (preciodomain.HistorialCostoPrecioSucursal, error) {
+	if input.SucursalID == uuid.Nil || input.PrecioVenta < 0 || math.IsNaN(input.PrecioVenta) {
+		return preciodomain.HistorialCostoPrecioSucursal{}, errors.New("el precio no es válido")
+	}
+	motivo := strings.TrimSpace(input.Motivo)
+	if motivo == "" {
+		return preciodomain.HistorialCostoPrecioSucursal{}, errors.New("el motivo es obligatorio")
+	}
+	var event preciodomain.HistorialCostoPrecioSucursal
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var current preciodomain.PrecioSucursal
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("negocio_id = ? AND sucursal_id = ? AND producto_negocio_id = ?", businessID, input.SucursalID, productID).First(&current).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("el producto no tiene precio configurado en esta sucursal")
+			}
+			return err
+		}
+		price := round2(input.PrecioVenta)
+		previous := current.PrecioVenta
+		if err := tx.Model(&current).Update("precio_venta", price).Error; err != nil {
+			return err
+		}
+		event = preciodomain.HistorialCostoPrecioSucursal{NegocioID: businessID, SucursalID: input.SucursalID, ProductoNegocioID: productID, Origen: preciodomain.OrigenAjustePrecioManual, PrecioAnterior: &previous, PrecioNuevo: &price, UsuarioID: &userID, Motivo: &motivo}
+		return tx.Create(&event).Error
+	})
+	return event, err
 }
 func round2(v float64) float64 { return math.Round(v*100) / 100 }
 func round4(v float64) float64 { return math.Round(v*10000) / 10000 }
