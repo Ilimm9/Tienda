@@ -87,6 +87,42 @@ describe('ProductosComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  it('muestra la lista guardada al volver y la refresca en segundo plano', () => {
+    const url = `${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`;
+    component.loadProducts();
+    http.expectOne(url).flush({ items: [{ id: 'guardado', nombre: 'Guardado', stock: 1, variantes: [] }], total: 1 });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+
+    const otra = TestBed.createComponent(ProductosComponent);
+    otra.detectChanges();
+    expect(otra.componentInstance.loading()).toBe(false);
+    expect(otra.componentInstance.products().map((p) => p.id)).toEqual(['guardado']);
+    const refresco = http.expectOne(url);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+    refresco.flush({ items: [{ id: 'fresco', nombre: 'Fresco', stock: 2, variantes: [] }], total: 1 });
+    expect(otra.componentInstance.products().map((p) => p.id)).toEqual(['fresco']);
+  });
+
+  it('conserva la lista guardada si falla el refresco en segundo plano', () => {
+    const url = `${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`;
+    component.loadProducts();
+    http.expectOne(url).flush({ items: [{ id: 'guardado', nombre: 'Guardado', stock: 1, variantes: [] }], total: 1 });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+
+    component.loadProducts();
+    http.expectOne(url).flush('error', { status: 500, statusText: 'Server Error' });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+    expect(component.products().map((p) => p.id)).toEqual(['guardado']);
+    expect(component.error()).toBeNull();
+    expect(component.loading()).toBe(false);
+  });
+
+  it('no recarga cuando el contexto se revalida con la misma sucursal', () => {
+    sucursal.set({ id: 'sucursal-1' });
+    fixture.detectChanges();
+    http.expectNone(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`);
+  });
+
   it('fills compatible fields and keeps them editable', () => {
     expect(component.loading()).toBe(false);
 

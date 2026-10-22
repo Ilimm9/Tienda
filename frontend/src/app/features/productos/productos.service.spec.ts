@@ -1,17 +1,31 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { ProductosService } from './productos.service';
 
 describe('ProductosService', () => {
   let service: ProductosService;
   let http: HttpTestingController;
+  const negocio = signal<{ id: string } | null>({ id: 'negocio-1' });
+  const listaUrl = `${environment.apiUrl}/negocios/negocio-1/catalogo/productos?sucursal_id=sucursal-1`;
+  const guardarLista = () => {
+    service.listByBusiness('negocio-1', 'sucursal-1').subscribe();
+    http.expectOne(listaUrl).flush({ items: [{ id: 'producto-1', nombre: 'Agua' }], total: 1 });
+  };
 
   beforeEach(() => {
+    negocio.set({ id: 'negocio-1' });
     TestBed.configureTestingModule({
-      providers: [ProductosService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        ProductosService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ContextoService, useValue: { negocio } },
+      ],
     });
     service = TestBed.inject(ProductosService);
     http = TestBed.inject(HttpTestingController);
@@ -48,6 +62,7 @@ describe('ProductosService', () => {
       unidad_contenido: null,
       presentacion: null,
       precio_venta: 10,
+      costo_proveedor: 0,
       stock_inicial: 0,
       codigo_barras: null,
       imagen_url: null,
@@ -124,5 +139,44 @@ describe('ProductosService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body.get('sucursal_id')).toBe('sucursal-1');
     request.flush({ procesadas: 3, insertables: 2, creadas: 0, omitidas: 0, invalidas: 1, skus_generados: 1, errores: [], advertencias: [] });
+  });
+
+  it('guarda la última lista por negocio y sucursal', () => {
+    expect(service.listaGuardada('negocio-1', 'sucursal-1')).toBeNull();
+    guardarLista();
+    expect(service.listaGuardada('negocio-1', 'sucursal-1')?.map((p) => p.id)).toEqual(['producto-1']);
+    expect(service.listaGuardada('negocio-1', 'sucursal-2')).toBeNull();
+  });
+
+  it('olvida la lista guardada después de modificar productos o inventario', () => {
+    const casos = [
+      () => service.deactivate('negocio-1', 'producto-1'),
+      () => service.adjustInventory('negocio-1', 'producto-1', { sucursal_id: 'sucursal-1', stock: 3 }),
+    ];
+    for (const caso of casos) {
+      guardarLista();
+      caso().subscribe();
+      expect(service.listaGuardada('negocio-1', 'sucursal-1')).not.toBeNull();
+      http.expectOne((request) => request.url.includes('/catalogo/productos/producto-1')).flush(null);
+      expect(service.listaGuardada('negocio-1', 'sucursal-1')).toBeNull();
+    }
+  });
+
+  it('olvida la lista guardada solo cuando la importación termina', () => {
+    const url = `${environment.apiUrl}/negocios/negocio-1/catalogo/productos/importaciones/importacion-1`;
+    guardarLista();
+    service.productImportStatus('negocio-1', 'importacion-1').subscribe();
+    http.expectOne(url).flush({ id: 'importacion-1', estado: 'procesando', etapa: '', porcentaje: 50, mensaje_error: null, resultado: null });
+    expect(service.listaGuardada('negocio-1', 'sucursal-1')).not.toBeNull();
+    service.productImportStatus('negocio-1', 'importacion-1').subscribe();
+    http.expectOne(url).flush({ id: 'importacion-1', estado: 'completada', etapa: '', porcentaje: 100, mensaje_error: null, resultado: null });
+    expect(service.listaGuardada('negocio-1', 'sucursal-1')).toBeNull();
+  });
+
+  it('olvida las listas guardadas al perder el negocio activo', () => {
+    guardarLista();
+    negocio.set(null);
+    TestBed.tick();
+    expect(service.listaGuardada('negocio-1', 'sucursal-1')).toBeNull();
   });
 });

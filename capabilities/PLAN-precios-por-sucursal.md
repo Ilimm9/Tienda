@@ -135,3 +135,15 @@ Borrador de trabajo. No es una capability aprobada (AGENTS.md exige `capabilitie
 Leído en código: modelos `PrecioSucursal`, `Propuesta`, `ProductoNegocio`; `createPriceProposal` (`compra_repository.go:190-226`); autorización (`precio_repository.go:36-48`); middleware de permisos por sección y operación en `backend/cmd/api/main.go`, complementado por `sucursalPermitida` en el handler de precios; rol `PROPIETARIO` (`domain/negocio/rol.go:32`); consultas de listado; conteo de archivos con `precio_venta`. No ejecutado contra base de datos.
 
 Actualización documental 2026-10-19: permisos contrastados con rutas HTTP, rutas de Catálogo y acciones de la interfaz; convención de capabilities contrastada con `AGENTS.md`. Sin cambios de código ni ejecución de pruebas de aplicación.
+
+## Corrección de rendimiento del listado de productos (2026-10-21)
+
+Aprobada por el usuario en conversación el 2026-10-21 (solo corrección de consulta, sin cambio de contrato).
+
+- **Síntoma:** con más de 1500 productos, el listado tarda notablemente cada vez que se entra a la vista. La recarga al volver ya existía (`effect` en `productos.component.ts`); lo nuevo es el tiempo de respuesta.
+- **Causa:** el merge `c8030a1` introdujo en `ProductRepository.ListByBusiness` un `LEFT JOIN LATERAL existencias` que, por cada producto, recorría todo el inventario de la sucursal filtrando con `oferta.producto_id = p.id OR variante.producto_id = p.id`; el `OR` impedía usar índices (costo cuadrático).
+- **Cambio:** `existencias` pasa a ser una subconsulta agregada una sola vez por `COALESCE(oferta.producto_id, variante.producto_id)` y unida por `existencias.producto_id = p.id`. Mismas condiciones: oferta activa del negocio, variante activa, solo la sucursal seleccionada. Contrato HTTP sin cambios.
+- **Índices:** no se agregan; ya existen `idx_inventario_sucursal_producto (sucursal_id, producto_negocio_id)` y `idx_precio_sucursal_producto (sucursal_id, producto_negocio_id)`.
+- **Pruebas ejecutadas:** `go build ./...` y `go vet ./internal/infrastructure/` correctos; `go test ./...` correcto salvo `internal/config` `TestProductionAcceptsStrongOTPSecret`, falla ajena a este cambio (configuración OTP/entorno).
+- **Pendientes:** las pruebas de integración (`catalog_variants_tenancy_integration_test.go`) se omitieron por falta de `SECURITY_TEST_DATABASE_URL`; falta medir tiempo y `EXPLAIN ANALYZE` contra la base con más de 1500 productos, y comprobar en navegador que stock y estado coinciden con los de antes (incluyendo variantes).
+- **Fuera de alcance:** caché del listado en frontend, paginación en servidor y endpoint de detalle para edición (posible capability 21).

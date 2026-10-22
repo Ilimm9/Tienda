@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { effect, inject, Injectable } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 
+import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import {
   CatalogOption,
@@ -11,6 +12,7 @@ import {
   ProductImportPreview,
   ProductListResponse,
   ProductLookup,
+  ProductRow,
   UnitOption,
   UpdateProductRequest,
   AdjustInventoryRequest,
@@ -19,12 +21,38 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ProductosService {
   private readonly http = inject(HttpClient);
+  private readonly contexto = inject(ContextoService);
+  // Última lista recibida por negocio y sucursal; permite mostrarla al volver a la vista
+  // mientras se refresca en segundo plano. Solo vive en memoria durante la sesión.
+  private readonly listas = new Map<string, ProductRow[]>();
+
+  constructor() {
+    effect(() => {
+      if (!this.contexto.negocio()) this.olvidarListas();
+    });
+  }
 
   listByBusiness(businessId: string, branchId?: string): Observable<ProductListResponse> {
     return this.http.get<ProductListResponse>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos`,
       branchId ? { params: { sucursal_id: branchId } } : undefined,
-    );
+    ).pipe(tap(({ items }) => this.listas.set(this.claveLista(businessId, branchId), items ?? [])));
+  }
+
+  listaGuardada(businessId: string, branchId?: string): ProductRow[] | null {
+    return this.listas.get(this.claveLista(businessId, branchId)) ?? null;
+  }
+
+  olvidarListas(): void {
+    this.listas.clear();
+  }
+
+  private claveLista(businessId: string, branchId?: string): string {
+    return `${businessId}:${branchId ?? ''}`;
+  }
+
+  private olvidarAlTerminar<T>(request: Observable<T>): Observable<T> {
+    return request.pipe(tap(() => this.olvidarListas()));
   }
 
   listCategories(businessId: string): Observable<CatalogOption[]> {
@@ -76,30 +104,30 @@ export class ProductosService {
   }
 
   create(businessId: string, payload: CreateProductRequest): Observable<void> {
-    return this.http.post<void>(
+    return this.olvidarAlTerminar(this.http.post<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos`,
       payload,
-    );
+    ));
   }
 
   update(businessId: string, productId: string, payload: UpdateProductRequest): Observable<void> {
-    return this.http.patch<void>(
+    return this.olvidarAlTerminar(this.http.patch<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}`,
       payload,
-    );
+    ));
   }
 
   adjustInventory(businessId: string, productId: string, payload: AdjustInventoryRequest): Observable<void> {
-    return this.http.patch<void>(
+    return this.olvidarAlTerminar(this.http.patch<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}/inventario`,
       payload,
-    );
+    ));
   }
 
   deactivate(businessId: string, productId: string): Observable<void> {
-    return this.http.delete<void>(
+    return this.olvidarAlTerminar(this.http.delete<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}`,
-    );
+    ));
   }
 
   productImportTemplateUrl(businessId: string): string {
@@ -125,7 +153,7 @@ export class ProductosService {
   productImportStatus(businessId: string, importId: string): Observable<ProductImportJob> {
     return this.http.get<ProductImportJob>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importaciones/${importId}`,
-    );
+    ).pipe(tap((job) => { if (job.estado === 'completada') this.olvidarListas(); }));
   }
 
   previewProductImport(

@@ -42,7 +42,7 @@
             </tr></ng-template
           ><ng-template #body let-item
             ><tr>
-              <td>{{ item.fecha_recepcion }}</td>
+              <td>{{ item.fecha_recepcion | date: 'dd MMM yyyy' : 'UTC' : 'es-MX' }}</td>
               <td>{{ item.tipo_documento }} {{ item.folio_documento }}</td>
               <td>{{ item.forma_pago }}</td>
               <td>{{ item.total | currency: 'MXN' }}</td>
@@ -138,8 +138,35 @@
             </div>
             <div formArrayName="detalles">
               @for (detail of details.controls; track $index) {
-                <section class="purchase-detail" [formGroupName]="$index">
-                  <div class="purchase-grid">
+                <section class="purchase-detail" [class.is-collapsed]="estaContraido($index)" [formGroupName]="$index">
+                  <header class="purchase-detail-header">
+                    <button
+                      type="button"
+                      class="purchase-detail-toggle"
+                      [attr.aria-expanded]="!estaContraido($index)"
+                      [attr.aria-controls]="'detalle-compra-' + $index"
+                      (click)="alternarDetalle($index)"
+                    >
+                      <i class="pi pi-chevron-down" aria-hidden="true"></i>
+                      <strong>{{ $index + 1 }}. {{ productSummaryName($index) }}</strong>
+                      <span>{{ detail.get('cantidad_empaques')?.value || 0 }} empaques · {{ detailSubtotal($index) | currency: 'MXN' }}</span>
+                      @if (detail.invalid && detail.touched) {
+                        <span class="purchase-detail-badge">Incompleto</span>
+                      }
+                    </button>
+                    <button
+                      class="purchase-detail-remove"
+                      type="button"
+                      (click)="removeDetail($index)"
+                      [disabled]="details.length === 1"
+                      [attr.aria-label]="'Quitar producto ' + ($index + 1)"
+                      title="Quitar producto"
+                    >
+                      <i class="pi pi-trash" aria-hidden="true"></i>
+                    </button>
+                  </header>
+                  @if (!estaContraido($index)) {
+                  <div class="purchase-grid purchase-detail-body" [id]="'detalle-compra-' + $index">
                     <label
                       >Producto<p-select
                         formControlName="producto_negocio_id"
@@ -250,16 +277,7 @@
                       /></label>
                     }
                   </div>
-                  <div class="detail-actions">
-                    <button
-                      class="secondary-button"
-                      type="button"
-                      (click)="removeDetail($index)"
-                      [disabled]="details.length === 1"
-                    >
-                      Quitar producto
-                    </button>
-                  </div>
+                  }
                 </section>
               }
             </div>

@@ -15,6 +15,12 @@
 
 Capability 20: [Arreglos de invitaciones y permisos](capabilities/historial/20-arreglos-invitaciones.md). **Cerrada** el 2026-10-20 con aceptación final del usuario. Aprobada el 2026-10-19: seis temas implementados, PostgreSQL/Mailpit/Chromium comprobados; ampliar permisos de roles existentes requiere autorización específica adicional. ID 19 reservado para el borrador de precios por sucursal.
 
+Capability 21: [Lista de productos en memoria con refresco silencioso](capabilities/historial/21-cache-listado-productos.md). **Cerrada** el 2026-10-21 con aceptación final del usuario: la lista se muestra al instante al regresar y se refresca en segundo plano.
+
+Capability 22: [Código de barras opcional al crear producto desde Registrar compra](capabilities/22-compras-producto-sin-codigo.md). **Verificada** el 2026-10-21 (aprobada el mismo día); pendiente prueba manual y aceptación final.
+
+Capability 23: [Productos de Registrar compra en contenedores compactables](capabilities/23-compras-productos-compactables.md). **Verificada** el 2026-10-21 (aprobada el mismo día); pendiente prueba manual y aceptación final.
+
 Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 | ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
 | --- | ------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -39,7 +45,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `21`; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `24`; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.

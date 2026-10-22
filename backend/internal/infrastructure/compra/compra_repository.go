@@ -141,8 +141,9 @@ func (r *Repository) buildDetail(tx *gorm.DB, businessID, providerID uuid.UUID, 
 	}
 	productID, err := uuid.Parse(row.ProductoNegocioID)
 	if row.ProductoNuevo {
-		if strings.TrimSpace(row.NombreProductoNuevo) == "" || strings.TrimSpace(row.CodigoBarrasNuevo) == "" {
-			return compradomain.CompraProveedorDetalle{}, errors.New("el producto nuevo requiere nombre y código de barras")
+		// El código de barras es opcional: puede agregarse después desde Editar producto.
+		if strings.TrimSpace(row.NombreProductoNuevo) == "" {
+			return compradomain.CompraProveedorDetalle{}, errors.New("el producto nuevo requiere nombre")
 		}
 		productID, err = r.createNewProduct(tx, businessID, providerID, row.NombreProductoNuevo, row.CodigoBarrasNuevo)
 		if err != nil {
@@ -258,12 +259,14 @@ func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProv
 
 func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.UUID, name, barcode string) (uuid.UUID, error) {
 	barcode = strings.TrimSpace(barcode)
-	var existing int64
-	if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&existing).Error; err != nil {
-		return uuid.Nil, err
-	}
-	if existing > 0 {
-		return uuid.Nil, errors.New("el código de barras ya está registrado")
+	if barcode != "" {
+		var existing int64
+		if err := tx.Model(&domain.ProductoCodigo{}).Where("negocio_id = ? AND codigo = ?", businessID, barcode).Count(&existing).Error; err != nil {
+			return uuid.Nil, err
+		}
+		if existing > 0 {
+			return uuid.Nil, errors.New("el código de barras ya está registrado")
+		}
 	}
 	p := domain.Producto{NegocioID: businessID, Nombre: strings.TrimSpace(name), Activo: true}
 	if err := tx.Create(&p).Error; err != nil {
@@ -274,8 +277,10 @@ func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.U
 	if err := tx.Create(&pn).Error; err != nil {
 		return uuid.Nil, err
 	}
-	if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: &p.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
-		return uuid.Nil, err
+	if barcode != "" {
+		if err := tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoID: &p.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error; err != nil {
+			return uuid.Nil, err
+		}
 	}
 	if err := tx.Create(&domain.ProductoProveedor{ProductoNegocioID: pn.ID, ProveedorID: providerID, EsPrincipal: true}).Error; err != nil {
 		return uuid.Nil, err

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import {
+  AbstractControl,
   FormArray,
   FormBuilder,
   FormsModule,
@@ -55,6 +56,8 @@ export class ComprasComponent {
   readonly providerSaving = signal(false);
   readonly providerError = signal<string | null>(null);
   readonly unitDetailIndex = signal<number | null>(null);
+  // Detalles compactados; se guarda el control para que quitar uno no altere a los demás.
+  readonly contraidos = signal(new Set<AbstractControl>());
   readonly unitSaving = signal(false);
   readonly documentTypes = ['TICKET', 'FACTURA'];
   readonly paymentMethods = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'CREDITO', 'OTRO'];
@@ -264,31 +267,45 @@ export class ComprasComponent {
     });
   }
   addDetail(): void {
+    this.contraidos.set(new Set(this.details.controls));
     this.details.push(this.newDetail());
   }
   removeDetail(index: number): void {
-    if (this.details.length > 1) this.details.removeAt(index);
+    if (this.details.length === 1) return;
+    const control = this.details.at(index);
+    this.contraidos.update((actuales) => new Set([...actuales].filter((item) => item !== control)));
+    this.details.removeAt(index);
+  }
+  estaContraido(index: number): boolean {
+    return this.contraidos().has(this.details.at(index));
+  }
+  alternarDetalle(index: number): void {
+    const control = this.details.at(index);
+    this.contraidos.update((actuales) => {
+      const siguientes = new Set(actuales);
+      if (!siguientes.delete(control)) siguientes.add(control);
+      return siguientes;
+    });
+  }
+  private abrirDetalles(controles: AbstractControl[]): void {
+    this.contraidos.update((actuales) => new Set([...actuales].filter((item) => !controles.includes(item))));
   }
   selectProduct(index: number, value: string): void {
     const row = this.details.at(index);
     const isNew = value === '__new_product__';
     const product = row.get('producto_negocio_id');
     const newProductName = row.get('nombre_producto_nuevo');
-    const newProductBarcode = row.get('codigo_barras_nuevo');
     row.get('producto_nuevo')?.setValue(isNew);
     if (isNew) {
       product?.setValue('');
       product?.clearValidators();
       newProductName?.setValidators(Validators.required);
-      newProductBarcode?.setValidators(Validators.required);
     } else {
       product?.setValidators(Validators.required);
       newProductName?.clearValidators();
-      newProductBarcode?.clearValidators();
     }
     product?.updateValueAndValidity();
     newProductName?.updateValueAndValidity();
-    newProductBarcode?.updateValueAndValidity();
   }
   selectUnit(index: number, value: string): void {
     if (value === '__new_unit__') {
@@ -384,6 +401,7 @@ export class ComprasComponent {
   }
   submit(): void {
     this.form.markAllAsTouched();
+    if (this.form.invalid) this.abrirDetalles(this.details.controls.filter((detail) => detail.invalid));
     if (this.form.invalid || this.saving()) return;
     for (let i = 0; i < this.details.length; i++) {
       const v = this.details.at(i).value as {
@@ -395,6 +413,7 @@ export class ComprasComponent {
         (v.piezas_danadas || 0) + (v.piezas_faltantes || 0) >
         (v.cantidad_empaques || 0) * this.unitFactor(i)
       ) {
+        this.abrirDetalles([this.details.at(i)]);
         this.error.set(`El detalle ${i + 1} tiene incidencias mayores al total.`);
         return;
       }

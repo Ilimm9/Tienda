@@ -2221,13 +2221,17 @@ func (r *ProductRepository) ListByBusiness(businessID, branchID uuid.UUID) ([]do
 			ORDER BY CASE WHEN pn.producto_id IS NOT NULL THEN 0 ELSE 1 END, pn.creado_en ASC
 			LIMIT 1
 		) pn ON TRUE`, businessID).
-		Joins(`LEFT JOIN LATERAL (
-			SELECT SUM(i.stock_actual) AS stock, SUM(i.stock_minimo) AS minimo
+		// Existencias de la sucursal agregadas en una sola pasada por producto; un
+		// LATERAL con OR por producto recorría el inventario completo en cada fila.
+		Joins(`LEFT JOIN (
+			SELECT COALESCE(oferta.producto_id, variante.producto_id) AS producto_id,
+				SUM(i.stock_actual) AS stock, SUM(i.stock_minimo) AS minimo
 			FROM inventario_sucursal i
 			JOIN producto_negocio oferta ON oferta.id = i.producto_negocio_id AND oferta.negocio_id = ? AND oferta.activo = TRUE
 			LEFT JOIN producto_variantes variante ON variante.id = oferta.producto_variante_id AND variante.activo = TRUE
-			WHERE i.sucursal_id = ? AND (oferta.producto_id = p.id OR variante.producto_id = p.id)
-		) existencias ON TRUE`, businessID, branchID).
+			WHERE i.sucursal_id = ?
+			GROUP BY COALESCE(oferta.producto_id, variante.producto_id)
+		) existencias ON existencias.producto_id = p.id`, businessID, branchID).
 		Joins("LEFT JOIN precios_sucursal ps ON ps.producto_negocio_id = pn.id AND ps.sucursal_id = ?", branchID).
 		Joins("LEFT JOIN marcas m ON m.id = p.marca_id").
 		Joins("LEFT JOIN unidades_medida u ON u.id = p.unidad_medida_id").

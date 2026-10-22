@@ -82,12 +82,15 @@
             >
               {{ saving() === item.id ? 'Actualizando…' : 'Actualizar costos' }}
             </button>
+            <!-- Oculto temporalmente  (2026-10-21).
             <button class="secondary-button" type="button" (click)="showHistory(item)">Historial</button>
+            -->
           </footer>
         </article>
       }
     </section>
   }
+  <!-- Oculto temporalmente(2026-10-21).
   @if (historyProduct()) {
     <section class="proposal-card" aria-label="Historial de precios">
       <h2>Historial de precio de sucursal</h2>
@@ -105,4 +108,5 @@
       } @else { <p>Aún no hay cambios registrados.</p> }
     </section>
   }
+  -->
 </section>

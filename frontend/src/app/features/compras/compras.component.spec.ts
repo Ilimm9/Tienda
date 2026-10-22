@@ -1,3 +1,4 @@
+import '@angular/common/locales/global/es-MX';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -34,6 +35,27 @@ describe('ComprasComponent', () => {
     return fixture;
   }
 
+  it('muestra la fecha de recepción como fecha civil en la tabla', async () => {
+    service.list.mockReturnValueOnce(of({
+      items: [{ id: 'compra-1', fecha_recepcion: '2026-10-21T00:00:00Z', tipo_documento: 'TICKET', folio_documento: 'A1', forma_pago: 'EFECTIVO', total: 100, importe_pagado: 100 }],
+      total: 1,
+    }) as never);
+    await TestBed.configureTestingModule({
+      imports: [ComprasComponent],
+      providers: [
+        { provide: ComprasService, useValue: service },
+        { provide: ContextoService, useValue: { puede: () => true, negocio: signal({ id: 'negocio-1' }), sucursal: signal({ id: 'sucursal-1' }) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: {} } } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ComprasComponent);
+    fixture.detectChanges();
+
+    const celda = fixture.nativeElement.querySelector('.data-table-card td') as HTMLElement;
+    expect(celda.textContent?.trim()).toBe('21 oct 2026');
+  });
+
   it('acumula el resumen global de todos los productos y muestra cero al iniciar', async () => {
     const component = (await createFixture()).componentInstance;
     expect(component.total()).toBe(0);
@@ -55,6 +77,53 @@ describe('ComprasComponent', () => {
     expect(component.total()).toBe(415.28);
   });
 
+  it('contrae los productos anteriores al agregar uno y permite alternarlos', async () => {
+    const fixture = await createFixture();
+    const component = fixture.componentInstance;
+    component.details.at(0).patchValue({ cantidad_empaques: 2, costo_empaque: 100, descuento: 0 });
+
+    component.addDetail();
+    fixture.detectChanges();
+
+    expect(component.estaContraido(0)).toBe(true);
+    expect(component.estaContraido(1)).toBe(false);
+    const toggles = fixture.nativeElement.querySelectorAll('.purchase-detail-toggle');
+    expect(toggles[0].getAttribute('aria-expanded')).toBe('false');
+    expect(toggles[0].textContent).toContain('2 empaques');
+    expect(toggles[0].textContent).toContain('200.00');
+    expect(fixture.nativeElement.querySelectorAll('.purchase-detail-body')).toHaveLength(1);
+
+    toggles[0].click();
+    fixture.detectChanges();
+    expect(component.estaContraido(0)).toBe(false);
+    expect(toggles[0].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('conserva el estado de los demás productos al quitar uno', async () => {
+    const component = (await createFixture()).componentInstance;
+    component.addDetail();
+    component.addDetail();
+    component.alternarDetalle(2);
+
+    component.removeDetail(0);
+
+    expect(component.details.length).toBe(2);
+    expect(component.estaContraido(0)).toBe(true);
+    expect(component.estaContraido(1)).toBe(true);
+    expect(component.contraidos().size).toBe(2);
+  });
+
+  it('abre los productos incompletos al intentar guardar', async () => {
+    const component = (await createFixture()).componentInstance;
+    component.addDetail();
+    expect(component.estaContraido(0)).toBe(true);
+
+    component.submit();
+
+    expect(component.estaContraido(0)).toBe(false);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
   it('muestra el panel de nuevo producto con el formato de nueva unidad', async () => {
     const fixture = await createFixture();
     const component = fixture.componentInstance;
@@ -67,20 +136,20 @@ describe('ComprasComponent', () => {
     expect(productPanel?.querySelectorAll('input')).toHaveLength(2);
   });
 
-  it('requiere nombre y código de barras al crear un producto nuevo', async () => {
+  it('requiere solo el nombre al crear un producto nuevo; el código de barras es opcional', async () => {
     const component = (await createFixture()).componentInstance;
 
     component.selectProduct(0, '__new_product__');
 
     expect(component.details.at(0).get('nombre_producto_nuevo')?.invalid).toBe(true);
-    expect(component.details.at(0).get('codigo_barras_nuevo')?.invalid).toBe(true);
+    expect(component.details.at(0).get('codigo_barras_nuevo')?.valid).toBe(true);
 
-    component.details.at(0).patchValue({
-      nombre_producto_nuevo: 'Galletas',
-      codigo_barras_nuevo: '7501234567890',
-    });
+    component.details.at(0).patchValue({ nombre_producto_nuevo: 'Galletas' });
 
     expect(component.details.at(0).get('nombre_producto_nuevo')?.valid).toBe(true);
+    expect(component.details.at(0).get('codigo_barras_nuevo')?.valid).toBe(true);
+
+    component.details.at(0).patchValue({ codigo_barras_nuevo: '7501234567890' });
     expect(component.details.at(0).get('codigo_barras_nuevo')?.valid).toBe(true);
   });
 

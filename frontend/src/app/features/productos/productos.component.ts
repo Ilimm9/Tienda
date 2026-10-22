@@ -18,6 +18,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
   CatalogOption,
   CreateUnitRequest,
@@ -72,6 +73,7 @@ export class ProductosComponent {
   readonly P = PERMISOS;
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
+  private readonly feedback = inject(FeedbackService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly router = inject(Router, { optional: true });
@@ -194,9 +196,11 @@ export class ProductosComponent {
       if (this.productForm.controls.tiene_variantes.value) this.applyBasePrice();
     });
     if (this.pageMode === 'list') {
+      // Solo un cambio real de negocio o sucursal recarga; la revalidación del contexto al
+      // recuperar el foco reemplaza los objetos con los mismos IDs.
+      const contextoLista = computed(() => `${this.contexto.negocio()?.id ?? ''}:${this.contexto.sucursal()?.id ?? ''}`);
       effect(() => {
-        this.contexto.negocio()?.id;
-        this.contexto.sucursal()?.id;
+        contextoLista();
         untracked(() => this.loadProducts());
       });
     } else if (this.pageMode === 'create') {
@@ -222,7 +226,10 @@ export class ProductosComponent {
     this.products.set([]);
     if (!negocio || !sucursal) { this.loading.set(false); this.error.set('Selecciona un negocio y una sucursal activa.'); return; }
     const vigente = () => carga === this.cargaProductos && negocio === this.negocioID && sucursal === this.contexto.sucursal()?.id;
-    this.loading.set(true);
+    // Con una lista guardada se muestra de inmediato y se refresca en segundo plano.
+    const guardada = this.productosService.listaGuardada(negocio, sucursal);
+    if (guardada) this.products.set(guardada);
+    this.loading.set(!guardada);
     this.error.set(null);
     this.productosService.listByBusiness(this.negocioID, this.sucursalID).subscribe({
       next: ({ items }) => {
@@ -232,7 +239,8 @@ export class ProductosComponent {
       },
       error: () => {
         if (!vigente()) return;
-        this.error.set('No fue posible cargar los productos.');
+        if (guardada) this.feedback.error('No fue posible actualizar los productos.', 'Se muestra la última lista cargada.');
+        else this.error.set('No fue posible cargar los productos.');
         this.loading.set(false);
       },
     });

@@ -38,8 +38,7 @@
   text-transform: uppercase;
 }
 
-.purchase-actions,
-.detail-actions {
+.purchase-actions {
   display: flex;
   flex-wrap: wrap;
   gap: .75rem;
@@ -213,9 +212,30 @@
 }
 
 .purchase-detail {
-  padding: 1.5rem 0;
-  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
 }
+
+.purchase-detail-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; }
+.purchase-detail:not(.is-collapsed) .purchase-detail-header { border-bottom: 1px solid var(--border); }
+
+.purchase-detail-toggle {
+  display: flex; flex: 1; min-width: 0; align-items: center; gap: 0.75rem;
+  padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.purchase-detail-toggle strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.purchase-detail-toggle span { color: var(--text-muted); white-space: nowrap; }
+.purchase-detail-toggle .pi { transition: transform 0.15s; }
+.is-collapsed .purchase-detail-toggle .pi { transform: rotate(-90deg); }
+.purchase-detail-badge { padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--danger); color: #fff !important; font-size: 0.75rem; }
+.purchase-detail-body { padding: 1rem; }
+.purchase-detail-remove {
+  display: inline-grid; flex: none; width: 2rem; height: 2rem; place-items: center;
+  border: 1px solid var(--border); border-radius: .35rem; background: transparent; color: var(--danger); cursor: pointer;
+}
+.purchase-detail-remove:disabled { color: var(--text-muted); cursor: not-allowed; opacity: .5; }
 
 .create-option { color: var(--text-muted); font-weight: 400; }
 
@@ -226,14 +246,7 @@
 
 .tax-options { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
 
-.purchase-detail:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.purchase-detail:last-child {
-  padding-bottom: 0;
-}
+.purchase-detail:first-child { margin-top: 0; }
 
 .detail-summary {
   margin-top: 1rem;
@@ -273,8 +286,7 @@
 }
 
 .purchase-unit-form .purchase-actions,
-.purchase-provider-form .purchase-actions,
-.detail-actions {
+.purchase-provider-form .purchase-actions {
   margin-top: 1rem;
 }
 
@@ -376,4 +388,6 @@
   .purchase-field-wide {
     grid-column: auto;
   }
+
+  .purchase-detail-toggle { flex-wrap: wrap; row-gap: .25rem; }
 }
