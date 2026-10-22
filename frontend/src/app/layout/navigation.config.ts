@@ -35,6 +35,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     children: [
       { label: 'Empleados', icon: 'pi pi-user', route: '/equipo/empleados', permiso: PERMISOS.empleadoVer },
       { label: 'Invitaciones', icon: 'pi pi-send', route: '/equipo/invitaciones', permiso: PERMISOS.invitacionVer },
+      { label: 'Puestos', icon: 'pi pi-briefcase', route: '/equipo/puestos', permiso: PERMISOS.empleadoVer },
     ],
   },
   { label: 'Roles y permisos', icon: 'pi pi-lock', route: '/roles-permisos', permiso: PERMISOS.rolVer },

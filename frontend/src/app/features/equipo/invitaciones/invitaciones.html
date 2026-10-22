@@ -2,7 +2,7 @@
   <header class="encabezado-pagina">
     <div>
       <h1>Invitaciones</h1>
-      <p class="descripcion">Enlaces para que tu equipo cree su acceso. Cada uno vence en 72 horas.</p>
+      <p class="descripcion">Enlaces de <strong>{{ sucursal()?.nombre || 'la sucursal activa' }}</strong> para que tu equipo cree su acceso. Cada uno vence en 72 horas.</p>
     </div>
     @if (puedeCrear()) {
       <a class="boton" routerLink="nueva"><i class="pi pi-plus" aria-hidden="true"></i>Nueva invitación</a>
@@ -50,18 +50,10 @@
             </button>
           }
         </div>
-        <div class="tabla-barra__fin w-full sm:w-[230px]">
-          <label class="sr-only" for="filtro-sucursal">Sucursal</label>
-          <span class="campo-grupo campo-grupo--select">
-            <i class="pi pi-map-marker" aria-hidden="true"></i>
-            <select #sucursal id="filtro-sucursal" [value]="sucursalId()" (change)="setSucursal(sucursal.value)">
-              <option value="">Todas las sucursales</option>
-              @for (item of sucursales(); track item.id) {
-                <option [value]="item.id">{{ item.nombre }}</option>
-              }
-            </select>
-          </span>
-        </div>
+        <p class="tabla-barra__fin secundario m-0 inline-flex items-center gap-1.5">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <span>Solo <strong>{{ sucursal()?.nombre || 'la sucursal activa' }}</strong> · cámbiala en el menú superior</span>
+        </p>
       </div>
 
       <div class="tabla-desplazable">
@@ -76,7 +68,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (invitacion of invitaciones(); track invitacion.id) {
+            @for (invitacion of paginaItems(); track invitacion.id) {
               <tr>
                 <td class="min-w-[260px]">
                   <span class="tabla-persona">
@@ -188,6 +180,21 @@
           </tbody>
         </table>
       </div>
+
+      @if (totalPaginas() > 1) {
+        <nav class="tabla-paginador" aria-label="Paginación de invitaciones">
+          <span>{{ rango() }}</span>
+          <span class="tabla-paginador__botones">
+            <button type="button" class="icono-accion" aria-label="Página anterior" [disabled]="pagina() === 1" (click)="irAPagina(pagina() - 1)">
+              <i class="pi pi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <span aria-live="polite">Página {{ pagina() }} de {{ totalPaginas() }}</span>
+            <button type="button" class="icono-accion" aria-label="Página siguiente" [disabled]="pagina() === totalPaginas()" (click)="irAPagina(pagina() + 1)">
+              <i class="pi pi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </span>
+        </nav>
+      }
 
       <footer class="tabla-pie">
         <span>{{ resumenLista() }}</span>

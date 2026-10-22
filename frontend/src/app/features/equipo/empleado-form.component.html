@@ -2,12 +2,41 @@
   <header class="encabezado-pagina">
     <div>
       <h1>{{ editing ? 'Editar empleado' : 'Nuevo empleado' }}</h1>
-      <p class="descripcion">Un empleado puede registrarse antes de tener cuenta en la plataforma.</p>
+      <p class="descripcion">
+        {{ editing ? 'Un empleado puede registrarse antes de tener cuenta en la plataforma.' : 'Datos, sucursal e invitación en un solo flujo. Puedes volver a un paso anterior cuando quieras.' }}
+      </p>
     </div>
     <a class="boton boton--secundario" routerLink="/equipo/empleados">
       <i class="pi pi-arrow-left" aria-hidden="true"></i>Volver a empleados
     </a>
   </header>
+
+  @if (!editing && paso() < 4) {
+    <ol class="pasos tarjeta px-5 py-3.5" aria-label="Progreso del alta">
+      @for (item of [{ n: 1, t: 'Datos' }, { n: 2, t: 'Sucursal' }, { n: 3, t: 'Invitación' }]; track item.n) {
+        @if (item.n > 1) {
+          <li class="paso__linea" [class.paso__linea--hecha]="paso() >= item.n" aria-hidden="true"></li>
+        }
+        <li
+          class="paso"
+          [class.paso--activo]="paso() === item.n"
+          [class.paso--hecho]="paso() > item.n"
+          [attr.aria-current]="paso() === item.n ? 'step' : null"
+        >
+          <button type="button" class="paso__boton" [disabled]="saving() || paso() === item.n || (item.n > 1 && !creado())" (click)="irPaso($any(item.n))">
+            <span class="paso__numero">
+              @if (paso() > item.n) {
+                <i class="pi pi-check" aria-hidden="true"></i>
+              } @else {
+                {{ item.n }}
+              }
+            </span>
+            {{ item.t }}
+          </button>
+        </li>
+      }
+    </ol>
+  }
 
   @if (error()) {
     <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
@@ -17,6 +46,7 @@
     <p class="estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando empleado…</p>
   } @else {
     <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+    @if (editing || paso() === 1) {
     <form class="formulario-g" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <fieldset class="formulario-g__seccion">
         <legend class="contents">
@@ -132,15 +162,20 @@
               <input
                 id="telefono"
                 type="tel"
+                inputmode="numeric"
+                maxlength="12"
                 formControlName="telefono"
-                autocomplete="tel"
+                autocomplete="tel-national"
                 placeholder="55 1234 5678"
-                [attr.aria-describedby]="hasError('telefono') ? 'telefono-ayuda' : null"
+                aria-describedby="telefono-ayuda"
                 [attr.aria-invalid]="hasError('telefono')"
+                (input)="formatearTelefono()"
               />
             </span>
             @if (hasError('telefono')) {
               <small id="telefono-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('telefono') }}</small>
+            } @else {
+              <small id="telefono-ayuda" class="ayuda">10 dígitos, sin lada.</small>
             }
           </div>
         </div>
@@ -157,21 +192,25 @@
         </legend>
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="campo-bloque">
-            <label class="etiqueta" for="puesto">Puesto</label>
-            <span class="campo-grupo">
+            <label class="etiqueta" for="puesto_id">Puesto</label>
+            <span class="campo-grupo campo-grupo--select">
               <i class="pi pi-id-card" aria-hidden="true"></i>
-              <input
-                id="puesto"
-                type="text"
-                formControlName="puesto"
-                autocomplete="organization-title"
-                placeholder="Cajera, almacenista…"
-                [attr.aria-describedby]="hasError('puesto') ? 'puesto-ayuda' : null"
-                [attr.aria-invalid]="hasError('puesto')"
-              />
+              <select
+                id="puesto_id"
+                formControlName="puesto_id"
+                aria-describedby="puesto-ayuda"
+                [attr.aria-invalid]="hasError('puesto_id')"
+              >
+                <option value="">{{ opcionesPuesto().length ? 'Sin puesto' : 'Aún no hay puestos' }}</option>
+                @for (puesto of opcionesPuesto(); track puesto.id) {
+                  <option [value]="puesto.id">{{ puesto.nombre }}{{ puesto.activo ? '' : ' (inactivo)' }}</option>
+                }
+              </select>
             </span>
-            @if (hasError('puesto')) {
-              <small id="puesto-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('puesto') }}</small>
+            @if (hasError('puesto_id')) {
+              <small id="puesto-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('puesto_id') }}</small>
+            } @else {
+              <small id="puesto-ayuda" class="ayuda">Del catálogo de <a routerLink="/equipo/puestos">Puestos</a>.</small>
             }
           </div>
           <div class="campo-bloque">
@@ -183,15 +222,20 @@
                 type="text"
                 formControlName="numero_empleado"
                 autocomplete="off"
-                placeholder="EMP-001"
+                placeholder="SC-001"
                 aria-describedby="numero-empleado-ayuda"
                 [attr.aria-invalid]="hasError('numero_empleado')"
               />
+              @if (!editing) {
+                <button type="button" class="campo-grupo__accion" (click)="generarNumero()" aria-label="Generar número con las iniciales de la sucursal" title="Generar">
+                  <i class="pi pi-sparkles" aria-hidden="true"></i>
+                </button>
+              }
             </span>
             @if (hasError('numero_empleado')) {
               <small id="numero-empleado-ayuda" class="error-campo"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje('numero_empleado') }}</small>
             } @else {
-              <small id="numero-empleado-ayuda" class="ayuda">Único dentro del negocio.</small>
+              <small id="numero-empleado-ayuda" class="ayuda">Único dentro del negocio.{{ editing ? '' : ' Genera uno con las iniciales de la sucursal.' }}</small>
             }
           </div>
           <div class="campo-bloque">
@@ -218,10 +262,153 @@
         <a class="boton boton--fantasma" routerLink="/equipo/empleados">Cancelar</a>
         <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
           <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
-          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar empleado' }}
+          {{ saving() ? 'Guardando…' : editing ? 'Guardar cambios' : creado() ? 'Guardar y continuar' : 'Registrar y continuar' }}
         </button>
       </footer>
     </form>
+    } @else if (paso() === 2) {
+      <section class="formulario-g" aria-labelledby="paso-sucursal">
+        <div class="formulario-g__seccion">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-map-marker"></i></span>
+            <span>
+              <span id="paso-sucursal" class="titulo block">¿Dónde trabajará?</span>
+              <span class="descripcion block">Elige una o varias sucursales y marca la principal. La invitación usa la principal.</span>
+            </span>
+          </span>
+          @if (!puedeAsignar()) {
+            <p class="aviso"><i class="pi pi-info-circle" aria-hidden="true"></i>No tienes permiso para asignar sucursales. Pide a un administrador que lo haga.</p>
+          } @else {
+            <ul class="m-0 flex list-none flex-col gap-2 p-0" aria-label="Sucursales del negocio">
+              @for (sucursal of sucursales(); track sucursal.id) {
+                @let asignada = asignadas().has(sucursal.id);
+                @let marcada = asignada || seleccion().has(sucursal.id);
+                <li class="tarjeta flex flex-wrap items-center gap-3 px-4 py-3">
+                  <label class="flex min-w-0 flex-1 items-center gap-3">
+                    <input type="checkbox" [checked]="marcada" [disabled]="asignada" (change)="alternarSucursal(sucursal.id, $any($event.target).checked)" />
+                    <span class="min-w-0">
+                      <strong class="block truncate">{{ sucursal.nombre }}</strong>
+                      <span class="secundario">{{ sucursal.codigo }}{{ asignada ? ' · ya asignada' : '' }}</span>
+                    </span>
+                  </label>
+                  @if (marcada) {
+                    <label class="inline-flex items-center gap-2 text-sm">
+                      <input type="radio" name="principal" [checked]="principalId() === sucursal.id" (change)="principalId.set(sucursal.id)" />
+                      Principal
+                    </label>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+        <footer class="formulario-g__acciones">
+          <button type="button" class="boton boton--fantasma" (click)="irPaso(1)"><i class="pi pi-arrow-left" aria-hidden="true"></i>Volver a datos</button>
+          <button type="button" class="boton boton--secundario" [disabled]="saving()" (click)="irPaso(3)">Omitir por ahora</button>
+          <button type="button" class="boton" [disabled]="saving() || !puedeAsignar() || (!seleccion().size && !asignaciones().length)" [attr.aria-busy]="saving()" (click)="guardarSucursales()">
+            <i class="pi" [class.pi-arrow-right]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            {{ saving() ? 'Asignando…' : 'Asignar y continuar' }}
+          </button>
+        </footer>
+      </section>
+    } @else if (paso() === 3) {
+      <section class="formulario-g" aria-labelledby="paso-invitacion">
+        <div class="formulario-g__seccion">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono" aria-hidden="true"><i class="pi pi-send"></i></span>
+            <span>
+              <span id="paso-invitacion" class="titulo block">Invitarlo a la plataforma</span>
+              <span class="descripcion block">Le llega un enlace válido 72 horas para crear su acceso.</span>
+            </span>
+          </span>
+          @switch (bloqueoInvitacion()) {
+            @case ('sucursal') {
+              <p class="aviso aviso--atencion" role="alert">
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                <span><strong>Falta la sucursal</strong>Sin sucursal no se puede invitar. Asígnala en el paso 2 o termina sin invitar.</span>
+              </p>
+              <button type="button" class="boton boton--secundario self-start" (click)="irPaso(2)"><i class="pi pi-map-marker" aria-hidden="true"></i>Volver a sucursal</button>
+            }
+            @case ('correo') {
+              <p class="aviso aviso--atencion" role="alert">
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                <span><strong>Falta el correo</strong>Agrégalo en el paso 1 para enviarle la invitación.</span>
+              </p>
+              <button type="button" class="boton boton--secundario self-start" (click)="irPaso(1)"><i class="pi pi-pencil" aria-hidden="true"></i>Volver a datos</button>
+            }
+            @case ('permiso') {
+              <p class="aviso"><i class="pi pi-info-circle" aria-hidden="true"></i>No tienes permiso para enviar invitaciones.</p>
+            }
+            @default {
+              <dl class="m-0 grid gap-3 sm:grid-cols-2">
+                <div><dt class="dato__rotulo">Correo</dt><dd class="dato__valor m-0">{{ creado()?.correo }}</dd></div>
+                <div><dt class="dato__rotulo">Sucursal principal</dt><dd class="dato__valor m-0">{{ principalAsignada()?.nombre_sucursal }}</dd></div>
+              </dl>
+              <div class="campo-bloque">
+                <label class="etiqueta" for="rol">Rol y permisos <span class="obligatorio" aria-hidden="true">*</span></label>
+                <span class="campo-grupo campo-grupo--select">
+                  <i class="pi pi-lock" aria-hidden="true"></i>
+                  <select id="rol" aria-required="true" aria-describedby="rol-ayuda" [value]="rolId()" (change)="rolId.set($any($event.target).value)">
+                    <option value="">Selecciona…</option>
+                    @for (rol of roles(); track rol.id) {
+                      <option [value]="rol.id" [selected]="rol.id === rolId()">{{ rol.nombre }}</option>
+                    }
+                  </select>
+                </span>
+                <small id="rol-ayuda" class="ayuda">
+                  {{ rolSugerido() && rolId() === rolSugerido()?.id ? 'Sugerido por su puesto (' + creado()?.puesto + ').' : 'Define qué podrá hacer en la plataforma.' }}
+                </small>
+              </div>
+            }
+          }
+        </div>
+        <footer class="formulario-g__acciones">
+          <button type="button" class="boton boton--fantasma" (click)="irPaso(2)"><i class="pi pi-arrow-left" aria-hidden="true"></i>Volver a sucursal</button>
+          <button type="button" class="boton boton--secundario" [disabled]="saving()" (click)="terminarSinInvitar()">Terminar sin invitar</button>
+          <button type="button" class="boton" [disabled]="saving() || !!bloqueoInvitacion()" [attr.aria-busy]="saving()" (click)="enviarInvitacion()">
+            <i class="pi" [class.pi-send]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            {{ saving() ? 'Enviando…' : 'Enviar invitación' }}
+          </button>
+        </footer>
+      </section>
+    } @else {
+      <section class="formulario-g" aria-labelledby="paso-listo">
+        <div class="formulario-g__seccion items-start">
+          <span class="seccion-encabezado">
+            <span class="seccion-icono seccion-icono--salvia" aria-hidden="true"><i class="pi pi-check"></i></span>
+            <span>
+              <span id="paso-listo" class="titulo block">{{ nombreVista() }} quedó dado de alta</span>
+              <span class="descripcion block">
+                {{ principalAsignada() ? 'Trabaja en ' + principalAsignada()?.nombre_sucursal + '.' : 'Sin sucursal asignada.' }}
+                {{ invitacion() ? '' : 'Puedes invitarlo después desde Invitaciones.' }}
+              </span>
+            </span>
+          </span>
+          @if (invitacion(); as enviada) {
+            @if (enviada.correoEnviado) {
+              <p class="aviso aviso--salvia"><i class="pi pi-check" aria-hidden="true"></i>Enviamos la invitación a {{ enviada.correo }}.</p>
+            } @else {
+              <p class="aviso aviso--error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                <span><strong>No pudimos enviar el correo</strong>La invitación sigue activa: copia el enlace y compártelo.</span>
+              </p>
+              <div class="flex w-full flex-col gap-2 sm:flex-row">
+                <label class="sr-only" for="enlace-alta">Enlace de invitación</label>
+                <span class="campo-grupo campo-grupo--lectura campo-grupo--monoespacio">
+                  <i class="pi pi-link" aria-hidden="true"></i>
+                  <input id="enlace-alta" type="text" readonly [value]="enviada.enlace" />
+                </span>
+                <button type="button" class="boton boton--verde" (click)="copiar(enviada.enlace)"><i class="pi pi-copy" aria-hidden="true"></i>Copiar</button>
+              </div>
+            }
+          }
+        </div>
+        <footer class="formulario-g__acciones">
+          <button type="button" class="boton boton--secundario" (click)="otraAlta()"><i class="pi pi-user-plus" aria-hidden="true"></i>Dar de alta otro</button>
+          <a class="boton" [routerLink]="['/equipo/empleados', creado()?.id]">Ver empleado<i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+        </footer>
+      </section>
+    }
 
     <aside class="flex flex-col gap-3.5 lg:sticky lg:top-6" aria-label="Vista previa">
       <section class="tarjeta tarjeta--tinte p-5.5">
@@ -246,6 +433,12 @@
             <dt class="dato__rotulo">Número</dt>
             <dd class="dato__valor truncate">{{ numeroVista() || '—' }}</dd>
           </div>
+          @if (!editing) {
+            <div class="min-w-0">
+              <dt class="dato__rotulo">Sucursal principal</dt>
+              <dd class="dato__valor truncate">{{ principalAsignada()?.nombre_sucursal || 'Sin asignar' }}</dd>
+            </div>
+          }
         </dl>
         <p class="m-0 mt-4">
           <span class="pastilla" [class.pastilla--exito]="empleado()?.tiene_cuenta" [class.pastilla--neutra]="!empleado()?.tiene_cuenta">
@@ -254,6 +447,7 @@
         </p>
       </section>
 
+      @if (editing) {
       <section class="tarjeta p-5.5">
         <div class="seccion-encabezado"><h2>Qué sigue</h2></div>
         <ol class="m-0 mt-3.5 flex list-none flex-col gap-3 p-0">
@@ -271,6 +465,7 @@
           </li>
         </ol>
       </section>
+      }
     </aside>
     </div>
   }

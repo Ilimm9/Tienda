@@ -25,6 +25,8 @@ Capability 24: [Correcciones a la carga masiva de productos](capabilities/24-cor
 
 Capability 25: [Logo vigente en correos y aplicación](capabilities/25-logo-vigente-correos-app.md). **Verificada** localmente el 2026-10-22 (aprobada el mismo día); pendiente de aceptación final. Correos, invitación y favicons derivados de `trace.svg`; recursos anteriores retirados. Go, build temporal y Mailpit/Chromium a 600/360 px correctos. Falta reiniciar backend activo para cargar el PNG embebido; clientes reales no comprobados. Independiente de la 24.
 
+Capability 30: [Rediseño de Equipo](capabilities/30-rediseno-equipo.md). **Verificada** el 2026-10-22 (aprobada el mismo día con alcance «solo vista y un poco de backend»: tabla `puestos_negocio`); pendiente prueba manual y aceptación final. Teléfono de 10 dígitos, alta en 3 pasos, número de empleado generado, catálogo de puestos, filtros y paginación, e invitaciones por sucursal del contexto. Diseño en el artboard I1. ID elegido para evitar conflicto con Ilian.
+
 Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 | ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
 | --- | ------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -49,7 +51,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `27`; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `28`; `27` reservado para Compras, `26` usado por observaciones, `30` usado por Equipo; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.

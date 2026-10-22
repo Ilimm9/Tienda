@@ -7,6 +7,8 @@ export interface EmpleadoResumen {
   nombre_completo: string;
   correo: string | null;
   telefono: string | null;
+  puesto_id: string | null;
+  /** Nombre vigente del puesto, solo para mostrar. */
   puesto: string | null;
   estado: EstadoEmpleado;
   tiene_cuenta: boolean;
@@ -26,6 +28,8 @@ export interface EmpleadoDetalle {
   nombre_completo: string;
   correo: string | null;
   telefono: string | null;
+  puesto_id: string | null;
+  /** Nombre vigente del puesto, solo para mostrar. */
   puesto: string | null;
   estado: EstadoEmpleado;
   contratado_en: string | null;
@@ -43,7 +47,7 @@ export interface CrearEmpleadoPayload {
   segundo_apellido?: string | null;
   correo?: string | null;
   telefono?: string | null;
-  puesto?: string | null;
+  puesto_id?: string | null;
   contratado_en?: string | null;
 }
 
@@ -55,7 +59,7 @@ export interface ActualizarEmpleadoPayload {
   segundo_apellido?: string | null;
   correo?: string | null;
   telefono?: string | null;
-  puesto?: string | null;
+  puesto_id?: string | null;
   estado?: EstadoEmpleado;
   contratado_en?: string | null;
   terminado_en?: string | null;

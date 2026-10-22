@@ -50,7 +50,7 @@ func Init(db *gorm.DB) error {
 		&negociodomain.Rol{}, &negociodomain.MembresiaNegocio{},
 		&negociodomain.Permiso{}, &negociodomain.PermisoRol{}, &negociodomain.RolMembresia{},
 		&negociodomain.Empleado{}, &negociodomain.InvitacionNegocio{},
-		&negociodomain.AsignacionEmpleadoSucursal{},
+		&negociodomain.AsignacionEmpleadoSucursal{}, &negociodomain.PuestoNegocio{},
 		&negociodomain.Sucursal{}, &domain.Marca{}, &domain.UnidadMedida{}, &domain.Producto{}, &domain.ImportacionProducto{}, &domain.FamiliaProducto{}, &domain.FamiliaProductoConsecutivo{}, &domain.ProductoVariante{}, &domain.ProductoVarianteAtributo{}, &domain.Categoria{},
 		&domain.ProductoCategoria{}, &domain.ProductoCodigo{}, &domain.ProductoImagen{},
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.ProductoSKUConsecutivo{}, &domain.Impuesto{},
@@ -106,6 +106,9 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := negocioinfra.MigrateEmpleadoCorreoUnico(db); err != nil {
+		return err
+	}
+	if err := negocioinfra.MigratePuestosNegocio(db); err != nil {
 		return err
 	}
 

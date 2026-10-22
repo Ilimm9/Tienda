@@ -1,0 +1,150 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <h1>Puestos</h1>
+      <p class="descripcion">
+        Catálogo de <strong>{{ contexto.negocio()?.nombre_comercial || 'tu negocio' }}</strong>, igual para todas las sucursales.
+        Un solo nombre por puesto: evita tener «Cajera», «cajero» y «Caja» para lo mismo.
+      </p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+  } @else {
+    @if (puedeGestionar()) {
+      <form class="tarjeta flex flex-col gap-3 p-5" (ngSubmit)="agregar()" novalidate aria-label="Agregar puesto">
+        <div class="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end">
+          <div class="campo-bloque">
+            <label class="etiqueta" for="nuevo-puesto">Nuevo puesto</label>
+            <span class="campo-grupo">
+              <i class="pi pi-briefcase" aria-hidden="true"></i>
+              <input
+                id="nuevo-puesto"
+                name="nuevo"
+                type="text"
+                maxlength="120"
+                placeholder="Ej. Repartidor"
+                aria-describedby="nuevo-puesto-ayuda"
+                [attr.aria-invalid]="duplicado() || !!errorNuevo()"
+                [ngModel]="nuevo()"
+                (ngModelChange)="nuevo.set($event); errorNuevo.set(null)"
+              />
+            </span>
+          </div>
+          @if (puedeVerRoles()) {
+            <div class="campo-bloque">
+              <label class="etiqueta" for="nuevo-rol">Rol sugerido al invitar</label>
+              <span class="campo-grupo campo-grupo--select">
+                <i class="pi pi-lock" aria-hidden="true"></i>
+                <select id="nuevo-rol" name="nuevoRol" [ngModel]="nuevoRol()" (ngModelChange)="nuevoRol.set($event)">
+                  <option value="">Sin rol sugerido</option>
+                  @for (rol of roles(); track rol.id) {
+                    <option [value]="rol.id">{{ rol.nombre }}</option>
+                  }
+                </select>
+              </span>
+            </div>
+          }
+          <button type="submit" class="boton" [disabled]="saving() || duplicado()" [attr.aria-busy]="saving()">
+            <i class="pi" [class.pi-plus]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+            Agregar
+          </button>
+        </div>
+        @if (duplicado()) {
+          <small id="nuevo-puesto-ayuda" class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ese puesto ya existe en el catálogo.</small>
+        } @else if (errorNuevo()) {
+          <small id="nuevo-puesto-ayuda" class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ errorNuevo() }}</small>
+        } @else {
+          <small id="nuevo-puesto-ayuda" class="ayuda">El rol sugerido se propone al invitar a alguien con este puesto; se puede cambiar.</small>
+        }
+      </form>
+    }
+
+    <section class="tabla-tarjeta" aria-label="Catálogo de puestos" [attr.aria-busy]="loading()">
+      <div class="tabla-desplazable">
+        <table class="tabla min-w-[640px]">
+          <thead>
+            <tr>
+              <th scope="col">Puesto</th>
+              <th scope="col">Rol sugerido al invitar</th>
+              <th scope="col">Estado</th>
+              @if (puedeGestionar()) {
+                <th scope="col" class="derecha">Acciones</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (puesto of puestos(); track puesto.id) {
+              <tr>
+                <td>
+                  @if (puedeGestionar()) {
+                    <label class="sr-only" [for]="'puesto-' + puesto.id">Nombre del puesto</label>
+                    <input
+                      class="campo"
+                      type="text"
+                      maxlength="120"
+                      [id]="'puesto-' + puesto.id"
+                      [value]="puesto.nombre"
+                      (change)="actualizar(puesto, { nombre: $any($event.target).value })"
+                    />
+                  } @else {
+                    <strong>{{ puesto.nombre }}</strong>
+                  }
+                </td>
+                <td>
+                  @if (puedeGestionar() && puedeVerRoles()) {
+                    <label class="sr-only" [for]="'rol-' + puesto.id">Rol sugerido de {{ puesto.nombre }}</label>
+                    <span class="campo-grupo campo-grupo--select">
+                      <select
+                        [id]="'rol-' + puesto.id"
+                        [value]="puesto.rol_sugerido_id ?? ''"
+                        (change)="actualizar(puesto, { rol_sugerido_id: $any($event.target).value || null })"
+                      >
+                        <option value="">Sin rol sugerido</option>
+                        @for (rol of roles(); track rol.id) {
+                          <option [value]="rol.id" [selected]="rol.id === puesto.rol_sugerido_id">{{ rol.nombre }}</option>
+                        }
+                      </select>
+                    </span>
+                  } @else {
+                    {{ nombreRol(puesto.rol_sugerido_id) }}
+                  }
+                </td>
+                <td>
+                  <span class="pastilla" [class.pastilla--exito]="puesto.activo" [class.pastilla--neutra]="!puesto.activo">
+                    {{ puesto.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                @if (puedeGestionar()) {
+                  <td class="derecha">
+                    <button type="button" class="boton boton--compacto boton--secundario" (click)="actualizar(puesto, { activo: !puesto.activo })">
+                      {{ puesto.activo ? 'Desactivar' : 'Activar' }}
+                    </button>
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="puedeGestionar() ? 4 : 3">
+                  @if (loading()) {
+                    <p class="estado-vacio"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando puestos…</p>
+                  } @else {
+                    <p class="estado-vacio estado-vacio--guiado">
+                      <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
+                      <strong>Aún no hay puestos</strong>
+                      <span>Agrega los puestos de tu negocio para elegirlos al dar de alta a alguien.</span>
+                    </p>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="tabla-pie">
+        <span><i class="pi pi-info-circle" aria-hidden="true"></i>Un puesto inactivo ya no se ofrece al dar de alta, pero se conserva en quien lo tiene.</span>
+      </footer>
+    </section>
+  }
+</section>

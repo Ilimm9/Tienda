@@ -42,10 +42,11 @@ func (r *EmpleadoRepository) PermisosEfectivos(ctx context.Context, usuarioID, n
 func (r *EmpleadoRepository) Listar(ctx context.Context, negocioID uuid.UUID, estado, buscar string) ([]domain.EmpleadoResumen, error) {
 	items := make([]domain.EmpleadoResumen, 0)
 	query := r.db.WithContext(ctx).Table("empleados AS e").
-		Select(`e.id, e.negocio_id, e.numero_empleado, e.correo, e.telefono, e.puesto, e.estado,
+		Select(`e.id, e.negocio_id, e.numero_empleado, e.correo, e.telefono, e.puesto_id, p.nombre AS puesto, e.estado,
 			(e.membresia_id IS NOT NULL) AS tiene_cuenta,
 			e.nombre, e.segundo_nombre, e.primer_apellido, e.segundo_apellido,
 			e.creado_en, e.actualizado_en`).
+		Joins("LEFT JOIN puestos_negocio p ON p.id = e.puesto_id").
 		Where("e.negocio_id = ?", negocioID)
 	if estado != "" && estado != "todos" {
 		query = query.Where("e.estado = ?", estado)
@@ -82,9 +83,10 @@ func (r *EmpleadoRepository) Obtener(ctx context.Context, negocioID, empleadoID 
 	var detalle domain.EmpleadoDetalle
 	err := r.db.WithContext(ctx).Table("empleados AS e").
 		Select(`e.id, e.negocio_id, e.membresia_id, e.numero_empleado, e.nombre, e.segundo_nombre,
-			e.primer_apellido, e.segundo_apellido, e.correo, e.telefono, e.puesto, e.estado,
+			e.primer_apellido, e.segundo_apellido, e.correo, e.telefono, e.puesto_id, p.nombre AS puesto, e.estado,
 			e.contratado_en, e.terminado_en, (e.membresia_id IS NOT NULL) AS tiene_cuenta,
 			e.creado_en, e.actualizado_en`).
+		Joins("LEFT JOIN puestos_negocio p ON p.id = e.puesto_id").
 		Where("e.id = ? AND e.negocio_id = ?", empleadoID, negocioID).
 		Take(&detalle).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -106,6 +108,13 @@ func (r *EmpleadoRepository) ExisteNumero(ctx context.Context, negocioID uuid.UU
 	}
 	var total int64
 	err := query.Count(&total).Error
+	return total > 0, err
+}
+
+func (r *EmpleadoRepository) PuestoActivo(ctx context.Context, negocioID, puestoID uuid.UUID) (bool, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Table("puestos_negocio").
+		Where("id = ? AND negocio_id = ? AND activo = TRUE", puestoID, negocioID).Count(&total).Error
 	return total > 0, err
 }
 
@@ -145,7 +154,7 @@ func (r *EmpleadoRepository) Crear(ctx context.Context, negocioID, creadoPor uui
 		NegocioID: negocioID, NumeroEmpleado: input.NumeroEmpleado,
 		Nombre: input.Nombre, SegundoNombre: input.SegundoNombre,
 		PrimerApellido: input.PrimerApellido, SegundoApellido: input.SegundoApellido,
-		Correo: input.Correo, Telefono: input.Telefono, Puesto: input.Puesto,
+		Correo: input.Correo, Telefono: input.Telefono, PuestoID: input.PuestoID,
 		Estado: domain.EstadoEmpleadoPendiente, ContratadoEn: parsearFecha(input.ContratadoEn),
 		CreadoPorUsuarioID: creadoPor,
 	}
@@ -160,7 +169,9 @@ func (r *EmpleadoRepository) Actualizar(ctx context.Context, negocioID, empleado
 	asignarOpcional(cambios, "segundo_apellido", input.SegundoApellido)
 	asignarOpcional(cambios, "correo", input.Correo)
 	asignarOpcional(cambios, "telefono", input.Telefono)
-	asignarOpcional(cambios, "puesto", input.Puesto)
+	if input.PuestoID.Set {
+		cambios["puesto_id"] = input.PuestoID.Value
+	}
 	if input.Nombre.Set && input.Nombre.Value != nil {
 		cambios["nombre"] = *input.Nombre.Value
 	}

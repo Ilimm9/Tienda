@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
@@ -21,6 +21,7 @@ interface EnlaceEmitido {
 }
 
 const HORA_MS = 60 * 60 * 1000;
+const POR_PAGINA = 10;
 
 @Component({
   selector: 'app-invitaciones',
@@ -36,14 +37,23 @@ export class Invitaciones {
 
   readonly invitaciones = signal<InvitacionResumen[]>([]);
   readonly vista = signal<Vista>('sin_aceptar');
-  readonly sucursalId = signal('');
+  readonly pagina = signal(1);
   readonly loading = signal(true);
   readonly processingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly enlaceEmitido = signal<EnlaceEmitido | null>(null);
 
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
-  readonly sucursales = computed(() => this.contexto.negocio()?.sucursales ?? []);
+  /** Solo se ven las invitaciones de la sucursal activa; se cambia desde el menú superior. */
+  readonly sucursal = computed(() => this.contexto.sucursal());
+  readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.invitaciones().length / POR_PAGINA)));
+  readonly paginaItems = computed(() =>
+    this.invitaciones().slice((this.pagina() - 1) * POR_PAGINA, this.pagina() * POR_PAGINA),
+  );
+  readonly rango = computed(() => {
+    const total = this.invitaciones().length;
+    return `${Math.min(total, (this.pagina() - 1) * POR_PAGINA + 1)}–${Math.min(total, this.pagina() * POR_PAGINA)} de ${total}`;
+  });
   readonly puedeEnviar = computed(() => this.misPermisos().includes('equipo.invitaciones.enviar'));
   /** Emitir una nueva también lee empleados y roles. */
   readonly puedeCrear = computed(() =>
@@ -61,17 +71,21 @@ export class Invitaciones {
   ];
 
   constructor() {
-    this.load();
+    // Cargar al iniciar y cada vez que cambie la sucursal del contexto.
+    effect(() => {
+      this.sucursal();
+      untracked(() => this.load());
+    });
+  }
+
+  irAPagina(pagina: number): void {
+    this.pagina.set(Math.min(Math.max(1, pagina), this.totalPaginas()));
   }
 
   setVista(valor: Vista): void {
     if (valor === this.vista()) return;
     this.vista.set(valor);
-    this.load();
-  }
-
-  setSucursal(valor: string): void {
-    this.sucursalId.set(valor);
+    this.pagina.set(1);
     this.load();
   }
 
@@ -173,7 +187,7 @@ export class Invitaciones {
     return {
       sinAceptar: vista === 'sin_aceptar',
       estado: vista === 'aceptada' || vista === 'cancelada' ? vista : '',
-      sucursalId: this.sucursalId() || undefined,
+      sucursalId: this.sucursal()?.id,
     };
   }
 
@@ -191,6 +205,7 @@ export class Invitaciones {
     }).subscribe({
       next: ({ invitaciones }) => {
         this.invitaciones.set(invitaciones.items);
+        this.irAPagina(this.pagina());
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {

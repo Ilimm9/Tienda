@@ -780,6 +780,25 @@ select.campo {
   gap: 6px;
 }
 
+.tabla-paginador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 20px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-paginador__botones {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .estado-vacio {
   margin: 0;
   padding: 32px;

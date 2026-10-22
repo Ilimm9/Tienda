@@ -28,7 +28,7 @@ type Empleado struct {
 	SegundoApellido    *string    `gorm:"type:varchar(100)" json:"segundo_apellido"`
 	Correo             *string    `gorm:"type:varchar(254)" json:"correo"`
 	Telefono           *string    `gorm:"type:varchar(30)" json:"telefono"`
-	Puesto             *string    `gorm:"type:varchar(120)" json:"puesto"`
+	PuestoID           *uuid.UUID `gorm:"type:uuid;index" json:"puesto_id"`
 	Estado             string     `gorm:"type:varchar(30);not null;default:'pendiente';index" json:"estado"`
 	ContratadoEn       *time.Time `gorm:"type:date" json:"contratado_en"`
 	TerminadoEn        *time.Time `gorm:"type:date" json:"terminado_en"`
@@ -45,29 +45,29 @@ func (e *Empleado) BeforeCreate(*gorm.DB) error {
 }
 
 type CrearEmpleadoInput struct {
-	NumeroEmpleado  *string `json:"numero_empleado"`
-	Nombre          string  `json:"nombre"`
-	SegundoNombre   *string `json:"segundo_nombre"`
-	PrimerApellido  string  `json:"primer_apellido"`
-	SegundoApellido *string `json:"segundo_apellido"`
-	Correo          *string `json:"correo"`
-	Telefono        *string `json:"telefono"`
-	Puesto          *string `json:"puesto"`
-	ContratadoEn    *string `json:"contratado_en"`
+	NumeroEmpleado  *string    `json:"numero_empleado"`
+	Nombre          string     `json:"nombre"`
+	SegundoNombre   *string    `json:"segundo_nombre"`
+	PrimerApellido  string     `json:"primer_apellido"`
+	SegundoApellido *string    `json:"segundo_apellido"`
+	Correo          *string    `json:"correo"`
+	Telefono        *string    `json:"telefono"`
+	PuestoID        *uuid.UUID `json:"puesto_id"`
+	ContratadoEn    *string    `json:"contratado_en"`
 }
 
 type ActualizarEmpleadoInput struct {
-	NumeroEmpleado  Optional[string] `json:"numero_empleado"`
-	Nombre          Optional[string] `json:"nombre"`
-	SegundoNombre   Optional[string] `json:"segundo_nombre"`
-	PrimerApellido  Optional[string] `json:"primer_apellido"`
-	SegundoApellido Optional[string] `json:"segundo_apellido"`
-	Correo          Optional[string] `json:"correo"`
-	Telefono        Optional[string] `json:"telefono"`
-	Puesto          Optional[string] `json:"puesto"`
-	Estado          Optional[string] `json:"estado"`
-	ContratadoEn    Optional[string] `json:"contratado_en"`
-	TerminadoEn     Optional[string] `json:"terminado_en"`
+	NumeroEmpleado  Optional[string]    `json:"numero_empleado"`
+	Nombre          Optional[string]    `json:"nombre"`
+	SegundoNombre   Optional[string]    `json:"segundo_nombre"`
+	PrimerApellido  Optional[string]    `json:"primer_apellido"`
+	SegundoApellido Optional[string]    `json:"segundo_apellido"`
+	Correo          Optional[string]    `json:"correo"`
+	Telefono        Optional[string]    `json:"telefono"`
+	PuestoID        Optional[uuid.UUID] `json:"puesto_id"`
+	Estado          Optional[string]    `json:"estado"`
+	ContratadoEn    Optional[string]    `json:"contratado_en"`
+	TerminadoEn     Optional[string]    `json:"terminado_en"`
 }
 
 type ReactivarEmpleadoInput struct {
@@ -76,17 +76,18 @@ type ReactivarEmpleadoInput struct {
 }
 
 type EmpleadoResumen struct {
-	ID             uuid.UUID `json:"id"`
-	NegocioID      uuid.UUID `json:"negocio_id"`
-	NumeroEmpleado *string   `json:"numero_empleado"`
-	NombreCompleto string    `json:"nombre_completo"`
-	Correo         *string   `json:"correo"`
-	Telefono       *string   `json:"telefono"`
-	Puesto         *string   `json:"puesto"`
-	Estado         string    `json:"estado"`
-	TieneCuenta    bool      `json:"tiene_cuenta"`
-	CreadoEn       time.Time `json:"creado_en"`
-	ActualizadoEn  time.Time `json:"actualizado_en"`
+	ID             uuid.UUID  `json:"id"`
+	NegocioID      uuid.UUID  `json:"negocio_id"`
+	NumeroEmpleado *string    `json:"numero_empleado"`
+	NombreCompleto string     `json:"nombre_completo"`
+	Correo         *string    `json:"correo"`
+	Telefono       *string    `json:"telefono"`
+	PuestoID       *uuid.UUID `json:"puesto_id"`
+	Puesto         *string    `json:"puesto"`
+	Estado         string     `json:"estado"`
+	TieneCuenta    bool       `json:"tiene_cuenta"`
+	CreadoEn       time.Time  `json:"creado_en"`
+	ActualizadoEn  time.Time  `json:"actualizado_en"`
 }
 
 type EmpleadoDetalle struct {
@@ -101,13 +102,15 @@ type EmpleadoDetalle struct {
 	NombreCompleto  string     `json:"nombre_completo"`
 	Correo          *string    `json:"correo"`
 	Telefono        *string    `json:"telefono"`
-	Puesto          *string    `json:"puesto"`
-	Estado          string     `json:"estado"`
-	ContratadoEn    *time.Time `json:"contratado_en"`
-	TerminadoEn     *time.Time `json:"terminado_en"`
-	TieneCuenta     bool       `json:"tiene_cuenta"`
-	CreadoEn        time.Time  `json:"creado_en"`
-	ActualizadoEn   time.Time  `json:"actualizado_en"`
+	PuestoID        *uuid.UUID `json:"puesto_id"`
+	// Puesto es el nombre vigente en `puestos_negocio`, solo para mostrar.
+	Puesto        *string    `json:"puesto"`
+	Estado        string     `json:"estado"`
+	ContratadoEn  *time.Time `json:"contratado_en"`
+	TerminadoEn   *time.Time `json:"terminado_en"`
+	TieneCuenta   bool       `json:"tiene_cuenta"`
+	CreadoEn      time.Time  `json:"creado_en"`
+	ActualizadoEn time.Time  `json:"actualizado_en"`
 }
 
 // NombreCompletoEmpleado arma el nombre visible sin depender de campos opcionales vacíos.

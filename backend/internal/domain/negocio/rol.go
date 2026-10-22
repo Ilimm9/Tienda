@@ -31,6 +31,12 @@ func (r *Rol) BeforeCreate(*gorm.DB) error {
 // CodigoRolPropietario identifica al rol de sistema que conserva todos los permisos del negocio.
 const CodigoRolPropietario = "PROPIETARIO"
 
+// CodigoRolCajero identifica el rol básico que se siembra al crear un negocio; es editable.
+const CodigoRolCajero = "CAJERO"
+
+// PermisosRolCajero son los permisos iniciales del rol Cajero.
+var PermisosRolCajero = []string{PermisoCatalogoVer, PermisoCompraVer, PermisoCompraRegistrar}
+
 type PermisoRol struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	RolID     uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_permisos_rol_unico" json:"rol_id"`

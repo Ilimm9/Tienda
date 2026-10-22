@@ -20,6 +20,7 @@ type empleadoRepositoryStub struct {
 	creado         domain.CrearEmpleadoInput
 	actualizado    domain.ActualizarEmpleadoInput
 	creoLlamado    bool
+	puestoActivo   bool
 }
 
 func (r *empleadoRepositoryStub) ObtenerContextoNegocio(context.Context, uuid.UUID, uuid.UUID) (domain.ContextoNegocioSucursal, error) {
@@ -39,6 +40,9 @@ func (r *empleadoRepositoryStub) Obtener(context.Context, uuid.UUID, uuid.UUID) 
 }
 func (r *empleadoRepositoryStub) ExisteNumero(context.Context, uuid.UUID, string, *uuid.UUID) (bool, error) {
 	return r.existeNumero, nil
+}
+func (r *empleadoRepositoryStub) PuestoActivo(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+	return r.puestoActivo, nil
 }
 func (r *empleadoRepositoryStub) CorreoEnUso(_ context.Context, _ uuid.UUID, _ string, excluir *uuid.UUID) (bool, error) {
 	r.correoExcluido = excluir
@@ -91,7 +95,7 @@ func TestEmpleadoServiceCrearNormalizaYNacePendiente(t *testing.T) {
 
 	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearEmpleadoInput{
 		NumeroEmpleado: texto("  emp-001 "), Nombre: "  Ana ", PrimerApellido: " López ",
-		Correo: texto("  ANA@Tienda.MX "), Puesto: texto("   "),
+		Correo: texto("  ANA@Tienda.MX "),
 	})
 
 	if err != nil {
@@ -106,8 +110,8 @@ func TestEmpleadoServiceCrearNormalizaYNacePendiente(t *testing.T) {
 	if *repository.creado.Correo != "ana@tienda.mx" {
 		t.Fatalf("el correo debe normalizarse en minúsculas: %q", *repository.creado.Correo)
 	}
-	if repository.creado.Puesto != nil {
-		t.Fatal("un puesto vacío debe guardarse como nulo")
+	if repository.creado.PuestoID != nil {
+		t.Fatal("sin puesto debe guardarse como nulo")
 	}
 }
 
@@ -269,4 +273,27 @@ func TestEmpleadoServiceActualizarRechazaCorreoDuplicadoExcluyendoAlEmpleado(t *
 
 func (r *empleadoRepositoryStub) Reactivar(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, domain.ReactivarEmpleadoInput) error {
 	return nil
+}
+
+func TestEmpleadoServicePuestoDebeSerActivoDelNegocio(t *testing.T) {
+	repository := empleadoStub(domain.PermisoEmpleadoGestionar)
+	actual := uuid.New()
+	repository.detalle.PuestoID = &actual
+	service := NewEmpleadoService(repository)
+	otro := uuid.New()
+	var validacion *ErrorValidacion
+
+	_, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearEmpleadoInput{Nombre: "Ana", PrimerApellido: "Ruiz", PuestoID: &otro})
+	if !errors.As(err, &validacion) || validacion.Campos["puesto_id"] == "" {
+		t.Fatalf("un puesto inactivo o ajeno debe rechazarse: %v", err)
+	}
+	// Conservar el puesto actual se permite aunque se haya desactivado.
+	if _, err := service.Actualizar(context.Background(), uuid.New(), uuid.New(), repository.detalle.ID,
+		domain.ActualizarEmpleadoInput{PuestoID: domain.Optional[uuid.UUID]{Set: true, Value: &actual}}); err != nil {
+		t.Fatalf("conservar el puesto actual debe aceptarse: %v", err)
+	}
+	repository.puestoActivo = true
+	if _, err := service.Crear(context.Background(), uuid.New(), uuid.New(), domain.CrearEmpleadoInput{Nombre: "Ana", PrimerApellido: "Ruiz", PuestoID: &otro}); err != nil {
+		t.Fatalf("un puesto activo debe aceptarse: %v", err)
+	}
 }

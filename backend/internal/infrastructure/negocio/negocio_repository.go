@@ -127,7 +127,10 @@ func (r *NegocioRepository) Crear(ctx context.Context, usuarioID uuid.UUID, slug
 		}
 		// Sin esto, un negocio creado en caliente no tendría rol de sistema y su propietario
 		// se quedaría sin permisos hasta el siguiente arranque de la API.
-		return sembrarRolPropietarioDeNegocio(tx, negocioID, membresia.ID, usuarioID)
+		if err := sembrarRolPropietarioDeNegocio(tx, negocioID, membresia.ID, usuarioID); err != nil {
+			return err
+		}
+		return sembrarRolCajeroDeNegocio(tx, negocioID, usuarioID)
 	})
 	if err != nil {
 		return domain.NegocioDetalle{}, err

@@ -24,7 +24,11 @@ var (
 var (
 	numeroEmpleadoPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{0,39}$`)
 	correoPattern         = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+	// Solo México y sin lada: el frontend envía únicamente los 10 dígitos.
+	telefonoPattern = regexp.MustCompile(`^\d{10}$`)
 )
+
+const mensajeTelefono = "escribe 10 dígitos, sin lada"
 
 var estadosEmpleado = map[string]struct{}{
 	domain.EstadoEmpleadoPendiente:  {},
@@ -39,6 +43,8 @@ type EmpleadoRepository interface {
 	Listar(ctx context.Context, negocioID uuid.UUID, estado, buscar string) ([]domain.EmpleadoResumen, error)
 	Obtener(ctx context.Context, negocioID, empleadoID uuid.UUID) (domain.EmpleadoDetalle, error)
 	ExisteNumero(ctx context.Context, negocioID uuid.UUID, numero string, excluir *uuid.UUID) (bool, error)
+	// PuestoActivo indica si el puesto es del negocio y sigue activo en el catálogo.
+	PuestoActivo(ctx context.Context, negocioID, puestoID uuid.UUID) (bool, error)
 	// CorreoEnUso indica si otro empleado o un miembro del negocio ya usa el correo; `excluir` es el empleado que se edita.
 	CorreoEnUso(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) (bool, error)
 	Crear(ctx context.Context, negocioID, creadoPor uuid.UUID, input domain.CrearEmpleadoInput) (uuid.UUID, error)
@@ -111,6 +117,9 @@ func (s *EmpleadoService) Crear(ctx context.Context, usuarioID, negocioID uuid.U
 			return domain.EmpleadoDetalle{}, err
 		}
 	}
+	if err := s.puestoDisponible(ctx, negocioID, input.PuestoID, nil); err != nil {
+		return domain.EmpleadoDetalle{}, err
+	}
 	id, err := s.empleados.Crear(ctx, negocioID, usuarioID, input)
 	if err != nil {
 		return domain.EmpleadoDetalle{}, err
@@ -122,7 +131,8 @@ func (s *EmpleadoService) Actualizar(ctx context.Context, usuarioID, negocioID, 
 	if err := s.autorizar(ctx, usuarioID, negocioID, domain.PermisoEmpleadoGestionar, true); err != nil {
 		return domain.EmpleadoDetalle{}, err
 	}
-	if _, err := s.empleados.Obtener(ctx, negocioID, empleadoID); err != nil {
+	actual, err := s.empleados.Obtener(ctx, negocioID, empleadoID)
+	if err != nil {
 		return domain.EmpleadoDetalle{}, err
 	}
 	if !actualizacionEmpleadoTieneCampos(input) {
@@ -145,10 +155,30 @@ func (s *EmpleadoService) Actualizar(ctx context.Context, usuarioID, negocioID, 
 			return domain.EmpleadoDetalle{}, err
 		}
 	}
+	if input.PuestoID.Set {
+		if err := s.puestoDisponible(ctx, negocioID, input.PuestoID.Value, actual.PuestoID); err != nil {
+			return domain.EmpleadoDetalle{}, err
+		}
+	}
 	if err := s.empleados.Actualizar(ctx, negocioID, empleadoID, input); err != nil {
 		return domain.EmpleadoDetalle{}, err
 	}
 	return s.empleados.Obtener(ctx, negocioID, empleadoID)
+}
+
+// puestoDisponible exige un puesto activo del negocio; conservar el puesto actual se permite aunque ya esté inactivo.
+func (s *EmpleadoService) puestoDisponible(ctx context.Context, negocioID uuid.UUID, puestoID, actual *uuid.UUID) error {
+	if puestoID == nil || (actual != nil && *actual == *puestoID) {
+		return nil
+	}
+	activo, err := s.empleados.PuestoActivo(ctx, negocioID, *puestoID)
+	if err != nil {
+		return err
+	}
+	if !activo {
+		return &ErrorValidacion{Campos: map[string]string{"puesto_id": "no es un puesto activo del negocio"}}
+	}
+	return nil
 }
 
 func (s *EmpleadoService) correoDisponible(ctx context.Context, negocioID uuid.UUID, correo string, excluir *uuid.UUID) error {
@@ -188,7 +218,6 @@ func normalizarCrearEmpleado(input *domain.CrearEmpleadoInput) {
 	input.SegundoNombre = limpiarOpcional(input.SegundoNombre, false)
 	input.SegundoApellido = limpiarOpcional(input.SegundoApellido, false)
 	input.Telefono = limpiarOpcional(input.Telefono, false)
-	input.Puesto = limpiarOpcional(input.Puesto, false)
 	input.Correo = limpiarOpcional(input.Correo, true)
 	input.ContratadoEn = limpiarOpcional(input.ContratadoEn, false)
 	if input.NumeroEmpleado != nil {
@@ -211,6 +240,9 @@ func validarCrearEmpleado(input domain.CrearEmpleadoInput) error {
 	if input.Correo != nil && !correoPattern.MatchString(*input.Correo) {
 		campos["correo"] = "no es un correo válido"
 	}
+	if input.Telefono != nil && !telefonoPattern.MatchString(*input.Telefono) {
+		campos["telefono"] = mensajeTelefono
+	}
 	if input.ContratadoEn != nil && !fechaValida(*input.ContratadoEn) {
 		campos["contratado_en"] = "usa el formato AAAA-MM-DD"
 	}
@@ -227,7 +259,6 @@ func normalizarYValidarActualizarEmpleado(input *domain.ActualizarEmpleadoInput)
 	recortarOpcional(&input.SegundoNombre)
 	recortarOpcional(&input.SegundoApellido)
 	recortarOpcional(&input.Telefono)
-	recortarOpcional(&input.Puesto)
 	recortarOpcional(&input.Correo)
 
 	if input.Nombre.Set {
@@ -256,6 +287,9 @@ func normalizarYValidarActualizarEmpleado(input *domain.ActualizarEmpleadoInput)
 	}
 	if input.Correo.Set && input.Correo.Value != nil && !correoPattern.MatchString(*input.Correo.Value) {
 		campos["correo"] = "no es un correo válido"
+	}
+	if input.Telefono.Set && input.Telefono.Value != nil && !telefonoPattern.MatchString(*input.Telefono.Value) {
+		campos["telefono"] = mensajeTelefono
 	}
 	if input.Estado.Set {
 		if input.Estado.Value == nil {
@@ -286,7 +320,7 @@ func validarNombreEmpleado(campos map[string]string, campo, valor string) {
 func actualizacionEmpleadoTieneCampos(input domain.ActualizarEmpleadoInput) bool {
 	return input.NumeroEmpleado.Set || input.Nombre.Set || input.SegundoNombre.Set ||
 		input.PrimerApellido.Set || input.SegundoApellido.Set || input.Correo.Set ||
-		input.Telefono.Set || input.Puesto.Set || input.Estado.Set ||
+		input.Telefono.Set || input.PuestoID.Set || input.Estado.Set ||
 		input.ContratadoEn.Set || input.TerminadoEn.Set
 }
 

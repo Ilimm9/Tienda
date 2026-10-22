@@ -21,6 +21,7 @@ describe('NAVIGATION_ITEMS', () => {
       '/precios/validaciones',
       '/equipo/empleados',
       '/equipo/invitaciones',
+      '/equipo/puestos',
       '/roles-permisos',
     ]);
   });

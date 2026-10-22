@@ -51,6 +51,11 @@ export const EQUIPO_ROUTES: Routes = [
         ],
       },
       {
+        path: 'puestos',
+        data: { breadcrumb: 'Puestos', permiso: PERMISOS.empleadoVer },
+        loadComponent: () => import('./puestos/puestos').then((module) => module.Puestos),
+      },
+      {
         path: 'invitaciones',
         data: { breadcrumb: 'Invitaciones', permiso: PERMISOS.invitacionVer },
         children: [

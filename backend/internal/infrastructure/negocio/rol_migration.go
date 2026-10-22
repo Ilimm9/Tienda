@@ -193,6 +193,23 @@ func sembrarRolPropietarioDeNegocio(tx *gorm.DB, negocioID, membresiaID, creadoP
 		ON CONFLICT (membresia_negocio_id, rol_id) DO NOTHING`, membresiaID, creadoPor, negocioID).Error
 }
 
+// sembrarRolCajeroDeNegocio crea el rol básico Cajero, editable, solo al crear el negocio:
+// si después lo borran, no se vuelve a sembrar.
+func sembrarRolCajeroDeNegocio(tx *gorm.DB, negocioID, creadoPor uuid.UUID) error {
+	rol := domain.Rol{
+		NegocioID: negocioID, Codigo: domain.CodigoRolCajero, Nombre: "Cajero",
+		Descripcion: ptrTexto("Rol básico de caja; ajústalo a tu operación."), Activo: true, CreadoPorUsuarioID: &creadoPor,
+	}
+	if err := tx.Create(&rol).Error; err != nil {
+		return err
+	}
+	return tx.Exec(`INSERT INTO permisos_rol (id, rol_id, permiso_id, creado_en)
+		SELECT gen_random_uuid(), ?, p.id, now() FROM permisos p WHERE p.codigo IN ?`,
+		rol.ID, domain.PermisosRolCajero).Error
+}
+
+func ptrTexto(valor string) *string { return &valor }
+
 func ejecutar(db *gorm.DB, statements []string) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		for _, statement := range statements {
