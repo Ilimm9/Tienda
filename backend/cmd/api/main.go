@@ -221,6 +221,7 @@ func main() {
 	catalogoGestion.DELETE("/catalogo/productos/:productoId", productHandler.Deactivate)
 	catalogoGestion.GET("/catalogo/productos/importacion/plantilla", productHandler.ProductImportTemplate)
 	catalogoGestion.POST("/catalogo/productos/validar-importacion", productHandler.PreviewProductImport)
+	catalogoGestion.POST("/catalogo/productos/importacion/errores", productHandler.ProductImportErrors)
 	catalogoGestion.POST("/catalogo/productos/importar", productHandler.ImportProducts)
 	catalogoGestion.GET("/catalogo/productos/importaciones/:importacionId", productHandler.ProductImportStatus)
 	catalogoGestion.POST("/catalogo/marcas", productHandler.CreateBrand)

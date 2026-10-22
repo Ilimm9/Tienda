@@ -236,13 +236,15 @@ func TestParseProductImportRejectsLegacyEqualsVariantFormat(t *testing.T) {
 	}
 }
 
-func TestParseProductImportRequiresValidCost(t *testing.T) {
+func TestParseProductImportRoundsCostToTwoDecimals(t *testing.T) {
 	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	file := workbook(t, headers, [][]string{
 		{"Sin costo", "", "", "", "", "", "", "", "10", "", "1", "", "", ""},
 		{"Cero", "", "", "", "", "", "", "", "10", "0", "1", "", "", ""},
 		{"Negativo", "", "", "", "", "", "", "", "10", "-1", "1", "", "", ""},
-		{"Precisión", "", "", "", "", "", "", "", "10", "1.12345", "1", "", "", ""},
+		{"Texto", "", "", "", "", "", "", "", "10", "catorce", "1", "", "", ""},
+		{"Residuo de Excel", "", "", "", "", "", "", "", "10", "8.380000000000001", "1", "", "", ""},
+		{"Precisión", "", "", "", "", "", "", "", "10", "12.12345", "1", "", "", ""},
 		{"Mayor al precio", "", "", "", "", "", "", "", "10", "25.1234", "1", "", "", ""},
 	})
 
@@ -250,11 +252,63 @@ func TestParseProductImportRequiresValidCost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
 	}
-	if len(rows) != 3 || rows[0].CostoProveedor != 0 || rows[1].CostoProveedor != 0 || rows[2].CostoProveedor != 25.1234 {
-		t.Fatalf("rows = %#v, want the empty, zero, and positive cost rows", rows)
+	got := make([]float64, 0, len(rows))
+	for _, row := range rows {
+		got = append(got, row.CostoProveedor)
+	}
+	if !reflect.DeepEqual(got, []float64{0, 0, 8.38, 12.12, 25.12}) {
+		t.Fatalf("costs = %v, want empty, zero and rounded costs", got)
 	}
 	if result.Invalidas != 2 || result.CostosFaltantes != 1 {
 		t.Fatalf("result = %#v, want two invalid rows and one missing cost", result)
+	}
+	if result.Errores[0].Nombre != "Negativo" || result.Errores[1].Nombre != "Texto" {
+		t.Fatalf("errores = %#v, want product names", result.Errores)
+	}
+}
+
+func TestProductImportErrorsWorkbookKeepsOnlyRejectedRows(t *testing.T) {
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, headers, [][]string{
+		{"Correcto", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", ""},
+		{"Stock negativo", "Dulces", "", "", "", "", "", "", "10", "5", "-3", "", "", ""},
+		{"Duplicado", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", ""},
+	})
+	issues := []domain.CatalogImportIssue{
+		{Fila: 3, Campo: "Stock inicial", Motivo: "debe ser un número mayor o igual a cero"},
+		{Fila: 4, Campo: "Código de barras", Motivo: "está repetido en el archivo"},
+		{Fila: 4, Motivo: "otro motivo"},
+	}
+
+	content, err := productImportErrorsWorkbook(file, issues)
+	if err != nil {
+		t.Fatalf("productImportErrorsWorkbook() error = %v", err)
+	}
+	book, err := excelize.OpenReader(bytes.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer book.Close()
+	got, err := book.GetRows(book.GetSheetList()[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{
+		append(append([]string{}, headers...), "Errores"),
+		{"Stock negativo", "Dulces", "", "", "", "", "", "", "10", "5", "-3", "", "", "", "Stock inicial: debe ser un número mayor o igual a cero"},
+		{"Duplicado", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", "", "Código de barras: está repetido en el archivo; otro motivo"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("rows = %#v, want %#v", got, want)
+	}
+
+	// El archivo descargado se puede volver a subir: la columna Errores se ignora.
+	rows, result, err := parseProductImport(bytes.NewReader(content))
+	if err != nil {
+		t.Fatalf("parseProductImport() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].Nombre != "Duplicado" || result.Invalidas != 1 || result.Errores[0].Fila != 2 {
+		t.Fatalf("rows = %#v, result = %#v", rows, result)
 	}
 }
 

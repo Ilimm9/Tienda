@@ -169,4 +169,15 @@ export class ProductosService {
       data,
     );
   }
+
+  downloadProductImportErrors(businessId: string, branchId: string, file: File): Observable<Blob> {
+    const data = new FormData();
+    data.append('archivo', file);
+    data.append('sucursal_id', branchId);
+    return this.http.post(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/importacion/errores`,
+      data,
+      { responseType: 'blob' },
+    );
+  }
 }

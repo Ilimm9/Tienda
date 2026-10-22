@@ -648,159 +648,101 @@
         <span class="import-intro-icon"><i class="pi pi-file-excel"></i></span>
         <div>
           <strong>Prepara tu archivo</strong>
-          <p>Descarga la plantilla, selecciona la sucursal y sube el archivo XLSX.</p>
+          <p>Descarga la plantilla, llénala y sube el archivo XLSX.</p>
         </div>
+        <a class="template-link import-intro-link" [href]="productImportTemplateUrl()"
+          ><i class="pi pi-download"></i> Descargar plantilla</a
+        >
       </div>
-      <a class="template-link" [href]="productImportTemplateUrl()"
-        ><i class="pi pi-download"></i> Descargar plantilla</a
-      >
-      <label class="field"
-        ><span>Sucursal para el inventario inicial <b>*</b></span
-        ><p-select
-          [(ngModel)]="importBranchId"
-          [options]="importBranches()"
-          optionLabel="nombre"
-          optionValue="id"
-          placeholder="Seleccionar sucursal..."
-          [style]="{ width: '100%' }"
-          [disabled]="importing()"
-      /></label>
-      <div
-        class="file-dropzone"
-        [class.is-dragging]="importDropActive"
-        [class.has-file]="importFile"
-        [class.is-disabled]="importing()"
-        role="button"
-        tabindex="0"
-        (click)="openImportFilePicker($event, importInput)"
-        (keydown.enter)="importInput.click()"
-        (dragover)="onImportDragOver($event)"
-        (dragleave)="onImportDragLeave($event)"
-        (drop)="onImportDrop($event)"
-      >
-        <input
-          #importInput
-          class="file-input"
-          type="file"
-          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          (change)="onImportFile($event)"
-          [disabled]="importing()"
-        />
-        <span class="dropzone-icon"
-          ><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i
-        ></span>
-        @if (importFile) {
-          <strong>{{ importFile.name }}</strong
-          ><small>Archivo listo para importar</small>
-          <button
-            class="remove-file-button"
-            type="button"
-            aria-label="Quitar archivo seleccionado"
+      <div class="import-setup" [class.import-setup--split]="importFile">
+        <p class="import-branch">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <span>
+            @if (importSucursal(); as sucursal) {
+              Se importará en <strong>{{ sucursal.nombre }}</strong>
+            } @else {
+              Selecciona una sucursal en el menú superior
+            }
+            <small>Es tu sucursal activa; cámbiala desde el menú superior.</small>
+          </span>
+        </p>
+        <div
+          class="file-dropzone"
+          [class.is-dragging]="importDropActive"
+          [class.has-file]="importFile"
+          [class.file-dropzone--compact]="importFile"
+          [class.is-disabled]="importing()"
+          role="button"
+          tabindex="0"
+          (click)="openImportFilePicker($event, importInput)"
+          (keydown.enter)="importInput.click()"
+          (dragover)="onImportDragOver($event)"
+          (dragleave)="onImportDragLeave($event)"
+          (drop)="onImportDrop($event)"
+        >
+          <input
+            #importInput
+            class="file-input"
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            (change)="onImportFile($event)"
             [disabled]="importing()"
-            (click)="removeImportFile($event, importInput)"
-            (keydown)="$event.stopPropagation()"
-          >
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        } @else {
-          <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
-          ><small>Solo archivos XLSX, máximo 5 MB</small>
-        }
+          />
+          <span class="dropzone-icon"
+            ><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i
+          ></span>
+          @if (importFile) {
+            <span class="dropzone-file"
+              ><strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small></span
+            >
+            <button
+              class="remove-file-button"
+              type="button"
+              aria-label="Quitar archivo seleccionado"
+              [disabled]="importing()"
+              (click)="removeImportFile($event, importInput)"
+              (keydown)="$event.stopPropagation()"
+            >
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          } @else {
+            <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
+            ><small>Solo archivos XLSX, máximo 5 MB</small>
+          }
+        </div>
       </div>
       <section class="import-output" aria-live="polite">
         @if (importError(); as message) {
           <p class="form-error">{{ message }}</p>
         } @else if (importResult(); as result) {
-          <section class="import-result">
-            <strong>Resultado de la importación</strong>
+          <header class="import-output-head">
+            <h2>Resultado de la importación</h2>
             <p>
               {{ result.productos_base_creados }} productos base nuevos ·
               {{ result.productos_base_reutilizados }} reutilizados ·
               {{ result.variantes_creadas }} variantes registradas · {{ result.omitidas }} omitidas
               · {{ result.invalidas }} inválidas · {{ result.skus_generados }} SKU generados
             </p>
-            @if ((result.errores ?? []).length) {
-              <ul>
-                @for (
-                  issue of result.errores ?? [];
-                  track issue.fila + (issue.campo ?? '') + issue.motivo
-                ) {
-                  <li>
-                    Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}:
-                    {{ issue.motivo }}
-                  </li>
-                }
-              </ul>
-            }
-            @if ((result.advertencias ?? []).length) {
-              <p class="import-warnings-title">Advertencias</p>
-              <ul class="import-warnings">
-                @for (
-                  issue of result.advertencias ?? [];
-                  track issue.fila + (issue.campo ?? '') + issue.motivo
-                ) {
-                  <li>
-                    Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}:
-                    {{ issue.motivo }}
-                  </li>
-                }
-              </ul>
-            }
-          </section>
+          </header>
+          <app-import-report [errores]="result.errores" [advertencias]="result.advertencias" />
         } @else if (importPreview(); as preview) {
-          <section class="import-result">
-            <strong>Vista previa de importación</strong>
+          <header class="import-output-head">
+            <h2>Vista previa</h2>
             <p>
-              {{ preview.insertables }} se insertarían · {{ preview.omitidas }} omitidas
-              <!-- {{ preview.invalidas }} inválidas · {{ preview.skus_generados }} SKU se generarían -->
+              {{ preview.insertables }} se insertarían{{ preview.omitidas ? ' · ' + preview.omitidas + ' omitidas por duplicado' : '' }}
             </p>
-            @if (preview.costos_faltantes) {
-              <p class="form-error">
-                {{ preview.costos_faltantes }} productos no cuentan con costo.
-              </p>
-            }
-            @if ((preview.catalogos_nuevos ?? []).length) {
-              <p class="import-warnings-title">Catálogos nuevos detectados</p>
-              <p>Al autorizar la importación se crearán con sus datos mínimos y podrás editarlos después.</p>
-              <div class="variant-table-wrap">
-                <table class="variant-edit-table">
-                  <thead><tr><th>Tipo</th><th>Nombre</th><th>Productos</th></tr></thead>
-                  <tbody>
-                    @for (catalogo of preview.catalogos_nuevos ?? []; track catalogo.tipo + catalogo.nombre) {
-                      <tr><td>{{ catalogo.tipo }}</td><td>{{ catalogo.nombre }}</td><td>{{ catalogo.productos }}</td></tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            }
-            @if ((preview.errores ?? []).length) {
-              <ul>
-                @for (
-                  issue of preview.errores ?? [];
-                  track issue.fila + (issue.campo ?? '') + issue.motivo
-                ) {
-                  <li>
-                    Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}:
-                    {{ issue.motivo }}
-                  </li>
-                }
-              </ul>
-            }
-            @if ((preview.advertencias ?? []).length) {
-              <p class="import-warnings-title">Advertencias</p>
-              <ul class="import-warnings">
-                @for (
-                  issue of preview.advertencias ?? [];
-                  track issue.fila + (issue.campo ?? '') + issue.motivo
-                ) {
-                  <li>
-                    Fila {{ issue.fila }}{{ issue.campo ? ' · ' + issue.campo : '' }}:
-                    {{ issue.motivo }}
-                  </li>
-                }
-              </ul>
-            }
-          </section>
+          </header>
+          <app-import-report
+            [errores]="preview.errores"
+            [advertencias]="preview.advertencias"
+            [catalogos]="preview.catalogos_nuevos"
+            [correctos]="preview.filas_correctas"
+            [costosFaltantes]="preview.costos_faltantes"
+            [sucursal]="importSucursal()?.nombre ?? ''"
+            [puedeDescargar]="true"
+            [descargando]="downloadingImportErrors()"
+            (descargarErrores)="downloadImportErrors()"
+          />
         } @else {
           <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p>
         }

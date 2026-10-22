@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
@@ -349,6 +349,7 @@ describe('ProductosComponent', () => {
       catalogos_nuevos: [],
       errores: [],
       advertencias: [],
+      filas_correctas: [],
     });
 
     component.onImportDrop({
@@ -504,5 +505,101 @@ describe('ProductosComponent', () => {
     expect(component.productCategoryFilter()).toBeNull();
     expect(component.productBrandFilter()).toBeNull();
     expect(component.productStatusFilter()).toBeNull();
+  });
+});
+
+describe('ProductosComponent carga masiva', () => {
+  let component: ProductosComponent;
+  let fixture: ComponentFixture<ProductosComponent>;
+  let http: HttpTestingController;
+  const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const sucursal = signal({ id: 'sucursal-1', nombre: 'Sucursal Centro' });
+  const archivo = new File(['xlsx'], 'productos.xlsx');
+  const vistaPrevia = {
+    procesadas: 0,
+    creadas: 0,
+    skus_generados: 1,
+    insertables: 1,
+    omitidas: 0,
+    invalidas: 1,
+    productos_simples_creados: 0,
+    productos_base_creados: 0,
+    productos_base_reutilizados: 0,
+    variantes_creadas: 0,
+    costos_faltantes: 0,
+    catalogos_nuevos: [],
+    errores: [{ fila: 3, nombre: 'Corona', campo: 'Stock inicial', motivo: 'debe ser un número mayor o igual a cero' }],
+    advertencias: [],
+    filas_correctas: [{ fila: 2, nombre: 'Agua', categoria: 'Bebidas', precio_venta: 12, costo: 8.38, stock_inicial: 4 }],
+  };
+
+  beforeEach(() => {
+    sucursal.set({ id: 'sucursal-1', nombre: 'Sucursal Centro' });
+    TestBed.configureTestingModule({
+      imports: [ProductosComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ContextoService, useValue: { negocio: signal({ id: negocioId }), sucursal, puede: () => true } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'import' }, paramMap: new Map() } } },
+        { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
+      ],
+    });
+    fixture = TestBed.createComponent(ProductosComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  function validar(): void {
+    component.importFile = archivo;
+    component.validateProductImport();
+    const request = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/validar-importacion`);
+    expect((request.request.body as FormData).get('sucursal_id')).toBe('sucursal-1');
+    request.flush(vistaPrevia);
+    fixture.detectChanges();
+  }
+
+  it('usa la sucursal activa sin mostrar un selector', () => {
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.querySelector('p-select')).toBeNull();
+    expect(page.querySelector('.import-branch')?.textContent).toContain('Sucursal Centro');
+
+    validar();
+
+    expect(page.querySelector('app-import-report')).not.toBeNull();
+    expect(page.textContent).toContain('Filas con error');
+  });
+
+  it('descarta la vista previa cuando cambia la sucursal activa', () => {
+    validar();
+    sucursal.set({ id: 'sucursal-1', nombre: 'Sucursal Centro' });
+    fixture.detectChanges();
+    expect(component.importPreview()).not.toBeNull();
+
+    sucursal.set({ id: 'sucursal-2', nombre: 'Sucursal Norte' });
+    fixture.detectChanges();
+
+    expect(component.importPreview()).toBeNull();
+  });
+
+  it('descarga el Excel de errores del archivo validado', () => {
+    validar();
+    const createObjectURL = vi.fn(() => 'blob:errores');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.reporte-descargar')!.click();
+    const request = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/importacion/errores`);
+    expect((request.request.body as FormData).get('sucursal_id')).toBe('sucursal-1');
+    request.flush(new Blob(['xlsx']));
+
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:errores');
+    expect(component.downloadingImportErrors()).toBe(false);
+    click.mockRestore();
   });
 });

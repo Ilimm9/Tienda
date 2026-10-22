@@ -1,6 +1,8 @@
 package correo
 
 import (
+	"bytes"
+	"image/png"
 	"strings"
 	"testing"
 
@@ -101,7 +103,17 @@ func TestUnknownTemplateFails(t *testing.T) {
 
 func TestLogoIsEmbeddedPNG(t *testing.T) {
 	logo, err := Logo()
-	if err != nil || len(logo) < 8 || string(logo[1:4]) != "PNG" {
-		t.Fatalf("logo inválido: len=%d err=%v", len(logo), err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	imagen, err := png.Decode(bytes.NewReader(logo))
+	if err != nil {
+		t.Fatalf("logo PNG inválido: %v", err)
+	}
+	if imagen.Bounds().Dx() != 440 || imagen.Bounds().Dy() != 96 {
+		t.Fatalf("dimensiones del logo inesperadas: %v", imagen.Bounds())
+	}
+	if _, _, _, alpha := imagen.At(439, 95).RGBA(); alpha != 0 {
+		t.Fatal("el logo debe conservar un fondo transparente")
 	}
 }

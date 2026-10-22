@@ -18,9 +18,10 @@ import (
 )
 
 var ErrInvalidImportFile = errors.New("el archivo no tiene el formato de plantilla esperado")
+var ErrNoImportErrors = errors.New("el archivo no tiene filas con errores")
 
 var shortBarcodePattern = regexp.MustCompile(`^\d{1,7}$`)
-var costPattern = regexp.MustCompile(`^\d+(?:\.\d{1,4})?$`)
+var costPattern = regexp.MustCompile(`^\d+(?:\.\d+)?$`)
 
 func (s *ProductService) ImportBrands(businessID uuid.UUID, file io.Reader) (domain.CatalogImportResult, error) {
 	rows, result, err := parseBrandImport(file)
@@ -56,6 +57,59 @@ func (s *ProductService) ImportProviders(businessID uuid.UUID, file io.Reader) (
 	}
 	imported, err := s.products.ImportProviders(businessID, rows)
 	return mergeImportResults(result, imported), err
+}
+
+func productImportErrorsWorkbook(content []byte, issues []domain.CatalogImportIssue) ([]byte, error) {
+	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	rows, _, err := readProductImportRows(bytes.NewReader(content), headers)
+	if err != nil {
+		return nil, err
+	}
+	reasons := make(map[int][]string)
+	for _, issue := range issues {
+		reason := issue.Motivo
+		if issue.Campo != "" {
+			reason = issue.Campo + ": " + reason
+		}
+		reasons[issue.Fila] = append(reasons[issue.Fila], reason)
+	}
+	book := excelize.NewFile()
+	defer book.Close()
+	sheet := "Productos"
+	book.SetSheetName(book.GetSheetName(0), sheet)
+	if err := book.SetSheetRow(sheet, "A1", &[]string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor", "Errores"}); err != nil {
+		return nil, err
+	}
+	next := 2
+	for index, row := range rows {
+		rowReasons, failed := reasons[index+2]
+		if !failed {
+			continue
+		}
+		values := make([]string, len(headers)+1)
+		for column := range headers {
+			values[column] = cell(row, column)
+		}
+		values[len(headers)] = strings.Join(rowReasons, "; ")
+		start, _ := excelize.CoordinatesToCellName(1, next)
+		if err := book.SetSheetRow(sheet, start, &values); err != nil {
+			return nil, err
+		}
+		next++
+	}
+	style, err := book.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true, Color: "FFFFFF"}, Fill: excelize.Fill{Type: "pattern", Color: []string{"2563EB"}, Pattern: 1}})
+	if err != nil {
+		return nil, err
+	}
+	book.SetCellStyle(sheet, "A1", "O1", style)
+	book.SetColWidth(sheet, "A", "N", 22)
+	book.SetColWidth(sheet, "O", "O", 70)
+	book.SetPanes(sheet, &excelize.Panes{Freeze: true, Split: true, YSplit: 1, TopLeftCell: "A2", ActivePane: "bottomLeft"})
+	var output bytes.Buffer
+	if err := book.Write(&output); err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
 }
 
 func CatalogImportTemplate(section string) ([]byte, error) {
@@ -106,7 +160,7 @@ func CatalogImportTemplate(section string) ([]byte, error) {
 			{"Campos opcionales", "Categoría, Marca, Proveedor, Descripción, Presentación, Contenido, Unidad de contenido, Unidad de medida, Código de barras, Variantes y Costo."},
 			{"Contenido y unidad de contenido", "Indican cuánto trae el empaque. Ejemplo: para una botella de 600 ml, escribe Contenido: 600 y Unidad de contenido: ml."},
 			{"Unidad de medida", "Es la unidad estandarizada del catálogo. Escribe su nombre completo, por ejemplo Mililitro. Si no existe, aparecerá en la vista previa para autorizar su creación."},
-			{"Números", "Precio, stock, contenido y costo deben ser números mayores o iguales a cero. El costo admite hasta 4 decimales."},
+			{"Números", "Precio, stock, contenido y costo deben ser números mayores o iguales a cero. El costo se redondea a 2 decimales."},
 			{"Catálogos", "Categoría, Marca, Proveedor y Unidad de medida son opcionales. Si indicas uno nuevo, revísalo y autoriza su creación en la vista previa."},
 			{"Código de barras", "De 8 a 14 dígitos se usa para buscar una imagen automáticamente. De 1 a 7 dígitos se acepta con advertencia y sin búsqueda de imagen."},
 			{"SKU interno", "Se genera automáticamente al importar y no debe incluirse como columna en el archivo."},
@@ -145,10 +199,10 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 		hasError := false
 		addError := func(field, reason string) {
 			hasError = true
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: field, Motivo: reason})
+			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Nombre: cell(row, 0), Campo: field, Motivo: reason})
 		}
 		addWarning := func(field, reason string) {
-			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rowNumber, Campo: field, Motivo: reason})
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: rowNumber, Nombre: cell(row, 0), Campo: field, Motivo: reason})
 		}
 		if cell(row, 0) == "" {
 			addError("Nombre", "es obligatorio")
@@ -206,19 +260,21 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 	return valid, result, nil
 }
 
+// parseImportedCost redondea a 2 decimales: Excel guarda residuos de flotante
+// como 8.380000000000001 aunque muestre 8.38.
 func parseImportedCost(value string) (float64, error) {
 	if !costPattern.MatchString(value) {
-		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales")
+		return 0, errors.New("debe ser un número mayor o igual a cero")
 	}
 	integerPart := strings.SplitN(value, ".", 2)[0]
 	if len(strings.TrimLeft(integerPart, "0")) > 10 {
-		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales dentro del rango permitido")
+		return 0, errors.New("debe ser un número mayor o igual a cero dentro del rango permitido")
 	}
 	cost, err := strconv.ParseFloat(value, 64)
 	if err != nil || math.IsNaN(cost) || math.IsInf(cost, 0) || cost < 0 {
-		return 0, errors.New("debe ser un número mayor o igual a cero con hasta 4 decimales dentro del rango permitido")
+		return 0, errors.New("debe ser un número mayor o igual a cero dentro del rango permitido")
 	}
-	return cost, nil
+	return math.Round(cost*100) / 100, nil
 }
 
 func parseVariantAttributes(value string) ([]domain.ProductVariantAttributeInput, error) {

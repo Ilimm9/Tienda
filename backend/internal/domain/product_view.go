@@ -162,6 +162,7 @@ type UpdateMarcaInput struct {
 // CatalogImportIssue identifies a row that could not be imported.
 type CatalogImportIssue struct {
 	Fila   int    `json:"fila"`
+	Nombre string `json:"nombre,omitempty"`
 	Campo  string `json:"campo,omitempty"`
 	Motivo string `json:"motivo"`
 }
@@ -188,6 +189,17 @@ type ProductImportPreview struct {
 	CatalogImportResult
 	Insertables     int                            `json:"insertables"`
 	CatalogosNuevos []ProductImportCatalogProposal `json:"catalogos_nuevos"`
+	FilasCorrectas  []ProductImportValidRow        `json:"filas_correctas"`
+}
+
+// ProductImportValidRow summarizes an insertable row in the import preview.
+type ProductImportValidRow struct {
+	Fila         int     `json:"fila"`
+	Nombre       string  `json:"nombre"`
+	Categoria    string  `json:"categoria"`
+	PrecioVenta  float64 `json:"precio_venta"`
+	Costo        float64 `json:"costo"`
+	StockInicial float64 `json:"stock_inicial"`
 }
 
 // ProductImportCatalogProposal is a new optional catalog value found in a

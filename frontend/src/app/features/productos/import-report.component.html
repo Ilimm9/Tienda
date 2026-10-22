@@ -1,0 +1,250 @@
+<div class="reporte-resumen">
+  @if (correctos().length) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--correctos" (click)="abrir('correctos')">
+      <span>Listos para importar</span><strong>{{ correctos().length }}</strong>
+    </button>
+  }
+  @if (errores().length) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--errores" (click)="abrir('errores')">
+      <span>Filas con error · no se importan</span><strong>{{ filasConError() }}</strong>
+    </button>
+  }
+  @if (hayAdvertencias()) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--advertencias" (click)="abrir('advertencias')">
+      <span>Advertencias · sí se importan</span><strong>{{ advertencias().length + (costosFaltantes() ? 1 : 0) }}</strong>
+    </button>
+  }
+  @if (catalogos().length) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--catalogos" (click)="abrir('catalogos')">
+      <span>Catálogos nuevos</span><strong>{{ catalogos().length }}</strong>
+    </button>
+  }
+</div>
+
+@if (errores().length) {
+  <section id="reporte-errores" class="reporte-seccion" aria-label="Errores">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().errores"
+        aria-controls="reporte-errores-cuerpo"
+        (click)="alternar('errores')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().errores" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--errores"><i class="pi pi-times-circle" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Errores <span class="reporte-contador">{{ errores().length }}</span></span>
+          <small>{{ filasConError() }} filas no se importarán hasta que las corrijas.</small>
+        </span>
+      </button>
+      @if (puedeDescargar()) {
+        <button type="button" class="reporte-descargar" [disabled]="descargando()" (click)="descargarErrores.emit()">
+          <i class="pi pi-download" aria-hidden="true"></i>
+          {{ descargando() ? 'Descargando...' : 'Descargar errores (.xlsx)' }}
+        </button>
+      }
+    </div>
+    @if (abiertas().errores) {
+      <div id="reporte-errores-cuerpo" class="reporte-cuerpo">
+        @if (campos().length > 2) {
+          <div class="reporte-filtros" role="group" aria-label="Filtrar errores por columna">
+            @for (item of campos(); track item.campo) {
+              <button type="button" class="reporte-filtro" [attr.aria-pressed]="campo() === item.campo" (click)="elegirCampo(item.campo)">
+                {{ item.campo }} <span>{{ item.total }}</span>
+              </button>
+            }
+          </div>
+        }
+        <div class="reporte-tabla">
+          <table>
+            <thead>
+              <tr><th scope="col">Fila</th><th scope="col">Producto</th><th scope="col">Columna</th><th scope="col">Qué corregir</th></tr>
+            </thead>
+            <tbody>
+              @for (issue of erroresPagina().filas; track $index) {
+                <tr>
+                  <td class="reporte-num">{{ issue.fila }}</td>
+                  <td>{{ issue.nombre || '—' }}</td>
+                  <td>{{ issue.campo || 'General' }}</td>
+                  <td>{{ issue.motivo }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ng-container *ngTemplateOutlet="paginador; context: { $implicit: erroresPagina(), seccion: 'errores', nombre: 'errores' }" />
+        @if (puedeDescargar()) {
+          <p class="reporte-nota">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>
+            El Excel trae solo las filas con error, en el formato de la plantilla y con una columna Errores al final. Corrígelas y sube ese mismo archivo.
+          </p>
+        }
+      </div>
+    }
+  </section>
+}
+
+@if (hayAdvertencias()) {
+  <section id="reporte-advertencias" class="reporte-seccion" aria-label="Advertencias">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().advertencias"
+        aria-controls="reporte-advertencias-cuerpo"
+        (click)="alternar('advertencias')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().advertencias" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--advertencias"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Advertencias <span class="reporte-contador">{{ advertencias().length + (costosFaltantes() ? 1 : 0) }}</span></span>
+          <small>Se importan igual; revisa si quieres ajustarlas.</small>
+        </span>
+      </button>
+    </div>
+    @if (abiertas().advertencias) {
+      <div id="reporte-advertencias-cuerpo" class="reporte-cuerpo">
+        @if (costosFaltantes()) {
+          <p class="reporte-nota reporte-nota--advertencia">
+            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            {{ costosFaltantes() }} productos no cuentan con costo; se importarán con costo 0.
+          </p>
+        }
+        @if (advertencias().length) {
+          <div class="reporte-tabla">
+            <table>
+              <thead>
+                <tr><th scope="col">Fila</th><th scope="col">Producto</th><th scope="col">Columna</th><th scope="col">Aviso</th></tr>
+              </thead>
+              <tbody>
+                @for (issue of advertenciasPagina().filas; track $index) {
+                  <tr>
+                    <td class="reporte-num">{{ issue.fila }}</td>
+                    <td>{{ issue.nombre || '—' }}</td>
+                    <td>{{ issue.campo || 'General' }}</td>
+                    <td>{{ issue.motivo }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <ng-container *ngTemplateOutlet="paginador; context: { $implicit: advertenciasPagina(), seccion: 'advertencias', nombre: 'advertencias' }" />
+        }
+      </div>
+    }
+  </section>
+}
+
+@if (catalogos().length) {
+  <section id="reporte-catalogos" class="reporte-seccion" aria-label="Catálogos nuevos">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().catalogos"
+        aria-controls="reporte-catalogos-cuerpo"
+        (click)="alternar('catalogos')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().catalogos" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--catalogos"><i class="pi pi-tags" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Catálogos nuevos <span class="reporte-contador">{{ catalogos().length }}</span></span>
+          <small>Al autorizar se crean con sus datos mínimos; podrás editarlos después.</small>
+        </span>
+      </button>
+    </div>
+    @if (abiertas().catalogos) {
+      <div id="reporte-catalogos-cuerpo" class="reporte-cuerpo">
+        <div class="reporte-tabla">
+          <table>
+            <thead>
+              <tr><th scope="col">Tipo</th><th scope="col">Nombre</th><th scope="col" class="reporte-num">Productos</th></tr>
+            </thead>
+            <tbody>
+              @for (catalogo of catalogosPagina().filas; track catalogo.tipo + catalogo.nombre) {
+                <tr>
+                  <td>{{ catalogo.tipo }}</td>
+                  <td>{{ catalogo.nombre }}</td>
+                  <td class="reporte-num">{{ catalogo.productos }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ng-container *ngTemplateOutlet="paginador; context: { $implicit: catalogosPagina(), seccion: 'catalogos', nombre: 'catálogos' }" />
+      </div>
+    }
+  </section>
+}
+
+@if (correctos().length) {
+  <section id="reporte-correctos" class="reporte-seccion" aria-label="Correctos">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().correctos"
+        aria-controls="reporte-correctos-cuerpo"
+        (click)="alternar('correctos')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().correctos" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--correctos"><i class="pi pi-check" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Correctos <span class="reporte-contador">{{ correctos().length }}</span></span>
+          <small>Filas listas para importar{{ sucursal() ? ' en ' + sucursal() : '' }}.</small>
+        </span>
+      </button>
+    </div>
+    @if (abiertas().correctos) {
+      <div id="reporte-correctos-cuerpo" class="reporte-cuerpo">
+        <div class="reporte-tabla">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Fila</th><th scope="col">Producto</th><th scope="col">Categoría</th>
+                <th scope="col" class="reporte-num">Precio</th><th scope="col" class="reporte-num">Costo</th><th scope="col" class="reporte-num">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of correctosPagina().filas; track fila.fila) {
+                <tr>
+                  <td class="reporte-num">{{ fila.fila }}</td>
+                  <td>{{ fila.nombre }}</td>
+                  <td>{{ fila.categoria || '—' }}</td>
+                  <td class="reporte-num">{{ fila.precio_venta | currency: 'MXN' }}</td>
+                  <td class="reporte-num">{{ fila.costo | currency: 'MXN' }}</td>
+                  <td class="reporte-num">{{ fila.stock_inicial }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ng-container *ngTemplateOutlet="paginador; context: { $implicit: correctosPagina(), seccion: 'correctos', nombre: 'correctos' }" />
+      </div>
+    }
+  </section>
+}
+
+<ng-template #paginador let-p let-seccion="seccion" let-nombre="nombre">
+  @if (p.total > 10) {
+    <nav class="reporte-paginador" [attr.aria-label]="'Paginación de ' + nombre">
+      <span>{{ p.desde }}–{{ p.hasta }} de {{ p.total }}</span>
+      <span class="reporte-paginas">
+        <button type="button" aria-label="Página anterior" [disabled]="p.pagina === 1" (click)="irA(seccion, p.pagina - 1)">
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+        </button>
+        @for (numero of p.paginas; track $index) {
+          @if (numero === 0) {
+            <span aria-hidden="true">…</span>
+          } @else {
+            <button type="button" [attr.aria-current]="numero === p.pagina ? 'page' : null" (click)="irA(seccion, numero)">{{ numero }}</button>
+          }
+        }
+        <button type="button" aria-label="Página siguiente" [disabled]="p.pagina === p.ultima" (click)="irA(seccion, p.pagina + 1)">
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </span>
+    </nav>
+  }
+</ng-template>

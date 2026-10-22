@@ -143,6 +143,7 @@ export interface ProductLookup {
 
 export interface ProductImportIssue {
   fila: number;
+  nombre?: string;
   campo?: string;
   motivo: string;
 }
@@ -165,6 +166,16 @@ export interface ProductImportResult {
 export interface ProductImportPreview extends ProductImportResult {
   insertables: number;
   catalogos_nuevos: ProductImportCatalogProposal[];
+  filas_correctas: ProductImportValidRow[];
+}
+
+export interface ProductImportValidRow {
+  fila: number;
+  nombre: string;
+  categoria: string;
+  precio_venta: number;
+  costo: number;
+  stock_inicial: number;
 }
 
 export interface ProductImportCatalogProposal {

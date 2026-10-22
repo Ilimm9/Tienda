@@ -18,6 +18,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { ImportReportComponent } from './import-report.component';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
   CatalogOption,
@@ -56,6 +57,7 @@ interface VariantDimension {
   standalone: true,
   imports: [
     PuedeDirective,
+    ImportReportComponent,
     CommonModule,
     ButtonModule,
     CheckboxModule,
@@ -142,7 +144,9 @@ export class ProductosComponent {
   readonly lookupSources = signal<string[]>([]);
   readonly catalogLookupWarnings = signal<string[]>([]);
   readonly failedProductImages = signal<ReadonlySet<string>>(new Set());
-  readonly importBranches = signal<CatalogOption[]>([]);
+  // La carga masiva siempre usa la sucursal activa del contexto.
+  readonly importSucursal = computed(() => this.contexto.sucursal());
+  readonly downloadingImportErrors = signal(false);
   readonly importing = signal(false);
   readonly importError = signal<string | null>(null);
   readonly importResult = signal<ProductImportResult | null>(null);
@@ -158,7 +162,10 @@ export class ProductosComponent {
   formError: string | null = null;
   importFile: File | null = null;
   importDropActive = false;
-  importBranchId = '';
+
+  get importBranchId(): string {
+    return this.importSucursal()?.id ?? '';
+  }
 
   readonly productForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(255)]],
@@ -207,6 +214,15 @@ export class ProductosComponent {
       this.openCreateDialog();
     } else if (this.pageMode === 'import') {
       this.openImportDialog();
+      // Una vista previa validada para otra sucursal no debe importarse en la nueva.
+      const sucursalImportacion = computed(() => this.contexto.sucursal()?.id ?? '');
+      effect(() => {
+        sucursalImportacion();
+        untracked(() => {
+          this.importPreview.set(null);
+          this.importResult.set(null);
+        });
+      });
     } else {
       this.loadProductForEdit();
     }
@@ -517,20 +533,10 @@ export class ProductosComponent {
   openImportDialog(): void {
     this.loading.set(false);
     this.importFile = null;
-    this.importBranchId = '';
     this.importDropActive = false;
     this.importError.set(null);
     this.importResult.set(null);
     this.importPreview.set(null);
-    this.importBranches.set([]);
-    this.productosService.listBranches(this.negocioID).subscribe({
-      next: (items) => {
-        this.importBranches.set(items);
-        this.importBranchId =
-          items.find((item) => item.id === this.contexto.sucursal()?.id)?.id ?? items[0]?.id ?? '';
-      },
-      error: () => this.importError.set('No fue posible cargar las sucursales.'),
-    });
   }
 
   onImportFile(event: Event): void {
@@ -598,6 +604,27 @@ export class ProductosComponent {
       error: (response) => {
         this.importing.set(false);
         this.importError.set(response.error?.mensaje ?? 'No fue posible validar el archivo.');
+      },
+    });
+  }
+
+  downloadImportErrors(): void {
+    if (!this.importFile || !this.importBranchId || this.downloadingImportErrors()) return;
+    const file = this.importFile;
+    this.downloadingImportErrors.set(true);
+    this.productosService.downloadProductImportErrors(this.negocioID, this.importBranchId, file).subscribe({
+      next: (blob) => {
+        this.downloadingImportErrors.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `errores-${file.name}`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.downloadingImportErrors.set(false);
+        this.feedback.error('No fue posible descargar el archivo de errores.');
       },
     });
   }
@@ -698,6 +725,7 @@ export class ProductosComponent {
       errores: preview.errores ?? [],
       advertencias: preview.advertencias ?? [],
       catalogos_nuevos: preview.catalogos_nuevos ?? [],
+      filas_correctas: preview.filas_correctas ?? [],
     };
   }
 

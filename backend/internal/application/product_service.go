@@ -72,7 +72,7 @@ func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.
 }
 
 func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool, progress func(string, int)) (domain.CatalogImportResult, error) {
-	prepared, result, proposals, err := s.prepareProductImport(businessID, branchID, file, authorizeNewCatalogs)
+	prepared, _, result, proposals, err := s.prepareProductImport(businessID, branchID, file, authorizeNewCatalogs)
 	if err != nil {
 		return result, err
 	}
@@ -117,7 +117,7 @@ func (s *ProductService) GetProductImportJob(businessID, jobID uuid.UUID) (domai
 }
 
 func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, file io.Reader) (domain.ProductImportPreview, error) {
-	prepared, result, proposals, err := s.prepareProductImport(businessID, branchID, file, false)
+	prepared, rows, result, proposals, err := s.prepareProductImport(businessID, branchID, file, false)
 	result.SKUsGenerados += len(prepared)
 	if result.Errores == nil {
 		result.Errores = make([]domain.CatalogImportIssue, 0)
@@ -128,34 +128,65 @@ func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, fi
 	if proposals == nil {
 		proposals = make([]domain.ProductImportCatalogProposal, 0)
 	}
-	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals}, err
+	byRow := make(map[int]domain.ProductImportRow, len(rows))
+	for _, row := range rows {
+		byRow[row.Fila] = row
+	}
+	valid := make([]domain.ProductImportValidRow, 0, len(prepared))
+	for _, item := range prepared {
+		row := byRow[item.Fila]
+		valid = append(valid, domain.ProductImportValidRow{Fila: item.Fila, Nombre: row.Nombre, Categoria: row.Categoria, PrecioVenta: row.PrecioVenta, Costo: row.CostoProveedor, StockInicial: row.StockInicial})
+	}
+	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals, FilasCorrectas: valid}, err
 }
 
-func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error) {
+// ProductImportErrors devuelve un XLSX con las filas rechazadas del archivo,
+// en el formato de la plantilla y con una columna final de errores.
+func (s *ProductService) ProductImportErrors(businessID, branchID uuid.UUID, content []byte) ([]byte, error) {
+	_, _, result, _, err := s.prepareProductImport(businessID, branchID, bytes.NewReader(content), false)
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Errores) == 0 {
+		return nil, ErrNoImportErrors
+	}
+	return productImportErrorsWorkbook(content, result.Errores)
+}
+
+func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) ([]domain.ValidatedProductImportRow, []domain.ProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error) {
 	rows, result, err := parseProductImport(file)
 	if err != nil {
-		return nil, result, nil, err
+		return nil, nil, result, nil, err
 	}
 	prepared, validation, proposals, err := s.products.ValidateProductImport(businessID, branchID, rows)
 	if err != nil {
-		return nil, result, nil, err
+		return nil, rows, result, nil, err
 	}
 	if len(proposals) > 0 && authorizeNewCatalogs {
 		if err := s.products.CreateImportedCatalogs(businessID, proposals); err != nil {
-			return nil, result, proposals, err
+			return nil, rows, result, proposals, err
 		}
 		prepared, validation, _, err = s.products.ValidateProductImport(businessID, branchID, rows)
 		if err != nil {
-			return nil, result, proposals, err
+			return nil, rows, result, proposals, err
+		}
+	}
+	names := make(map[int]string, len(rows))
+	for _, row := range rows {
+		names[row.Fila] = row.Nombre
+	}
+	for index := range validation.Errores {
+		if validation.Errores[index].Nombre == "" {
+			validation.Errores[index].Nombre = names[validation.Errores[index].Fila]
 		}
 	}
 	result.Omitidas += validation.Omitidas
 	result.Invalidas += validation.Invalidas
 	result.Errores = append(result.Errores, validation.Errores...)
 	if len(proposals) == 0 {
-		return prepared, result, nil, nil
+		return prepared, rows, result, nil, nil
 	}
-	return prepared, result, proposals, nil
+	return prepared, rows, result, proposals, nil
 }
 
 func validImportImageURL(value string) bool {

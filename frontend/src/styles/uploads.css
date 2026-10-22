@@ -1,5 +1,6 @@
 .import-intro {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.85rem;
   padding: 0.85rem 1rem;
@@ -36,6 +37,108 @@
   align-items: center;
   color: var(--primary);
   font-weight: 600;
+}
+
+.import-intro-link {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.import-setup {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.import-setup--split {
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.import-setup--split .import-branch {
+  align-items: center;
+}
+
+/* Con archivo elegido la zona se reduce a una fila para dar espacio a la vista previa. */
+.file-dropzone--compact {
+  display: flex;
+  min-height: 0;
+  padding: 0.6rem 0.75rem;
+  gap: 0.75rem;
+  border-width: 1px;
+  text-align: left;
+}
+
+.file-dropzone--compact:hover,
+.file-dropzone--compact:focus-visible {
+  transform: none;
+}
+
+.file-dropzone--compact .dropzone-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.dropzone-file {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dropzone-file strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-dropzone--compact .remove-file-button {
+  position: static;
+  flex-shrink: 0;
+}
+
+.import-output-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.import-output-head h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.import-output-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.import-branch {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--primary-border);
+  border-radius: 0.65rem;
+  background: var(--primary-tint);
+  color: var(--text);
+}
+
+.import-branch i {
+  margin-top: 0.2rem;
+  color: var(--primary);
+}
+
+.import-branch small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .file-dropzone {
