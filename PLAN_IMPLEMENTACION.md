@@ -49,7 +49,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `26`; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `27`; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.
