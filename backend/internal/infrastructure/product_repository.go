@@ -660,6 +660,23 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
 			return errors.New("la sucursal no pertenece al negocio o está inactiva")
 		}
+		// Surtido por sucursal (28): un producto del catálogo no se duplica; si no está en
+		// esta sucursal, el cliente puede agregarlo con AddProductToBranch.
+		existing, err := existingSimpleProduct(tx, businessID, input.Nombre, optionalString(input.Presentacion), barcode)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			var inBranch int64
+			if err := tx.Table("inventario_sucursal i").Joins("JOIN producto_negocio pn ON pn.id = i.producto_negocio_id").
+				Where("pn.negocio_id = ? AND pn.producto_id = ? AND i.sucursal_id = ?", businessID, existing.ID, input.SucursalID).Count(&inBranch).Error; err != nil {
+				return err
+			}
+			if inBranch > 0 {
+				return domain.ErrAlreadyInBranch
+			}
+			return &domain.ProductInOtherBranchError{ProductoID: existing.ID, Nombre: existing.Nombre}
+		}
 		if input.CategoriaID != nil {
 			var category domain.Categoria
 			if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.CategoriaID, businessID).First(&category).Error; err != nil {
@@ -731,7 +748,7 @@ func (r *ProductRepository) Create(businessID uuid.UUID, input domain.CreateProd
 		if err := tx.Create(&commercial).Error; err != nil {
 			return err
 		}
-		if err := replaceProductProvider(tx, commercial.ID, input.ProveedorID); err != nil {
+		if err := setPrincipalProvider(tx, commercial.ID, input.ProveedorID); err != nil {
 			return err
 		}
 		if err := createInitialBranchPrice(tx, businessID, input.SucursalID, commercial.ID, input.UsuarioID, input.CostoProveedor, input.PrecioVenta); err != nil {
@@ -768,6 +785,69 @@ func createInitialBranchPrice(tx *gorm.DB, businessID, branchID, commercialID, u
 	event := preciodomain.HistorialCostoPrecioSucursal{NegocioID: businessID, SucursalID: branchID, ProductoNegocioID: commercialID, Origen: preciodomain.OrigenAltaInicial, CostoNuevo: &cost, PrecioNuevo: &price}
 	if userID != uuid.Nil {
 		event.UsuarioID = &userID
+	}
+	return tx.Create(&event).Error
+}
+
+// branchPricing carries who edits a product and where its sale price applies.
+type branchPricing struct {
+	branchID uuid.UUID
+	userID   uuid.UUID
+	motivo   string
+	allowed  bool
+}
+
+const defaultEditPriceReason = "Edición del producto"
+
+func branchPricingFromUpdate(input domain.UpdateProductInput) branchPricing {
+	motivo := strings.TrimSpace(optionalString(input.MotivoPrecio))
+	if motivo == "" {
+		motivo = defaultEditPriceReason
+	}
+	return branchPricing{branchID: input.SucursalID, userID: input.UsuarioID, motivo: motivo, allowed: input.PuedeCambiarPrecio}
+}
+
+// applyBranchPriceOnEdit writes an edited sale price into precios_sucursal of the
+// active branch. An unchanged price writes nothing; a missing price is created
+// only when one was captured, so untouched products stay "sin precio".
+func applyBranchPriceOnEdit(tx *gorm.DB, businessID, commercialID uuid.UUID, price float64, pricing branchPricing) error {
+	if price < 0 || math.IsNaN(price) || math.IsInf(price, 0) {
+		return errors.New("el precio de venta no es válido")
+	}
+	price = math.Round(price*100) / 100
+	var current preciodomain.PrecioSucursal
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("negocio_id = ? AND sucursal_id = ? AND producto_negocio_id = ?", businessID, pricing.branchID, commercialID).
+		First(&current).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if price == 0 {
+			return nil
+		}
+		if !pricing.allowed {
+			return domain.ErrPricePermissionRequired
+		}
+		return createInitialBranchPrice(tx, businessID, pricing.branchID, commercialID, pricing.userID, 0, price)
+	}
+	if err != nil {
+		return err
+	}
+	previous := current.PrecioVenta
+	if previous == price {
+		return nil
+	}
+	if !pricing.allowed {
+		return domain.ErrPricePermissionRequired
+	}
+	values := map[string]interface{}{"precio_venta": price}
+	if current.CostoVigente > 0 {
+		values["margen"] = (price - current.CostoVigente) / current.CostoVigente
+	}
+	if err := tx.Model(&current).Updates(values).Error; err != nil {
+		return err
+	}
+	event := preciodomain.HistorialCostoPrecioSucursal{NegocioID: businessID, SucursalID: pricing.branchID, ProductoNegocioID: commercialID, Origen: preciodomain.OrigenAjustePrecioManual, PrecioAnterior: &previous, PrecioNuevo: &price, Motivo: &pricing.motivo}
+	if pricing.userID != uuid.Nil {
+		event.UsuarioID = &pricing.userID
 	}
 	return tx.Create(&event).Error
 }
@@ -887,7 +967,7 @@ func (r *ProductRepository) createFamilyVariant(tx *gorm.DB, businessID, branchI
 	if err := tx.Create(&commercial).Error; err != nil {
 		return err
 	}
-	if err := replaceProductProvider(tx, commercial.ID, providerID); err != nil {
+	if err := setPrincipalProvider(tx, commercial.ID, providerID); err != nil {
 		return err
 	}
 	if err := createInitialBranchPrice(tx, businessID, branchID, commercial.ID, userID, initialCost, variant.PrecioVenta); err != nil {
@@ -1107,10 +1187,19 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 		}
 	}
 
+	if len([]rune(strings.TrimSpace(optionalString(input.MotivoPrecio)))) > 200 {
+		return errors.New("el motivo del cambio de precio admite hasta 200 caracteres")
+	}
+	pricing := branchPricingFromUpdate(input)
+
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		var product domain.Producto
 		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", productID, businessID).First(&product).Error; err != nil {
 			return errors.New("producto no encontrado")
+		}
+		var branch domain.Sucursal
+		if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", input.SucursalID, businessID).First(&branch).Error; err != nil {
+			return errors.New("la sucursal no pertenece al negocio o está inactiva")
 		}
 		if input.CategoriaID != nil {
 			var category domain.Categoria
@@ -1154,22 +1243,25 @@ func (r *ProductRepository) Update(businessID, productID uuid.UUID, input domain
 				return errors.New("producto no encontrado")
 			}
 			if len(input.Variantes) > 0 {
-				return r.convertSimpleProductToFamily(tx, businessID, product, commercial, input)
+				return r.convertSimpleProductToFamily(tx, businessID, product, commercial, input, pricing)
 			}
-			if err := replaceProductProvider(tx, commercial.ID, input.ProveedorID); err != nil {
+			if err := setPrincipalProvider(tx, commercial.ID, input.ProveedorID); err != nil {
 				return err
 			}
-			return replaceSimpleProductBarcode(tx, businessID, productID, barcode)
+			if err := replaceSimpleProductBarcode(tx, businessID, productID, barcode); err != nil {
+				return err
+			}
+			return applyBranchPriceOnEdit(tx, businessID, commercial.ID, input.PrecioVenta, pricing)
 		}
 
 		if barcode != "" {
 			return errors.New("el código de barras de una familia se captura en cada variante")
 		}
-		return r.updateProductFamily(tx, businessID, product, input)
+		return r.updateProductFamily(tx, businessID, product, input, pricing)
 	})
 }
 
-func (r *ProductRepository) convertSimpleProductToFamily(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, commercial domain.ProductoNegocio, input domain.UpdateProductInput) error {
+func (r *ProductRepository) convertSimpleProductToFamily(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, commercial domain.ProductoNegocio, input domain.UpdateProductInput, pricing branchPricing) error {
 	if len(input.Variantes) == 0 {
 		return errors.New("se requiere al menos una variante")
 	}
@@ -1220,7 +1312,7 @@ func (r *ProductRepository) convertSimpleProductToFamily(tx *gorm.DB, businessID
 		if err != nil {
 			return err
 		}
-		if err := r.createFamilyVariantOnUpdate(tx, businessID, product, family, variant, key, input.ProveedorID); err != nil {
+		if err := r.createFamilyVariantOnUpdate(tx, businessID, product, family, variant, key, input.ProveedorID, pricing); err != nil {
 			return err
 		}
 	}
@@ -1322,7 +1414,7 @@ func ensureBarcodeAvailable(tx *gorm.DB, businessID uuid.UUID, barcode string, p
 	return nil
 }
 
-func (r *ProductRepository) updateProductFamily(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, input domain.UpdateProductInput) error {
+func (r *ProductRepository) updateProductFamily(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, input domain.UpdateProductInput, pricing branchPricing) error {
 	if len(input.Variantes) == 0 {
 		return errors.New("una familia debe conservar al menos una variante")
 	}
@@ -1378,7 +1470,7 @@ func (r *ProductRepository) updateProductFamily(tx *gorm.DB, businessID uuid.UUI
 		seenKeys[key] = struct{}{}
 
 		if variant.ID == nil {
-			if err := r.createFamilyVariantOnUpdate(tx, businessID, product, family, variant, key, input.ProveedorID); err != nil {
+			if err := r.createFamilyVariantOnUpdate(tx, businessID, product, family, variant, key, input.ProveedorID, pricing); err != nil {
 				return err
 			}
 			continue
@@ -1392,6 +1484,9 @@ func (r *ProductRepository) updateProductFamily(tx *gorm.DB, businessID uuid.UUI
 		}
 		seenIDs[*variant.ID] = struct{}{}
 		if err := updateExistingFamilyVariant(tx, businessID, current, variant, key, input.ProveedorID); err != nil {
+			return err
+		}
+		if err := applyBranchPriceOnEdit(tx, businessID, current.CommercialID, variant.PrecioVenta, pricing); err != nil {
 			return err
 		}
 	}
@@ -1434,7 +1529,7 @@ func updateExistingFamilyVariant(tx *gorm.DB, businessID uuid.UUID, current stru
 			return err
 		}
 	}
-	if err := replaceProductProvider(tx, current.CommercialID, providerID); err != nil {
+	if err := setPrincipalProvider(tx, current.CommercialID, providerID); err != nil {
 		return err
 	}
 	if err := tx.Where("negocio_id = ? AND producto_variante_id = ? AND es_principal = TRUE", businessID, current.ID).Delete(&domain.ProductoCodigo{}).Error; err != nil {
@@ -1446,7 +1541,7 @@ func updateExistingFamilyVariant(tx *gorm.DB, businessID uuid.UUID, current stru
 	return tx.Create(&domain.ProductoCodigo{NegocioID: businessID, ProductoVarianteID: &current.ID, Tipo: "GTIN", Codigo: barcode, EsPrincipal: true}).Error
 }
 
-func (r *ProductRepository) createFamilyVariantOnUpdate(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, family domain.FamiliaProducto, input domain.UpdateProductVariantInput, key string, providerID *uuid.UUID) error {
+func (r *ProductRepository) createFamilyVariantOnUpdate(tx *gorm.DB, businessID uuid.UUID, product domain.Producto, family domain.FamiliaProducto, input domain.UpdateProductVariantInput, key string, providerID *uuid.UUID, pricing branchPricing) error {
 	if input.PrecioVenta < 0 {
 		return errors.New("el precio de cada variante debe ser válido")
 	}
@@ -1481,7 +1576,10 @@ func (r *ProductRepository) createFamilyVariantOnUpdate(tx *gorm.DB, businessID 
 	if err := tx.Create(&commercial).Error; err != nil {
 		return err
 	}
-	return replaceProductProvider(tx, commercial.ID, providerID)
+	if err := setPrincipalProvider(tx, commercial.ID, providerID); err != nil {
+		return err
+	}
+	return applyBranchPriceOnEdit(tx, businessID, commercial.ID, input.PrecioVenta, pricing)
 }
 
 func (r *ProductRepository) Deactivate(businessID, productID uuid.UUID) error {
@@ -1535,35 +1633,57 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	for _, item := range units {
 		unitIDs[catalogImportKey(item.Nombre)] = item.ID
 	}
-	var existingCodes []string
-	if err := r.db.Model(&domain.ProductoCodigo{}).Where("negocio_id = ?", businessID).Pluck("codigo", &existingCodes).Error; err != nil {
+	// Surtido por sucursal (28): un producto que ya existe en el negocio no se
+	// duplica; se agrega a la sucursal o se actualiza. Por eso se conserva la
+	// oferta (producto_negocio) de cada código y de cada identidad existente.
+	var existingCodes []struct {
+		Codigo   string     `gorm:"column:codigo"`
+		OfertaID *uuid.UUID `gorm:"column:oferta_id"`
+	}
+	if err := r.db.Table("producto_codigos pc").
+		Select("pc.codigo, pn.id AS oferta_id").
+		Joins(`LEFT JOIN producto_negocio pn ON pn.negocio_id = pc.negocio_id AND pn.activo = TRUE
+			AND ((pc.producto_id IS NOT NULL AND pn.producto_id = pc.producto_id) OR (pc.producto_variante_id IS NOT NULL AND pn.producto_variante_id = pc.producto_variante_id))`).
+		Where("pc.negocio_id = ?", businessID).Scan(&existingCodes).Error; err != nil {
 		return nil, result, nil, err
 	}
 	type productIdentity struct {
+		OfertaID          uuid.UUID
 		Nombre            string
 		Presentacion      string
 		FamiliaProductoID *uuid.UUID
+		MarcaID           *uuid.UUID
+		CategoriaID       *uuid.UUID
 	}
 	var existingProducts []productIdentity
 	if err := r.db.Table("productos AS p").
-		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id").
-		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ?", businessID).
+		Select("pn.id AS oferta_id, p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id, p.marca_id, (SELECT pc.categoria_id FROM producto_categorias pc WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC LIMIT 1) AS categoria_id").
+		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Where("p.activo = TRUE").
 		Scan(&existingProducts).Error; err != nil {
 		return nil, result, nil, err
 	}
 	existingCodeSet := make(map[string]struct{}, len(existingCodes))
+	existingCodeOffers := make(map[string]uuid.UUID, len(existingCodes))
 	seenFileCodes := make(map[string]struct{})
-	seenNamePresentations := make(map[string]struct{}, len(existingProducts))
+	seenNamePresentations := make(map[string]struct{})
 	seenVariantIdentities := make(map[string]struct{})
+	existingSimpleOffers := make(map[string]uuid.UUID, len(existingProducts))
+	existingSimpleData := make(map[uuid.UUID]productIdentity, len(existingProducts))
 	for _, code := range existingCodes {
-		existingCodeSet[code] = struct{}{}
+		existingCodeSet[code.Codigo] = struct{}{}
+		if code.OfertaID != nil {
+			existingCodeOffers[code.Codigo] = *code.OfertaID
+		}
 	}
 	for _, product := range existingProducts {
 		if product.FamiliaProductoID == nil {
-			seenNamePresentations[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = struct{}{}
+			existingSimpleOffers[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = product.OfertaID
+			existingSimpleData[product.OfertaID] = product
 		}
 	}
 	var existingVariants []struct {
+		OfertaID     uuid.UUID  `gorm:"column:oferta_id"`
 		Nombre       string     `gorm:"column:nombre"`
 		Presentacion string     `gorm:"column:presentacion"`
 		MarcaID      *uuid.UUID `gorm:"column:marca_id"`
@@ -1571,15 +1691,33 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		Clave        string     `gorm:"column:clave"`
 	}
 	if err := r.db.Table("producto_variantes AS pv").
-		Select("p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.marca_id, pc.categoria_id, pv.clave").
+		Select("pn.id AS oferta_id, p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.marca_id, pc.categoria_id, pv.clave").
 		Joins("JOIN productos p ON p.id = pv.producto_id").
 		Joins("LEFT JOIN producto_categorias pc ON pc.producto_id = p.id AND pc.es_principal = TRUE").
-		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ?", businessID).
+		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Where("pv.activo = TRUE").Scan(&existingVariants).Error; err != nil {
 		return nil, result, nil, err
 	}
+	existingVariantOffers := make(map[string]uuid.UUID, len(existingVariants))
 	for _, variant := range existingVariants {
-		seenVariantIdentities[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = struct{}{}
+		existingVariantOffers[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = variant.OfertaID
+	}
+	// Estado de la sucursal activa: qué ofertas ya están en su surtido y con qué stock y precio.
+	var branchRows []struct {
+		ProductoNegocioID uuid.UUID `gorm:"column:producto_negocio_id"`
+		Stock             float64   `gorm:"column:stock"`
+		Precio            *float64  `gorm:"column:precio"`
+		Costo             *float64  `gorm:"column:costo"`
+	}
+	if err := r.db.Table("inventario_sucursal i").
+		Select("i.producto_negocio_id, i.stock_actual AS stock, ps.precio_venta AS precio, ps.costo_vigente AS costo").
+		Joins("LEFT JOIN precios_sucursal ps ON ps.producto_negocio_id = i.producto_negocio_id AND ps.sucursal_id = i.sucursal_id").
+		Where("i.sucursal_id = ?", branchID).Scan(&branchRows).Error; err != nil {
+		return nil, result, nil, err
+	}
+	branchState := make(map[uuid.UUID]importBranchState, len(branchRows))
+	for _, item := range branchRows {
+		branchState[item.ProductoNegocioID] = importBranchState{stock: item.Stock, price: item.Precio, cost: item.Costo}
 	}
 	seenVariantBases := make(map[string]variantBaseInput)
 	seenVariantProviders := make(map[string]*uuid.UUID)
@@ -1594,24 +1732,49 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			hasError = true
 			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: field, Motivo: reason})
 		}
+		addWarning := func(field, reason string) {
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: row.Fila, Nombre: row.Nombre, Campo: field, Motivo: reason})
+		}
 		namePresentationKey := productImportNamePresentationKey(row.Nombre, row.Presentacion)
 		// A row with variant attributes is identified by its attribute combination.
 		// Empty barcode values must not turn different flavours/colours into
 		// duplicate simple products.
+		// existingOffer es la oferta del catálogo que corresponde a la fila, si existe.
+		existingOffer := uuid.Nil
 		if len(row.Variantes) == 0 {
 			if _, exists := seenNamePresentations[namePresentationKey]; exists {
 				hasDuplicate = true
 				field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
 				addError(field, reason)
+			} else if offer, exists := existingSimpleOffers[namePresentationKey]; exists {
+				codeOffer, codeKnown := existingCodeOffers[row.CodigoBarras]
+				switch {
+				case row.CodigoBarras == "" || (codeKnown && codeOffer == offer):
+					existingOffer = offer
+				case !codeKnown:
+					// Mismo nombre con otro código: probablemente es una variante (regla de la 24).
+					hasDuplicate = true
+					field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
+					addError(field, reason)
+				default:
+					hasDuplicate = true
+					addError("Código de barras", "pertenece a otro producto del negocio")
+				}
 			}
 		}
-		if row.CodigoBarras != "" {
-			if _, exists := existingCodeSet[row.CodigoBarras]; exists {
-				hasDuplicate = true
-				addError("Código de barras", "ya está registrado en el negocio")
-			} else if _, exists := seenFileCodes[row.CodigoBarras]; exists {
+		if row.CodigoBarras != "" && !hasError {
+			if _, exists := seenFileCodes[row.CodigoBarras]; exists {
 				hasDuplicate = true
 				addError("Código de barras", "está repetido en el archivo")
+			} else if _, exists := existingCodeSet[row.CodigoBarras]; exists && len(row.Variantes) == 0 && existingOffer == uuid.Nil {
+				// Producto simple identificado solo por su código.
+				codeOffer, hasOffer := existingCodeOffers[row.CodigoBarras]
+				if _, simple := existingSimpleData[codeOffer]; hasOffer && simple {
+					existingOffer = codeOffer
+				} else {
+					hasDuplicate = true
+					addError("Código de barras", "ya está registrado en el negocio")
+				}
 			}
 		}
 		var categoryID *uuid.UUID
@@ -1670,9 +1833,15 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				variantIdentity := baseKey + "\x00" + variantKey
 				if _, exists := seenVariantIdentities[variantIdentity]; exists {
 					hasDuplicate = true
-					addError("Variantes", "la combinación ya existe o está repetida en el archivo")
+					addError("Variantes", "la combinación está repetida en el archivo")
+				} else if offer, exists := existingVariantOffers[variantIdentity]; exists {
+					existingOffer = offer
 				}
 				seenVariantIdentities[variantIdentity] = struct{}{}
+				if _, exists := existingCodeSet[row.CodigoBarras]; row.CodigoBarras != "" && exists && existingCodeOffers[row.CodigoBarras] != existingOffer {
+					hasDuplicate = true
+					addError("Código de barras", "ya está registrado en el negocio")
+				}
 			}
 		}
 		if hasError {
@@ -1683,6 +1852,30 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			}
 			continue
 		}
+		if existingOffer != uuid.Nil {
+			// Los datos compartidos del catálogo no cambian; solo se avisa si la fila trae otros.
+			if data, simple := existingSimpleData[existingOffer]; simple && (len(pendingCatalogs) > 0 ||
+				(categoryID != nil && !sameOptionalUUID(categoryID, data.CategoriaID)) || (brandID != nil && !sameOptionalUUID(brandID, data.MarcaID))) {
+				addWarning("Producto", "ya existe en el catálogo; se conservan los datos del catálogo")
+			} else if !simple && len(pendingCatalogs) > 0 {
+				addWarning("Producto", "ya existe en el catálogo; se conservan los datos del catálogo")
+			}
+			accion, changed := importExistingAction(branchState, existingOffer, row, addWarning)
+			if !changed {
+				result.Omitidas++
+				addWarning("Producto", "ya está en esta sucursal y no tiene cambios")
+				continue
+			}
+			input := domain.CreateImportedProductInput{Nombre: row.Nombre, SucursalID: branchID, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial, Variantes: row.Variantes}
+			if row.CodigoBarras != "" {
+				seenFileCodes[row.CodigoBarras] = struct{}{}
+			}
+			if len(row.Variantes) == 0 {
+				seenNamePresentations[namePresentationKey] = struct{}{}
+			}
+			prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input, Accion: accion, ProductoNegocioID: existingOffer})
+			continue
+		}
 		for _, proposal := range pendingCatalogs {
 			key := proposal.Tipo + "\x00" + catalogImportKey(proposal.Nombre)
 			current := proposals[key]
@@ -1691,7 +1884,7 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			current.Productos++
 			proposals[key] = current
 		}
-		input := domain.CreateImportedProductInput{Nombre: row.Nombre, CategoriaID: categoryID, MarcaID: brandID, ProveedorID: providerID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, StockInicial: row.StockInicial}
+		input := domain.CreateImportedProductInput{Nombre: row.Nombre, CategoriaID: categoryID, MarcaID: brandID, ProveedorID: providerID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial}
 		input.Descripcion = importOptionalString(row.Descripcion)
 		input.Presentacion = importOptionalString(row.Presentacion)
 		input.UnidadContenido = importOptionalString(row.UnidadContenido)
@@ -1828,6 +2021,21 @@ func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []
 	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0), Advertencias: make([]domain.CatalogImportIssue, 0)}
 	accountedVariantBases := make(map[string]struct{})
 	for _, row := range rows {
+		switch row.Accion {
+		case domain.ImportAccionAgregarSucursal, domain.ImportAccionActualizar:
+			changed, err := r.applyImportToBranch(businessID, row)
+			if err != nil {
+				result.Invalidas++
+				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: importErrorField(err.Error()), Motivo: err.Error()})
+			} else if row.Accion == domain.ImportAccionAgregarSucursal {
+				result.AgregadasSucursal++
+			} else if changed {
+				result.Actualizadas++
+			} else {
+				result.Omitidas++
+			}
+			continue
+		}
 		baseCreated := false
 		var err error
 		if len(row.Input.Variantes) > 0 {
@@ -1983,10 +2191,10 @@ func (r *ProductRepository) createImportedProduct(businessID uuid.UUID, input do
 		if err := tx.Create(&commercial).Error; err != nil {
 			return err
 		}
-		if err := replaceProductProvider(tx, commercial.ID, input.ProveedorID); err != nil {
+		if err := setPrincipalProvider(tx, commercial.ID, input.ProveedorID); err != nil {
 			return err
 		}
-		if err := createInitialBranchPrice(tx, businessID, input.SucursalID, commercial.ID, uuid.Nil, input.CostoProveedor, input.PrecioVenta); err != nil {
+		if err := createInitialBranchPrice(tx, businessID, input.SucursalID, commercial.ID, input.UsuarioID, input.CostoProveedor, input.PrecioVenta); err != nil {
 			return err
 		}
 		inventory := domain.InventarioSucursal{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, StockActual: input.StockInicial, StockMinimo: 0}
@@ -2088,10 +2296,10 @@ func (r *ProductRepository) createImportedVariant(businessID uuid.UUID, input do
 		if err := tx.Create(&commercial).Error; err != nil {
 			return err
 		}
-		if err := replaceProductProvider(tx, commercial.ID, input.ProveedorID); err != nil {
+		if err := setPrincipalProvider(tx, commercial.ID, input.ProveedorID); err != nil {
 			return err
 		}
-		if err := createInitialBranchPrice(tx, businessID, input.SucursalID, commercial.ID, uuid.Nil, input.CostoProveedor, input.PrecioVenta); err != nil {
+		if err := createInitialBranchPrice(tx, businessID, input.SucursalID, commercial.ID, input.UsuarioID, input.CostoProveedor, input.PrecioVenta); err != nil {
 			return err
 		}
 		inventory := domain.InventarioSucursal{SucursalID: input.SucursalID, ProductoNegocioID: commercial.ID, StockActual: input.StockInicial, StockMinimo: 0}
@@ -2132,14 +2340,20 @@ func validateProductProvider(tx *gorm.DB, businessID uuid.UUID, providerID *uuid
 	return nil
 }
 
-func replaceProductProvider(tx *gorm.DB, commercialID uuid.UUID, providerID *uuid.UUID) error {
-	if err := tx.Where("producto_negocio_id = ?", commercialID).Delete(&domain.ProductoProveedor{}).Error; err != nil {
+// setPrincipalProvider fija el proveedor principal y conserva los demás proveedores
+// que surten el producto (por ejemplo, los ligados al registrar compras).
+func setPrincipalProvider(tx *gorm.DB, commercialID uuid.UUID, providerID *uuid.UUID) error {
+	if err := tx.Model(&domain.ProductoProveedor{}).Where("producto_negocio_id = ? AND es_principal", commercialID).Update("es_principal", false).Error; err != nil {
 		return err
 	}
 	if providerID == nil {
 		return nil
 	}
-	return tx.Create(&domain.ProductoProveedor{ProductoNegocioID: commercialID, ProveedorID: *providerID, EsPrincipal: true}).Error
+	link := domain.ProductoProveedor{ProductoNegocioID: commercialID, ProveedorID: *providerID, EsPrincipal: true}
+	return tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "producto_negocio_id"}, {Name: "proveedor_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"es_principal": true, "actualizado_en": gorm.Expr("now()")}),
+	}).Create(&link).Error
 }
 
 func NewProductRepository(db *gorm.DB) *ProductRepository {
@@ -2213,14 +2427,18 @@ func (r *ProductRepository) ListByBusiness(businessID, branchID uuid.UUID) ([]do
 				WHEN COALESCE(existencias.stock, 0) <= COALESCE(existencias.minimo, 0) THEN 'Bajo stock'
 				ELSE 'En stock'
 			END AS estado`).
-		Joins(`JOIN LATERAL (
-			SELECT pn.*
-			FROM producto_negocio pn
-			WHERE pn.negocio_id = ? AND pn.activo = TRUE
-				AND (pn.producto_id = p.id OR pn.producto_variante_id IN (SELECT pv.id FROM producto_variantes pv WHERE pv.producto_id = p.id AND pv.activo = TRUE))
-			ORDER BY CASE WHEN pn.producto_id IS NOT NULL THEN 0 ELSE 1 END, pn.creado_en ASC
-			LIMIT 1
-		) pn ON TRUE`, businessID).
+		// Surtido por sucursal (28): se parte del inventario de la sucursal y se elige
+		// una oferta por producto (la simple primero). Evita un LATERAL correlacionado
+		// con OR, que el planificador resolvía recorriendo el inventario por cada fila.
+		Joins(`JOIN (
+			SELECT DISTINCT ON (COALESCE(oferta.producto_id, variante.producto_id))
+				COALESCE(oferta.producto_id, variante.producto_id) AS base_id, oferta.id, oferta.sku_interno
+			FROM inventario_sucursal isu
+			JOIN producto_negocio oferta ON oferta.id = isu.producto_negocio_id AND oferta.negocio_id = ? AND oferta.activo = TRUE
+			LEFT JOIN producto_variantes variante ON variante.id = oferta.producto_variante_id
+			WHERE isu.sucursal_id = ? AND (oferta.producto_variante_id IS NULL OR variante.activo = TRUE)
+			ORDER BY COALESCE(oferta.producto_id, variante.producto_id), CASE WHEN oferta.producto_id IS NOT NULL THEN 0 ELSE 1 END, oferta.creado_en ASC
+		) pn ON pn.base_id = p.id`, businessID, branchID).
 		// Existencias de la sucursal agregadas en una sola pasada por producto; un
 		// LATERAL con OR por producto recorría el inventario completo en cada fila.
 		Joins(`LEFT JOIN (
@@ -2279,7 +2497,7 @@ func (r *ProductRepository) ListByBusiness(businessID, branchID uuid.UUID) ([]do
 			(SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras`, branchID).
 		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Joins("LEFT JOIN precios_sucursal ps ON ps.producto_negocio_id = pn.id AND ps.sucursal_id = ?", branchID).
-		Where("pv.activo = TRUE").Scan(&variants).Error; err != nil {
+		Where("pv.activo = TRUE AND EXISTS (SELECT 1 FROM inventario_sucursal isu WHERE isu.producto_negocio_id = pn.id AND isu.sucursal_id = ?)", branchID).Scan(&variants).Error; err != nil {
 		return nil, err
 	}
 	attributesByVariant := make(map[string][]domain.ProductVariantAttributeInput, len(variants))

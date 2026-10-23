@@ -39,6 +39,12 @@
   color: var(--tone-sage-text);
 }
 
+.reporte-tarjeta--sucursal {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
 .reporte-tarjeta--errores {
   border-color: var(--danger-border);
   background: var(--danger-soft);
@@ -128,6 +134,11 @@
 }
 
 .reporte-icono--catalogos {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.reporte-icono--sucursal {
   background: var(--primary-soft);
   color: var(--primary-hover);
 }

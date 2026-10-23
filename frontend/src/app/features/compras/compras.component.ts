@@ -15,7 +15,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { forkJoin } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
-import { CatalogOption, PackagingUnit, PurchaseProduct, PurchaseRow } from './compras.models';
+import { CatalogOption, PackagingUnit, PurchaseProduct, PurchaseProductGroup, PurchaseRow } from './compras.models';
 import { ComprasService } from './compras.service';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
@@ -93,10 +93,16 @@ export class ComprasComponent {
         unit.factor_a_base >= 1,
     ),
   );
-  readonly productOptions = computed(() => [
-    ...this.products(),
-    { id: '__new_product__', nombre: 'Crear nuevo…', sku: null, codigo_barras: null },
-  ]);
+  // Todos los productos del negocio: primero los que surte el proveedor elegido.
+  readonly productOptions = computed<PurchaseProductGroup[]>(() => {
+    const products = this.products();
+    const groups: PurchaseProductGroup[] = [
+      { label: 'Nuevo', items: [{ id: '__new_product__', nombre: 'Crear nuevo…', sku: null, codigo_barras: null, del_proveedor: false }] },
+      { label: 'De este proveedor', items: products.filter((product) => product.del_proveedor) },
+      { label: 'Otros productos', items: products.filter((product) => !product.del_proveedor) },
+    ];
+    return groups.filter((group) => group.items.length > 0);
+  });
   readonly providerOptions = computed(() => [
     ...this.providers(),
     ...(this.context.puede(this.P.catalogoGestionar)
@@ -217,7 +223,7 @@ export class ComprasComponent {
       .products(this.businessId, providerId)
       .subscribe({
         next: (items) => this.products.set(items),
-        error: () => this.error.set('No fue posible cargar los productos del proveedor.'),
+        error: () => this.error.set('No fue posible cargar los productos.'),
       });
   }
   selectProvider(value: string): void {
@@ -351,6 +357,11 @@ export class ComprasComponent {
         this.error.set(r.error?.mensaje ?? 'No fue posible crear la unidad.');
       },
     });
+  }
+  // El producto elegido aún no está ligado al proveedor; se liga al guardar la compra.
+  seLigaraAlProveedor(index: number): boolean {
+    const id = this.details.at(index).get('producto_negocio_id')?.value;
+    return !this.isNewProduct(index) && this.products().some((product) => product.id === id && !product.del_proveedor);
   }
   isNewProduct(index: number): boolean {
     return Boolean(this.details.at(index).get('producto_nuevo')?.value);

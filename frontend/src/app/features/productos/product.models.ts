@@ -117,6 +117,10 @@ export interface UpdateProductRequest {
   unidad_medida_id?: string | null;
   presentacion: string | null;
   precio_venta: number;
+  /** Sucursal activa donde aplica el precio de venta. */
+  sucursal_id: string;
+  /** Opcional; si falta, el historial guarda «Edición del producto». */
+  motivo_precio?: string;
   codigo_barras: string | null;
   imagen_url: string | null;
   variantes: UpdateProductVariantRequest[];
@@ -159,6 +163,9 @@ export interface ProductImportResult {
   productos_base_reutilizados: number;
   variantes_creadas: number;
   costos_faltantes: number;
+  /** Surtido por sucursal (28): productos existentes agregados a la sucursal o actualizados. */
+  agregadas_sucursal?: number;
+  actualizadas?: number;
   errores: ProductImportIssue[];
   advertencias: ProductImportIssue[];
 }
@@ -167,6 +174,26 @@ export interface ProductImportPreview extends ProductImportResult {
   insertables: number;
   catalogos_nuevos: ProductImportCatalogProposal[];
   filas_correctas: ProductImportValidRow[];
+  filas_agregar_sucursal?: ProductImportValidRow[];
+  filas_actualizar?: ProductImportValidRow[];
+}
+
+/** Producto del negocio que aún no está en la sucursal (28). */
+export interface BranchCatalogProduct {
+  id: string;
+  nombre: string;
+  presentacion: string | null;
+  sku: string | null;
+  codigo_barras: string | null;
+  categoria: string | null;
+  variantes_faltantes: number;
+}
+
+export interface AddProductToBranchRequest {
+  sucursal_id: string;
+  precio_venta: number;
+  costo: number;
+  stock_inicial: number;
 }
 
 export interface ProductImportValidRow {

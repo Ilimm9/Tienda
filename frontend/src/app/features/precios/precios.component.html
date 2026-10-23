@@ -102,7 +102,7 @@
       @if (history().length) {
         <ul class="history-list">
           @for (entry of history(); track entry.id) {
-            <li><strong>{{ entry.origen }}</strong> · {{ entry.precio_anterior | currency: 'MXN' }} → {{ entry.precio_nuevo | currency: 'MXN' }} · {{ entry.creado_en | date: 'short' }} @if (entry.motivo) { · {{ entry.motivo }} }</li>
+            <li><strong>{{ etiquetaOrigen(entry.origen) }}</strong> · {{ entry.precio_anterior | currency: 'MXN' }} → {{ entry.precio_nuevo | currency: 'MXN' }} · {{ entry.creado_en | date: 'short' }} @if (entry.motivo) { · {{ entry.motivo }} }</li>
           }
         </ul>
       } @else { <p>Aún no hay cambios registrados.</p> }

@@ -6,8 +6,17 @@
         <h1>Productos</h1>
         <p>Visualiza el catálogo de productos y sus existencias actuales.</p>
       </div>
-      @if (!loading() && !error() && products().length > 0) {
+      @if (!loading() && !error() && products().length > 0 && esPropietario()) {
         <div class="products-actions">
+          <button
+            *appPuede="P.catalogoGestionar"
+            class="secondary-button"
+            type="button"
+            (click)="navigateToAddFromCatalog()"
+          >
+            <i class="pi pi-th-large" aria-hidden="true"></i>
+            Agregar del catálogo
+          </button>
           <button
             *appPuede="P.catalogoGestionar"
             class="secondary-button"
@@ -37,9 +46,18 @@
     } @else if (products().length === 0) {
       <div class="empty-products">
         <span class="empty-icon"><i class="pi pi-tags" aria-hidden="true"></i></span>
-        <h2>Sin productos disponibles</h2>
-        <p>Agrega tu primer producto para comenzar a administrar tu catálogo.</p>
+        <h2>Esta sucursal aún no tiene productos</h2>
+        @if (esPropietario()) {
+        <p>Agrega productos del catálogo del negocio, impórtalos o crea uno nuevo.</p>
         <div class="products-actions">
+          <button
+            *appPuede="P.catalogoGestionar"
+            class="secondary-button"
+            type="button"
+            (click)="navigateToAddFromCatalog()"
+          >
+            <i class="pi pi-th-large" aria-hidden="true"></i> Agregar del catálogo
+          </button>
           <button
             *appPuede="P.catalogoGestionar"
             class="secondary-button"
@@ -57,6 +75,9 @@
             <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
           </button>
         </div>
+        } @else {
+        <p>Pide al propietario que agregue productos.</p>
+        }
       </div>
     } @else {
       <section class="products-filters" aria-label="Filtros de productos">
@@ -532,7 +553,15 @@
               <span>Precio base <b>*</b></span>
               <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" />
               @if (hasError('precio_venta')) { <small>Captura un precio válido.</small> }
+              @if (editingProduct() && !puedeCambiarPrecio()) { <small class="price-locked">Necesitas permiso para cambiar precios.</small> }
             </label>
+            @if (editingProduct() && mostrarMotivoPrecio()) {
+              <label class="field" [class.field--error]="hasError('motivo_precio')">
+                <span>Motivo del cambio de precio <small class="optional-label">(opcional)</small></span>
+                <input pInputText formControlName="motivo_precio" maxlength="200" placeholder="Edición del producto" />
+                @if (hasError('motivo_precio')) { <small>Usa hasta 200 caracteres.</small> }
+              </label>
+            }
 			<label class="field" [class.field--error]="hasError('costo_proveedor')">
 			  <span>Costo proveedor <b>*</b></span>
 			  <input pInputText type="number" formControlName="costo_proveedor" min="0" step="0.0001" />
@@ -599,6 +628,17 @@
         }
         @if (formError) {
           <div class="form-error" role="alert">{{ formError }}</div>
+        }
+        @if (productoEnOtraSucursal(); as existente) {
+          <div class="existing-product-notice">
+            <p>
+              <strong>{{ existente.nombre }}</strong> ya está en el catálogo del negocio, pero no en esta sucursal.
+              Puedes agregarlo con el precio, costo y stock que capturaste, sin duplicarlo.
+            </p>
+            <button class="primary-button" type="button" [disabled]="agregandoASucursal()" (click)="agregarExistenteASucursal()">
+              {{ agregandoASucursal() ? 'Agregando...' : 'Agregar a esta sucursal' }}
+            </button>
+          </div>
         }
       </form>
     }
@@ -720,7 +760,8 @@
             <p>
               {{ result.productos_base_creados }} productos base nuevos ·
               {{ result.productos_base_reutilizados }} reutilizados ·
-              {{ result.variantes_creadas }} variantes registradas · {{ result.omitidas }} omitidas
+              {{ result.variantes_creadas }} variantes registradas ·
+              {{ result.agregadas_sucursal ?? 0 }} agregadas a la sucursal · {{ result.actualizadas ?? 0 }} actualizadas · {{ result.omitidas }} omitidas
               · {{ result.invalidas }} inválidas · {{ result.skus_generados }} SKU generados
             </p>
           </header>
@@ -729,7 +770,7 @@
           <header class="import-output-head">
             <h2>Vista previa</h2>
             <p>
-              {{ preview.insertables }} se insertarían{{ preview.omitidas ? ' · ' + preview.omitidas + ' omitidas por duplicado' : '' }}
+              {{ preview.insertables }} se importarían{{ preview.omitidas ? ' · ' + preview.omitidas + ' omitidas (repetidas o sin cambios)' : '' }}
             </p>
           </header>
           <app-import-report
@@ -737,6 +778,8 @@
             [advertencias]="preview.advertencias"
             [catalogos]="preview.catalogos_nuevos"
             [correctos]="preview.filas_correctas"
+            [agregarSucursal]="preview.filas_agregar_sucursal ?? []"
+            [actualizar]="preview.filas_actualizar ?? []"
             [costosFaltantes]="preview.costos_faltantes"
             [sucursal]="importSucursal()?.nombre ?? ''"
             [puedeDescargar]="true"

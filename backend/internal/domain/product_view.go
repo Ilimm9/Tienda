@@ -9,6 +9,8 @@ import (
 var (
 	ErrCatalogItemInUse    = errors.New("catalog item is in use")
 	ErrCatalogItemNotFound = errors.New("catalog item not found")
+	// ErrPricePermissionRequired is returned when an edit changes a branch price without precios.autorizar.
+	ErrPricePermissionRequired = errors.New("necesitas permiso para cambiar precios")
 )
 
 type CatalogDeletionCheck struct {
@@ -107,21 +109,27 @@ type CreateProductInput struct {
 	UsuarioID         uuid.UUID                   `json:"-"`
 }
 
-// UpdateProductInput intentionally excludes stock and branch assignment: inventory movements are managed separately from commercial product data.
+// UpdateProductInput intentionally excludes stock: inventory movements are managed separately from commercial product data.
+// SucursalID only scopes the sale price, which lives in precios_sucursal of the active branch.
 type UpdateProductInput struct {
-	Nombre          string                      `json:"nombre" binding:"required"`
-	MarcaID         *uuid.UUID                  `json:"marca_id"`
-	ProveedorID     *uuid.UUID                  `json:"proveedor_id"`
-	CategoriaID     *uuid.UUID                  `json:"categoria_id"`
-	Descripcion     *string                     `json:"descripcion"`
-	Contenido       *float64                    `json:"contenido"`
-	UnidadContenido *string                     `json:"unidad_contenido"`
-	UnidadMedidaID  *uuid.UUID                  `json:"unidad_medida_id"`
-	Presentacion    *string                     `json:"presentacion"`
-	PrecioVenta     float64                     `json:"precio_venta"`
-	CodigoBarras    *string                     `json:"codigo_barras"`
-	ImagenURL       *string                     `json:"imagen_url"`
-	Variantes       []UpdateProductVariantInput `json:"variantes"`
+	SucursalID   uuid.UUID `json:"sucursal_id" binding:"required"`
+	MotivoPrecio *string   `json:"motivo_precio"`
+	UsuarioID    uuid.UUID `json:"-"`
+	// PuedeCambiarPrecio is resolved by the handler from precios.autorizar.
+	PuedeCambiarPrecio bool                        `json:"-"`
+	Nombre             string                      `json:"nombre" binding:"required"`
+	MarcaID            *uuid.UUID                  `json:"marca_id"`
+	ProveedorID        *uuid.UUID                  `json:"proveedor_id"`
+	CategoriaID        *uuid.UUID                  `json:"categoria_id"`
+	Descripcion        *string                     `json:"descripcion"`
+	Contenido          *float64                    `json:"contenido"`
+	UnidadContenido    *string                     `json:"unidad_contenido"`
+	UnidadMedidaID     *uuid.UUID                  `json:"unidad_medida_id"`
+	Presentacion       *string                     `json:"presentacion"`
+	PrecioVenta        float64                     `json:"precio_venta"`
+	CodigoBarras       *string                     `json:"codigo_barras"`
+	ImagenURL          *string                     `json:"imagen_url"`
+	Variantes          []UpdateProductVariantInput `json:"variantes"`
 }
 
 // UpdateProductVariantInput only changes commercial variant data. SKU and inventory stay owned by their respective flows.
@@ -179,6 +187,8 @@ type CatalogImportResult struct {
 	ProductosBaseReutilizados int                  `json:"productos_base_reutilizados"`
 	VariantesCreadas          int                  `json:"variantes_creadas"`
 	CostosFaltantes           int                  `json:"costos_faltantes"`
+	AgregadasSucursal         int                  `json:"agregadas_sucursal"`
+	Actualizadas              int                  `json:"actualizadas"`
 	Errores                   []CatalogImportIssue `json:"errores"`
 	Advertencias              []CatalogImportIssue `json:"advertencias"`
 }
@@ -190,6 +200,9 @@ type ProductImportPreview struct {
 	Insertables     int                            `json:"insertables"`
 	CatalogosNuevos []ProductImportCatalogProposal `json:"catalogos_nuevos"`
 	FilasCorrectas  []ProductImportValidRow        `json:"filas_correctas"`
+	// Surtido por sucursal (28): filas de productos que ya existen en el negocio.
+	FilasAgregarSucursal []ProductImportValidRow `json:"filas_agregar_sucursal"`
+	FilasActualizar      []ProductImportValidRow `json:"filas_actualizar"`
 }
 
 // ProductImportValidRow summarizes an insertable row in the import preview.
@@ -224,15 +237,28 @@ type ProductImportRow struct {
 	UnidadMedida    string
 	PrecioVenta     float64
 	CostoProveedor  float64
-	StockInicial    float64
-	CodigoBarras    string
-	ImagenURL       string
-	Variantes       []ProductVariantAttributeInput
+	// CostoCapturado distingue una celda de costo vacía de un costo 0.
+	CostoCapturado bool
+	StockInicial   float64
+	CodigoBarras   string
+	ImagenURL      string
+	Variantes      []ProductVariantAttributeInput
 }
+
+// Acciones de una fila de importación (capability 28).
+const (
+	ImportAccionCrear           = "crear"
+	ImportAccionAgregarSucursal = "agregar_sucursal"
+	ImportAccionActualizar      = "actualizar"
+)
 
 type ValidatedProductImportRow struct {
 	Fila  int
 	Input CreateImportedProductInput
+	// Accion vacía equivale a crear. Para agregar o actualizar, ProductoNegocioID
+	// es la oferta existente del catálogo.
+	Accion            string
+	ProductoNegocioID uuid.UUID
 }
 
 // CreateImportedProductInput permits the optional fields supported
@@ -253,6 +279,8 @@ type CreateImportedProductInput struct {
 	CodigoBarras    *string
 	ImagenURL       *string
 	Variantes       []ProductVariantAttributeInput
+	CostoCapturado  bool
+	UsuarioID       uuid.UUID
 }
 
 type CatalogImportBrandRow struct {
@@ -330,4 +358,46 @@ type UpdateUnidadMedidaInput struct {
 	PermiteFraccion *bool      `json:"permite_fraccion"`
 	Decimales       *int       `json:"decimales"`
 	Activo          *bool      `json:"activo"`
+}
+
+// ErrAlreadyInBranch: the product already belongs to the branch assortment (capability 28).
+var ErrAlreadyInBranch = errors.New("este producto ya existe en esta sucursal")
+
+// ProductInOtherBranchError: creating a simple product that already exists in the
+// business catalog but not in the active branch; the client may add it instead.
+type ProductInOtherBranchError struct {
+	ProductoID uuid.UUID
+	Nombre     string
+}
+
+func (e *ProductInOtherBranchError) Error() string {
+	return "este producto ya existe en otra sucursal"
+}
+
+// BranchCatalogProduct is a business product that is not yet in a branch.
+type BranchCatalogProduct struct {
+	ID                 uuid.UUID `json:"id"`
+	Nombre             string    `json:"nombre"`
+	Presentacion       *string   `json:"presentacion"`
+	SKU                *string   `json:"sku"`
+	CodigoBarras       *string   `json:"codigo_barras"`
+	Categoria          *string   `json:"categoria"`
+	VariantesFaltantes int       `json:"variantes_faltantes"`
+}
+
+// AddToBranchInput adds catalog products to a branch without price or stock.
+type AddToBranchInput struct {
+	SucursalID  uuid.UUID   `json:"sucursal_id" binding:"required"`
+	ProductoIDs []uuid.UUID `json:"producto_ids"`
+	Todos       bool        `json:"todos"`
+}
+
+// AddProductToBranchInput adds one existing simple product to a branch with the
+// amounts captured in the product form.
+type AddProductToBranchInput struct {
+	SucursalID   uuid.UUID `json:"sucursal_id" binding:"required"`
+	PrecioVenta  float64   `json:"precio_venta"`
+	Costo        float64   `json:"costo"`
+	StockInicial float64   `json:"stock_inicial"`
+	UsuarioID    uuid.UUID `json:"-"`
 }

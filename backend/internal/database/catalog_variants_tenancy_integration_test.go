@@ -78,7 +78,7 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 			jabon = p.ID
 		}
 	}
-	upd := domain.UpdateProductInput{Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12, CodigoBarras: &code}
+	upd := domain.UpdateProductInput{SucursalID: ctxs[0].sucursal, PuedeCambiarPrecio: true, Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12, CodigoBarras: &code}
 	if err := repo.Update(ctxs[0].negocio, jabon, upd); err != nil {
 		t.Fatalf("update propio: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestCatalogVariantsTenancyIsolation(t *testing.T) {
 		t.Fatal("otro negocio desactivó producto ajeno")
 	}
 	conversion := domain.UpdateProductInput{
-		Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12,
+		SucursalID: ctxs[0].sucursal, PuedeCambiarPrecio: true, Nombre: "Jabón 2", CategoriaID: &ctxs[0].categoria, PrecioVenta: 12,
 		Variantes: []domain.UpdateProductVariantInput{
 			{Atributos: []domain.ProductVariantAttributeInput{{Nombre: "Aroma", Valor: "Neutro"}}, PrecioVenta: 12},
 			{Atributos: []domain.ProductVariantAttributeInput{{Nombre: "Aroma", Valor: "Lavanda"}}, PrecioVenta: 13},

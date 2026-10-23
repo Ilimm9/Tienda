@@ -1,11 +1,11 @@
 # Capability 24: Correcciones a la carga masiva de productos
 
-- Estado: **Verificada** (pendiente de prueba manual y aceptación final).
+- Estado: **Cerrada** el 2026-10-22 con aceptación final del usuario («la 24 está aceptada»), tras la prueba manual.
 - Aprobación explícita: 2026-10-22, el usuario aprobó los puntos 1 a 6 («procede con la implementación»), con estos ajustes: el costo se redondea a 2 decimales (punto 6) y el stock negativo se sigue rechazando.
 - Fecha: 2026-10-22.
 - Origen: prueba local con `thrs/docs-prueba/06-productos-lista-clienta.xlsx` (948 productos de la clienta): 505 correctos, 443 filas con error y 80 advertencias se muestran como listas largas sin orden; la vista pide una sucursal que ya está en el contexto.
 - Diseño: canvas «Tienda — Alta inicial e invitaciones», artboard **H1 · Carga masiva: vista previa** (interactivo, con datos reales del archivo 06). Colores provisionales: los actuales.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Frontend `features/productos`; backend en `application` (importación de productos), `domain/product_view.go` y `interfaces/http/product_handler.go`. Sin cambios de esquema.
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Frontend `features/productos`; backend en `application` (importación de productos), `domain/product_view.go` y `interfaces/http/product_handler.go`. Sin cambios de esquema.
 
 ## Objetivo
 
@@ -50,7 +50,7 @@ Que la vista previa y el resultado de la carga masiva se lean de un vistazo aunq
 ### 6. Costo redondeado a 2 decimales
 - El Excel de la clienta guarda `8.380000000000001` aunque se vea `8.38`; antes se rechazaba por tener más de 4 decimales (20 filas del archivo 06).
 - Decisión del usuario (2026-10-22): el costo de la importación se redondea a 2 decimales. Cualquier número finito no negativo se acepta y se redondea (`8.380000000000001` → 8.38; `12.12345` → 12.12). Se siguen rechazando el texto, los negativos y los valores fuera de rango (más de 10 dígitos enteros).
-- Modifica la regla de precisión de la importación de la [capability 19](19-historial-costos-precios-sucursal/CAPABILITY.md) (antes: hasta 4 decimales o error). La instrucción de la plantilla se actualiza.
+- Modifica la regla de precisión de la importación de la [capability 19](../19-historial-costos-precios-sucursal/CAPABILITY.md) (antes: hasta 4 decimales o error). La instrucción de la plantilla se actualiza.
 
 ### 7. Stock negativo
 - Decisión del usuario (2026-10-22): se sigue rechazando con el error actual. Sin cambios de código.
@@ -108,6 +108,7 @@ Tamaño aproximado: frontend mediano (la mayor parte del trabajo), backend chico
 - [x] Frontend: resumen, secciones, filtros y paginación.
 - [x] Frontend: descarga.
 - [x] Pruebas y registro de resultados.
+- [x] Prueba manual y aceptación final (2026-10-22).
 
 ## Decisiones
 - 2026-10-22: el usuario pidió secciones compactables (correctos, errores, advertencias), descargar los errores en Excel, paginar a partir de unas 10 filas y tomar la sucursal del contexto.
@@ -133,8 +134,13 @@ Tamaño aproximado: frontend mediano (la mayor parte del trabajo), backend chico
 - `ng build`: correcto. Aviso de presupuesto: `import-report.component.css` mide 5.19 kB (aviso a 4 kB, error a 16 kB), igual que otros componentes.
 - `graphify update .`: no se ejecutó porque `graphify` no está instalado en este equipo.
 
+## Prueba manual (2026-10-22)
+
+Hecha por el usuario con la lista de pasos A–G (sucursal desde el contexto, resumen y secciones, paginación y filtros, costo redondeado, descargar errores y volver a subir, importación y resultado, móvil): todo correcto.
+
+- A: el selector de sucursal solo está en la barra superior. Al cambiar de sucursal la aplicación redirige a Inicio y recarga las vistas, así que la vista previa no persiste con otra sucursal; el riesgo de importar en una sucursal distinta a la validada no se presenta.
+- Observación surgida en la prueba, fuera de esta capability: en otra sucursal se ve todo el catálogo del negocio (agotado y sin precio) y se percibe como duplicado. Se atiende en la [capability 28](28-surtido-por-sucursal.md).
+
 ## Pendientes
 
-- Prueba manual en el navegador con el archivo 06: validar, abrir y cerrar secciones, paginar, filtrar, descargar errores, corregir y volver a subir; cambiar de sucursal con una vista previa abierta; escritorio y móvil.
-- La descarga vuelve a validar contra la BD; si el catálogo cambió entre la vista previa y la descarga, el Excel refleja el estado actual.
-- Aceptación final del usuario.
+- Ninguno de esta capability. Comportamiento conocido: la descarga vuelve a validar contra la BD; si el catálogo cambió entre la vista previa y la descarga, el Excel refleja el estado actual.

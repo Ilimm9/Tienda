@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { permisoGuard } from '../../contexto/permiso.guard';
 import { PERMISOS } from '../../contexto/permisos';
+import { soloPropietarioGuard } from './solo-propietario.guard';
 
 export const PRODUCTOS_ROUTES: Routes = [
   {
@@ -20,14 +21,20 @@ export const PRODUCTOS_ROUTES: Routes = [
   {
     path: 'nuevo',
     data: { breadcrumb: 'Agregar producto', title: 'Agregar producto', mode: 'create', permiso: PERMISOS.catalogoGestionar },
-    canActivate: [permisoGuard],
+    canActivate: [permisoGuard, soloPropietarioGuard],
     loadComponent: () => import('./productos.component').then((module) => module.ProductosComponent),
   },
   {
     path: 'importar',
     data: { breadcrumb: 'Carga masiva', title: 'Carga masiva', mode: 'import', permiso: PERMISOS.catalogoGestionar },
-    canActivate: [permisoGuard],
+    canActivate: [permisoGuard, soloPropietarioGuard],
     loadComponent: () => import('./productos.component').then((module) => module.ProductosComponent),
+  },
+  {
+    path: 'agregar-del-catalogo',
+    data: { breadcrumb: 'Agregar del catálogo', title: 'Agregar del catálogo', permiso: PERMISOS.catalogoGestionar },
+    canActivate: [permisoGuard, soloPropietarioGuard],
+    loadComponent: () => import('./agregar-catalogo.component').then((module) => module.AgregarCatalogoComponent),
   },
   {
     path: ':productoId/editar',

@@ -1,7 +1,9 @@
 import '@angular/common/locales/global/es-MX';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Select } from 'primeng/select';
 import { of } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
@@ -187,5 +189,40 @@ describe('ComprasComponent', () => {
     });
     expect(component.details.at(0).get('unidad_medida_id')?.value).toBe('paquete-24');
     expect(component.unitDetailIndex()).toBeNull();
+  });
+  it('agrupa todos los productos con los del proveedor primero y avisa si se ligará al guardar', async () => {
+    service.products.mockReturnValueOnce(of([
+      { id: 'pn-1', nombre: 'Arroz', sku: null, codigo_barras: null, del_proveedor: true },
+      { id: 'pn-2', nombre: 'Zanahoria', sku: 'Z1', codigo_barras: '750', del_proveedor: false },
+    ]) as never);
+    const fixture = await createFixture();
+    const component = fixture.componentInstance;
+    component.form.controls.proveedor_id.setValue('proveedor-1');
+    component.loadProducts();
+
+    const groups = component.productOptions();
+    expect(groups.map((group) => group.label)).toEqual(['Nuevo', 'De este proveedor', 'Otros productos']);
+    expect(groups[1].items.map((item) => item.id)).toEqual(['pn-1']);
+    expect(groups[2].items.map((item) => item.id)).toEqual(['pn-2']);
+
+    component.details.at(0).patchValue({ producto_negocio_id: 'pn-1' });
+    expect(component.seLigaraAlProveedor(0)).toBe(false);
+    component.details.at(0).patchValue({ producto_negocio_id: 'pn-2' });
+    expect(component.seLigaraAlProveedor(0)).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Se ligará a este proveedor al guardar.');
+  });
+
+  it('omite los grupos vacíos', async () => {
+    const component = (await createFixture()).componentInstance;
+    expect(component.productOptions().map((group) => group.label)).toEqual(['Nuevo']);
+  });
+  it('usa scroll virtual en el selector de productos para catálogos grandes', async () => {
+    const fixture = await createFixture();
+    const select = fixture.debugElement
+      .queryAll(By.directive(Select))
+      .find((item) => item.attributes['formControlName'] === 'producto_negocio_id')?.componentInstance as Select;
+    expect(select.virtualScroll()).toBe(true);
+    expect(select.virtualScrollItemSize()).toBe(38);
   });
 });

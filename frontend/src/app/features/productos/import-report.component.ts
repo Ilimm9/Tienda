@@ -7,7 +7,7 @@ import {
   ProductImportValidRow,
 } from './product.models';
 
-type Seccion = 'errores' | 'advertencias' | 'catalogos' | 'correctos';
+type Seccion = 'errores' | 'advertencias' | 'catalogos' | 'correctos' | 'agregar' | 'actualizar';
 
 interface Paginado<T> {
   filas: T[];
@@ -34,6 +34,9 @@ export class ImportReportComponent {
   readonly advertencias = input<ProductImportIssue[]>([]);
   readonly catalogos = input<ProductImportCatalogProposal[]>([]);
   readonly correctos = input<ProductImportValidRow[]>([]);
+  /** Surtido por sucursal (28): productos del catálogo que se agregan o actualizan en la sucursal. */
+  readonly agregarSucursal = input<ProductImportValidRow[]>([]);
+  readonly actualizar = input<ProductImportValidRow[]>([]);
   readonly costosFaltantes = input(0);
   readonly sucursal = input('');
   readonly puedeDescargar = input(false);
@@ -45,12 +48,16 @@ export class ImportReportComponent {
     advertencias: false,
     catalogos: false,
     correctos: false,
+    agregar: false,
+    actualizar: false,
   });
   private readonly paginas = signal<Record<Seccion, number>>({
     errores: 1,
     advertencias: 1,
     catalogos: 1,
     correctos: 1,
+    agregar: 1,
+    actualizar: 1,
   });
   private readonly campoElegido = signal('Todos');
 
@@ -83,6 +90,8 @@ export class ImportReportComponent {
   readonly advertenciasPagina = computed(() => this.paginar('advertencias', this.advertencias()));
   readonly catalogosPagina = computed(() => this.paginar('catalogos', this.catalogos()));
   readonly correctosPagina = computed(() => this.paginar('correctos', this.correctos()));
+  readonly agregarPagina = computed(() => this.paginar('agregar', this.agregarSucursal()));
+  readonly actualizarPagina = computed(() => this.paginar('actualizar', this.actualizar()));
 
   alternar(seccion: Seccion): void {
     this.abiertas.update((actual) => ({ ...actual, [seccion]: !actual[seccion] }));

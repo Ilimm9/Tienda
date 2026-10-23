@@ -28,6 +28,9 @@ type ProductLookupProvider interface {
 
 type ProductRepository interface {
 	ListByBusiness(businessID, branchID uuid.UUID) ([]domain.ProductRow, error)
+	ListCatalogNotInBranch(businessID, branchID uuid.UUID) ([]domain.BranchCatalogProduct, error)
+	AddToBranch(businessID uuid.UUID, input domain.AddToBranchInput) (int, error)
+	AddProductToBranch(businessID, productID uuid.UUID, input domain.AddProductToBranchInput) error
 	ListCategories(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	ListBrands(businessID uuid.UUID) ([]domain.CatalogOption, error)
 	ListBranches(businessID uuid.UUID) ([]domain.CatalogOption, error)
@@ -67,11 +70,11 @@ type ProductRepository interface {
 	DeleteUnit(businessID, unitID uuid.UUID) error
 }
 
-func (s *ProductService) ImportProducts(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) (domain.CatalogImportResult, error) {
-	return s.importProducts(businessID, branchID, file, authorizeNewCatalogs, nil)
+func (s *ProductService) ImportProducts(businessID, branchID, userID uuid.UUID, file io.Reader, authorizeNewCatalogs bool) (domain.CatalogImportResult, error) {
+	return s.importProducts(businessID, branchID, userID, file, authorizeNewCatalogs, nil)
 }
 
-func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.Reader, authorizeNewCatalogs bool, progress func(string, int)) (domain.CatalogImportResult, error) {
+func (s *ProductService) importProducts(businessID, branchID, userID uuid.UUID, file io.Reader, authorizeNewCatalogs bool, progress func(string, int)) (domain.CatalogImportResult, error) {
 	prepared, _, result, proposals, err := s.prepareProductImport(businessID, branchID, file, authorizeNewCatalogs)
 	if err != nil {
 		return result, err
@@ -85,6 +88,9 @@ func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.
 	if progress != nil {
 		progress("Creando productos", 30)
 	}
+	for index := range prepared {
+		prepared[index].Input.UsuarioID = userID
+	}
 	imported, err := s.products.CreateImportedProducts(businessID, prepared)
 	if err != nil {
 		return result, err
@@ -92,14 +98,14 @@ func (s *ProductService) importProducts(businessID, branchID uuid.UUID, file io.
 	return mergeImportResults(result, imported), nil
 }
 
-func (s *ProductService) StartProductImport(businessID, branchID uuid.UUID, content []byte, authorizeNewCatalogs bool) (domain.ProductImportJob, error) {
+func (s *ProductService) StartProductImport(businessID, branchID, userID uuid.UUID, content []byte, authorizeNewCatalogs bool) (domain.ProductImportJob, error) {
 	job, err := s.products.CreateProductImportJob(businessID, branchID)
 	if err != nil {
 		return domain.ProductImportJob{}, err
 	}
 	go func() {
 		_ = s.products.UpdateProductImportJob(job.ID, "procesando", "Validando archivo", 10, nil, nil)
-		result, importErr := s.importProducts(businessID, branchID, bytes.NewReader(content), authorizeNewCatalogs, func(stage string, progress int) {
+		result, importErr := s.importProducts(businessID, branchID, userID, bytes.NewReader(content), authorizeNewCatalogs, func(stage string, progress int) {
 			_ = s.products.UpdateProductImportJob(job.ID, "procesando", stage, progress, nil, nil)
 		})
 		if importErr != nil {
@@ -133,11 +139,23 @@ func (s *ProductService) PreviewProductImport(businessID, branchID uuid.UUID, fi
 		byRow[row.Fila] = row
 	}
 	valid := make([]domain.ProductImportValidRow, 0, len(prepared))
+	toBranch := make([]domain.ProductImportValidRow, 0)
+	toUpdate := make([]domain.ProductImportValidRow, 0)
 	for _, item := range prepared {
 		row := byRow[item.Fila]
-		valid = append(valid, domain.ProductImportValidRow{Fila: item.Fila, Nombre: row.Nombre, Categoria: row.Categoria, PrecioVenta: row.PrecioVenta, Costo: row.CostoProveedor, StockInicial: row.StockInicial})
+		summary := domain.ProductImportValidRow{Fila: item.Fila, Nombre: row.Nombre, Categoria: row.Categoria, PrecioVenta: row.PrecioVenta, Costo: row.CostoProveedor, StockInicial: row.StockInicial}
+		switch item.Accion {
+		case domain.ImportAccionAgregarSucursal:
+			toBranch = append(toBranch, summary)
+		case domain.ImportAccionActualizar:
+			toUpdate = append(toUpdate, summary)
+		default:
+			valid = append(valid, summary)
+		}
 	}
-	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals, FilasCorrectas: valid}, err
+	// Solo las filas nuevas generan SKU.
+	result.SKUsGenerados -= len(toBranch) + len(toUpdate)
+	return domain.ProductImportPreview{CatalogImportResult: result, Insertables: len(prepared), CatalogosNuevos: proposals, FilasCorrectas: valid, FilasAgregarSucursal: toBranch, FilasActualizar: toUpdate}, err
 }
 
 // ProductImportErrors devuelve un XLSX con las filas rechazadas del archivo,
@@ -298,6 +316,18 @@ func NewProductService(products ProductRepository, productLookup ProductLookupPr
 
 func (s *ProductService) ListByBusiness(businessID, branchID uuid.UUID) ([]domain.ProductRow, error) {
 	return s.products.ListByBusiness(businessID, branchID)
+}
+
+func (s *ProductService) ListCatalogNotInBranch(businessID, branchID uuid.UUID) ([]domain.BranchCatalogProduct, error) {
+	return s.products.ListCatalogNotInBranch(businessID, branchID)
+}
+
+func (s *ProductService) AddToBranch(businessID uuid.UUID, input domain.AddToBranchInput) (int, error) {
+	return s.products.AddToBranch(businessID, input)
+}
+
+func (s *ProductService) AddProductToBranch(businessID, productID uuid.UUID, input domain.AddProductToBranchInput) error {
+	return s.products.AddProductToBranch(businessID, productID, input)
 }
 
 func (s *ProductService) AdjustInventory(businessID, productID, userID uuid.UUID, input domain.AdjustInventoryInput) error {
