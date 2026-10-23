@@ -1,48 +1,124 @@
 <section class="home-page">
   @if (alta() === 'listo') {
-    <header class="contexto tarjeta">
-      <div class="contexto__texto">
-        <p class="eyebrow">Panel principal</p>
-        <h1>{{ contexto.negocio()?.nombre_comercial || 'Bienvenido al sistema' }}</h1>
+    <section class="bienvenida" aria-label="Bienvenida">
+      <div class="tarjeta bienvenida__texto">
+        <p class="bienvenida__fecha"><i class="pi pi-sun" aria-hidden="true"></i>{{ hoy }}</p>
+        <h1>{{ saludo }}.<br /><span class="bienvenida__acento">Qué gusto verte de nuevo.</span></h1>
         @if (contexto.sucursal(); as sucursal) {
+          <p class="description">
+            Hoy trabajas en <strong>{{ sucursal.nombre }}</strong> de {{ contexto.negocio()?.nombre_comercial }}.
+            Te dejamos tus siguientes pasos y algunos consejos para avanzar más rápido.
+          </p>
           <p class="etiquetas">
             <span class="pastilla">{{ sucursal.codigo }}</span>
-            <span class="pastilla pastilla--aceptada">Sucursal {{ sucursal.nombre }} · activa</span>
+            <span class="pastilla pastilla--aceptada">Sucursal activa</span>
+            <span class="pastilla pastilla--atencion">{{ esPropietario() ? 'Propietario' : 'Miembro' }}</span>
           </p>
         } @else {
           <p class="description">Registra una sucursal para operar módulos que la requieren.</p>
         }
       </div>
-    </header>
+      <div class="mosaico mosaico--chico bienvenida__mosaico" aria-hidden="true">
+        <div class="mosaico__celda mosaico__celda--mantequilla mosaico__celda--centro [grid-area:1/1/3/3]"><i class="pi pi-shop"></i></div>
+        <div class="mosaico__celda mosaico__celda--lavanda-2 [grid-area:1/3/2/5]"></div>
+        <div class="mosaico__celda mosaico__celda--violeta [grid-area:2/3/4/4]"></div>
+        <div class="mosaico__celda mosaico__celda--verde [grid-area:2/4/4/5]"></div>
+        <div class="mosaico__celda mosaico__celda--salvia mosaico__celda--centro [grid-area:3/1/5/3]"><i class="pi pi-box"></i></div>
+        <div class="mosaico__celda mosaico__celda--lavanda [grid-area:4/3/5/5]"></div>
+      </div>
+    </section>
 
-    <div class="summary-grid">
-      @if (contexto.puedeVerNegocios()) {
-        <a class="resumen-tarjeta" routerLink="/negocios">
-          <span class="summary-icon lavanda"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
-          <span class="resumen-tarjeta__texto">
-            <strong>Negocios</strong>
-            <span>Gestiona la información general de tus negocios.</span>
-          </span>
-          <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
-        </a>
+    <section class="fila">
+      @if (mostrarPasos()) {
+        @let a = avance()!;
+        <div class="tarjeta pasos">
+          <div class="pasos__cabecera">
+            <h2>Pon a punto tu sucursal</h2>
+            <span class="pasos__conteo">{{ hechos() }} de 5 listos</span>
+          </div>
+          <div class="pasos__barra" role="progressbar" aria-label="Avance de configuración" aria-valuemin="0" aria-valuemax="5" [attr.aria-valuenow]="hechos()">
+            <span [style.width.%]="hechos() * 20"></span>
+          </div>
+          <ol class="pasos__lista">
+            <li class="paso paso--hecho">
+              <span class="paso__marca"><i class="pi pi-check" aria-hidden="true"></i></span>
+              <span class="paso__texto"><strong>Registraste tu empresa</strong><span>{{ contexto.negocio()?.nombre_comercial }}</span></span>
+              <span class="paso__estado">Hecho</span>
+            </li>
+            <li class="paso paso--hecho">
+              <span class="paso__marca"><i class="pi pi-check" aria-hidden="true"></i></span>
+              <span class="paso__texto"><strong>Abriste tu primera sucursal</strong><span>{{ contexto.sucursal()?.nombre }} · {{ contexto.sucursal()?.codigo }}</span></span>
+              <span class="paso__estado">Hecho</span>
+            </li>
+            <li class="paso" [class.paso--hecho]="a.productos">
+              <span class="paso__marca">@if (a.productos) { <i class="pi pi-check" aria-hidden="true"></i> } @else { 3 }</span>
+              <span class="paso__texto"><strong>Carga tus productos</strong><span>Uno por uno o todos de golpe con tu Excel.</span></span>
+              @if (a.productos) { <span class="paso__estado">Hecho</span> } @else { <a class="boton boton--compacto" routerLink="/productos/importar">Empezar<i class="pi pi-arrow-right" aria-hidden="true"></i></a> }
+            </li>
+            <li class="paso" [class.paso--hecho]="a.equipo">
+              <span class="paso__marca">@if (a.equipo) { <i class="pi pi-check" aria-hidden="true"></i> } @else { 4 }</span>
+              <span class="paso__texto"><strong>Invita a tu equipo</strong><span>Cada persona entra solo a las sucursales que le asignes.</span></span>
+              @if (a.equipo) { <span class="paso__estado">Hecho</span> } @else { <a class="boton-enlace" routerLink="/equipo/empleados/nuevo">Invitar</a> }
+            </li>
+            <li class="paso" [class.paso--hecho]="a.compras">
+              <span class="paso__marca">@if (a.compras) { <i class="pi pi-check" aria-hidden="true"></i> } @else { 5 }</span>
+              <span class="paso__texto"><strong>Registra tu primera compra</strong><span>Suma existencias y guarda el costo de cada producto.</span></span>
+              @if (a.compras) { <span class="paso__estado">Hecho</span> } @else { <a class="boton-enlace" routerLink="/compras/nueva">Registrar</a> }
+            </li>
+          </ol>
+        </div>
       }
-      <a *appPuede="P.sucursalVer" class="resumen-tarjeta" routerLink="/sucursales">
-        <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
-        <span class="resumen-tarjeta__texto">
-          <strong>Sucursales</strong>
-          <span>Organiza ubicaciones, equipos y operaciones.</span>
-        </span>
-        <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
-      </a>
-      <a *appPuede="P.empleadoVer" class="resumen-tarjeta" routerLink="/equipo/empleados">
-        <span class="summary-icon lavanda"><i class="pi pi-users" aria-hidden="true"></i></span>
-        <span class="resumen-tarjeta__texto">
-          <strong>Equipo</strong>
-          <span>Consulta empleados, invitaciones y permisos.</span>
-        </span>
-        <i class="pi pi-arrow-right flecha" aria-hidden="true"></i>
-      </a>
-    </div>
+
+      <aside class="consejo" aria-label="Consejos">
+        <div class="consejo__cabecera">
+          <span class="consejo__rotulo"><i class="pi pi-lightbulb" aria-hidden="true"></i>¿Sabías que…?</span>
+          <span class="consejo__pos">{{ indiceConsejo() + 1 }} de {{ consejos.length }}</span>
+        </div>
+        <span class="consejo__icono" aria-hidden="true"><i class="pi" [class]="consejo().icono"></i></span>
+        <h2 aria-live="polite">{{ consejo().titulo }}</h2>
+        <p>{{ consejo().texto }}</p>
+        <a class="consejo__accion" [routerLink]="consejo().ruta">{{ consejo().accion }}<i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+        <div class="consejo__pie">
+          <span class="consejo__puntos" aria-hidden="true">
+            @for (c of consejos; track c.titulo; let i = $index) {
+              <span [class.activo]="i === indiceConsejo()"></span>
+            }
+          </span>
+          <span class="consejo__flechas">
+            <button type="button" class="consejo__boton" aria-label="Consejo anterior" (click)="moverConsejo(-1)"><i class="pi pi-chevron-left" aria-hidden="true"></i></button>
+            <button type="button" class="consejo__boton consejo__boton--principal" aria-label="Siguiente consejo" (click)="moverConsejo(1)"><i class="pi pi-chevron-right" aria-hidden="true"></i></button>
+          </span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="accesos" aria-labelledby="titulo-accesos">
+      <h2 id="titulo-accesos">Ir directo a</h2>
+      <div class="summary-grid">
+        <a *appPuede="P.catalogoVer" class="resumen-tarjeta" routerLink="/productos">
+          <span class="summary-icon lavanda"><i class="pi pi-box" aria-hidden="true"></i></span>
+          <span class="resumen-tarjeta__texto"><strong>Productos</strong><span>Catálogo y existencias</span></span>
+        </a>
+        <a *appPuede="P.compraVer" class="resumen-tarjeta" routerLink="/compras">
+          <span class="summary-icon mantequilla"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
+          <span class="resumen-tarjeta__texto"><strong>Compras</strong><span>Entradas y costos</span></span>
+        </a>
+        <a *appPuede="P.sucursalVer" class="resumen-tarjeta" routerLink="/sucursales">
+          <span class="summary-icon salvia"><i class="pi pi-map-marker" aria-hidden="true"></i></span>
+          <span class="resumen-tarjeta__texto"><strong>Sucursales</strong><span>Ubicaciones y operación</span></span>
+        </a>
+        <a *appPuede="P.empleadoVer" class="resumen-tarjeta" routerLink="/equipo/empleados">
+          <span class="summary-icon lavanda"><i class="pi pi-users" aria-hidden="true"></i></span>
+          <span class="resumen-tarjeta__texto"><strong>Equipo</strong><span>Empleados e invitaciones</span></span>
+        </a>
+        @if (contexto.puedeVerNegocios()) {
+          <a class="resumen-tarjeta" routerLink="/negocios">
+            <span class="summary-icon mantequilla"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
+            <span class="resumen-tarjeta__texto"><strong>Negocios</strong><span>Datos de tu empresa</span></span>
+          </a>
+        }
+      </div>
+    </section>
   } @else {
     <header class="encabezado-pagina">
       <h1>Inicio</h1>

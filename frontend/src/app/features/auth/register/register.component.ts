@@ -69,7 +69,7 @@ export class RegisterComponent {
       ],
       segundoApellido: ['', Validators.maxLength(120)],
       correo: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
-      telefono: ['', Validators.maxLength(30)],
+      telefono: ['', Validators.pattern(/^\d{10}$/)],
       contrasena: [
         '',
         [Validators.required, Validators.minLength(8), Validators.maxLength(72), securePassword],
@@ -111,6 +111,12 @@ export class RegisterComponent {
 
   switchToLogin(): void {
     this.transition.request('login');
+  }
+
+  soloDigitosTelefono(): void {
+    const control = this.form.controls.telefono;
+    const digitos = control.value.replace(/\D/g, '').slice(0, 10);
+    if (digitos !== control.value) control.setValue(digitos);
   }
 
   submit(): void {

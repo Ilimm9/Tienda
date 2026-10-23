@@ -108,10 +108,17 @@
               class="register-input"
               type="tel"
               formControlName="telefono"
-              placeholder="55 1234 5678"
-              autocomplete="tel"
+              placeholder="5512345678"
+              autocomplete="tel-national"
+              inputmode="numeric"
+              maxlength="10"
+              (input)="soloDigitosTelefono()"
+              [attr.aria-invalid]="form.controls.telefono.touched && form.controls.telefono.invalid"
             />
           </span>
+          @if (form.controls.telefono.touched && form.controls.telefono.invalid) {
+            <small class="field-error">El teléfono debe tener 10 dígitos.</small>
+          }
         </div>
 
         <div class="register-field register-field--security">

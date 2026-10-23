@@ -32,6 +32,19 @@ describe('RegisterComponent', () => {
     expect(component.form.hasError('passwordsMismatch')).toBe(true);
   });
 
+  it('accepts an empty phone or exactly 10 digits', () => {
+    const component = TestBed.createComponent(RegisterComponent).componentInstance;
+    const telefono = component.form.controls.telefono;
+
+    expect(telefono.valid).toBe(true);
+    telefono.setValue('55 12-34a5678999');
+    component.soloDigitosTelefono();
+    expect(telefono.value).toBe('5512345678');
+    expect(telefono.valid).toBe(true);
+    telefono.setValue('551234567');
+    expect(telefono.valid).toBe(false);
+  });
+
   it('maps the form to the existing API contract', () => {
     auth.register.mockReturnValue(
       of({
@@ -83,7 +96,7 @@ describe('RegisterComponent', () => {
       primerApellido: 'Pérez',
       segundoApellido: '',
       correo: 'juan@ejemplo.com',
-      telefono: '55 1234 5678',
+      telefono: '5512345678',
       contrasena: 'ClaveSegura1!',
       confirmarContrasena: 'ClaveSegura1!',
     });

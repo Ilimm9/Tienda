@@ -38,6 +38,7 @@ go run ./cmd/admin-plataforma revoke \
 El administrador inicia sesión normalmente. Si no tiene tiendas, el login lo dirige a `/administracion-plataforma`; no verá el asistente de alta inicial.
 
 El panel contiene:
+z
 
 - Resumen de tiendas activas/archivadas, sucursales, cuentas y usuarios activos en 7/30 días.
 - Directorio de tiendas con búsqueda, estado, sucursales, personal, cuentas vinculadas y última actividad.

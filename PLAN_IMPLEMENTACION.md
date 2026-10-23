@@ -37,6 +37,8 @@ Capability 29: [Guardar el precio al editar un producto](capabilities/historial/
 
 Capability 31: [Solo el propietario crea productos](capabilities/historial/31-crear-productos-solo-propietario.md). **Cerrada** el 2026-10-23 con aceptación final del usuario. Corrige la observación 3 de la 26: crear e importar productos (con precio y costo) queda solo para el propietario.
 
+Capability 32: [Inicio con bienvenida, primeros pasos y consejos](capabilities/32-inicio-bienvenida.md). **Verificada** el 2026-10-23 (aprobada el mismo día sobre el artboard J1); pendiente prueba manual y aceptación final. Solo frontend: saludo por hora sin nombre (la sesión no lo expone), pasos del propietario con listas existentes, 5 consejos y accesos por permiso.
+
 Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 | ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
 | --- | ------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -61,7 +63,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `32`; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `33`; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.
