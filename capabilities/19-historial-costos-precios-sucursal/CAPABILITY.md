@@ -55,11 +55,11 @@ El 2026-10-21 el usuario ajustó la regla de importación: `Costo` es opcional. 
 - [x] Integrar altas iniciales, autorizaciones de compra, ajuste manual y consulta.
 - [x] Adaptar la pantalla de precios y ejecutar verificaciones focalizadas.
 - [x] Eliminar columnas de montos de `producto_negocio`, incluidos modelos y migración explícita de esquema.
-- [ ] Cambiar creación y edición de productos y variantes para escribir exclusivamente `precios_sucursal` de la sucursal activa; exigir `precios.autorizar` cuando envíen montos.
+- [ ] Cambiar creación y edición de productos y variantes para escribir exclusivamente `precios_sucursal` de la sucursal activa; exigir `precios.autorizar` cuando envíen montos. Parte de **edición trasladada** el 2026-10-22 a la [capability 29](../historial/29-guardar-precio-al-editar.md) por decisión del usuario; la parte de creación quedó **trasladada** el 2026-10-22 a la [capability 31](../historial/31-crear-productos-solo-propietario.md) (solo el propietario crea e importa productos).
 - [x] Cambiar listado y consultas de compra para leer `precios_sucursal` de la sucursal activa y eliminar fallbacks a `producto_negocio`.
-- [ ] Cambiar importación para crear precio/costo/stock locales y activar productos existentes en la sucursal sin duplicar catálogo.
+- [ ] Cambiar importación para crear precio/costo/stock locales y activar productos existentes en la sucursal sin duplicar catálogo. **Trasladada** el 2026-10-22 a la [capability 28](../historial/28-surtido-por-sucursal.md) por decisión del usuario; se da seguimiento allá.
 - [x] Validar el costo opcional de la plantilla XLSX, propagarlo al precio vigente de sucursal y mostrar `costos_faltantes` en la vista previa.
-- [ ] Añadir selector de productos existentes por sucursal y proteger contra altas locales duplicadas.
+- [ ] Añadir selector de productos existentes por sucursal y proteger contra altas locales duplicadas. **Trasladada** el 2026-10-22 a la [capability 28](../historial/28-surtido-por-sucursal.md) por decisión del usuario; se da seguimiento allá.
 - [ ] Ejecutar regresión completa de productos, variantes, importación, compras, precios y permisos.
 
 ## Verificación

@@ -17,15 +17,25 @@ Capability 20: [Arreglos de invitaciones y permisos](capabilities/historial/20-a
 
 Capability 21: [Lista de productos en memoria con refresco silencioso](capabilities/historial/21-cache-listado-productos.md). **Cerrada** el 2026-10-21 con aceptación final del usuario: la lista se muestra al instante al regresar y se refresca en segundo plano.
 
-Capability 22: [Código de barras opcional al crear producto desde Registrar compra](capabilities/22-compras-producto-sin-codigo.md). **Verificada** el 2026-10-21 (aprobada el mismo día); pendiente prueba manual y aceptación final.
+Capability 22: [Código de barras opcional al crear producto desde Registrar compra](capabilities/historial/22-compras-producto-sin-codigo.md). **Cerrada** el 2026-10-23 con aceptación final del usuario.
 
-Capability 23: [Productos de Registrar compra en contenedores compactables](capabilities/23-compras-productos-compactables.md). **Verificada** el 2026-10-21 (aprobada el mismo día); pendiente prueba manual y aceptación final.
+Capability 23: [Productos de Registrar compra en contenedores compactables](capabilities/historial/23-compras-productos-compactables.md). **Cerrada** el 2026-10-23 con aceptación final del usuario.
 
-Capability 24: [Correcciones a la carga masiva de productos](capabilities/24-correccion-masiva-producto.md). **Verificada** el 2026-10-22 (aprobada el mismo día: costo redondeado a 2 decimales, stock negativo se rechaza); pendiente prueba manual y aceptación final. Diseño en el artboard H1 del canvas de alta inicial.
+Capability 24: [Correcciones a la carga masiva de productos](capabilities/historial/24-correccion-masiva-producto.md). **Cerrada** el 2026-10-22 con prueba manual correcta y aceptación final del usuario (costo redondeado a 2 decimales, stock negativo se rechaza).
 
 Capability 25: [Logo vigente en correos y aplicación](capabilities/25-logo-vigente-correos-app.md). **Verificada** localmente el 2026-10-22 (aprobada el mismo día); pendiente de aceptación final. Correos, invitación y favicons derivados de `trace.svg`; recursos anteriores retirados. Go, build temporal y Mailpit/Chromium a 600/360 px correctos. Falta reiniciar backend activo para cargar el PNG embebido; clientes reales no comprobados. Independiente de la 24.
 
 Capability 30: [Rediseño de Equipo](capabilities/30-rediseno-equipo.md). **Verificada** el 2026-10-22 (aprobada el mismo día con alcance «solo vista y un poco de backend»: tabla `puestos_negocio`); pendiente prueba manual y aceptación final. Teléfono de 10 dígitos, alta en 3 pasos, número de empleado generado, catálogo de puestos, filtros y paginación, e invitaciones por sucursal del contexto. Diseño en el artboard I1. ID elegido para evitar conflicto con Ilian.
+
+Observaciones 26: [Observaciones a los cambios de Ilian](capabilities/historial/26-observaciones-ilian.md). **Cerrada** el 2026-10-23: observaciones 1–5 corregidas en las capabilities 27, 28, 29 y 31 (cerradas); 6 mejorada; 7 resuelta en la 24. Las fallas previas de pruebas automáticas siguen en planes actuales.
+
+Capability 27: [Compras con cualquier producto y varios proveedores](capabilities/historial/27-compras-cualquier-producto.md). **Cerrada** el 2026-10-23 con aceptación final del usuario. Corrige la observación 2 de la 26: Registrar compra muestra todo el catálogo (primero los del proveedor) y un producto puede tener varios proveedores con uno principal.
+
+Capability 28: [Surtido por sucursal](capabilities/historial/28-surtido-por-sucursal.md). **Cerrada** el 2026-10-23 con aceptación final del usuario. Cada sucursal muestra solo sus productos; el propietario agrega productos del catálogo con «Agregar del catálogo»; la carga masiva agrega o actualiza (precio, costo y stock) sin duplicar el catálogo. Absorbe dos tareas abiertas de la 19.
+
+Capability 29: [Guardar el precio al editar un producto](capabilities/historial/29-guardar-precio-al-editar.md). **Cerrada** el 2026-10-23 con aceptación final del usuario. Corrige las observaciones 1 y 4 de la 26: el precio editado se guarda en la sucursal activa con historial y permiso `precios.autorizar`.
+
+Capability 31: [Solo el propietario crea productos](capabilities/historial/31-crear-productos-solo-propietario.md). **Cerrada** el 2026-10-23 con aceptación final del usuario. Corrige la observación 3 de la 26: crear e importar productos (con precio y costo) queda solo para el propietario.
 
 Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 | ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
@@ -51,7 +61,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `28`; `27` reservado para Compras, `26` usado por observaciones, `30` usado por Equipo; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `32`; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.

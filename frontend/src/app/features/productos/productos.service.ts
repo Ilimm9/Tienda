@@ -16,6 +16,8 @@ import {
   UnitOption,
   UpdateProductRequest,
   AdjustInventoryRequest,
+  AddProductToBranchRequest,
+  BranchCatalogProduct,
 } from './product.models';
 
 @Injectable({ providedIn: 'root' })
@@ -120,6 +122,33 @@ export class ProductosService {
   adjustInventory(businessId: string, productId: string, payload: AdjustInventoryRequest): Observable<void> {
     return this.olvidarAlTerminar(this.http.patch<void>(
       `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}/inventario`,
+      payload,
+    ));
+  }
+
+  /** Productos del negocio que aún no están en la sucursal (solo propietario). */
+  listNotInBranch(businessId: string, branchId: string): Observable<BranchCatalogProduct[]> {
+    return this.http.get<BranchCatalogProduct[]>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/fuera-de-sucursal`,
+      { params: { sucursal_id: branchId } },
+    );
+  }
+
+  /** Agrega productos del catálogo a la sucursal, sin precio ni stock. */
+  addToBranch(businessId: string, branchId: string, productIds: string[] | 'todos'): Observable<{ agregados: number }> {
+    const body = productIds === 'todos'
+      ? { sucursal_id: branchId, todos: true }
+      : { sucursal_id: branchId, producto_ids: productIds };
+    return this.olvidarAlTerminar(this.http.post<{ agregados: number }>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/agregar-a-sucursal`,
+      body,
+    ));
+  }
+
+  /** Agrega un producto simple existente con el precio, costo y stock del formulario. */
+  addProductToBranch(businessId: string, productId: string, payload: AddProductToBranchRequest): Observable<void> {
+    return this.olvidarAlTerminar(this.http.post<void>(
+      `${environment.apiUrl}/negocios/${businessId}/catalogo/productos/${productId}/agregar-a-sucursal`,
       payload,
     ));
   }

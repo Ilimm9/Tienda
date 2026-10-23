@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface PriceProposal { id: string; producto_negocio_id: string; producto: string; piezas_buenas: number | string; costo_capturado: number | string; costo_anterior: number | string | null; precio_anterior: number | string; margen_sugerido: number | string; precio_sugerido: number | string; ganancia?: number; }
-export interface PriceHistoryItem { id: string; origen: 'ALTA_INICIAL' | 'COMPRA_AUTORIZADA' | 'AJUSTE_PRECIO_MANUAL'; costo_anterior: number | null; costo_nuevo: number | null; precio_anterior: number | null; precio_nuevo: number | null; motivo: string | null; creado_en: string; }
+export interface PriceHistoryItem { id: string; origen: 'ALTA_INICIAL' | 'COMPRA_AUTORIZADA' | 'AJUSTE_PRECIO_MANUAL' | 'CARGA_MASIVA'; costo_anterior: number | null; costo_nuevo: number | null; precio_anterior: number | null; precio_nuevo: number | null; motivo: string | null; creado_en: string; }
 @Injectable({ providedIn: 'root' })
 export class PreciosService {
   private readonly http = inject(HttpClient);

@@ -14,6 +14,8 @@ const (
 	OrigenAltaInicial        = "ALTA_INICIAL"
 	OrigenCompraAutorizada   = "COMPRA_AUTORIZADA"
 	OrigenAjustePrecioManual = "AJUSTE_PRECIO_MANUAL"
+	// OrigenCargaMasiva: la carga masiva actualizó precio o costo de un producto que ya estaba en la sucursal (28).
+	OrigenCargaMasiva = "CARGA_MASIVA"
 )
 
 type Propuesta struct {

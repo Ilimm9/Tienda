@@ -4,6 +4,16 @@
       <span>Listos para importar</span><strong>{{ correctos().length }}</strong>
     </button>
   }
+  @if (agregarSucursal().length) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--sucursal" (click)="abrir('agregar')">
+      <span>Se agregarán a esta sucursal</span><strong>{{ agregarSucursal().length }}</strong>
+    </button>
+  }
+  @if (actualizar().length) {
+    <button type="button" class="reporte-tarjeta reporte-tarjeta--sucursal" (click)="abrir('actualizar')">
+      <span>Se actualizarán</span><strong>{{ actualizar().length }}</strong>
+    </button>
+  }
   @if (errores().length) {
     <button type="button" class="reporte-tarjeta reporte-tarjeta--errores" (click)="abrir('errores')">
       <span>Filas con error · no se importan</span><strong>{{ filasConError() }}</strong>
@@ -198,33 +208,91 @@
     </div>
     @if (abiertas().correctos) {
       <div id="reporte-correctos-cuerpo" class="reporte-cuerpo">
-        <div class="reporte-tabla">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Fila</th><th scope="col">Producto</th><th scope="col">Categoría</th>
-                <th scope="col" class="reporte-num">Precio</th><th scope="col" class="reporte-num">Costo</th><th scope="col" class="reporte-num">Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (fila of correctosPagina().filas; track fila.fila) {
-                <tr>
-                  <td class="reporte-num">{{ fila.fila }}</td>
-                  <td>{{ fila.nombre }}</td>
-                  <td>{{ fila.categoria || '—' }}</td>
-                  <td class="reporte-num">{{ fila.precio_venta | currency: 'MXN' }}</td>
-                  <td class="reporte-num">{{ fila.costo | currency: 'MXN' }}</td>
-                  <td class="reporte-num">{{ fila.stock_inicial }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: correctosPagina().filas }" />
         <ng-container *ngTemplateOutlet="paginador; context: { $implicit: correctosPagina(), seccion: 'correctos', nombre: 'correctos' }" />
       </div>
     }
   </section>
 }
+
+@if (agregarSucursal().length) {
+  <section id="reporte-agregar" class="reporte-seccion" aria-label="Se agregarán a esta sucursal">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().agregar"
+        aria-controls="reporte-agregar-cuerpo"
+        (click)="alternar('agregar')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().agregar" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--sucursal"><i class="pi pi-plus-circle" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Se agregarán a esta sucursal <span class="reporte-contador">{{ agregarSucursal().length }}</span></span>
+          <small>Ya existen en el catálogo del negocio; se agregan{{ sucursal() ? ' a ' + sucursal() : '' }} con su precio, costo y stock, sin duplicarlos.</small>
+        </span>
+      </button>
+    </div>
+    @if (abiertas().agregar) {
+      <div id="reporte-agregar-cuerpo" class="reporte-cuerpo">
+        <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: agregarPagina().filas }" />
+        <ng-container *ngTemplateOutlet="paginador; context: { $implicit: agregarPagina(), seccion: 'agregar', nombre: 'productos por agregar' }" />
+      </div>
+    }
+  </section>
+}
+
+@if (actualizar().length) {
+  <section id="reporte-actualizar" class="reporte-seccion" aria-label="Se actualizarán">
+    <div class="reporte-encabezado">
+      <button
+        type="button"
+        class="reporte-toggle"
+        [attr.aria-expanded]="abiertas().actualizar"
+        aria-controls="reporte-actualizar-cuerpo"
+        (click)="alternar('actualizar')"
+      >
+        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().actualizar" aria-hidden="true"></i>
+        <span class="reporte-icono reporte-icono--sucursal"><i class="pi pi-sync" aria-hidden="true"></i></span>
+        <span>
+          <span class="reporte-titulo">Se actualizarán <span class="reporte-contador">{{ actualizar().length }}</span></span>
+          <small>Ya están en esta sucursal: el stock se reemplaza y se actualizan precio y costo. Revisa los cambios en Advertencias.</small>
+        </span>
+      </button>
+    </div>
+    @if (abiertas().actualizar) {
+      <div id="reporte-actualizar-cuerpo" class="reporte-cuerpo">
+        <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: actualizarPagina().filas }" />
+        <ng-container *ngTemplateOutlet="paginador; context: { $implicit: actualizarPagina(), seccion: 'actualizar', nombre: 'productos por actualizar' }" />
+      </div>
+    }
+  </section>
+}
+
+<ng-template #tablaFilas let-filas>
+  <div class="reporte-tabla">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Fila</th><th scope="col">Producto</th><th scope="col">Categoría</th>
+          <th scope="col" class="reporte-num">Precio</th><th scope="col" class="reporte-num">Costo</th><th scope="col" class="reporte-num">Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (fila of filas; track fila.fila) {
+          <tr>
+            <td class="reporte-num">{{ fila.fila }}</td>
+            <td>{{ fila.nombre }}</td>
+            <td>{{ fila.categoria || '—' }}</td>
+            <td class="reporte-num">{{ fila.precio_venta | currency: 'MXN' }}</td>
+            <td class="reporte-num">{{ fila.costo | currency: 'MXN' }}</td>
+            <td class="reporte-num">{{ fila.stock_inicial }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>
 
 <ng-template #paginador let-p let-seccion="seccion" let-nombre="nombre">
   @if (p.total > 10) {

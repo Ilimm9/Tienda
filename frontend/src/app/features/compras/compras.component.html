@@ -171,13 +171,24 @@
                       >Producto<p-select
                         formControlName="producto_negocio_id"
                         [options]="productOptions()"
+                        [group]="true"
+                        optionGroupLabel="label"
+                        optionGroupChildren="items"
                         optionLabel="nombre"
                         optionValue="id"
+                        [filter]="true"
+                        filterBy="nombre,sku,codigo_barras"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="38"
+                        scrollHeight="320px"
+                        emptyFilterMessage="Sin coincidencias"
                         placeholder="Selecciona"
                         (onChange)="selectProduct($index, $event.value)"
-                      /><small class="create-option"
+                      />@if (seLigaraAlProveedor($index)) {<small class="create-option"
+                        >Se ligará a este proveedor al guardar.</small
+                      >} @else {<small class="create-option"
                         >Elige “Crear nuevo…” para darlo de alta.</small
-                      ></label
+                      >}</label
                     >
                     @if (isNewProduct($index)) {
                       <section class="purchase-product-form">

@@ -161,6 +161,9 @@ func MigrateCatalogTenancy(db *gorm.DB) error {
 		`DROP INDEX IF EXISTS idx_unidades_negocio_codigo_ci`,
 		`DROP INDEX IF EXISTS idx_producto_codigos_codigo`,
 		`DROP INDEX IF EXISTS idx_familia_producto_codigo`,
+		// Un producto puede tener varios proveedores, con un solo principal.
+		`DROP INDEX IF EXISTS idx_producto_proveedor_unico`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_producto_proveedor_principal ON producto_proveedor (producto_negocio_id) WHERE es_principal`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_marcas_negocio_nombre_ci ON marcas (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_categorias_negocio_nombre_ci ON categorias (negocio_id, lower(btrim(nombre)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_unidades_negocio_nombre_ci ON unidades_medida (negocio_id, lower(btrim(nombre)))`,

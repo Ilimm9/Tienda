@@ -34,11 +34,12 @@ func (r *Repository) Get(businessID, id uuid.UUID) (compradomain.CompraProveedor
 func (r *Repository) ListProductos(businessID, providerID uuid.UUID) ([]compraapp.ProductoComprable, error) {
 	items := make([]compraapp.ProductoComprable, 0)
 	err := r.db.Table("producto_negocio pn").Select(`pn.id, COALESCE(p.nombre, vp.nombre) || COALESCE(' · ' || pv.clave, '') AS nombre, pn.sku_interno AS sku,
- (SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_id = p.id OR pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras`).
+ (SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_id = p.id OR pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras,
+ EXISTS (SELECT 1 FROM producto_proveedor pp WHERE pp.producto_negocio_id = pn.id AND pp.proveedor_id = ?) AS del_proveedor`, providerID).
 		Joins("LEFT JOIN productos p ON p.id = pn.producto_id").Joins("LEFT JOIN producto_variantes pv ON pv.id = pn.producto_variante_id").
 		Joins("LEFT JOIN productos vp ON vp.id = pv.producto_id").
-		Where("pn.negocio_id = ? AND pn.activo = TRUE AND EXISTS (SELECT 1 FROM producto_proveedor pp WHERE pp.producto_negocio_id = pn.id AND pp.proveedor_id = ?)", businessID, providerID).
-		Order("nombre ASC").Scan(&items).Error
+		Where("pn.negocio_id = ? AND pn.activo = TRUE", businessID).
+		Order("del_proveedor DESC, nombre ASC").Scan(&items).Error
 	return items, err
 }
 
@@ -156,10 +157,8 @@ func (r *Repository) buildDetail(tx *gorm.DB, businessID, providerID uuid.UUID, 
 	if err := tx.Where("id = ? AND negocio_id = ? AND activo = TRUE", productID, businessID).First(&product).Error; err != nil {
 		return compradomain.CompraProveedorDetalle{}, errors.New("el producto no existe o está inactivo")
 	}
-	var linked int64
-	tx.Model(&domain.ProductoProveedor{}).Where("producto_negocio_id = ? AND proveedor_id = ?", productID, providerID).Count(&linked)
-	if linked == 0 {
-		return compradomain.CompraProveedorDetalle{}, errors.New("el producto no está asociado al proveedor")
+	if err := linkProvider(tx, productID, providerID); err != nil {
+		return compradomain.CompraProveedorDetalle{}, err
 	}
 	piecesPerPackage := int(unit.FactorABase)
 	totalPieces := row.CantidadEmpaques * piecesPerPackage
@@ -287,6 +286,29 @@ func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.U
 	}
 	return pn.ID, nil
 }
+
+// linkProvider liga el producto al proveedor de la compra si aún no lo estaba.
+// Solo queda como principal cuando el producto no tiene otro principal.
+func linkProvider(tx *gorm.DB, productID, providerID uuid.UUID) error {
+	// Bloquea el producto para que dos compras simultáneas no elijan dos principales.
+	var product domain.ProductoNegocio
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Where("id = ?", productID).First(&product).Error; err != nil {
+		return err
+	}
+	var linked int64
+	if err := tx.Model(&domain.ProductoProveedor{}).Where("producto_negocio_id = ? AND proveedor_id = ?", productID, providerID).Count(&linked).Error; err != nil {
+		return err
+	}
+	if linked > 0 {
+		return nil
+	}
+	var principal int64
+	if err := tx.Model(&domain.ProductoProveedor{}).Where("producto_negocio_id = ? AND es_principal", productID).Count(&principal).Error; err != nil {
+		return err
+	}
+	return tx.Create(&domain.ProductoProveedor{ProductoNegocioID: productID, ProveedorID: providerID, EsPrincipal: principal == 0}).Error
+}
+
 func validPayment(value string) bool {
 	for _, item := range []string{"EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "OTRO"} {
 		if value == item {

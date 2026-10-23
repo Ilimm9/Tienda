@@ -15,11 +15,13 @@ describe('ProductosComponent', () => {
   let http: HttpTestingController;
   let fixture: ComponentFixture<ProductosComponent>;
   const sucursal = signal({ id: 'sucursal-1' });
+  const permisosDenegados = signal<string[]>([]);
   const router = { navigate: vi.fn().mockResolvedValue(true) };
   const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
   beforeEach(() => {
     sucursal.set({ id: 'sucursal-1' });
+    permisosDenegados.set([]);
     TestBed.configureTestingModule({
       imports: [ProductosComponent],
       providers: [
@@ -30,7 +32,7 @@ describe('ProductosComponent', () => {
           useValue: {
             negocio: signal({ id: negocioId }),
             sucursal,
-            puede: () => true,
+            puede: (permiso: string) => !permisosDenegados().includes(permiso),
           },
         },
         { provide: Router, useValue: router },
@@ -267,6 +269,106 @@ describe('ProductosComponent', () => {
     expect(controls.sku_interno.disabled).toBe(true);
     expect(controls.precio_venta.enabled).toBe(true);
     expect(controls.stock_inicial.disabled).toBe(true);
+  });
+
+  it('ofrece agregar a la sucursal un producto que ya existe en otra (28)', () => {
+    component.productForm.patchValue({ nombre: 'Jabón', categoria_id: 'categoria-bebidas', precio_venta: 12, costo_proveedor: 6, stock_inicial: 3 });
+    component.saveProduct();
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos`)
+      .flush(
+        { codigo: 'PRODUCTO_EN_OTRA_SUCURSAL', mensaje: 'Este producto ya existe en otra sucursal', producto_id: 'producto-9', nombre: 'Jabón' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    fixture.detectChanges();
+
+    expect(component.productoEnOtraSucursal()).toEqual({ id: 'producto-9', nombre: 'Jabón' });
+    component.agregarExistenteASucursal();
+
+    const agregar = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/producto-9/agregar-a-sucursal`);
+    expect(agregar.request.body).toEqual({ sucursal_id: 'sucursal-1', precio_venta: 12, costo: 6, stock_inicial: 3 });
+    agregar.flush(null);
+    expect(component.productoEnOtraSucursal()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/catalogo/productos']);
+  });
+
+  const abrirEdicion = (product: unknown) => {
+    component.openEditDialog(product as ProductRow);
+    for (const catalogo of ['categorias', 'marcas', 'proveedores', 'unidades-medida']) {
+      http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/${catalogo}`).flush([]);
+    }
+  };
+  const cafe = { id: 'producto-1', nombre: 'Café', precio: 85, stock: 4, variantes: [], inventario: [] };
+  const guardarEdicion = () => {
+    component.saveProduct();
+    const request = http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos/producto-1`);
+    expect(request.request.method).toBe('PATCH');
+    const body = request.request.body;
+    request.flush(null);
+    return body;
+  };
+
+  it('envía el precio editado con la sucursal activa y el motivo opcional', () => {
+    abrirEdicion(cafe);
+    expect(component.mostrarMotivoPrecio()).toBe(false);
+    component.productForm.controls.precio_venta.setValue(90);
+    component.productForm.markAsDirty();
+    expect(component.mostrarMotivoPrecio()).toBe(true);
+
+    const sinMotivo = guardarEdicion();
+    expect(sinMotivo.sucursal_id).toBe('sucursal-1');
+    expect(sinMotivo.precio_venta).toBe(90);
+    expect(sinMotivo.motivo_precio).toBeUndefined();
+
+    abrirEdicion(cafe);
+    component.productForm.controls.precio_venta.setValue(95);
+    component.productForm.controls.motivo_precio.setValue('  Promoción ');
+    component.productForm.markAsDirty();
+    expect(guardarEdicion().motivo_precio).toBe('Promoción');
+  });
+
+  it('al abrir una familia conserva el precio de cada variante', () => {
+    abrirEdicion({
+      ...cafe,
+      variantes: [
+        { id: 'variante-m', precio: 50, stock: 1, atributos: [{ nombre: 'Talla', valor: 'M' }] },
+        { id: 'variante-g', precio: 60, stock: 1, atributos: [{ nombre: 'Talla', valor: 'G' }] },
+      ],
+    });
+    expect(component.variantControls.controls.map((control) => control.controls.precio_venta.value)).toEqual([50, 60]);
+    expect(component.precioCambiado()).toBe(false);
+  });
+
+  it('no envía motivo cuando el precio no cambia', () => {
+    abrirEdicion(cafe);
+    component.productForm.controls.nombre.setValue('Café de olla');
+    component.productForm.controls.motivo_precio.setValue('Sin uso');
+    component.productForm.markAsDirty();
+    const body = guardarEdicion();
+    expect(body.sucursal_id).toBe('sucursal-1');
+    expect(body.precio_venta).toBe(85);
+    expect(body.motivo_precio).toBeUndefined();
+  });
+
+  it('sin permiso de precios bloquea el precio y deja sin precio las variantes nuevas', () => {
+    permisosDenegados.set(['precios.autorizar']);
+    abrirEdicion({
+      ...cafe,
+      variantes: [{ id: 'variante-m', precio: 50, stock: 1, atributos: [{ nombre: 'Talla', valor: 'M' }] }],
+    });
+    expect(component.productForm.controls.precio_venta.disabled).toBe(true);
+    expect(component.variantControls.at(0).controls.precio_venta.disabled).toBe(true);
+
+    component.addVariant();
+    const nueva = component.variantControls.at(1).controls.precio_venta;
+    expect(nueva.disabled).toBe(true);
+    expect(nueva.value).toBe(0);
+    expect(component.mostrarMotivoPrecio()).toBe(false);
+
+    component.variantControls.at(1).controls.atributos.setValue('Talla=G');
+    component.productForm.markAsDirty();
+    const body = guardarEdicion();
+    expect(body.variantes.map((variant: { precio_venta: number }) => variant.precio_venta)).toEqual([50, 0]);
   });
 
   it('only enables saving an edited product after a real change', () => {
@@ -601,5 +703,61 @@ describe('ProductosComponent carga masiva', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:errores');
     expect(component.downloadingImportErrors()).toBe(false);
     click.mockRestore();
+  });
+});
+
+describe('ProductosComponent · crear solo propietario', () => {
+  const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const producto = { id: 'producto-1', nombre: 'Agua', precio: 10, stock: 1, estado: 'activo', variantes: [], inventario: [] };
+
+  function montar(tipoMiembro: 'propietario' | 'miembro', items: unknown[]): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [ProductosComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ContextoService,
+          useValue: { negocio: signal({ id: negocioId, tipo_miembro: tipoMiembro }), sucursal: signal({ id: 'sucursal-1' }), puede: () => true },
+        },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: {}, paramMap: new Map() } } },
+        { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ProductosComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`).flush({ items, total: items.length });
+    http.match(() => true).forEach((request) => request.flush([]));
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('muestra «Agregar del catálogo», «Agregar nuevo producto» y «Carga masiva» al propietario', () => {
+    const page = montar('propietario', [producto]);
+    expect(page.textContent).toContain('Agregar del catálogo');
+    expect(page.textContent).toContain('Agregar nuevo producto');
+    expect(page.textContent).toContain('Carga masiva');
+  });
+
+  it('una sucursal sin productos invita al propietario a agregar del catálogo', () => {
+    const page = montar('propietario', []);
+    expect(page.textContent).toContain('Esta sucursal aún no tiene productos');
+    expect(page.textContent).toContain('Agregar del catálogo');
+  });
+
+  it('oculta crear e importar a un miembro aunque tenga permisos de catálogo', () => {
+    const page = montar('miembro', [producto]);
+    expect(page.textContent).not.toContain('Agregar nuevo producto');
+    expect(page.textContent).not.toContain('Carga masiva');
+    expect(page.textContent).not.toContain('Agregar del catálogo');
+  });
+
+  it('pide al propietario que agregue productos cuando la lista está vacía', () => {
+    const page = montar('miembro', []);
+    expect(page.textContent).toContain('Pide al propietario que agregue productos.');
+    expect(page.textContent).not.toContain('Agregar nuevo producto');
   });
 });

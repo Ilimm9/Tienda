@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"tienda/backend/internal/application"
 	negocioapplication "tienda/backend/internal/application/negocio"
 	"tienda/backend/internal/domain"
+	negociodomain "tienda/backend/internal/domain/negocio"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,6 +20,13 @@ import (
 type ProductHandler struct {
 	products *application.ProductService
 	contexto *negocioapplication.ContextoService
+	permisos permisoAutorizador
+}
+
+// permisoAutorizador resolves optional permissions inside a handler, such as
+// precios.autorizar when an edit changes a sale price.
+type permisoAutorizador interface {
+	Autorizar(ctx context.Context, usuarioID, negocioID uuid.UUID, permiso string) error
 }
 
 func (h *ProductHandler) LookupProduct(c *gin.Context) {
@@ -44,8 +53,8 @@ func (h *ProductHandler) LookupProduct(c *gin.Context) {
 	}
 }
 
-func NewProductHandler(products *application.ProductService, contexto *negocioapplication.ContextoService) *ProductHandler {
-	return &ProductHandler{products: products, contexto: contexto}
+func NewProductHandler(products *application.ProductService, contexto *negocioapplication.ContextoService, permisos permisoAutorizador) *ProductHandler {
+	return &ProductHandler{products: products, contexto: contexto, permisos: permisos}
 }
 
 func (h *ProductHandler) List(c *gin.Context) {
@@ -156,10 +165,94 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	// validar que la sesión tenga membresía y permiso sobre este negocio.
 	if err := h.products.Create(businessID, input); err != nil {
+		var otherBranch *domain.ProductInOtherBranchError
+		if errors.As(err, &otherBranch) {
+			c.JSON(http.StatusConflict, gin.H{"codigo": "PRODUCTO_EN_OTRA_SUCURSAL", "mensaje": "Este producto ya existe en otra sucursal", "producto_id": otherBranch.ProductoID, "nombre": otherBranch.Nombre})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"mensaje": "Producto creado correctamente"})
+}
+
+// CatalogNotInBranch lista los productos del negocio que aún no están en la sucursal (28).
+func (h *ProductHandler) CatalogNotInBranch(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	branchID, err := uuid.Parse(c.Query("sucursal_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "La sucursal no es válida"})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, branchID) {
+		return
+	}
+	items, err := h.products.ListCatalogNotInBranch(businessID, branchID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+// AddToBranch agrega productos del catálogo a la sucursal, sin precio ni stock (28).
+func (h *ProductHandler) AddToBranch(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	var input domain.AddToBranchInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Elige la sucursal y los productos"})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, input.SucursalID) {
+		return
+	}
+	added, err := h.products.AddToBranch(businessID, input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"agregados": added})
+}
+
+// AddProductToBranch agrega un producto simple existente con el precio, costo y stock del formulario (28).
+func (h *ProductHandler) AddProductToBranch(c *gin.Context) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	productID, ok := parseID(c, "productoId")
+	if !ok {
+		return
+	}
+	var input domain.AddProductToBranchInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa la sucursal, el precio, el costo y el stock"})
+		return
+	}
+	if !h.sucursalActiva(c, businessID, input.SucursalID) {
+		return
+	}
+	userID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	input.UsuarioID = userID
+	if err := h.products.AddProductToBranch(businessID, productID, input); err != nil {
+		if errors.Is(err, domain.ErrAlreadyInBranch) {
+			c.JSON(http.StatusConflict, gin.H{"mensaje": "Este producto ya existe en esta sucursal"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"mensaje": "Producto agregado a la sucursal"})
 }
 
 func (h *ProductHandler) Update(c *gin.Context) {
@@ -176,7 +269,29 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los campos obligatorios del producto"})
 		return
 	}
+	if !h.sucursalActiva(c, businessID, input.SucursalID) {
+		return
+	}
+	userID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	input.UsuarioID = userID
+	switch err := h.permisos.Autorizar(c.Request.Context(), userID, businessID, negociodomain.PermisoPrecioAutorizar); {
+	case err == nil:
+		input.PuedeCambiarPrecio = true
+	case errors.Is(err, negocioapplication.ErrRolProhibido):
+		input.PuedeCambiarPrecio = false
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible validar tus permisos"})
+		return
+	}
 	if err := h.products.Update(businessID, productID, input); err != nil {
+		if errors.Is(err, domain.ErrPricePermissionRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"mensaje": "Necesitas permiso para cambiar precios"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
 		return
 	}
@@ -226,6 +341,35 @@ func (h *ProductHandler) Deactivate(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// SoloPropietario limita crear e importar productos al propietario del negocio:
+// esas altas fijan precio y costo iniciales de la sucursal.
+func (h *ProductHandler) SoloPropietario() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		usuarioID, ok := AuthenticatedUserID(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+			return
+		}
+		negocioID, err := uuid.Parse(c.Param("negocioId"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"mensaje": "El negocioId no es válido"})
+			return
+		}
+		opciones, err := h.contexto.ListarOpciones(c.Request.Context(), usuarioID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible validar el acceso"})
+			return
+		}
+		for _, negocio := range opciones {
+			if negocio.ID == negocioID && negocio.TipoMiembro == "propietario" {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"codigo": "SOLO_PROPIETARIOS", "mensaje": "Solo el propietario puede crear productos."})
+	}
 }
 
 func parseID(c *gin.Context, name string) (uuid.UUID, bool) {
@@ -465,7 +609,12 @@ func (h *ProductHandler) ImportProducts(c *gin.Context) {
 		return
 	}
 	authorizeNewCatalogs := strings.EqualFold(strings.TrimSpace(c.PostForm("autorizar_catalogos_nuevos")), "true")
-	job, err := h.products.StartProductImport(businessID, branchID, content, authorizeNewCatalogs)
+	userID, ok := AuthenticatedUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	job, err := h.products.StartProductImport(businessID, branchID, userID, content, authorizeNewCatalogs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible iniciar la importación"})
 		return

@@ -1,0 +1,204 @@
+:host {
+  display: block;
+}
+
+.catalog-page {
+  width: min(100%, var(--section-max-width));
+  padding: 36px var(--section-padding-inline) 56px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.catalog-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.catalog-header h1 {
+  margin: 5px 0 8px;
+  color: var(--text);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.catalog-header p:last-child {
+  max-width: 680px;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.catalog-state {
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.catalog-state--error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.catalog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.catalog-search {
+  flex: 1 1 280px;
+}
+
+.catalog-search input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.35rem;
+  color: var(--text);
+  background: var(--surface-raised);
+  font: inherit;
+}
+
+.catalog-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.catalog-table-wrap {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.catalog-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.catalog-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.65rem 0.75rem;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  text-align: left;
+  font-weight: 600;
+}
+
+.catalog-table td {
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+
+.catalog-table td small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.catalog-table tbody tr {
+  cursor: pointer;
+}
+
+.catalog-table tbody tr:hover,
+.catalog-table tbody tr.is-selected {
+  background: var(--primary-soft);
+}
+
+.catalog-check {
+  width: 2.5rem;
+}
+
+.catalog-empty {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0.35rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.primary-button {
+  color: #fff;
+  background: var(--primary);
+}
+
+.primary-button:hover {
+  background: var(--primary-hover);
+}
+
+.secondary-button {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .catalog-page {
+    padding: 24px 16px 40px;
+  }
+
+  .catalog-header h1 {
+    font-size: 26px;
+  }
+
+  .catalog-table th:nth-child(4),
+  .catalog-table td:nth-child(4) {
+    display: none;
+  }
+}

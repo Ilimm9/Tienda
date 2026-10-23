@@ -87,4 +87,17 @@ describe('ImportReportComponent', () => {
     expect(descargar).toHaveBeenCalled();
     expect(page.querySelector('#reporte-advertencias-cuerpo')?.textContent).toContain('3 productos no cuentan con costo');
   });
+  it('muestra las secciones de productos que se agregan o actualizan en la sucursal (28)', () => {
+    const fila = { fila: 2, nombre: 'Jabón', categoria: 'Limpieza', precio_venta: 12, costo: 6, stock_inicial: 7 };
+    render({ agregarSucursal: [fila], actualizar: [{ ...fila, fila: 3, nombre: 'Cloro' }], sucursal: 'SUR' });
+
+    const tarjetas = [...page.querySelectorAll('.reporte-tarjeta--sucursal')].map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+    expect(tarjetas).toEqual(['Se agregarán a esta sucursal1', 'Se actualizarán1']);
+    expect(page.querySelector('#reporte-agregar small')?.textContent).toContain('a SUR');
+
+    page.querySelector<HTMLButtonElement>('#reporte-actualizar .reporte-toggle')!.click();
+    fixture.detectChanges();
+    expect(page.querySelector('#reporte-actualizar-cuerpo tbody')?.textContent).toContain('Cloro');
+    expect(page.querySelector('#reporte-agregar-cuerpo')).toBeNull();
+  });
 });

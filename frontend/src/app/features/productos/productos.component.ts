@@ -75,6 +75,12 @@ export class ProductosComponent {
   readonly P = PERMISOS;
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
+  // Cambiar el precio al editar requiere precios.autorizar; sin él se conserva el vigente.
+  // Crear e importar productos es solo del propietario (capability 31).
+  readonly esPropietario = computed(() => this.contexto.negocio()?.tipo_miembro === 'propietario');
+  readonly puedeCambiarPrecio = computed(() => this.contexto.puede(PERMISOS.precioAutorizar));
+  // Precios al abrir la edición: '' para el producto simple y el ID de cada variante existente.
+  private preciosOriginales = new Map<string, number>();
   private readonly feedback = inject(FeedbackService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute, { optional: true });
@@ -160,6 +166,10 @@ export class ProductosComponent {
   private categoriesLoaded = false;
   private brandsLoaded = false;
   formError: string | null = null;
+  // Surtido por sucursal (28): al crear un producto que ya existe en otra sucursal,
+  // el formulario ofrece agregarlo a esta en lugar de duplicarlo.
+  readonly productoEnOtraSucursal = signal<{ id: string; nombre: string } | null>(null);
+  readonly agregandoASucursal = signal(false);
   importFile: File | null = null;
   importDropActive = false;
 
@@ -187,6 +197,7 @@ export class ProductosComponent {
     precio_venta: [0, [Validators.required, Validators.min(0)]],
     costo_proveedor: [0, [Validators.required, Validators.min(0)]],
     stock_inicial: [0, [Validators.required, Validators.min(0)]],
+    motivo_precio: ['', Validators.maxLength(200)],
   });
   readonly brandForm = this.formBuilder.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(180)]],
@@ -428,7 +439,9 @@ export class ProductosComponent {
       presentacion: product.presentacion ?? '',
       precio_venta: product.precio,
       stock_inicial: currentStock,
+      motivo_precio: '',
     });
+    this.preciosOriginales = new Map([['', product.precio], ...product.variantes.map((variant) => [variant.id, variant.precio] as [string, number])]);
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
     this.productForm.controls.sku_interno.disable();
@@ -451,6 +464,7 @@ export class ProductosComponent {
       });
       this.onVariantsChanged();
     }
+    this.syncPriceEditing();
     this.productForm.markAsPristine();
     this.productForm.markAsUntouched();
     this.productosService.listCategories(this.negocioID).subscribe({
@@ -526,7 +540,11 @@ export class ProductosComponent {
     this.navigate(['/catalogo/productos', product.id, 'editar']);
   }
 
-  navigateToImport(): void {
+  navigateToAddFromCatalog(): void {
+    this.navigate(['/catalogo/productos/agregar-del-catalogo']);
+  }
+
+    navigateToImport(): void {
     this.navigate(['/catalogo/productos/importar']);
   }
 
@@ -822,7 +840,9 @@ export class ProductosComponent {
   }
 
   addVariant(): void {
-    this.variantControls.push(this.createVariantForm());
+    const control = this.createVariantForm();
+    this.syncVariantControlPriceEditing(control);
+    this.variantControls.push(control);
   }
 
   addDimension(): void {
@@ -870,6 +890,7 @@ export class ProductosComponent {
         control.controls.atributos.setValue(serialized);
         control.controls.precio_venta.setValue(this.productForm.controls.precio_venta.value);
         if (this.editingProduct()) this.syncVariantControlStockEditing(control);
+        this.syncVariantControlPriceEditing(control);
         this.variantControls.push(control);
       }
     }
@@ -1304,6 +1325,7 @@ export class ProductosComponent {
   private persistProduct(): void {
     this.saving.set(true);
     this.formError = null;
+    this.productoEnOtraSucursal.set(null);
     const value = this.productForm.getRawValue();
     const payload = {
       ...value,
@@ -1342,6 +1364,8 @@ export class ProductosComponent {
           unidad_medida_id: payload.unidad_medida_id,
           presentacion: payload.presentacion,
           precio_venta: payload.precio_venta,
+          sucursal_id: this.sucursalID,
+          motivo_precio: this.mostrarMotivoPrecio() ? value.motivo_precio.trim() || undefined : undefined,
           codigo_barras: payload.codigo_barras,
           imagen_url: payload.imagen_url,
           variantes: payload.tiene_variantes
@@ -1371,6 +1395,35 @@ export class ProductosComponent {
       },
       error: (response) => {
         this.saving.set(false);
+        this.formError = this.productSaveError(response);
+        const conflicto = response.error as { codigo?: string; producto_id?: string; nombre?: string } | null;
+        if (!editing && response.status === 409 && conflicto?.codigo === 'PRODUCTO_EN_OTRA_SUCURSAL' && conflicto.producto_id) {
+          this.productoEnOtraSucursal.set({ id: conflicto.producto_id, nombre: conflicto.nombre ?? '' });
+        }
+      },
+    });
+  }
+
+  /** Agrega el producto existente a la sucursal activa con el precio, costo y stock capturados. */
+  agregarExistenteASucursal(): void {
+    const existente = this.productoEnOtraSucursal();
+    if (!existente || this.agregandoASucursal()) return;
+    const value = this.productForm.getRawValue();
+    this.agregandoASucursal.set(true);
+    this.formError = null;
+    this.productosService.addProductToBranch(this.negocioID, existente.id, {
+      sucursal_id: this.sucursalID,
+      precio_venta: Number(value.precio_venta) || 0,
+      costo: Number(value.costo_proveedor) || 0,
+      stock_inicial: Number(value.stock_inicial) || 0,
+    }).subscribe({
+      next: () => {
+        this.agregandoASucursal.set(false);
+        this.productoEnOtraSucursal.set(null);
+        this.navigate(['/catalogo/productos']);
+      },
+      error: (response) => {
+        this.agregandoASucursal.set(false);
         this.formError = this.productSaveError(response);
       },
     });
@@ -1441,6 +1494,38 @@ export class ProductosComponent {
       keys.add(key);
       return true;
     });
+  }
+
+  /** Hay un precio distinto del vigente al abrir la edición (o una variante nueva con precio). */
+  precioCambiado(): boolean {
+    if (!this.editingProduct()) return false;
+    if (!this.productForm.controls.tiene_variantes.value) {
+      return Number(this.productForm.controls.precio_venta.value) !== this.preciosOriginales.get('');
+    }
+    return this.variantControls.controls.some((control) => {
+      const price = Number(control.controls.precio_venta.value);
+      const id = control.controls.id.value;
+      return id ? price !== this.preciosOriginales.get(id) : price > 0;
+    });
+  }
+
+  mostrarMotivoPrecio(): boolean {
+    return this.puedeCambiarPrecio() && this.precioCambiado();
+  }
+
+  private syncPriceEditing(): void {
+    if (!this.editingProduct()) return;
+    // Sin emitir: valueChanges del precio base reescribe el precio de todas las variantes.
+    if (this.puedeCambiarPrecio()) this.productForm.controls.precio_venta.enable({ emitEvent: false });
+    else this.productForm.controls.precio_venta.disable({ emitEvent: false });
+    this.variantControls.controls.forEach((control) => this.syncVariantControlPriceEditing(control));
+  }
+
+  // Sin permiso, las variantes existentes conservan su precio y las nuevas quedan sin precio.
+  private syncVariantControlPriceEditing(control: VariantFormGroup): void {
+    if (!this.editingProduct() || this.puedeCambiarPrecio()) return;
+    if (!control.controls.id.value) control.controls.precio_venta.setValue(0);
+    control.controls.precio_venta.disable();
   }
 
   private syncVariantStockEditing(): void {

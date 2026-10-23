@@ -12,6 +12,7 @@ type ProductoComprable struct {
 	Nombre       string    `json:"nombre"`
 	SKU          *string   `json:"sku"`
 	CodigoBarras *string   `json:"codigo_barras"`
+	DelProveedor bool      `json:"del_proveedor"`
 }
 
 type CrearDetalleInput struct {

@@ -1,9 +1,9 @@
 # Productos de Registrar compra en contenedores compactables
 
-- Estado: **Verificada** (pendiente de prueba manual y aceptación final).
+- Estado: **Cerrada** el 2026-10-23 con aceptación final del usuario.
 - Aprobación explícita: 2026-10-21. El usuario eligió «Contraer los anteriores» y aprobó el plan.
 - Fecha: 2026-10-21.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Solo frontend de `compras`; sin cambios de API ni de datos enviados.
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Solo frontend de `compras`; sin cambios de API ni de datos enviados.
 
 ## Objetivo
 
@@ -41,9 +41,17 @@ En «Mercancía recibida», cada producto de la compra aparece en su propio cont
 
 ## Correcciones relacionadas
 
-- 2026-10-21 (plan aprobado por el usuario): la tabla de compras mostraba `fecha_recepcion` cruda (`2026-10-21T00:00:00Z`). Es una fecha civil (`type:date`), así que se formatea con `date: 'dd MMM yyyy' : 'UTC' : 'es-MX'` → «21 oct 2026». No se usa `fechaMexico`, porque en UTC-6 mostraría el día anterior ([11](historial/11-fechas-auditoria.md)). Prueba nueva en `compras.component.spec.ts`; `ng test --include src/app/features/compras` 9/9 y `ng build` correctos.
+- 2026-10-21 (plan aprobado por el usuario): la tabla de compras mostraba `fecha_recepcion` cruda (`2026-10-21T00:00:00Z`). Es una fecha civil (`type:date`), así que se formatea con `date: 'dd MMM yyyy' : 'UTC' : 'es-MX'` → «21 oct 2026». No se usa `fechaMexico`, porque en UTC-6 mostraría el día anterior ([11](11-fechas-auditoria.md)). Prueba nueva en `compras.component.spec.ts`; `ng test --include src/app/features/compras` 9/9 y `ng build` correctos.
 
 ## Pendientes
 
 - Prueba manual en navegador, escritorio y móvil: agregar 3 productos, abrir y cerrar, quitar uno, y guardar con un producto incompleto compactado.
 - Aceptación final del usuario.
+
+## Prueba manual (2026-10-22)
+
+- El usuario confirmó que las pruebas manuales pasaron. Pendiente la aceptación final.
+
+## Cierre (2026-10-23)
+
+- Aceptación final del usuario: «acepto la 22, 23, 27, 28, 29 y 31». Cerrada y archivada en `historial/`.

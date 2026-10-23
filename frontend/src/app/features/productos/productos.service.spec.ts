@@ -88,6 +88,7 @@ describe('ProductosService', () => {
       unidad_medida_id: 'unidad-ml',
       presentacion: 'Botella',
       precio_venta: 18.5,
+      sucursal_id: 'sucursal-1',
       codigo_barras: '7501055303038',
       imagen_url: 'https://cdn.example.com/producto.jpg',
       variantes: [],

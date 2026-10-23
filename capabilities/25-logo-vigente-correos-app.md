@@ -4,7 +4,7 @@
 - Aprobación explícita: 2026-10-22, el usuario indicó «lo puedes implementar por favor, cualquier detalle me dices por favor» tras revisar la propuesta de esta capability.
 - Fecha: 2026-10-22.
 - Fuente de identidad indicada por el usuario: `frontend/public/trace.svg`.
-- Coordinación: capability independiente de [24 · Corrección masiva de productos](24-correccion-masiva-producto.md), actualmente trabajada por otro agente. No modificar su plan ni sus archivos de productos, importación o `backend/cmd/api/main.go`.
+- Coordinación: capability independiente de [24 · Corrección masiva de productos](historial/24-correccion-masiva-producto.md), actualmente trabajada por otro agente. No modificar su plan ni sus archivos de productos, importación o `backend/cmd/api/main.go`.
 
 ## Problema y objetivo
 

@@ -1,6 +1,7 @@
 # Observaciones a los cambios de Ilian
 
 - Fecha: 2026-10-22.
+- Estado: **Cerrada** el 2026-10-23. Las observaciones 1 a 5 quedaron corregidas en capabilities cerradas con aceptación final del usuario; la 6 mejoró según su prueba y la 7 se resolvió en la 24. Las fallas previas de pruebas automáticas (punto 8) siguen registradas en [planes actuales](../planes-actuales.md).
 - Revisados: commits de `ilimm9` del 2026-10-21 (`85cb7c2` «ajustes tabla productos», merge `c8030a1` «cambios rama ilu» y `d384c52` «correccion compras»), contrastados con sus capabilities 19, 21, 22 y 23, más hallazgos de la prueba con el archivo de la clienta (`thrs/docs-prueba/06-productos-lista-clienta.xlsx`).
 - Método: lectura de código. Salvo donde se indica, no se ejecutó la app.
 - Documento de seguimiento: **no autoriza implementación**. Cada corrección requiere su capability aprobada.
@@ -9,14 +10,14 @@
 
 | # | Observación | Gravedad | Estado |
 |---|---|---|---|
-| 1 | Editar producto no guarda el precio | Alta | Pendiente |
-| 2 | Compras no muestra productos sin proveedor | Alta | Pendiente (capability por crear, ID 27) |
-| 3 | Crear y editar con montos no exige `precios.autorizar` | Media | Pendiente (tarea abierta en la 19) |
-| 4 | Variantes nuevas al editar quedan sin precio en la sucursal | Media | Pendiente |
-| 5 | La importación no activa productos existentes en otra sucursal | Media | Pendiente (tarea abierta en la 19) |
-| 6 | El merge `c8030a1` volvió lento el listado de productos | Media | Corregido en `d384c52`; falta medir |
+| 1 | Editar producto no guarda el precio | Alta | Corregida en la [29](29-guardar-precio-al-editar.md), cerrada (2026-10-23) |
+| 2 | Compras no muestra productos sin proveedor | Alta | Corregida en la [27](27-compras-cualquier-producto.md), cerrada (2026-10-23) |
+| 3 | Crear y editar con montos no exige `precios.autorizar` | Media | Corregida en la [31](31-crear-productos-solo-propietario.md) (solo el propietario crea e importa), cerrada (2026-10-23). La edición quedó en la 29 |
+| 4 | Variantes nuevas al editar quedan sin precio en la sucursal | Media | Corregida en la [29](29-guardar-precio-al-editar.md), cerrada (2026-10-23) |
+| 5 | La importación no activa productos existentes en otra sucursal | Media | Corregida en la [28](28-surtido-por-sucursal.md), cerrada (2026-10-23) |
+| 6 | El merge `c8030a1` volvió lento el listado de productos | Media | Corregido en `d384c52`; el usuario lo probó el 2026-10-22 y confirmó que mejoró; la [28](28-surtido-por-sucursal.md) reescribió la consulta (2–15 ms en la base local) |
 | 7 | Costos de Excel con residuo de flotante rechazados | Media | Resuelto en la capability 24 |
-| 8 | Pruebas manuales y aceptación pendientes (21, 22, 23) | Baja | Pendiente |
+| 8 | Pruebas manuales y aceptación pendientes (21, 22, 23) | Baja | 22 y 23 cerradas (2026-10-23). Siguen las fallas previas de pruebas automáticas (en planes actuales) |
 
 ## Detalle
 
@@ -48,7 +49,8 @@
 ### 6. Rendimiento del listado
 - El merge `c8030a1` agregó un `LEFT JOIN LATERAL` de existencias con `OR` que impedía usar índices (costo cuadrático con más de 1500 productos).
 - Ilian lo corrigió en `d384c52` con una subconsulta agregada.
-- Pendiente, según su propio registro en `PLAN-precios-por-sucursal.md`: `EXPLAIN ANALYZE` contra una base con más de 1500 productos y las pruebas de integración (se omitieron por falta de `SECURITY_TEST_DATABASE_URL`).
+- 2026-10-22: el usuario probó el listado y confirmó que ya mejoró. Sigue sin registrarse una medición formal.
+- Pendiente original, según su propio registro en `PLAN-precios-por-sucursal.md`: `EXPLAIN ANALYZE` contra una base con más de 1500 productos y las pruebas de integración (se omitieron por falta de `SECURITY_TEST_DATABASE_URL`).
 
 ### 7. Costos con residuo de flotante
 - La regla de la 19 (hasta 4 decimales) rechazaba valores como `8.380000000000001`, que Excel guarda aunque muestre `8.38`: 20 filas del archivo de la clienta.
@@ -56,7 +58,7 @@
 
 ### 8. Pendientes de cierre
 - 21 (lista en memoria): cerrada.
-- 22 (código opcional desde Compras) y 23 (tarjetas compactables): verificadas, falta prueba manual y aceptación final. La 22 no tiene prueba automática de backend para el alta sin código.
+- 22 (código opcional desde Compras) y 23 (tarjetas compactables): verificadas; el usuario confirmó el 2026-10-22 que sus pruebas manuales pasaron. Falta su aceptación final. La 22 no tiene prueba automática de backend para el alta sin código.
 - `TestProductionAcceptsStrongOTPSecret` (`internal/config`) sigue fallando; está registrada como falla previa.
 - `alta-inicial.spec.ts`: 6 pruebas fallan con `window.matchMedia is not a function`, a raíz del cambio a `p-select` en el alta inicial (`85cb7c2`, capability 14).
 

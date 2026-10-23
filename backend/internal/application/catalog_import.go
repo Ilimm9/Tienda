@@ -226,6 +226,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			addError("Precio de venta", "debe ser un número mayor o igual a cero")
 		}
 		cost := 0.0
+		costCaptured := costText != ""
 		if costText == "" {
 			result.CostosFaltantes++
 		} else {
@@ -255,7 +256,7 @@ func parseProductImport(file io.Reader) ([]domain.ProductImportRow, domain.Catal
 			result.Invalidas++
 			continue
 		}
-		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), Categoria: cell(row, 1), Marca: cell(row, 2), Descripcion: cell(row, 3), Presentacion: cell(row, 4), Contenido: contenido, UnidadContenido: cell(row, 6), UnidadMedida: cell(row, 7), PrecioVenta: precio, CostoProveedor: cost, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
+		valid = append(valid, domain.ProductImportRow{Fila: rowNumber, Nombre: cell(row, 0), Categoria: cell(row, 1), Marca: cell(row, 2), Descripcion: cell(row, 3), Presentacion: cell(row, 4), Contenido: contenido, UnidadContenido: cell(row, 6), UnidadMedida: cell(row, 7), PrecioVenta: precio, CostoProveedor: cost, CostoCapturado: costCaptured, StockInicial: stock, CodigoBarras: barcode, Variantes: variantes, Proveedor: cell(row, 13)})
 	}
 	return valid, result, nil
 }
@@ -472,6 +473,8 @@ func mergeImportResults(first, second domain.CatalogImportResult) domain.Catalog
 		ProductosBaseReutilizados: first.ProductosBaseReutilizados + second.ProductosBaseReutilizados,
 		VariantesCreadas:          first.VariantesCreadas + second.VariantesCreadas,
 		CostosFaltantes:           first.CostosFaltantes + second.CostosFaltantes,
+		AgregadasSucursal:         first.AgregadasSucursal + second.AgregadasSucursal,
+		Actualizadas:              first.Actualizadas + second.Actualizadas,
 		Errores:                   append(first.Errores, second.Errores...),
 		Advertencias:              append(first.Advertencias, second.Advertencias...),
 	}

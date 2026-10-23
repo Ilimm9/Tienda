@@ -7,6 +7,11 @@ export interface PurchaseProduct {
   nombre: string;
   sku: string | null;
   codigo_barras: string | null;
+  del_proveedor: boolean;
+}
+export interface PurchaseProductGroup {
+  label: string;
+  items: PurchaseProduct[];
 }
 export interface PackagingUnit extends CatalogOption {
   tipo: string;
