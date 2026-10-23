@@ -19,6 +19,7 @@ import { EmpleadoApiError, EmpleadoDetalle } from './empleado.models';
 import { EmpleadoService } from './empleado.service';
 import { InvitacionService } from './invitacion.service';
 import { digitosTelefono, formatoTelefono, siguienteNumero } from './numero-empleado';
+import { CREAR_NUEVO } from './presentacion';
 import { Puesto } from './puesto.models';
 import { PuestoService } from './puesto.service';
 
@@ -92,6 +93,11 @@ export class EmpleadoFormComponent {
   readonly sucursales = computed(() => this.contexto.negocio()?.sucursales ?? []);
   readonly puedeAsignar = computed(() => this.contexto.puede(PERMISOS.asignacionEditar));
   readonly puedeInvitar = computed(() => this.contexto.puede([PERMISOS.invitacionEnviar, PERMISOS.rolVer]));
+  readonly puedeCrearPuesto = computed(() => this.contexto.puede(PERMISOS.empleadoGestionar));
+  readonly puedeCrearRol = computed(() => this.contexto.puede(PERMISOS.rolGestionar));
+  readonly CREAR_NUEVO = CREAR_NUEVO;
+  /** Último puesto elegido a mano; null mientras solo esté el cargado del empleado. */
+  private puestoAnterior: string | null = null;
   readonly asignadas = computed(() => new Set(this.asignaciones().map((item) => item.sucursal_id)));
   readonly principalAsignada = computed(() => this.asignaciones().find((item) => item.es_principal) ?? this.asignaciones()[0] ?? null);
   /** Puestos activos más el que ya tiene el empleado, aunque se haya desactivado. */
@@ -148,6 +154,32 @@ export class EmpleadoFormComponent {
     this.cargarApoyos();
     const baja = this.cambiosPendientes.registrar(() => this.form.dirty && !this.saving());
     inject(DestroyRef).onDestroy(baja);
+  }
+
+  /** «+ Crear nuevo puesto…» lleva a Puestos; si hay datos sin guardar, pide confirmación. */
+  async alElegirPuesto(): Promise<void> {
+    const control = this.form.controls.puesto_id;
+    if (control.value !== CREAR_NUEVO) {
+      this.puestoAnterior = control.value;
+      return;
+    }
+    control.setValue(this.puestoAnterior ?? this.empleado()?.puesto_id ?? this.creado()?.puesto_id ?? '');
+    const pendientes = Object.entries(this.form.controls).some(([campo, item]) => campo !== 'puesto_id' && item.dirty);
+    const salir =
+      !pendientes ||
+      (await this.feedback.confirmDanger({
+        titulo: '¿Salir para crear un puesto?',
+        descripcion: 'Lo que capturaste en este formulario no se guardará.',
+        textoConfirmar: 'Ir a Puestos',
+        textoCancelar: 'Seguir aquí',
+      }));
+    if (salir) void this.router.navigate(['/equipo/puestos']);
+  }
+
+  /** El empleado ya está guardado en el paso 3; crear un rol solo deja la invitación para después. */
+  elegirRol(valor: string): void {
+    if (valor === CREAR_NUEVO) void this.router.navigate(['/roles-permisos/nuevo']);
+    else this.rolId.set(valor);
   }
 
   /** Mantiene el teléfono como `55 1234 5678` mientras se escribe. */

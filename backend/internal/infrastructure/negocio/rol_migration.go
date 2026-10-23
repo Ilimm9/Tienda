@@ -203,9 +203,13 @@ func sembrarRolCajeroDeNegocio(tx *gorm.DB, negocioID, creadoPor uuid.UUID) erro
 	if err := tx.Create(&rol).Error; err != nil {
 		return err
 	}
-	return tx.Exec(`INSERT INTO permisos_rol (id, rol_id, permiso_id, creado_en)
+	if err := tx.Exec(`INSERT INTO permisos_rol (id, rol_id, permiso_id, creado_en)
 		SELECT gen_random_uuid(), ?, p.id, now() FROM permisos p WHERE p.codigo IN ?`,
-		rol.ID, domain.PermisosRolCajero).Error
+		rol.ID, domain.PermisosRolCajero).Error; err != nil {
+		return err
+	}
+	// El puesto Cajero acompaña al rol para que el alta de empleados tenga una opción lista.
+	return tx.Create(&domain.PuestoNegocio{NegocioID: negocioID, Nombre: "Cajero", RolSugeridoID: &rol.ID, Activo: true}).Error
 }
 
 func ptrTexto(valor string) *string { return &valor }

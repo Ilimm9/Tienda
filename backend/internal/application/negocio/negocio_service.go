@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -45,12 +46,25 @@ type NegocioRepository interface {
 	Restaurar(ctx context.Context, usuarioID, negocioID uuid.UUID) error
 }
 
+// SembradorCatalogo deja listos los catálogos básicos (unidades de empaque y proveedor general)
+// de un negocio recién creado; lo implementa el catálogo para no cruzar dominios.
+type SembradorCatalogo interface {
+	SembrarCatalogoInicial(ctx context.Context, negocioID uuid.UUID) error
+}
+
 type NegocioService struct {
-	negocios NegocioRepository
+	negocios  NegocioRepository
+	sembrador SembradorCatalogo
 }
 
 func NewNegocioService(negocios NegocioRepository) *NegocioService {
 	return &NegocioService{negocios: negocios}
+}
+
+// ConSembrador activa la semilla de catálogos al crear un negocio.
+func (s *NegocioService) ConSembrador(sembrador SembradorCatalogo) *NegocioService {
+	s.sembrador = sembrador
+	return s
 }
 
 func (s *NegocioService) Listar(ctx context.Context, usuarioID uuid.UUID, estado string) ([]domain.NegocioResumen, error) {
@@ -106,7 +120,15 @@ func (s *NegocioService) Crear(ctx context.Context, usuarioID uuid.UUID, input d
 	if existe {
 		slug = fmt.Sprintf("%s-%s", base, strings.ReplaceAll(uuid.NewString(), "-", "")[:8])
 	}
-	return s.negocios.Crear(ctx, usuarioID, slug, input)
+	negocio, err := s.negocios.Crear(ctx, usuarioID, slug, input)
+	if err != nil || s.sembrador == nil {
+		return negocio, err
+	}
+	// El negocio ya existe: una falla de la semilla no se devuelve para no provocar un reintento que lo duplique.
+	if err := s.sembrador.SembrarCatalogoInicial(ctx, negocio.ID); err != nil {
+		log.Printf("semilla de catálogo del negocio %s: %v", negocio.ID, err)
+	}
+	return negocio, nil
 }
 
 func (s *NegocioService) Actualizar(ctx context.Context, usuarioID, negocioID uuid.UUID, input domain.ActualizarNegocioInput) (domain.NegocioDetalle, error) {

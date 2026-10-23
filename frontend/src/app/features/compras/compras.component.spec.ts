@@ -10,6 +10,15 @@ import { ContextoService } from '../../contexto/contexto.service';
 import { ComprasComponent } from './compras.component';
 import { ComprasService } from './compras.service';
 
+// jsdom no implementa la ventana modal nativa.
+HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+  this.setAttribute('open', '');
+};
+HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+  this.removeAttribute('open');
+  this.dispatchEvent(new Event('close'));
+};
+
 describe('ComprasComponent', () => {
   const service = {
     providers: vi.fn(() => of([])),
@@ -126,16 +135,86 @@ describe('ComprasComponent', () => {
     expect(service.create).not.toHaveBeenCalled();
   });
 
-  it('muestra el panel de nuevo producto con el formato de nueva unidad', async () => {
+  it('captura el producto nuevo en una ventana y lo deja en el renglón, sin formularios incrustados', async () => {
     const fixture = await createFixture();
     const component = fixture.componentInstance;
 
-    component.selectProduct(0, '__new_product__');
+    component.abrirProducto(0);
+    fixture.detectChanges();
+    const ventana: HTMLDialogElement = fixture.nativeElement.querySelectorAll('dialog')[1];
+    expect(ventana.open).toBe(true);
+    expect(ventana.textContent).toContain('Nuevo producto');
+    expect(ventana.querySelectorAll('input')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('.purchase-product-form')).toBeNull();
+
+    component.productForm.setValue({ nombre: ' Galletas ', codigo_barras: '' });
+    component.usarProducto();
     fixture.detectChanges();
 
-    const productPanel = fixture.nativeElement.querySelector('.purchase-product-form');
-    expect(productPanel?.querySelector('h3')?.textContent).toContain('Nuevo producto');
-    expect(productPanel?.querySelectorAll('input')).toHaveLength(2);
+    expect(component.isNewProduct(0)).toBe(true);
+    expect(component.details.at(0).get('nombre_producto_nuevo')?.value).toBe('Galletas');
+    expect(component.ventana()).toBeNull();
+    expect(ventana.open).toBe(false);
+    expect(fixture.nativeElement.querySelector('.producto-nuevo')?.textContent).toContain('Galletas');
+
+    component.quitarProductoNuevo(0);
+    expect(component.isNewProduct(0)).toBe(false);
+    expect(component.details.at(0).get('nombre_producto_nuevo')?.value).toBe('');
+  });
+
+  it('cierra la ventana con Esc o clic en el fondo', async () => {
+    const fixture = await createFixture();
+    const component = fixture.componentInstance;
+    component.abrirProveedor();
+    fixture.detectChanges();
+    const ventana: HTMLDialogElement = fixture.nativeElement.querySelector('dialog');
+    expect(ventana.open).toBe(true);
+
+    ventana.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(ventana.open).toBe(false);
+    expect(component.ventana()).toBeNull();
+  });
+
+  it('preselecciona Pieza y muestra las piezas que entran', async () => {
+    service.units.mockReturnValueOnce(of([
+      { id: 'caja-1', nombre: 'Caja 12', tipo: 'EMPAQUE', factor_a_base: 12 },
+      { id: 'pieza-1', nombre: 'Pieza', tipo: 'EMPAQUE', factor_a_base: 1 },
+      { id: 'kilo-1', nombre: 'Kilo', tipo: 'CANTIDAD', factor_a_base: 1 },
+    ]) as never);
+    const fixture = await createFixture();
+    const component = fixture.componentInstance;
+
+    expect(component.details.at(0).get('unidad_medida_id')?.value).toBe('pieza-1');
+    expect(component.unitOptions().map((unit) => unit.etiqueta)).toEqual(['Caja 12 (12 piezas)', 'Pieza (1 pieza)']);
+    const empaques: HTMLInputElement = fixture.nativeElement.querySelector('[formcontrolname="cantidad_empaques"]');
+    empaques.value = '8';
+    empaques.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.purchase-pieces')?.textContent).toContain('8 piezas');
+
+    component.addDetail();
+    expect(component.details.at(1).get('unidad_medida_id')?.value).toBe('pieza-1');
+    component.details.at(1).patchValue({ unidad_medida_id: 'caja-1', cantidad_empaques: 2 });
+    expect(component.pieces(1)).toBe(24);
+  });
+
+  it('pide número de cuenta solo para transferencia o tarjeta y lo limpia al cambiar', async () => {
+    const fixture = await createFixture();
+    const component = fixture.componentInstance;
+    const cuenta = () => fixture.nativeElement.querySelector('[formcontrolname="numero_cuenta"]');
+
+    expect(cuenta()).toBeNull();
+    component.form.controls.forma_pago.setValue('TRANSFERENCIA');
+    fixture.detectChanges();
+    expect(cuenta()).not.toBeNull();
+
+    component.form.controls.numero_cuenta.setValue('012345678901234567');
+    component.form.controls.forma_pago.setValue('EFECTIVO');
+    fixture.detectChanges();
+    expect(cuenta()).toBeNull();
+    expect(component.form.controls.numero_cuenta.value).toBe('');
   });
 
   it('requiere solo el nombre al crear un producto nuevo; el código de barras es opcional', async () => {
@@ -158,8 +237,8 @@ describe('ComprasComponent', () => {
   it('solo habilita el alta rápida de proveedor después de escribir su nombre', async () => {
     const component = (await createFixture()).componentInstance;
 
-    component.selectProvider('__new_provider__');
-    expect(component.creatingProvider()).toBe(true);
+    component.abrirProveedor();
+    expect(component.ventana()).toBe('proveedor');
     expect(component.providerForm.invalid).toBe(true);
 
     component.providerForm.controls.nombre.setValue('Distribuidora Norte');
@@ -201,9 +280,9 @@ describe('ComprasComponent', () => {
     component.loadProducts();
 
     const groups = component.productOptions();
-    expect(groups.map((group) => group.label)).toEqual(['Nuevo', 'De este proveedor', 'Otros productos']);
-    expect(groups[1].items.map((item) => item.id)).toEqual(['pn-1']);
-    expect(groups[2].items.map((item) => item.id)).toEqual(['pn-2']);
+    expect(groups.map((group) => group.label)).toEqual(['De este proveedor', 'Otros productos']);
+    expect(groups[0].items.map((item) => item.id)).toEqual(['pn-1']);
+    expect(groups[1].items.map((item) => item.id)).toEqual(['pn-2']);
 
     component.details.at(0).patchValue({ producto_negocio_id: 'pn-1' });
     expect(component.seLigaraAlProveedor(0)).toBe(false);
@@ -215,7 +294,7 @@ describe('ComprasComponent', () => {
 
   it('omite los grupos vacíos', async () => {
     const component = (await createFixture()).componentInstance;
-    expect(component.productOptions().map((group) => group.label)).toEqual(['Nuevo']);
+    expect(component.productOptions()).toEqual([]);
   });
   it('usa scroll virtual en el selector de productos para catálogos grandes', async () => {
     const fixture = await createFixture();

@@ -200,10 +200,14 @@
                 formControlName="puesto_id"
                 aria-describedby="puesto-ayuda"
                 [attr.aria-invalid]="hasError('puesto_id')"
+                (change)="alElegirPuesto()"
               >
                 <option value="">{{ opcionesPuesto().length ? 'Sin puesto' : 'Aún no hay puestos' }}</option>
                 @for (puesto of opcionesPuesto(); track puesto.id) {
                   <option [value]="puesto.id">{{ puesto.nombre }}{{ puesto.activo ? '' : ' (inactivo)' }}</option>
+                }
+                @if (puedeCrearPuesto()) {
+                  <option [value]="CREAR_NUEVO">+ Crear nuevo puesto…</option>
                 }
               </select>
             </span>
@@ -348,10 +352,13 @@
                 <label class="etiqueta" for="rol">Rol y permisos <span class="obligatorio" aria-hidden="true">*</span></label>
                 <span class="campo-grupo campo-grupo--select">
                   <i class="pi pi-lock" aria-hidden="true"></i>
-                  <select id="rol" aria-required="true" aria-describedby="rol-ayuda" [value]="rolId()" (change)="rolId.set($any($event.target).value)">
+                  <select id="rol" aria-required="true" aria-describedby="rol-ayuda" [value]="rolId()" (change)="elegirRol($any($event.target).value)">
                     <option value="">Selecciona…</option>
                     @for (rol of roles(); track rol.id) {
                       <option [value]="rol.id" [selected]="rol.id === rolId()">{{ rol.nombre }}</option>
+                    }
+                    @if (puedeCrearRol()) {
+                      <option [value]="CREAR_NUEVO">+ Crear nuevo rol…</option>
                     }
                   </select>
                 </span>

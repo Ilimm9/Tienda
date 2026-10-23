@@ -170,14 +170,17 @@
 }
 
 .purchase-form label,
-.purchase-unit-form label {
+.ventana-form label {
   display: grid;
+  /* Pegado arriba: una ayuda bajo el campo vecino estira la fila y no debe bajar este input. */
+  align-content: start;
   gap: .4rem;
   color: var(--text);
   font-size: .85rem;
 }
 
-.purchase-form :is(input, textarea, p-select) {
+.purchase-form :is(input, textarea, p-select),
+.ventana-form input {
   width: 100%;
 }
 
@@ -203,10 +206,12 @@
   margin-bottom: 1.5rem;
 }
 
-.purchase-section-heading h2,
-.purchase-unit-form h3,
-.purchase-product-form h3,
-.purchase-provider-form h3 {
+.purchase-section-heading > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.purchase-section-heading h2 {
   margin: 0 0 .4rem;
   font-size: 1.2rem;
 }
@@ -239,11 +244,6 @@
 
 .create-option { color: var(--text-muted); font-weight: 400; }
 
-.inline-create,
-.purchase-unit-form,
-.purchase-product-form,
-.purchase-provider-form { grid-column: 1 / -1; }
-
 .tax-options { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
 
 .purchase-detail:first-child { margin-top: 0; }
@@ -267,27 +267,6 @@
 
 .purchase-checkbox input {
   width: auto;
-}
-
-.purchase-new-product,
-.purchase-unit-form,
-.purchase-product-form,
-.purchase-provider-form {
-  margin-top: 1rem;
-}
-
-.purchase-unit-form,
-.purchase-product-form,
-.purchase-provider-form {
-  padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: .75rem;
-  background: var(--background);
-}
-
-.purchase-unit-form .purchase-actions,
-.purchase-provider-form .purchase-actions {
-  margin-top: 1rem;
 }
 
 .purchase-summary {
@@ -353,6 +332,288 @@
 
 .purchase-submit-action {
   margin-top: 1.5rem;
+}
+
+/* Pasos de la compra y campos con botón «Nuevo». */
+.purchase-step-title {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.campo-con-accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: .5rem;
+}
+
+.campo-con-accion > label,
+.campo-con-accion > .producto-nuevo {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.boton-nuevo {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .4rem;
+  padding: 0 .9rem;
+  border: 1px dashed var(--primary);
+  border-radius: 10px;
+  color: var(--primary-hover);
+  background: var(--primary-tint);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boton-nuevo--icono {
+  width: 44px;
+  justify-content: center;
+  padding: 0;
+}
+
+.boton-nuevo--neutro {
+  border-style: solid;
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+.boton-nuevo:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.producto-nuevo {
+  display: grid;
+  gap: .15rem;
+  padding: .6rem .9rem;
+  border: 1px solid var(--primary-border);
+  border-radius: 10px;
+  background: var(--primary-tint);
+}
+
+.producto-nuevo__rotulo {
+  color: var(--primary-hover);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.purchase-pieces {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 1rem 0 0;
+  padding: .6rem .8rem;
+  border-radius: 10px;
+  color: var(--success);
+  background: color-mix(in srgb, var(--tone-sage) 45%, var(--surface-raised));
+  font-size: .85rem;
+}
+
+.purchase-optional {
+  margin-top: 1rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.purchase-optional summary {
+  min-height: 32px;
+  color: var(--primary-hover);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.purchase-optional[open] summary {
+  margin-bottom: .75rem;
+}
+
+/* Contenido de las ventanas para crear. */
+.ventana-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ventana-acciones {
+  display: contents;
+}
+
+.ventana-aviso {
+  display: flex;
+  gap: .5rem;
+  margin: 0;
+  padding: .7rem .8rem;
+  border-radius: 10px;
+  color: var(--warning);
+  background: var(--warning-soft);
+  font-size: .85rem;
+}
+
+.ventana-atajos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.ventana-atajo {
+  min-height: 40px;
+  padding: 0 .9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-body);
+  background: var(--surface-raised);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ventana-atajo.activo {
+  border-color: var(--primary);
+  color: var(--primary-hover);
+  background: var(--primary-soft);
+}
+
+.ventana-atajo:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Compras vacías: guía y lo que ya viene listo. */
+.compras-vacio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.compras-guia {
+  display: flex;
+  min-width: 0;
+  flex: 999 1 520px;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem;
+}
+
+.compras-guia h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.03em;
+}
+
+.compras-guia p {
+  margin: .4rem 0 0;
+  color: var(--text-body);
+}
+
+.compras-guia__pasos {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.compras-guia__pasos li {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .75rem .9rem;
+  border-radius: 12px;
+  background: var(--primary-tint);
+}
+
+.compras-guia__pasos li > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--primary);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.compras-guia__pasos strong,
+.compras-guia__pasos small {
+  display: block;
+}
+
+.compras-guia__pasos small {
+  color: var(--text-muted);
+}
+
+.compras-guia__accion {
+  align-self: flex-start;
+}
+
+.compras-listo {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 300px;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.6rem;
+  border-radius: 18px;
+  color: #fff;
+  background: var(--brand-ink);
+}
+
+.compras-listo h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.compras-listo p {
+  margin: auto 0 0;
+  padding-top: .75rem;
+  border-top: 1px solid var(--brand-ink-line);
+  color: var(--brand-ink-text);
+  font-size: .85rem;
+}
+
+.compras-listo__rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--tone-butter);
+  font-weight: 600;
+}
+
+.compras-listo__grupo {
+  display: grid;
+  gap: .5rem;
+}
+
+.compras-listo__titulo {
+  color: var(--brand-ink-text);
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.compras-listo__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.compras-listo__chips span {
+  padding: .35rem .75rem;
+  border-radius: 999px;
+  background: var(--brand-ink-hover);
+  font-size: .85rem;
+  font-weight: 600;
 }
 
 @media (max-width: 700px) {

@@ -52,4 +52,11 @@ func TestCrearNegocioSiembraRolCajero(t *testing.T) {
 	if strings.Join(permisos, ",") != "catalogo.ver,compras.registrar,compras.ver" {
 		t.Fatalf("permisos del Cajero: %v", permisos)
 	}
+	var puesto domain.PuestoNegocio
+	if err := db.Where("negocio_id = ? AND nombre = ?", negocio.ID, "Cajero").Take(&puesto).Error; err != nil {
+		t.Fatalf("el negocio nuevo debe tener puesto Cajero: %v", err)
+	}
+	if !puesto.Activo || puesto.RolSugeridoID == nil || *puesto.RolSugeridoID != rol.ID {
+		t.Fatalf("el puesto Cajero debe sugerir el rol Cajero: %#v", puesto)
+	}
 }

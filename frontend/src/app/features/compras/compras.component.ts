@@ -19,11 +19,12 @@ import { CatalogOption, PackagingUnit, PurchaseProduct, PurchaseProductGroup, Pu
 import { ComprasService } from './compras.service';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
+import { VentanaCompraComponent } from './ventana-compra.component';
 
 @Component({
   selector: 'app-compras',
   standalone: true,
-  imports: [PuedeDirective, 
+  imports: [PuedeDirective, VentanaCompraComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -52,7 +53,10 @@ export class ComprasComponent {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
-  readonly creatingProvider = signal(false);
+  /** Ventana abierta para crear proveedor o capturar producto nuevo; la de unidad usa `unitDetailIndex`. */
+  readonly ventana = signal<'proveedor' | 'producto' | null>(null);
+  readonly productoIndex = signal<number | null>(null);
+  readonly unitError = signal<string | null>(null);
   readonly providerSaving = signal(false);
   readonly providerError = signal<string | null>(null);
   readonly unitDetailIndex = signal<number | null>(null);
@@ -85,6 +89,19 @@ export class ComprasComponent {
     decimales: [0, [Validators.required, Validators.min(0), Validators.max(6)]],
   });
   readonly providerForm = this.fb.nonNullable.group({ nombre: ['', Validators.required] });
+  readonly productForm = this.fb.nonNullable.group({ nombre: ['', Validators.required], codigo_barras: [''] });
+  /** Atajos de la ventana de unidad: solo prellenan nombre, símbolo y piezas. */
+  readonly unitPresets = [
+    { nombre: 'Pieza', simbolo: 'pz', factor_a_base: 1 },
+    { nombre: 'Caja 6', simbolo: 'cj6', factor_a_base: 6 },
+    { nombre: 'Caja 12', simbolo: 'cj12', factor_a_base: 12 },
+    { nombre: 'Caja 24', simbolo: 'cj24', factor_a_base: 24 },
+  ];
+  /** El número de cuenta solo aplica a pagos que salen de una cuenta. */
+  readonly pideCuenta = computed(() => {
+    this.calculationVersion();
+    return ['TRANSFERENCIA', 'TARJETA'].includes(this.form.controls.forma_pago.value);
+  });
   readonly packagingUnits = computed(() =>
     this.units().filter(
       (unit) =>
@@ -97,22 +114,23 @@ export class ComprasComponent {
   readonly productOptions = computed<PurchaseProductGroup[]>(() => {
     const products = this.products();
     const groups: PurchaseProductGroup[] = [
-      { label: 'Nuevo', items: [{ id: '__new_product__', nombre: 'Crear nuevo…', sku: null, codigo_barras: null, del_proveedor: false }] },
       { label: 'De este proveedor', items: products.filter((product) => product.del_proveedor) },
       { label: 'Otros productos', items: products.filter((product) => !product.del_proveedor) },
     ];
     return groups.filter((group) => group.items.length > 0);
   });
-  readonly providerOptions = computed(() => [
-    ...this.providers(),
-    ...(this.context.puede(this.P.catalogoGestionar)
-      ? [{ id: '__new_provider__', nombre: 'Crear nuevo…' }]
-      : []),
-  ]);
-  readonly unitOptions = computed(() => [
-    ...this.packagingUnits(),
-    { id: '__new_unit__', nombre: 'Crear nuevo…', tipo: 'EMPAQUE', factor_a_base: 0 },
-  ]);
+  readonly unitOptions = computed(() =>
+    this.packagingUnits().map((unit) => {
+      const piezas = Number(unit.factor_a_base);
+      return { ...unit, etiqueta: `${unit.nombre} (${piezas} ${piezas === 1 ? 'pieza' : 'piezas'})` };
+    }),
+  );
+  /** Unidad por omisión de un renglón nuevo: «Pieza», o la primera de una pieza. */
+  readonly piezaId = computed(() => {
+    const unidades = this.packagingUnits().filter((unit) => Number(unit.factor_a_base) === 1);
+    return (unidades.find((unit) => unit.nombre.trim().toLowerCase() === 'pieza') ?? unidades[0])?.id ?? '';
+  });
+  readonly sucursalNombre = computed(() => this.context.sucursal()?.nombre ?? 'la sucursal');
   readonly subtotal = computed(() => {
     this.calculationVersion();
     return this.details.controls.reduce(
@@ -150,6 +168,9 @@ export class ComprasComponent {
       });
       this.form.controls.ieps.markAsPristine();
     });
+    this.form.controls.forma_pago.valueChanges.subscribe((forma) => {
+      if (!['TRANSFERENCIA', 'TARJETA'].includes(forma)) this.form.controls.numero_cuenta.setValue('');
+    });
     this.createMode ? this.loadForm() : this.loadList();
   }
   private get businessId(): string {
@@ -183,11 +204,22 @@ export class ComprasComponent {
       next: (r) => {
         this.purchases.set(r.items);
         this.loading.set(false);
+        if (!r.items.length) this.cargarListo();
       },
       error: () => {
         this.error.set('No fue posible cargar las compras.');
         this.loading.set(false);
       },
+    });
+  }
+  /** Sin compras: muestra lo que el negocio ya tiene listo (lo sembrado o lo que haya creado). */
+  private cargarListo(): void {
+    forkJoin({ units: this.service.units(this.businessId), providers: this.service.providers(this.businessId) }).subscribe({
+      next: (r) => {
+        this.units.set(r.units);
+        this.providers.set(r.providers);
+      },
+      error: () => undefined,
     });
   }
   private loadForm(): void {
@@ -207,6 +239,7 @@ export class ComprasComponent {
           return;
         }
         this.form.controls.sucursal_id.setValue(activeBranch.id);
+        this.details.controls.forEach((detail) => this.preseleccionarPieza(detail));
         this.loading.set(false);
       },
       error: () => {
@@ -226,16 +259,14 @@ export class ComprasComponent {
         error: () => this.error.set('No fue posible cargar los productos.'),
       });
   }
-  selectProvider(value: string): void {
-    if (value !== '__new_provider__') {
-      this.creatingProvider.set(false);
-      this.loadProducts();
-      return;
-    }
-    this.form.controls.proveedor_id.setValue('');
+  abrirProveedor(): void {
     this.providerForm.reset({ nombre: '' });
     this.providerError.set(null);
-    this.creatingProvider.set(true);
+    this.ventana.set('proveedor');
+  }
+  cerrarVentana(): void {
+    this.ventana.set(null);
+    this.productoIndex.set(null);
   }
   createProvider(): void {
     this.providerForm.markAllAsTouched();
@@ -257,7 +288,7 @@ export class ComprasComponent {
               return;
             }
             this.form.controls.proveedor_id.setValue(created.id);
-            this.creatingProvider.set(false);
+            this.ventana.set(null);
             this.providerSaving.set(false);
             this.loadProducts();
           },
@@ -274,7 +305,13 @@ export class ComprasComponent {
   }
   addDetail(): void {
     this.contraidos.set(new Set(this.details.controls));
-    this.details.push(this.newDetail());
+    const detail = this.newDetail();
+    this.preseleccionarPieza(detail);
+    this.details.push(detail);
+  }
+  private preseleccionarPieza(detail: AbstractControl): void {
+    const unidad = detail.get('unidad_medida_id');
+    if (unidad && !unidad.value && this.piezaId()) unidad.setValue(this.piezaId());
   }
   removeDetail(index: number): void {
     if (this.details.length === 1) return;
@@ -313,13 +350,38 @@ export class ComprasComponent {
     product?.updateValueAndValidity();
     newProductName?.updateValueAndValidity();
   }
-  selectUnit(index: number, value: string): void {
-    if (value === '__new_unit__') {
-      this.details.at(index).get('unidad_medida_id')?.setValue('');
-      this.startUnit(index);
-    } else if (this.unitDetailIndex() === index) this.unitDetailIndex.set(null);
+  /** Captura el producto nuevo del renglón; se crea al guardar la compra, como antes. */
+  abrirProducto(index: number): void {
+    const row = this.details.at(index);
+    this.productForm.reset({
+      nombre: this.isNewProduct(index) ? row.get('nombre_producto_nuevo')?.value ?? '' : '',
+      codigo_barras: this.isNewProduct(index) ? row.get('codigo_barras_nuevo')?.value ?? '' : '',
+    });
+    this.productoIndex.set(index);
+    this.ventana.set('producto');
+  }
+  usarProducto(): void {
+    const index = this.productoIndex();
+    this.productForm.markAllAsTouched();
+    if (index === null || this.productForm.invalid) return;
+    const row = this.details.at(index);
+    const value = this.productForm.getRawValue();
+    row.get('nombre_producto_nuevo')?.setValue(value.nombre.trim());
+    row.get('codigo_barras_nuevo')?.setValue(value.codigo_barras.trim());
+    this.selectProduct(index, '__new_product__');
+    this.cerrarVentana();
+  }
+  quitarProductoNuevo(index: number): void {
+    const row = this.details.at(index);
+    row.get('nombre_producto_nuevo')?.setValue('');
+    row.get('codigo_barras_nuevo')?.setValue('');
+    this.selectProduct(index, '');
+  }
+  usarPreset(preset: { nombre: string; simbolo: string; factor_a_base: number }): void {
+    this.unitForm.patchValue(preset);
   }
   startUnit(index: number): void {
+    this.unitError.set(null);
     this.unitDetailIndex.set(index);
     this.unitForm.reset({
       nombre: '',
@@ -349,12 +411,12 @@ export class ComprasComponent {
           },
           error: () => {
             this.unitSaving.set(false);
-            this.error.set('La unidad fue creada, pero no fue posible recargarla.');
+            this.unitError.set('La unidad fue creada, pero no fue posible recargarla.');
           },
         }),
       error: (r) => {
         this.unitSaving.set(false);
-        this.error.set(r.error?.mensaje ?? 'No fue posible crear la unidad.');
+        this.unitError.set(r.error?.mensaje ?? 'No fue posible crear la unidad.');
       },
     });
   }

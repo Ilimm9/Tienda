@@ -37,10 +37,13 @@
               <label class="etiqueta" for="nuevo-rol">Rol sugerido al invitar</label>
               <span class="campo-grupo campo-grupo--select">
                 <i class="pi pi-lock" aria-hidden="true"></i>
-                <select id="nuevo-rol" name="nuevoRol" [ngModel]="nuevoRol()" (ngModelChange)="nuevoRol.set($event)">
+                <select id="nuevo-rol" name="nuevoRol" [ngModel]="nuevoRol()" (ngModelChange)="elegirRol($event)">
                   <option value="">Sin rol sugerido</option>
                   @for (rol of roles(); track rol.id) {
                     <option [value]="rol.id">{{ rol.nombre }}</option>
+                  }
+                  @if (puedeCrearRol()) {
+                    <option [value]="CREAR_NUEVO">+ Crear nuevo rol…</option>
                   }
                 </select>
               </span>

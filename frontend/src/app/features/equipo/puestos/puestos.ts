@@ -1,10 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { ContextoService } from '../../../contexto/contexto.service';
 import { PERMISOS } from '../../../contexto/permisos';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
+import { CREAR_NUEVO } from '../presentacion';
 import { RolResumen } from '../../roles-permisos/rol.models';
 import { RolService } from '../../roles-permisos/rol.service';
 import { ActualizarPuestoPayload, Puesto } from '../puesto.models';
@@ -33,6 +35,15 @@ export class Puestos {
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
   readonly puedeGestionar = computed(() => this.contexto.puede(PERMISOS.empleadoGestionar));
   readonly puedeVerRoles = computed(() => this.contexto.puede(PERMISOS.rolVer));
+  readonly puedeCrearRol = computed(() => this.contexto.puede(PERMISOS.rolGestionar));
+  readonly CREAR_NUEVO = CREAR_NUEVO;
+  private readonly router = inject(Router);
+
+  /** «+ Crear nuevo rol…» lleva a Roles y permisos. */
+  elegirRol(valor: string): void {
+    if (valor === CREAR_NUEVO) void this.router.navigate(['/roles-permisos/nuevo']);
+    else this.nuevoRol.set(valor);
+  }
   /** Aviso inmediato; el servidor vuelve a comprobarlo sin distinguir mayúsculas. */
   readonly duplicado = computed(() => {
     const nombre = this.nuevo().trim().toLowerCase();

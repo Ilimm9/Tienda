@@ -213,3 +213,29 @@ func TestNegocioServiceListarOcultaNegociosSinPermisoDeVer(t *testing.T) {
 		t.Fatalf("solo debe listarse el negocio propio: %v %+v", err, items)
 	}
 }
+
+type sembradorStub struct {
+	negocioID uuid.UUID
+	err       error
+}
+
+func (s *sembradorStub) SembrarCatalogoInicial(_ context.Context, negocioID uuid.UUID) error {
+	s.negocioID = negocioID
+	return s.err
+}
+
+func TestNegocioServiceCrearSiembraCatalogoSinRomperElAlta(t *testing.T) {
+	id := uuid.New()
+	for _, fallo := range []error{nil, errors.New("sin conexión")} {
+		sembrador := &sembradorStub{err: fallo}
+		service := NewNegocioService(&negocioRepositoryStub{detalle: domain.NegocioDetalle{ID: id}}).ConSembrador(sembrador)
+
+		negocio, err := service.Crear(context.Background(), uuid.New(), domain.CrearNegocioInput{NombreComercial: "Tienda", CodigoMoneda: "MXN", ZonaHoraria: "America/Mexico_City"})
+		if err != nil || negocio.ID != id {
+			t.Fatalf("el alta no debe fallar por la semilla (fallo=%v): %v", fallo, err)
+		}
+		if sembrador.negocioID != id {
+			t.Fatalf("la semilla debe recibir el negocio creado")
+		}
+	}
+}

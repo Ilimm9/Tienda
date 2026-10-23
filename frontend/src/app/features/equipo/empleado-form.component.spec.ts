@@ -2,11 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { ContextoService } from '../../contexto/contexto.service';
+import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { EmpleadoFormComponent } from './empleado-form.component';
+import { CREAR_NUEVO } from './presentacion';
 
 describe('EmpleadoFormComponent (alta en 3 pasos)', () => {
   const negocioId = 'negocio-1';
@@ -95,6 +97,42 @@ describe('EmpleadoFormComponent (alta en 3 pasos)', () => {
     component.submit();
     http.expectOne({ method: 'PATCH', url: `${base}/empleados/emp-1` }).flush(empleado('ana@correo.mx'));
     expect(component.paso()).toBe(2);
+  });
+
+  it('ofrece crear un puesto y, sin datos capturados, va directo a Puestos', async () => {
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#puesto_id');
+    expect(select.options[select.options.length - 1].textContent).toContain('Crear nuevo puesto');
+
+    component.form.controls.puesto_id.setValue(CREAR_NUEVO);
+    await component.alElegirPuesto();
+
+    expect(navegar).toHaveBeenCalledWith(['/equipo/puestos']);
+    expect(component.form.controls.puesto_id.value).toBe('');
+  });
+
+  it('con datos capturados pide confirmar antes de ir a Puestos', async () => {
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const confirmar = vi.spyOn(TestBed.inject(FeedbackService), 'confirmDanger').mockResolvedValue(false);
+    component.form.controls.nombre.setValue('Ana');
+    component.form.controls.nombre.markAsDirty();
+    component.form.controls.puesto_id.setValue('p1');
+    await component.alElegirPuesto();
+
+    component.form.controls.puesto_id.setValue(CREAR_NUEVO);
+    await component.alElegirPuesto();
+
+    expect(confirmar).toHaveBeenCalled();
+    expect(navegar).not.toHaveBeenCalled();
+    expect(component.form.controls.puesto_id.value).toBe('p1');
+  });
+
+  it('el rol «Crear nuevo» lleva a Roles y permisos', () => {
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    component.elegirRol(CREAR_NUEVO);
+    expect(navegar).toHaveBeenCalledWith(['/roles-permisos/nuevo']);
+    component.elegirRol('rol-cajero');
+    expect(component.rolId()).toBe('rol-cajero');
   });
 
   it('sin correo pide volver a datos', () => {

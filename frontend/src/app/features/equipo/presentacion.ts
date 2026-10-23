@@ -1,5 +1,8 @@
 import { EstadoEmpleado } from './empleado.models';
 
+/** Valor de la opción «+ Crear nuevo…» en los selectores de puesto y rol: lleva a su sección. */
+export const CREAR_NUEVO = '__crear_nuevo__';
+
 /** Iniciales para avatares de Equipo: hasta dos palabras del nombre; sin nombre, la del respaldo. */
 export function iniciales(nombre: string | null | undefined, respaldo = ''): string {
   const partes = (nombre ?? '').trim().split(/\s+/).filter(Boolean);

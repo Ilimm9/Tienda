@@ -92,7 +92,7 @@ func main() {
 	productLookup := infrastructure.NewFallbackProductLookup(precioCheckClient, upcItemDBClient)
 	productService := application.NewProductService(productRepo, productLookup)
 	negocioRepo := negocioinfra.NewNegocioRepository(db)
-	negocioHandler := negociohttp.NewNegocioHandler(negocioapplication.NewNegocioService(negocioRepo))
+	negocioHandler := negociohttp.NewNegocioHandler(negocioapplication.NewNegocioService(negocioRepo).ConSembrador(infrastructure.NewCatalogSeeder(db)))
 	sucursalRepo := negocioinfra.NewSucursalRepository(db)
 	sucursalHandler := negociohttp.NewSucursalHandler(negocioapplication.NewSucursalService(sucursalRepo))
 	contextoRepo := negocioinfra.NewContextoRepository(db)

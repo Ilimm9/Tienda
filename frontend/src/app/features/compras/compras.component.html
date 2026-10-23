@@ -19,16 +19,50 @@
     } @else if (error()) {
       <section class="purchase-state error-state">{{ error() }}</section>
     } @else if (!purchases().length) {
-      <section class="empty-purchases">
-        <span class="empty-icon"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
-        <h2>Aún no hay compras registradas</h2>
-        <p>
-          Registra la primera recepción de mercancía para actualizar el inventario de tu sucursal.
-        </p>
-        <button *appPuede="P.compraRegistrar" class="primary-button" type="button" routerLink="/compras/nueva">
-          <i class="pi pi-plus" aria-hidden="true"></i> Registrar nueva compra
-        </button>
-      </section>
+      <div class="compras-vacio">
+        <section class="purchase-card compras-guia" aria-labelledby="titulo-guia">
+          <span class="empty-icon"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
+          <div>
+            <h2 id="titulo-guia">Tu primera compra toma un minuto</h2>
+            <p>No necesitas tener todo dado de alta: puedes crear el proveedor o el producto ahí mismo, sin salir de la compra.</p>
+          </div>
+          <ol class="compras-guia__pasos">
+            <li><span>1</span><div><strong>Elige a quién le compraste</strong><small>Si no tiene un proveedor fijo, usa «Proveedor general».</small></div></li>
+            <li><span>2</span><div><strong>Agrega lo que recibiste</strong><small>Por pieza o por caja: 8 piezas sueltas o 2 cajas de 12.</small></div></li>
+            <li><span>3</span><div><strong>Revisa el total y guarda</strong><small>Las existencias suben en tu sucursal y el costo queda registrado.</small></div></li>
+          </ol>
+          <button *appPuede="P.compraRegistrar" class="primary-button compras-guia__accion" type="button" routerLink="/compras/nueva">
+            Registrar primera compra <i class="pi pi-arrow-right" aria-hidden="true"></i>
+          </button>
+        </section>
+        @if (packagingUnits().length || providers().length) {
+          <aside class="compras-listo" aria-labelledby="titulo-listo">
+            <span class="compras-listo__rotulo"><i class="pi pi-check" aria-hidden="true"></i>Ya viene listo</span>
+            <h2 id="titulo-listo">Preparamos lo básico para que no empieces de cero</h2>
+            @if (packagingUnits().length) {
+              <div class="compras-listo__grupo">
+                <span class="compras-listo__titulo">Unidades de empaque</span>
+                <div class="compras-listo__chips">
+                  @for (unit of packagingUnits(); track unit.id) {
+                    <span>{{ unit.nombre }} · {{ unit.factor_a_base }}</span>
+                  }
+                </div>
+              </div>
+            }
+            @if (providers().length) {
+              <div class="compras-listo__grupo">
+                <span class="compras-listo__titulo">Proveedores</span>
+                <div class="compras-listo__chips">
+                  @for (provider of providers(); track provider.id) {
+                    <span>{{ provider.nombre }}</span>
+                  }
+                </div>
+              </div>
+            }
+            <p>Son tuyos: puedes renombrarlos, desactivarlos o crear otros en Catálogo y Proveedores.</p>
+          </aside>
+        }
+      </div>
     } @else {
       <section class="purchase-card data-table-card">
         <p-table [value]="purchases()" class="app-table" responsiveLayout="scroll"
@@ -70,66 +104,74 @@
     } @else {
       <section class="purchase-workspace">
         <form id="purchase-form" class="purchase-form" [formGroup]="form" (ngSubmit)="submit()">
-          <section class="purchase-card purchase-form-card purchase-grid">
-            <label
-              >Proveedor<p-select
-                formControlName="proveedor_id"
-                [options]="providerOptions()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Selecciona"
-                (onChange)="selectProvider($event.value)" /></label
-            ><label
-              >Sucursal receptora<p-select
-                formControlName="sucursal_id"
-                [options]="branches()"
-                optionLabel="nombre"
-                optionValue="id"
-                [disabled]="true" /></label
-            ><label
-              >Tipo de documento<p-select
-                formControlName="tipo_documento"
-                [options]="documentTypes" /></label
-            ><label>Folio<input pInputText formControlName="folio_documento" /></label
-            ><label
-              >Fecha del documento<input
-                pInputText
-                type="date"
-                formControlName="fecha_documento" /></label
-            ><label
-              >Fecha de recepción<input
-                pInputText
-                type="date"
-                formControlName="fecha_recepcion" /></label
-            ><label
-              >Forma de pago<p-select
-                formControlName="forma_pago"
-                [options]="paymentMethods" /></label
-            ><label>Número de cuenta<input pInputText formControlName="numero_cuenta" /></label
-            ><label class="purchase-field-wide"
-              >Observaciones<textarea pTextarea formControlName="observaciones" rows="3"></textarea>
-            </label>
-            @if (creatingProvider()) {
-              <section *appPuede="P.catalogoGestionar" class="purchase-provider-form" [formGroup]="providerForm">
-                <h3>Nuevo proveedor</h3>
-                <div class="purchase-grid">
-                  <label>Nombre del proveedor<input pInputText formControlName="nombre" /></label>
-                </div>
-                @if (providerError()) {
-                  <p class="form-error" role="alert">{{ providerError() }}</p>
-                }
-                <div class="purchase-actions">
-                  <button class="primary-button" type="button" (click)="createProvider()" [disabled]="providerForm.invalid || providerSaving()">
-                    {{ providerSaving() ? 'Guardando…' : 'Guardar proveedor' }}
-                  </button>
-                </div>
-              </section>
-            }
+          <section class="purchase-card purchase-form-card" aria-labelledby="titulo-datos">
+            <h2 id="titulo-datos" class="purchase-step-title">1 · ¿A quién le compraste?</h2>
+            <div class="purchase-grid">
+              <div class="purchase-field-wide campo-con-accion">
+                <label
+                  >Proveedor<p-select
+                    formControlName="proveedor_id"
+                    [options]="providers()"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    placeholder="Selecciona"
+                    (onChange)="loadProducts()" /></label
+                >
+                <button *appPuede="P.catalogoGestionar" class="boton-nuevo" type="button" (click)="abrirProveedor()">
+                  <i class="pi pi-plus" aria-hidden="true"></i> Nuevo proveedor
+                </button>
+              </div>
+              <label
+                >Sucursal receptora<p-select
+                  formControlName="sucursal_id"
+                  [options]="branches()"
+                  optionLabel="nombre"
+                  optionValue="id"
+                  [disabled]="true" /></label
+              ><label
+                >Tipo de documento<p-select
+                  formControlName="tipo_documento"
+                  [options]="documentTypes" /></label
+              ><label>Folio<input pInputText formControlName="folio_documento" /></label
+              ><label
+                >Fecha del documento<input
+                  pInputText
+                  type="date"
+                  formControlName="fecha_documento" /><small class="create-option"
+                  >La que trae impresa la factura o el ticket.</small
+                ></label
+              ><label
+                >Fecha de recepción<input
+                  pInputText
+                  type="date"
+                  formControlName="fecha_recepcion" /><small class="create-option"
+                  >Cuando la mercancía llegó a la sucursal.</small
+                ></label
+              ><label
+                >Forma de pago<p-select
+                  formControlName="forma_pago"
+                  [options]="paymentMethods" /></label
+              >
+              @if (pideCuenta()) {
+                <label
+                  >Número de cuenta<input
+                    pInputText
+                    formControlName="numero_cuenta"
+                    [placeholder]="form.controls.forma_pago.value === 'TARJETA' ? 'Últimos 4 dígitos' : 'CLABE o cuenta de origen'"
+                /></label>
+              }
+            </div>
+            <details class="purchase-optional" [open]="!!form.controls.observaciones.value">
+              <summary>Observaciones (opcional)</summary>
+              <label class="purchase-field-wide"
+                >Observaciones<textarea pTextarea formControlName="observaciones" rows="3"></textarea>
+              </label>
+            </details>
           </section>
           <section class="purchase-card purchase-form-card">
             <div class="purchase-section-heading">
               <div>
-                <h2>Mercancía recibida</h2>
+                <h2 class="purchase-step-title">2 · ¿Qué recibiste?</h2>
                 <p>Indica los empaques recibidos y el costo de cada producto.</p>
               </div>
               <button class="secondary-button" type="button" (click)="addDetail()">
@@ -166,127 +208,128 @@
                     </button>
                   </header>
                   @if (!estaContraido($index)) {
-                  <div class="purchase-grid purchase-detail-body" [id]="'detalle-compra-' + $index">
-                    <label
-                      >Producto<p-select
-                        formControlName="producto_negocio_id"
-                        [options]="productOptions()"
-                        [group]="true"
-                        optionGroupLabel="label"
-                        optionGroupChildren="items"
-                        optionLabel="nombre"
-                        optionValue="id"
-                        [filter]="true"
-                        filterBy="nombre,sku,codigo_barras"
-                        [virtualScroll]="true"
-                        [virtualScrollItemSize]="38"
-                        scrollHeight="320px"
-                        emptyFilterMessage="Sin coincidencias"
-                        placeholder="Selecciona"
-                        (onChange)="selectProduct($index, $event.value)"
-                      />@if (seLigaraAlProveedor($index)) {<small class="create-option"
-                        >Se ligará a este proveedor al guardar.</small
-                      >} @else {<small class="create-option"
-                        >Elige “Crear nuevo…” para darlo de alta.</small
-                      >}</label
-                    >
-                    @if (isNewProduct($index)) {
-                      <section class="purchase-product-form">
-                        <h3>Nuevo producto</h3>
-                        <div class="purchase-grid">
+                  <div class="purchase-detail-body" [id]="'detalle-compra-' + $index">
+                    <div class="purchase-grid">
+                      <div class="purchase-field-wide campo-con-accion">
+                        @if (isNewProduct($index)) {
+                          <div class="producto-nuevo">
+                            <span class="producto-nuevo__rotulo">Producto nuevo</span>
+                            <strong>{{ detail.get('nombre_producto_nuevo')?.value }}</strong>
+                            <small class="create-option">Se crea sin precio de venta al guardar la compra.</small>
+                          </div>
+                          <button class="boton-nuevo" type="button" (click)="abrirProducto($index)">
+                            <i class="pi pi-pencil" aria-hidden="true"></i> Editar
+                          </button>
+                          <button class="boton-nuevo boton-nuevo--neutro" type="button" (click)="quitarProductoNuevo($index)">
+                            Elegir existente
+                          </button>
+                        } @else {
                           <label
-                            >Nombre del producto<input
-                              pInputText
-                              formControlName="nombre_producto_nuevo" /></label
-                          ><label
-                            >Código de barras<input
-                              pInputText
-                              formControlName="codigo_barras_nuevo"
-                          /></label>
-                        </div>
-                      </section>
+                            >Producto<p-select
+                              formControlName="producto_negocio_id"
+                              [options]="productOptions()"
+                              [group]="true"
+                              optionGroupLabel="label"
+                              optionGroupChildren="items"
+                              optionLabel="nombre"
+                              optionValue="id"
+                              [filter]="true"
+                              filterBy="nombre,sku,codigo_barras"
+                              [virtualScroll]="true"
+                              [virtualScrollItemSize]="38"
+                              scrollHeight="320px"
+                              emptyFilterMessage="Sin coincidencias"
+                              placeholder="Selecciona"
+                              (onChange)="selectProduct($index, $event.value)"
+                            />@if (seLigaraAlProveedor($index)) {<small class="create-option"
+                              >Se ligará a este proveedor al guardar.</small
+                            >}</label
+                          >
+                          <button class="boton-nuevo" type="button" (click)="abrirProducto($index)">
+                            <i class="pi pi-plus" aria-hidden="true"></i> Nuevo
+                          </button>
+                        }
+                      </div>
+                      <div class="campo-con-accion">
+                        <label
+                          >Unidad de empaque<p-select
+                            formControlName="unidad_medida_id"
+                            [options]="unitOptions()"
+                            optionLabel="etiqueta"
+                            optionValue="id"
+                            placeholder="Selecciona"
+                        /></label>
+                        <button
+                          *appPuede="P.catalogoGestionar"
+                          class="boton-nuevo boton-nuevo--icono"
+                          type="button"
+                          aria-label="Nueva unidad de empaque"
+                          title="Nueva unidad de empaque"
+                          (click)="startUnit($index)"
+                        >
+                          <i class="pi pi-plus" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                      <label
+                        >Empaques<input
+                          pInputText
+                          type="number"
+                          min="1"
+                          formControlName="cantidad_empaques" /></label
+                      ><label
+                        >Costo por empaque<input
+                          pInputText
+                          type="number"
+                          min="0"
+                          formControlName="costo_empaque" /></label
+                      ><label
+                        >Descuento<input
+                          pInputText
+                          type="number"
+                          min="0"
+                          formControlName="descuento"
+                      /></label>
+                    </div>
+                    @if (selectedUnit($index)) {
+                      <p class="purchase-pieces">
+                        <i class="pi pi-info-circle" aria-hidden="true"></i>
+                        Entran <strong>{{ pieces($index) }} {{ pieces($index) === 1 ? 'pieza' : 'piezas' }}</strong> a {{ sucursalNombre() }} · subtotal
+                        {{ detailSubtotal($index) | currency: 'MXN' }}
+                      </p>
                     }
-                    <label
-                      >Unidad de empaque<p-select
-                        formControlName="unidad_medida_id"
-                        [options]="unitOptions()"
-                        optionLabel="nombre"
-                        optionValue="id"
-                        placeholder="Selecciona"
-                        (onChange)="selectUnit($index, $event.value)"
-                      /><small class="create-option"
-                        >Elige “Crear nuevo…” para agregar una unidad.</small
-                      ></label
+                    <details
+                      class="purchase-optional"
+                      [open]="!!detail.get('numero_lote')?.value || !!detail.get('fecha_caducidad')?.value || hasAnomalies($index)"
                     >
-                    @if (unitDetailIndex() === $index) {
-                      <section class="purchase-unit-form" [formGroup]="unitForm">
-                        <h3>Nueva unidad de empaque</h3>
-                        <div class="purchase-grid">
-                          <label>Nombre<input pInputText formControlName="nombre" /></label
-                          ><label>Símbolo<input pInputText formControlName="simbolo" /></label
-                          ><label
-                            >Piezas por empaque<input
+                      <summary>Lote, caducidad o mercancía dañada (opcional)</summary>
+                      <div class="purchase-grid">
+                        <label>Lote<input pInputText formControlName="numero_lote" /></label
+                        ><label
+                          >Caducidad<input
+                            pInputText
+                            type="date"
+                            formControlName="fecha_caducidad" /></label
+                        ><label class="purchase-checkbox"
+                          ><input type="checkbox" formControlName="tiene_anomalias" /> Registrar
+                          anomalías</label
+                        >
+                        @if (hasAnomalies($index)) {
+                          <label
+                            >Piezas dañadas<input
                               pInputText
                               type="number"
-                              min="1"
-                              formControlName="factor_a_base"
+                              min="0"
+                              formControlName="piezas_danadas" /></label
+                          ><label
+                            >Piezas faltantes<input
+                              pInputText
+                              type="number"
+                              min="0"
+                              formControlName="piezas_faltantes"
                           /></label>
-                        </div>
-                        <div class="purchase-actions">
-                          <button
-                            class="primary-button"
-                            type="button"
-                            (click)="createUnit()"
-                            [disabled]="unitForm.invalid || unitSaving()"
-                          >
-                            {{ unitSaving() ? 'Creando…' : 'Guardar unidad' }}
-                          </button>
-                        </div>
-                      </section>
-                    }
-                    <label
-                      >Empaques<input
-                        pInputText
-                        type="number"
-                        min="1"
-                        formControlName="cantidad_empaques" /></label
-                    ><label
-                      >Costo por empaque<input
-                        pInputText
-                        type="number"
-                        min="0"
-                        formControlName="costo_empaque" /></label
-                    ><label
-                      >Descuento<input
-                        pInputText
-                        type="number"
-                        min="0"
-                        formControlName="descuento" /></label
-                    ><label>Lote<input pInputText formControlName="numero_lote" /></label
-                    ><label
-                      >Caducidad<input
-                        pInputText
-                        type="date"
-                        formControlName="fecha_caducidad" /></label
-                    ><label class="purchase-checkbox"
-                      ><input type="checkbox" formControlName="tiene_anomalias" /> Registrar
-                      anomalías</label
-                    >
-                    @if (hasAnomalies($index)) {
-                      <label
-                        >Piezas dañadas<input
-                          pInputText
-                          type="number"
-                          min="0"
-                          formControlName="piezas_danadas" /></label
-                      ><label
-                        >Piezas faltantes<input
-                          pInputText
-                          type="number"
-                          min="0"
-                          formControlName="piezas_faltantes"
-                      /></label>
-                    }
+                        }
+                      </div>
+                    </details>
                   </div>
                   }
                 </section>
@@ -294,6 +337,7 @@
             </div>
           </section>
           <section class="purchase-card purchase-form-card purchase-totals-card">
+            <h2 class="purchase-step-title">3 · Revisa y guarda</h2>
             <div class="tax-options">
               <label class="purchase-checkbox"
                 ><input type="checkbox" formControlName="incluye_ieps" /> Incluir IEPS</label
@@ -352,6 +396,91 @@
           </div>
         </aside>
       </section>
+
+      <app-ventana-compra
+        [abierta]="ventana() === 'proveedor'"
+        titulo="Nuevo proveedor"
+        subtitulo="Queda seleccionado en esta compra."
+        icono="pi-shop"
+        (cerrar)="cerrarVentana()"
+      >
+        <form id="form-proveedor" class="ventana-form" [formGroup]="providerForm" (ngSubmit)="createProvider()">
+          <label>Nombre del proveedor<input pInputText formControlName="nombre" placeholder="Ej. Distribuidora del Centro" /></label>
+          <small class="create-option">RFC y demás datos los completas después en Proveedores.</small>
+          @if (providerError()) {
+            <p class="form-error" role="alert">{{ providerError() }}</p>
+          }
+        </form>
+        <div pie class="ventana-acciones">
+          <button class="secondary-button" type="button" (click)="cerrarVentana()">Cancelar</button>
+          <button class="primary-button" type="submit" form="form-proveedor" [disabled]="providerForm.invalid || providerSaving()">
+            {{ providerSaving() ? 'Guardando…' : 'Guardar y usar' }}
+          </button>
+        </div>
+      </app-ventana-compra>
+
+      <app-ventana-compra
+        [abierta]="ventana() === 'producto'"
+        titulo="Nuevo producto"
+        subtitulo="Se agrega al catálogo al guardar la compra."
+        icono="pi-box"
+        (cerrar)="cerrarVentana()"
+      >
+        <form id="form-producto" class="ventana-form" [formGroup]="productForm" (ngSubmit)="usarProducto()">
+          <label>Nombre del producto<input pInputText formControlName="nombre" placeholder="Ej. Coca-Cola 600 ml" /></label>
+          <label>Código de barras<input pInputText formControlName="codigo_barras" placeholder="Opcional" /></label>
+          <p class="ventana-aviso"><i class="pi pi-info-circle" aria-hidden="true"></i>Se crea sin precio de venta. Lo defines después en Productos.</p>
+        </form>
+        <div pie class="ventana-acciones">
+          <button class="secondary-button" type="button" (click)="cerrarVentana()">Cancelar</button>
+          <button class="primary-button" type="submit" form="form-producto" [disabled]="productForm.invalid">Usar en esta compra</button>
+        </div>
+      </app-ventana-compra>
+
+      <app-ventana-compra
+        [abierta]="unitDetailIndex() !== null"
+        titulo="Nueva unidad de empaque"
+        subtitulo="Cómo te lo vende el proveedor."
+        icono="pi-th-large"
+        (cerrar)="unitDetailIndex.set(null)"
+      >
+        <form id="form-unidad" class="ventana-form" [formGroup]="unitForm" (ngSubmit)="createUnit()">
+          <div class="ventana-atajos" role="group" aria-label="Atajos">
+            @for (preset of unitPresets; track preset.nombre) {
+              <button
+                type="button"
+                class="ventana-atajo"
+                [class.activo]="unitForm.controls.nombre.value === preset.nombre"
+                [attr.aria-pressed]="unitForm.controls.nombre.value === preset.nombre"
+                (click)="usarPreset(preset)"
+              >
+                {{ preset.nombre }} · {{ preset.factor_a_base }}
+              </button>
+            }
+          </div>
+          <label>Nombre<input pInputText formControlName="nombre" /></label>
+          <div class="purchase-grid">
+            <label>Símbolo<input pInputText formControlName="simbolo" /></label
+            ><label
+              >Piezas por empaque<input
+                pInputText
+                type="number"
+                min="1"
+                formControlName="factor_a_base"
+            /></label>
+          </div>
+          <small class="create-option">Ejemplo: «Caja 12» trae 12 piezas. Para piezas sueltas usa «Pieza» (1).</small>
+          @if (unitError()) {
+            <p class="form-error" role="alert">{{ unitError() }}</p>
+          }
+        </form>
+        <div pie class="ventana-acciones">
+          <button class="secondary-button" type="button" (click)="unitDetailIndex.set(null)">Cancelar</button>
+          <button class="primary-button" type="submit" form="form-unidad" [disabled]="unitForm.invalid || unitSaving()">
+            {{ unitSaving() ? 'Creando…' : 'Guardar y usar' }}
+          </button>
+        </div>
+      </app-ventana-compra>
     }
   }
 </main>

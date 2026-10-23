@@ -10,6 +10,8 @@ Base vigente según código local. Actualizado: 2026-10-19.
 4. Confirmar una transacción: cabecera, detalle, entrada de piezas buenas, movimientos `COMPRA_ENTRADA`, lotes opcionales y propuestas de costo/precio. Una compra confirmada es inmutable; el documento no puede repetirse para negocio/proveedor/tipo/folio.
 5. En Precios, consultar y autorizar cada propuesta por sucursal. Recibir mercancía aumenta stock; costo y precio vigentes cambian al autorizar, con historial de valores y responsable.
 
+Pantalla ([34](34-compras-panel-lateral-y-semilla.md)): proveedor, producto nuevo y unidad se crean en ventanas modales («Nuevo…» junto a cada selector); el producto nuevo se sigue creando al guardar la compra. Forma de pago va en los datos principales y el número de cuenta solo aparece con Transferencia o Tarjeta (se limpia al cambiar). Cada renglón muestra la unidad con su factor, viene con «Pieza» preseleccionada y avisa «Entran N piezas». Lote, caducidad, anomalías y observaciones quedan en secciones plegables. Sin compras, la lista muestra una guía y lo que ya viene listo. Al crear un negocio se siembran las unidades `EMPAQUE` Pieza (1), Caja 12 y Caja 24 y el proveedor «Proveedor general»; son editables o desactivables y no se vuelven a sembrar.
+
 Las cantidades, importes y pertenencia a negocio/proveedor/sucursal se validan en servidor. El costo por pieza procede del ticket y es de consulta en la bandeja; se ajustan los valores de autorización permitidos. Las rutas exigen permisos `compras.ver`, `compras.registrar`, `precios.ver` o `precios.autorizar` según operación. Adjuntar ticket/factura queda fuera del flujo actual.
 
 ## Tablas principales

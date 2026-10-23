@@ -1,17 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../../contexto/contexto.service';
+import { PERMISOS } from '../../../contexto/permisos';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
 import { RolResumen } from '../../roles-permisos/rol.models';
 import { RolService } from '../../roles-permisos/rol.service';
 import { EmpleadoResumen } from '../empleado.models';
 import { EmpleadoService } from '../empleado.service';
 import { InvitacionService } from '../invitacion.service';
-import { iniciales } from '../presentacion';
+import { CREAR_NUEVO, iniciales } from '../presentacion';
 import { enfocarPrimerInvalido } from '../../../shared/formularios/formulario';
 
 // El rol propietario nunca se delega por invitación; el servidor también lo rechaza.
@@ -48,7 +49,10 @@ export class InvitacionNueva {
   private readonly rolService = inject(RolService);
   private readonly feedback = inject(FeedbackService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly contexto = inject(ContextoService);
+  readonly CREAR_NUEVO = CREAR_NUEVO;
+  readonly puedeCrearRol = computed(() => this.contexto.puede(PERMISOS.rolGestionar));
 
   readonly invitables = signal<EmpleadoResumen[]>([]);
   readonly roles = signal<RolResumen[]>([]);
@@ -66,6 +70,12 @@ export class InvitacionNueva {
     this.route.snapshot.queryParamMap.get('sucursal') ?? this.contexto.sucursal()?.id ?? '',
   );
   readonly rolId = signal('');
+
+  /** «+ Crear nuevo rol…» lleva a Roles y permisos. */
+  elegirRol(valor: string): void {
+    if (valor === CREAR_NUEVO) void this.router.navigate(['/roles-permisos/nuevo']);
+    else this.rolId.set(valor);
+  }
 
   readonly negocio = computed(() => this.contexto.negocio());
   readonly sucursales = computed(() => this.negocio()?.sucursales ?? []);

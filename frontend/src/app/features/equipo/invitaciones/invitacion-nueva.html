@@ -108,11 +108,14 @@
                 [attr.aria-invalid]="falta('rol')"
                 aria-describedby="rol-ayuda"
                 [ngModel]="rolId()"
-                (ngModelChange)="rolId.set($event)"
+                (ngModelChange)="elegirRol($event)"
               >
                 <option value="">Selecciona…</option>
                 @for (item of roles(); track item.id) {
                   <option [value]="item.id">{{ item.nombre }}</option>
+                }
+                @if (puedeCrearRol()) {
+                  <option [value]="CREAR_NUEVO">+ Crear nuevo rol…</option>
                 }
               </select>
             </span>
