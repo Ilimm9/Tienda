@@ -9,19 +9,20 @@
   @else if (error()) { <div class="state-card error">{{ error() }}</div> }
   @else {
     <section class="panel">
-      <header><div><h2>{{ total() | number }} tiendas</h2><p>Los conteos consideran solamente personal y sucursales activas.</p></div></header>
+      <header><div><h2>{{ total() | number }} tiendas</h2><p>Los conteos consideran solamente empleados, productos y sucursales activos.</p></div></header>
       <div class="table-wrap"><table>
-        <thead><tr><th>Tienda</th><th>Estado</th><th>Sucursales</th><th>Personal</th><th>Con cuenta</th><th>Última actividad</th><th></th></tr></thead>
+        <thead><tr><th>Tienda</th><th>Estado</th><th>Creada</th><th>Sucursales</th><th>Productos</th><th>Empleados</th><th>Con cuenta</th><th>Última actividad</th><th></th></tr></thead>
         <tbody>
           @for (item of items(); track item.id) {
             <tr>
               <td><strong>{{ item.nombre_comercial }}</strong><small>{{ item.rfc || item.slug }}</small></td>
               <td><span class="status" [class.inactive]="item.estado !== 'activo'">{{ item.estado }}</span></td>
-              <td>{{ item.total_sucursales }}</td><td>{{ item.total_personal }}</td><td>{{ item.cuentas_vinculadas }}</td>
+              <td>{{ item.creado_en | date: 'dd/MM/yyyy':'America/Mexico_City' }}</td>
+              <td>{{ item.total_sucursales }}</td><td>{{ item.total_productos | number }}</td><td>{{ item.total_personal }}</td><td>{{ item.cuentas_vinculadas }}</td>
               <td>{{ item.ultima_actividad_en ? (item.ultima_actividad_en | date: 'dd/MM/yyyy HH:mm':'America/Mexico_City') : 'Sin actividad' }}</td>
               <td><a class="row-link" [routerLink]="['/administracion-plataforma/negocios', item.id]" aria-label="Ver detalle"><i class="pi pi-arrow-right"></i></a></td>
             </tr>
-          } @empty { <tr><td colspan="7" class="empty-cell">No hay tiendas que coincidan con los filtros.</td></tr> }
+          } @empty { <tr><td colspan="9" class="empty-cell">No hay tiendas que coincidan con los filtros.</td></tr> }
         </tbody>
       </table></div>
       <footer class="pagination"><span>Página {{ page() }}</span><div><button type="button" (click)="anterior()" [disabled]="page() === 1">Anterior</button><button type="button" (click)="siguiente()" [disabled]="page() * pageSize >= total()">Siguiente</button></div></footer>

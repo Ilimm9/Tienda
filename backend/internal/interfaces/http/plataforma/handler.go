@@ -40,6 +40,17 @@ func (h *Handler) ListarNegocios(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
+func (h *Handler) ListarCuentas(c *gin.Context) {
+	page := entero(c.Query("page"), 1)
+	pageSize := entero(c.Query("page_size"), 20)
+	items, err := h.service.ListarCuentas(c.Request.Context(), c.Query("q"), c.Query("estado"), page, pageSize)
+	if err != nil {
+		internalError(c)
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
 func (h *Handler) ObtenerNegocio(c *gin.Context) {
 	id, ok := negocioID(c)
 	if !ok {

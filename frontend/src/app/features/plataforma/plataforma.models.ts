@@ -24,6 +24,7 @@ export interface NegocioPlataformaResumen {
   creado_en: string;
   total_sucursales: number;
   total_personal: number;
+  total_productos: number;
   cuentas_vinculadas: number;
   ultima_actividad_en: string | null;
 }
@@ -68,4 +69,23 @@ export interface PaginaNegocios {
 export interface UsuariosResponse {
   items: UsuarioPlataformaResumen[];
   total: number;
+}
+
+export interface CuentaPlataformaResumen {
+  id: string;
+  nombre: string;
+  correo: string;
+  estado: string;
+  correo_verificado: boolean;
+  creado_en: string;
+  ultimo_inicio_sesion_en: string | null;
+  total_negocios: number;
+  negocios: string[];
+}
+
+export interface PaginaCuentas {
+  items: CuentaPlataformaResumen[];
+  total: number;
+  page: number;
+  page_size: number;
 }

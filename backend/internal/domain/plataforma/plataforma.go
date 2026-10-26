@@ -104,6 +104,7 @@ type NegocioResumen struct {
 	CreadoEn          time.Time  `json:"creado_en"`
 	TotalSucursales   int64      `json:"total_sucursales"`
 	TotalPersonal     int64      `json:"total_personal"`
+	TotalProductos    int64      `json:"total_productos"`
 	CuentasVinculadas int64      `json:"cuentas_vinculadas"`
 	UltimaActividadEn *time.Time `json:"ultima_actividad_en"`
 }
@@ -124,8 +125,8 @@ type NegocioDetalle struct {
 	Correo            *string           `json:"correo"`
 	ZonaHoraria       string            `json:"zona_horaria"`
 	TotalPropietarios int64             `json:"total_propietarios"`
-	Sucursales        []SucursalResumen `json:"sucursales"`
-	Actividad         []ActividadDiaria `json:"actividad"`
+	Sucursales        []SucursalResumen `gorm:"-" json:"sucursales"`
+	Actividad         []ActividadDiaria `gorm:"-" json:"actividad"`
 }
 
 type UsuarioResumen struct {
@@ -144,4 +145,23 @@ type PaginaNegocios struct {
 	Total    int64            `json:"total"`
 	Page     int              `json:"page"`
 	PageSize int              `json:"page_size"`
+}
+
+type CuentaResumen struct {
+	ID                   uuid.UUID  `json:"id"`
+	Nombre               string     `json:"nombre"`
+	Correo               string     `json:"correo"`
+	Estado               string     `json:"estado"`
+	CorreoVerificado     bool       `json:"correo_verificado"`
+	CreadoEn             time.Time  `json:"creado_en"`
+	UltimoInicioSesionEn *time.Time `json:"ultimo_inicio_sesion_en"`
+	TotalNegocios        int64      `json:"total_negocios"`
+	Negocios             []string   `json:"negocios"`
+}
+
+type PaginaCuentas struct {
+	Items    []CuentaResumen `json:"items"`
+	Total    int64           `json:"total"`
+	Page     int             `json:"page"`
+	PageSize int             `json:"page_size"`
 }

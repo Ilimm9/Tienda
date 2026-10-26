@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   NegocioPlataformaDetalle,
+  PaginaCuentas,
   PaginaNegocios,
   PlataformaResumen,
   UsuariosResponse,
@@ -24,6 +25,13 @@ export class PlataformaService {
     if (q.trim()) params = params.set('q', q.trim());
     if (estado) params = params.set('estado', estado);
     return this.http.get<PaginaNegocios>(`${this.url}/negocios`, { params });
+  }
+
+  cuentas(q = '', estado = '', page = 1, pageSize = 20): Observable<PaginaCuentas> {
+    let params = new HttpParams().set('page', page).set('page_size', pageSize);
+    if (q.trim()) params = params.set('q', q.trim());
+    if (estado) params = params.set('estado', estado);
+    return this.http.get<PaginaCuentas>(`${this.url}/cuentas`, { params });
   }
 
   negocio(id: string): Observable<NegocioPlataformaDetalle> {

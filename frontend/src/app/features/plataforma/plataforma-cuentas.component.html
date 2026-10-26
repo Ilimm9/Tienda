@@ -1,0 +1,31 @@
+<section class="platform-page">
+  <header class="page-heading"><div><span class="eyebrow">Directorio</span><h1>Cuentas registradas</h1><p>Consulta cuándo se registró cada cuenta, si verificó su correo y a qué tiendas pertenece.</p></div></header>
+  <form class="filter-bar" (ngSubmit)="buscar()">
+    <label><span>Buscar</span><input name="query" [(ngModel)]="query" placeholder="Nombre o correo" /></label>
+    <label><span>Estado</span><select name="estado" [(ngModel)]="estado"><option value="">Todas</option><option value="activo">Activas</option><option value="sin_verificar">Sin verificar</option><option value="deshabilitado">Deshabilitadas</option></select></label>
+    <button class="primary-action" type="submit"><i class="pi pi-search"></i>Buscar</button>
+  </form>
+  @if (loading()) { <div class="state-card"><i class="pi pi-spin pi-spinner"></i> Cargando cuentas…</div> }
+  @else if (error()) { <div class="state-card error">{{ error() }}</div> }
+  @else {
+    <section class="panel">
+      <header><div><h2>{{ total() | number }} cuentas</h2><p>No incluye las cuentas de administración de plataforma.</p></div></header>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Cuenta</th><th>Estado</th><th>Verificada</th><th>Registro</th><th>Último acceso</th><th>Tiendas</th></tr></thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td><strong>{{ item.nombre || 'Sin nombre' }}</strong><small>{{ item.correo }}</small></td>
+              <td><span class="status" [class.inactive]="item.estado !== 'activo'">{{ item.estado }}</span></td>
+              <td>{{ item.correo_verificado ? 'Sí' : 'No' }}</td>
+              <td>{{ item.creado_en | date: 'dd/MM/yyyy HH:mm':'America/Mexico_City' }}</td>
+              <td>{{ item.ultimo_inicio_sesion_en ? (item.ultimo_inicio_sesion_en | date: 'dd/MM/yyyy HH:mm':'America/Mexico_City') : 'Nunca' }}</td>
+              <td>@if (item.total_negocios) { <strong>{{ item.total_negocios }}</strong><small>{{ item.negocios.join(', ') }}</small> } @else { Sin tienda }</td>
+            </tr>
+          } @empty { <tr><td colspan="6" class="empty-cell">No hay cuentas que coincidan con los filtros.</td></tr> }
+        </tbody>
+      </table></div>
+      <footer class="pagination"><span>Página {{ page() }}</span><div><button type="button" (click)="anterior()" [disabled]="page() === 1">Anterior</button><button type="button" (click)="siguiente()" [disabled]="page() * pageSize >= total()">Siguiente</button></div></footer>
+    </section>
+  }
+</section>

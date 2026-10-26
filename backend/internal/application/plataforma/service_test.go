@@ -35,6 +35,10 @@ func (*repositoryStub) ObtenerNegocio(context.Context, uuid.UUID, time.Time, tim
 func (*repositoryStub) ListarUsuarios(context.Context, uuid.UUID) ([]domain.UsuarioResumen, error) {
 	return nil, nil
 }
+func (r *repositoryStub) ListarCuentas(_ context.Context, query, estado string, page, pageSize int) (domain.PaginaCuentas, error) {
+	r.query, r.estado, r.page, r.pageSize = query, estado, page, pageSize
+	return domain.PaginaCuentas{}, nil
+}
 func (r *repositoryStub) RegistrarActividad(_ context.Context, _, _ uuid.UUID, at time.Time) error {
 	r.activityAt = at
 	return nil
@@ -59,6 +63,19 @@ func TestListarNegociosNormalizaFiltrosYPaginacion(t *testing.T) {
 	_, _ = service.ListarNegocios(context.Background(), "  Tienda  ", "desconocido", 0, 1000)
 	if repo.query != "Tienda" || repo.estado != "" || repo.page != 1 || repo.pageSize != 100 {
 		t.Fatalf("filtros no normalizados: %#v", repo)
+	}
+}
+
+func TestListarCuentasNormalizaFiltrosYPaginacion(t *testing.T) {
+	repo := &repositoryStub{}
+	service := NewService(repo)
+	_, _ = service.ListarCuentas(context.Background(), "  ana@correo.com ", "archivado", -3, 0)
+	if repo.query != "ana@correo.com" || repo.estado != "" || repo.page != 1 || repo.pageSize != 20 {
+		t.Fatalf("filtros no normalizados: %#v", repo)
+	}
+	_, _ = service.ListarCuentas(context.Background(), "", "sin_verificar", 2, 500)
+	if repo.estado != "sin_verificar" || repo.page != 2 || repo.pageSize != 100 {
+		t.Fatalf("estado válido o límite incorrecto: %#v", repo)
 	}
 }
 

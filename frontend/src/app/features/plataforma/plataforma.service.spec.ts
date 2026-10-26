@@ -34,6 +34,15 @@ describe('PlataformaService', () => {
     request.flush({ items: [], total: 0, page: 2, page_size: 20 });
   });
 
+  it('pagina y filtra cuentas globales', () => {
+    service.cuentas(' ana ', 'sin_verificar', 3, 20).subscribe();
+    const request = http.expectOne((candidate) => candidate.url === `${base}/cuentas`);
+    expect(request.request.params.get('q')).toBe('ana');
+    expect(request.request.params.get('estado')).toBe('sin_verificar');
+    expect(request.request.params.get('page')).toBe('3');
+    request.flush({ items: [], total: 0, page: 3, page_size: 20 });
+  });
+
   it('consulta detalle y usuarios sin rutas tenant', () => {
     const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
     service.negocio(id).subscribe();

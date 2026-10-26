@@ -77,6 +77,7 @@ func (r *Repository) ListarNegocios(ctx context.Context, query, estado string, p
 	err := base.Select(`n.id, n.slug, n.nombre_comercial, n.rfc, n.estado, n.creado_en,
 		(SELECT count(*) FROM sucursales s WHERE s.negocio_id = n.id AND s.activo = TRUE AND s.eliminado_en IS NULL) AS total_sucursales,
 		(SELECT count(*) FROM empleados e WHERE e.negocio_id = n.id AND e.estado = 'activo') AS total_personal,
+		(SELECT count(*) FROM productos p WHERE p.negocio_id = n.id AND p.activo = TRUE) AS total_productos,
 		(SELECT count(*) FROM empleados e JOIN membresias_negocio m ON m.id = e.membresia_id AND m.estado = 'activo' JOIN usuarios u ON u.id = m.usuario_id AND u.estado = 'activo' AND u.deshabilitado_en IS NULL WHERE e.negocio_id = n.id AND e.estado = 'activo') AS cuentas_vinculadas,
 		(SELECT max(a.ultima_actividad_en) FROM actividad_usuario_diaria a WHERE a.negocio_id = n.id) AS ultima_actividad_en`).
 		Order("n.creado_en DESC, n.id ASC").Offset((page - 1) * pageSize).Limit(pageSize).Scan(&items).Error
@@ -89,6 +90,7 @@ func (r *Repository) ObtenerNegocio(ctx context.Context, negocioID uuid.UUID, de
 		n.razon_social, n.correo, n.zona_horaria,
 		(SELECT count(*) FROM sucursales s WHERE s.negocio_id = n.id AND s.activo = TRUE AND s.eliminado_en IS NULL) AS total_sucursales,
 		(SELECT count(*) FROM empleados e WHERE e.negocio_id = n.id AND e.estado = 'activo') AS total_personal,
+		(SELECT count(*) FROM productos p WHERE p.negocio_id = n.id AND p.activo = TRUE) AS total_productos,
 		(SELECT count(*) FROM empleados e JOIN membresias_negocio m ON m.id = e.membresia_id AND m.estado = 'activo' JOIN usuarios u ON u.id = m.usuario_id AND u.estado = 'activo' AND u.deshabilitado_en IS NULL WHERE e.negocio_id = n.id AND e.estado = 'activo') AS cuentas_vinculadas,
 		(SELECT max(a.ultima_actividad_en) FROM actividad_usuario_diaria a WHERE a.negocio_id = n.id) AS ultima_actividad_en,
 		(SELECT count(*) FROM membresias_negocio m WHERE m.negocio_id = n.id AND m.estado = 'activo' AND m.tipo_miembro = 'propietario') AS total_propietarios`).
@@ -129,7 +131,7 @@ func (r *Repository) ListarUsuarios(ctx context.Context, negocioID uuid.UUID) ([
 			COALESCE(string_agg(DISTINCT r.nombre, E'\x1f'), '') AS roles_texto,
 			COALESCE(string_agg(DISTINCT s.nombre, E'\x1f'), '') AS sucursales_texto`).
 		Joins("JOIN usuarios u ON u.id = m.usuario_id").
-		Joins("LEFT JOIN perfiles_usuario p ON p.usuario_id = u.id").
+		Joins("LEFT JOIN perfil_usuarios p ON p.usuario_id = u.id").
 		Joins("LEFT JOIN roles_membresia rm ON rm.membresia_negocio_id = m.id").
 		Joins("LEFT JOIN roles r ON r.id = rm.rol_id AND r.activo = TRUE").
 		Joins("LEFT JOIN empleados e ON e.membresia_id = m.id AND e.estado = 'activo'").
@@ -148,6 +150,48 @@ func (r *Repository) ListarUsuarios(ctx context.Context, negocioID uuid.UUID) ([
 			Sucursales: splitAggregate(row.SucursalesTexto), UltimoInicioSesionEn: row.UltimoInicioSesionEn})
 	}
 	return items, nil
+}
+
+func (r *Repository) ListarCuentas(ctx context.Context, query, estado string, page, pageSize int) (domain.PaginaCuentas, error) {
+	base := r.db.WithContext(ctx).Table("usuarios AS u").
+		Joins("LEFT JOIN perfil_usuarios p ON p.usuario_id = u.id").
+		Where("NOT EXISTS (SELECT 1 FROM roles_usuario_plataforma rup WHERE rup.usuario_id = u.id)")
+	switch estado {
+	case "activo":
+		base = base.Where("u.estado = 'activo' AND u.correo_verificado_en IS NOT NULL AND u.deshabilitado_en IS NULL")
+	case "sin_verificar":
+		base = base.Where("u.correo_verificado_en IS NULL")
+	case "deshabilitado":
+		base = base.Where("u.deshabilitado_en IS NOT NULL OR u.estado <> 'activo'")
+	}
+	if query != "" {
+		term := "%" + strings.ToLower(query) + "%"
+		base = base.Where("lower(u.correo) LIKE ? OR lower(concat_ws(' ', p.nombres, p.primer_apellido, p.segundo_apellido)) LIKE ?", term, term)
+	}
+	var total int64
+	if err := base.Count(&total).Error; err != nil {
+		return domain.PaginaCuentas{}, err
+	}
+	type row struct {
+		domain.CuentaResumen
+		NegociosTexto string
+	}
+	rows := make([]row, 0)
+	err := base.Select(`u.id, trim(concat_ws(' ', p.nombres, p.primer_apellido, p.segundo_apellido)) AS nombre,
+		u.correo, u.estado, u.correo_verificado_en IS NOT NULL AS correo_verificado, u.creado_en, u.ultimo_inicio_sesion_en,
+		(SELECT count(*) FROM membresias_negocio m WHERE m.usuario_id = u.id AND m.estado = 'activo') AS total_negocios,
+		(SELECT COALESCE(string_agg(n.nombre_comercial, E'\x1f' ORDER BY n.nombre_comercial), '') FROM membresias_negocio m JOIN negocios n ON n.id = m.negocio_id WHERE m.usuario_id = u.id AND m.estado = 'activo') AS negocios_texto`).
+		Order("u.creado_en DESC, u.id ASC").Offset((page - 1) * pageSize).Limit(pageSize).Scan(&rows).Error
+	if err != nil {
+		return domain.PaginaCuentas{}, err
+	}
+	items := make([]domain.CuentaResumen, 0, len(rows))
+	for _, row := range rows {
+		item := row.CuentaResumen
+		item.Negocios = splitAggregate(row.NegociosTexto)
+		items = append(items, item)
+	}
+	return domain.PaginaCuentas{Items: items, Total: total, Page: page, PageSize: pageSize}, nil
 }
 
 func splitAggregate(value string) []string {

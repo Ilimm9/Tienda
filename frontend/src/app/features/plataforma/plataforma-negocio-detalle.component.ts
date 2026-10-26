@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -8,7 +8,7 @@ import { PlataformaService } from './plataforma.service';
 
 @Component({
   selector: 'app-plataforma-negocio-detalle',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink],
   templateUrl: './plataforma-negocio-detalle.component.html',
   styleUrl: './plataforma.css',
 })

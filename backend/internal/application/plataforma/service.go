@@ -22,6 +22,7 @@ type Repository interface {
 	ListarNegocios(ctx context.Context, query, estado string, page, pageSize int) (domain.PaginaNegocios, error)
 	ObtenerNegocio(ctx context.Context, negocioID uuid.UUID, desde, hasta time.Time) (domain.NegocioDetalle, error)
 	ListarUsuarios(ctx context.Context, negocioID uuid.UUID) ([]domain.UsuarioResumen, error)
+	ListarCuentas(ctx context.Context, query, estado string, page, pageSize int) (domain.PaginaCuentas, error)
 	RegistrarActividad(ctx context.Context, usuarioID, negocioID uuid.UUID, at time.Time) error
 	LimpiarActividad(ctx context.Context, antes time.Time) error
 }
@@ -56,15 +57,7 @@ func (s *Service) ListarNegocios(ctx context.Context, query, estado string, page
 	if estado != "" && estado != "activo" && estado != "archivado" {
 		estado = ""
 	}
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-	if pageSize > 100 {
-		pageSize = 100
-	}
+	page, pageSize = normalizarPagina(page, pageSize)
 	return s.repository.ListarNegocios(ctx, query, estado, page, pageSize)
 }
 
@@ -76,6 +69,15 @@ func (s *Service) ListarUsuarios(ctx context.Context, negocioID uuid.UUID) ([]do
 	return s.repository.ListarUsuarios(ctx, negocioID)
 }
 
+func (s *Service) ListarCuentas(ctx context.Context, query, estado string, page, pageSize int) (domain.PaginaCuentas, error) {
+	query = strings.TrimSpace(query)
+	if estado != "activo" && estado != "sin_verificar" && estado != "deshabilitado" {
+		estado = ""
+	}
+	page, pageSize = normalizarPagina(page, pageSize)
+	return s.repository.ListarCuentas(ctx, query, estado, page, pageSize)
+}
+
 func (s *Service) RegistrarActividad(ctx context.Context, usuarioID, negocioID uuid.UUID) error {
 	if usuarioID == uuid.Nil || negocioID == uuid.Nil {
 		return nil
@@ -85,6 +87,19 @@ func (s *Service) RegistrarActividad(ctx context.Context, usuarioID, negocioID u
 
 func (s *Service) LimpiarActividad() error {
 	return s.repository.LimpiarActividad(context.Background(), time.Now().UTC().AddDate(-1, -1, 0))
+}
+
+func normalizarPagina(page, pageSize int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return page, pageSize
 }
 
 func normalizarHasta(value time.Time) time.Time {

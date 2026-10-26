@@ -186,6 +186,7 @@ func main() {
 	plataforma.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), plataformahttp.RequireAdminLectura(plataformaService))
 	plataforma.GET("/resumen", plataformaHandler.Resumen)
 	plataforma.GET("/negocios", plataformaHandler.ListarNegocios)
+	plataforma.GET("/cuentas", plataformaHandler.ListarCuentas)
 	plataforma.GET("/negocios/:negocioId", plataformaHandler.ObtenerNegocio)
 	plataforma.GET("/negocios/:negocioId/usuarios", plataformaHandler.ListarUsuarios)
 

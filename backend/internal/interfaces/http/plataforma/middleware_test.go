@@ -36,6 +36,9 @@ func (*middlewareRepository) ObtenerNegocio(context.Context, uuid.UUID, time.Tim
 func (*middlewareRepository) ListarUsuarios(context.Context, uuid.UUID) ([]domain.UsuarioResumen, error) {
 	return nil, nil
 }
+func (*middlewareRepository) ListarCuentas(context.Context, string, string, int, int) (domain.PaginaCuentas, error) {
+	return domain.PaginaCuentas{}, nil
+}
 func (r *middlewareRepository) RegistrarActividad(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	r.activities++
 	return nil

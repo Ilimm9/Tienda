@@ -64,10 +64,11 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 | 17  | [Alta autorizada de catálogos durante importación](capabilities/17-catalogos-nuevos-importacion-productos/CAPABILITY.md) | Verificada | Importación XLSX de productos y catálogos existentes | Aprobada explícitamente el 2026-10-16 mediante “Implement the plan” | Vista previa agrupa catálogos nuevos; autorización global antes de crearlos e importar productos |
 | 18  | [Variantes para productos repetidos en importación](capabilities/18-variantes-importacion-productos-repetidos/CAPABILITY.md) | Verificada | Importación XLSX y variantes de productos existentes | Aprobada explícitamente el 2026-10-16 mediante “Implement the plan” | Un código distinto para el mismo nombre y presentación requiere atributo de variante |
 | 19  | [Precios, costos e historial por sucursal](capabilities/19-historial-costos-precios-sucursal/CAPABILITY.md) | En implementación | Productos, compras, precios por sucursal y RBAC | Revisión aprobada explícitamente el 2026-10-20 mediante “Implement the plan” | Eliminar montos de catálogo; vigente en `precios_sucursal`; historial inmutable separado |
+| 35  | [Control general de cuentas y tiendas en plataforma](capabilities/35-plataforma-cuentas-tiendas.md) | En implementación | Administración de plataforma 15 | Aprobada explícitamente el 2026-10-26 mediante aprobación del plan | Listado global de cuentas con fecha de registro; tiendas con fecha de creación, productos y empleados |
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `35`; `34` usado por Compras; `33` usado por puesto Cajero; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `36`; `35` usado por cuentas y tiendas de plataforma; `34` usado por Compras; `33` usado por puesto Cajero; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.
