@@ -5,7 +5,7 @@ import { altaInicialGuard, asistenteGuard } from './contexto/alta-inicial.guard'
 import { contextoGuard } from './contexto/contexto.guard';
 import { permisoGuard } from './contexto/permiso.guard';
 import { PERMISOS } from './contexto/permisos';
-import { plataformaGuard } from './features/plataforma/plataforma.guard';
+import { fueraDePlataformaGuard, plataformaGuard } from './features/plataforma/plataforma.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
@@ -60,7 +60,7 @@ export const routes: Routes = [
   {
     // El asistente de alta inicial es una pantalla enfocada: sin menú lateral ni selector de contexto.
     path: 'configuracion-inicial',
-    canActivate: [authGuard, asistenteGuard],
+    canActivate: [authGuard, fueraDePlataformaGuard, asistenteGuard],
     loadComponent: () => import('./features/alta-inicial/alta-inicial').then((module) => module.AltaInicial),
   },
   {
@@ -71,6 +71,7 @@ export const routes: Routes = [
   },
   {
     path: '',
+    canActivate: [fueraDePlataformaGuard],
     canActivateChild: [authGuard],
     loadComponent: () =>
       import('./layout/shell/app-shell.component').then((module) => module.AppShellComponent),
