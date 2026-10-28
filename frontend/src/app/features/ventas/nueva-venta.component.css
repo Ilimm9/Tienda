@@ -1,0 +1,809 @@
+.nueva-venta__rotulo {
+  margin: 0 0 6px;
+  color: var(--primary);
+}
+
+.nueva-venta .descripcion {
+  max-width: 62ch;
+}
+
+.nueva-venta__cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 16px;
+}
+
+.nueva-venta__captura {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* ---------- Campo de captura ---------- */
+.captura {
+  position: relative;
+}
+
+.captura__campo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px 0 16px;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--primary);
+  border-radius: 12px;
+  box-shadow: var(--focus-ring);
+}
+
+.captura__campo > .pi-barcode {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+.captura__campo input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 0;
+  color: var(--text);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+}
+
+.captura__campo input::placeholder {
+  color: var(--text-subtle);
+}
+
+.captura__cargando {
+  color: var(--text-subtle);
+}
+
+.captura__atajo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.captura__atajo kbd {
+  padding: 2px 6px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-hover);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.captura__lista {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 340px;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+}
+
+.captura__opcion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 90px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.captura__opcion--resaltada {
+  background: var(--primary-tint);
+}
+
+.captura__opcion--agotada {
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+
+.captura__producto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.captura__producto strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.captura__opcion--agotada .captura__producto strong {
+  color: var(--text-subtle);
+}
+
+.captura__producto small,
+.producto__codigo {
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.captura__existencia {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.captura__precio {
+  color: var(--text);
+  font-weight: 600;
+  text-align: right;
+}
+
+.captura__vacio {
+  padding: 12px;
+  color: var(--text-muted);
+}
+
+.existencia--baja {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* ---------- Productos de la venta ---------- */
+.productos-venta {
+  overflow: hidden;
+}
+
+.productos-venta__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.productos-venta__encabezado h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.productos-venta__encabezado h2 span {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.productos-venta__alerta {
+  margin: 0 18px 14px;
+}
+
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.interruptor input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.interruptor__pista {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+
+.interruptor__pista::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  content: '';
+  transition: transform 0.15s;
+}
+
+.interruptor input:checked + .interruptor__pista {
+  background: var(--primary);
+}
+
+.interruptor input:checked + .interruptor__pista::after {
+  transform: translateX(14px);
+}
+
+.interruptor input:focus-visible + .interruptor__pista {
+  box-shadow: var(--focus-ring);
+}
+
+.productos-venta__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.productos-venta__tabla th {
+  padding: 10px 14px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-row-hover);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.productos-venta__tabla td {
+  padding: 12px 14px;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+.productos-venta__tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.productos-venta__tabla .numero {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.productos-venta__tabla .centro {
+  text-align: center;
+}
+
+.productos-venta__tabla .indice {
+  width: 32px;
+  color: var(--text-muted);
+}
+
+.producto__nombre {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.importe {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.fila--ultima td {
+  background: var(--primary-tint);
+}
+
+.fila--ultima td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.fila--bajo-costo td {
+  background: var(--danger-soft);
+}
+
+.margen--negativo {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.margen--bajo {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.cantidad {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.cantidad button,
+.quitar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cantidad button:hover:not(:disabled),
+.quitar:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.cantidad button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cantidad button:focus-visible,
+.quitar:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.cantidad button .pi {
+  font-size: 11px;
+}
+
+.cantidad output {
+  min-width: 28px;
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+}
+
+.quitar:hover {
+  color: var(--danger);
+}
+
+.productos-venta__vacio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 18px 32px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-soft);
+}
+
+.productos-venta__vacio .pi {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.productos-venta__vacio p {
+  margin: 0;
+}
+
+.productos-venta__vacio strong {
+  display: block;
+  color: var(--text);
+}
+
+/* ---------- Resumen ---------- */
+.resumen-venta {
+  position: sticky;
+  top: 16px;
+  padding: 18px;
+}
+
+.resumen-venta h2 {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.resumen-venta dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 14px;
+}
+
+.resumen-venta dl div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.resumen-venta dt {
+  color: var(--text-muted);
+}
+
+.resumen-venta dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.resumen-venta__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.resumen-venta__total span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.resumen-venta__total strong {
+  color: var(--text);
+  font-size: 30px;
+  letter-spacing: -0.03em;
+}
+
+.resumen-venta__acciones {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.resumen-venta__vaciar {
+  color: var(--danger);
+}
+
+@media (max-width: 960px) {
+  .nueva-venta__cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen-venta {
+    position: static;
+  }
+
+  .captura__atajo {
+    display: none;
+  }
+}
+
+/* ---------- Cobro ---------- */
+.cobro {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-dialog);
+}
+
+.cobro::backdrop {
+  background: rgb(44 46 106 / 45%);
+}
+
+.cobro__contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 20px 0;
+}
+
+.cobro__encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.cobro__rotulo {
+  margin: 0 0 4px;
+  color: var(--primary);
+}
+
+.cobro__encabezado h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.cobro__cerrar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cobro__cerrar:hover {
+  background: var(--surface-hover);
+}
+
+.cobro__formas {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cobro__formas legend,
+.cobro__campo span {
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cobro__opciones {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cobro__opcion {
+  min-height: 40px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cobro__opcion--activa {
+  color: var(--primary-hover);
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  font-weight: 600;
+}
+
+.cobro__opcion:disabled {
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+
+.cobro__campo {
+  display: flex;
+  flex-direction: column;
+}
+
+.cobro__campo input {
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.cobro__campo input:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.cobro__campo input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.cobro__rapidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cobro__rapidos button {
+  min-height: 32px;
+  padding: 0 12px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cobro__rapidos button:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-tint);
+}
+
+.cobro__saldo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cobro__saldo strong {
+  font-size: 20px;
+}
+
+.cobro__saldo--falta {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.cobro__saldo--cambio {
+  color: var(--tone-sage-text);
+  background: var(--tone-sage);
+}
+
+/* El pie queda fijo abajo: «Confirmar cobro» siempre visible aunque el teclado reduzca la pantalla. */
+.cobro__pie {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 0 -20px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ---------- Venta terminada ---------- */
+.venta-terminada {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 480px);
+  margin: 24px auto 0;
+  padding: 28px 24px 24px;
+  text-align: center;
+}
+
+.venta-terminada__icono {
+  display: inline-grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  color: var(--tone-sage-text);
+  border-radius: 50%;
+  background: var(--tone-sage);
+  font-size: 20px;
+}
+
+.venta-terminada__rotulo {
+  margin: 4px 0 0;
+  color: var(--primary);
+}
+
+.venta-terminada h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 36px;
+  letter-spacing: -0.035em;
+}
+
+.venta-terminada__detalle {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  font-size: 14px;
+  text-align: left;
+}
+
+.venta-terminada__detalle div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.venta-terminada__detalle dt {
+  color: var(--text-muted);
+}
+
+.venta-terminada__detalle dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.venta-terminada__cambio {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.venta-terminada__cambio dt {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.venta-terminada__cambio dd {
+  color: var(--tone-sage-text);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.venta-terminada__nota {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.venta-terminada__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Teléfono: la ventana de cobro sube desde abajo a todo lo ancho y los campos usan 16 px para que iOS no acerque la pantalla. */
+@media (max-width: 600px) {
+  .captura__campo input {
+    font-size: 16px;
+  }
+
+  .cobro {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .cobro__contenido {
+    padding: 18px 16px 0;
+  }
+
+  .cobro__encabezado h2 {
+    font-size: 26px;
+  }
+
+  .cobro__opcion {
+    font-size: 13px;
+  }
+
+  .cobro__rapidos button {
+    flex: 1 1 0;
+    min-height: 40px;
+  }
+
+  .cobro__pie {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 6px;
+    margin: 0 -16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .cobro__pie .boton {
+    width: 100%;
+  }
+
+  .cobro__pie .boton-enlace {
+    min-height: 40px;
+  }
+}

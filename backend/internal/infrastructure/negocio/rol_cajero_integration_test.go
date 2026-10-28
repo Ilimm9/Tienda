@@ -49,7 +49,7 @@ func TestCrearNegocioSiembraRolCajero(t *testing.T) {
 	var permisos []string
 	db.Raw(`SELECT p.codigo FROM permisos_rol pr JOIN permisos p ON p.id = pr.permiso_id WHERE pr.rol_id = ?`, rol.ID).Scan(&permisos)
 	sort.Strings(permisos)
-	if strings.Join(permisos, ",") != "catalogo.ver,compras.registrar,compras.ver" {
+	if strings.Join(permisos, ",") != "ventas.registrar" {
 		t.Fatalf("permisos del Cajero: %v", permisos)
 	}
 	var puesto domain.PuestoNegocio

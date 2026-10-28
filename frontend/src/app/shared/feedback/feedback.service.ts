@@ -46,6 +46,11 @@ export class FeedbackService {
     toast.warning(titulo, { description: descripcion });
   }
 
+  /** Aviso con un botón de acción, por ejemplo «Deshacer» tras quitar algo. */
+  conAccion(titulo: string, etiqueta: string, alHacer: () => void, descripcion?: string): void {
+    toast(titulo, { description: descripcion, action: { label: etiqueta, onClick: () => alHacer() } });
+  }
+
   async confirmDanger(options: DangerConfirmationOptions): Promise<boolean> {
     const result = await this.dangerDialog.fire({
       icon: 'warning',

@@ -500,3 +500,21 @@ a:focus-visible {
 
 /* Utilities al final y sin capa: ganan a reglas de elemento como `a { color }` y a estilos previos. */
 @tailwind utilities;
+
+/* Al imprimir un ticket de venta solo se muestra el ticket, sin menú ni barra superior. */
+@media print {
+  body:has(.ticket-imprimible) * {
+    visibility: hidden;
+  }
+
+  body:has(.ticket-imprimible) .ticket-imprimible,
+  body:has(.ticket-imprimible) .ticket-imprimible * {
+    visibility: visible;
+  }
+
+  body:has(.ticket-imprimible) .ticket-imprimible {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}

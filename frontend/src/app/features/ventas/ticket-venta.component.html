@@ -1,0 +1,200 @@
+<main class="pagina ticket-venta">
+  @if (cargando()) {
+    <p class="estado-vacio" role="status">
+      <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando ticket…
+    </p>
+  } @else if (noEncontrada()) {
+    <div class="estado-vacio">
+      <p>No encontramos este ticket o no tienes acceso a él.</p>
+      <a class="boton boton--secundario" routerLink="/ventas"
+        ><i class="pi pi-arrow-left" aria-hidden="true"></i> Volver a ventas</a
+      >
+    </div>
+  } @else if (error()) {
+    <p class="aviso aviso--error" role="alert">
+      <i class="pi pi-times-circle" aria-hidden="true"></i>{{ error() }}
+    </p>
+  } @else if (venta(); as v) {
+    <header class="encabezado-pagina">
+      <div>
+        <p class="rotulo ticket-venta__rotulo">Ventas</p>
+        <h1>Ticket {{ v.folio }}</h1>
+        <p class="descripcion">{{ fecha(v) }} · Atendió {{ v.atendio }}</p>
+      </div>
+      <div class="ticket-venta__acciones">
+        <a class="boton boton--secundario" routerLink="/ventas"
+          ><i class="pi pi-arrow-left" aria-hidden="true"></i> Volver</a
+        >
+        <button type="button" class="boton boton--secundario" (click)="reimprimir()">
+          <i class="pi pi-print" aria-hidden="true"></i> Reimprimir
+        </button>
+        @if (puedeCancelar()) {
+          <button
+            type="button"
+            class="boton boton--secundario ticket-venta__cancelar"
+            [disabled]="!v.cancelable"
+            [title]="v.cancelable ? '' : 'Solo se pueden cancelar ventas del mismo día'"
+            (click)="abrirCancelar()"
+          >
+            Cancelar venta
+          </button>
+        }
+      </div>
+    </header>
+
+    <div class="ticket-venta__cuerpo">
+      <section class="tarjeta ticket-venta__lineas" aria-label="Productos">
+        <div class="tabla-desplazable">
+          <table class="tabla-ticket">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                <th scope="col" class="numero">Cantidad</th>
+                <th scope="col" class="numero">Precio</th>
+                <th scope="col" class="numero">Importe</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (linea of v.lineas ?? []; track linea.id) {
+                <tr>
+                  <td class="producto">{{ linea.nombre }}</td>
+                  <td class="numero">{{ linea.cantidad }}</td>
+                  <td class="numero">{{ dinero(linea.precio_unitario) }}</td>
+                  <td class="numero importe">{{ dinero(linea.importe) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="tarjeta ticket-venta__resumen" aria-label="Resumen del ticket">
+        @if (v.estado === 'CANCELADA') {
+          <span class="pastilla pastilla--plana pastilla--peligro">Cancelada</span>
+        } @else {
+          <span class="pastilla pastilla--plana pastilla--exito">Pagada</span>
+        }
+        <dl>
+          <div>
+            <dt>Forma de pago</dt>
+            <dd>
+              <strong>{{ formasPago[v.forma_pago] }}</strong>
+            </dd>
+          </div>
+          @if (v.referencia) {
+            <div>
+              <dt>Referencia</dt>
+              <dd>{{ v.referencia }}</dd>
+            </div>
+          }
+          <div>
+            <dt>Recibido</dt>
+            <dd>{{ dinero(v.recibido) }}</dd>
+          </div>
+          <div>
+            <dt>Cambio</dt>
+            <dd>{{ dinero(v.cambio) }}</dd>
+          </div>
+        </dl>
+        <div
+          class="ticket-venta__total"
+          [class.ticket-venta__total--cancelado]="v.estado === 'CANCELADA'"
+        >
+          <span>Total</span>
+          <strong>{{ dinero(v.total) }}</strong>
+        </div>
+        @if (v.estado === 'CANCELADA') {
+          <div class="ticket-venta__cancelacion">
+            <strong
+              >Cancelada por {{ v.cancelada_por }}
+              @if (v.cancelada_en) {
+                · {{ hora(v.cancelada_en) }}
+              }
+            </strong>
+            <p>{{ v.motivo_cancelacion }}</p>
+          </div>
+        }
+      </aside>
+    </div>
+
+    <app-ticket-impreso [venta]="v" />
+
+    <dialog
+      #dialogoCancelar
+      class="cancelar"
+      aria-labelledby="titulo-cancelar"
+      (cancel)="$event.preventDefault(); cerrarCancelar()"
+    >
+      <form class="cancelar__contenido" (submit)="$event.preventDefault(); confirmarCancelar()">
+        <header class="cancelar__encabezado">
+          <h2 id="titulo-cancelar">Cancelar venta {{ v.folio }}</h2>
+          <button
+            type="button"
+            class="cancelar__cerrar"
+            aria-label="Cerrar"
+            (click)="cerrarCancelar()"
+          >
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </header>
+        <p class="aviso aviso--atencion">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          <span>
+            Se regresarán {{ v.piezas }} {{ v.piezas === 1 ? 'pieza' : 'piezas' }} al inventario y
+            el ticket quedará tachado. No se puede deshacer.
+          </span>
+        </p>
+        <fieldset class="cancelar__motivos">
+          <legend>¿Por qué se cancela?</legend>
+          @for (opcion of motivos; track opcion.valor) {
+            <label class="cancelar__motivo">
+              <input
+                type="radio"
+                name="motivo"
+                [value]="opcion.valor"
+                [checked]="motivo() === opcion.valor"
+                (change)="motivo.set(opcion.valor)"
+              />
+              {{ opcion.etiqueta }}
+            </label>
+          }
+        </fieldset>
+        <label class="cancelar__detalle">
+          <span>{{ motivo() === 'OTRO' ? 'Explica el motivo' : 'Comentario (opcional)' }}</span>
+          <textarea
+            #detalleCancelar
+            rows="3"
+            maxlength="300"
+            (input)="detalle.set(detalleCancelar.value)"
+          ></textarea>
+        </label>
+        @if (errorCancelar()) {
+          <p class="aviso aviso--error" role="alert">
+            <i class="pi pi-times-circle" aria-hidden="true"></i>{{ errorCancelar() }}
+          </p>
+        }
+        <footer class="cancelar__pie">
+          <button
+            type="button"
+            class="boton-enlace"
+            [disabled]="cancelando()"
+            (click)="cerrarCancelar()"
+          >
+            Conservar venta
+          </button>
+          <button
+            type="submit"
+            class="boton boton--peligro"
+            [disabled]="!motivoCompleto() || cancelando()"
+          >
+            @if (cancelando()) {
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Cancelando…
+            } @else {
+              Cancelar venta
+            }
+          </button>
+        </footer>
+      </form>
+    </dialog>
+  }
+</main>

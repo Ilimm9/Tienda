@@ -1,0 +1,295 @@
+.ticket-venta__rotulo {
+  margin: 0 0 6px;
+  color: var(--primary);
+}
+
+.ticket-venta__acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ticket-venta__cancelar {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.ticket-venta__cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 16px;
+}
+
+.ticket-venta__lineas {
+  overflow: hidden;
+}
+
+.tabla-ticket {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabla-ticket th {
+  padding: 10px 14px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-row-hover);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.tabla-ticket td {
+  padding: 12px 14px;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tabla-ticket tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla-ticket .numero {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabla-ticket .producto,
+.tabla-ticket .importe {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ticket-venta__resumen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+}
+
+.ticket-venta__resumen dl {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  font-size: 14px;
+}
+
+.ticket-venta__resumen dl div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ticket-venta__resumen dt {
+  color: var(--text-muted);
+}
+
+.ticket-venta__resumen dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.ticket-venta__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.ticket-venta__total span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.ticket-venta__total strong {
+  color: var(--text);
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.ticket-venta__total--cancelado strong {
+  color: var(--text-subtle);
+  text-decoration: line-through;
+}
+
+.ticket-venta__cancelacion {
+  width: 100%;
+  padding: 12px;
+  color: var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  font-size: 13px;
+}
+
+.ticket-venta__cancelacion p {
+  margin: 4px 0 0;
+  color: var(--text-body);
+}
+
+/* ---------- Cancelar ---------- */
+.cancelar {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-dialog);
+}
+
+.cancelar::backdrop {
+  background: rgb(44 46 106 / 45%);
+}
+
+.cancelar__contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 20px 0;
+}
+
+.cancelar__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cancelar__encabezado h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.cancelar__cerrar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cancelar__motivos {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cancelar__motivos legend,
+.cancelar__detalle span {
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cancelar__motivo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancelar__motivo:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.cancelar__detalle {
+  display: flex;
+  flex-direction: column;
+}
+
+.cancelar__detalle textarea {
+  padding: 10px 12px;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.cancelar__detalle textarea:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+/* El pie queda fijo abajo para que confirmar siempre esté a la vista. */
+.cancelar__pie {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 0 -20px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
+}
+
+@media (max-width: 900px) {
+  .ticket-venta__cuerpo {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Teléfono: la ventana de cancelar sube desde abajo; el comentario usa 16 px para que iOS no acerque la pantalla. */
+@media (max-width: 600px) {
+  .cancelar {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .cancelar__contenido {
+    padding: 18px 16px 0;
+  }
+
+  .cancelar__detalle textarea {
+    font-size: 16px;
+  }
+
+  .cancelar__pie {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 6px;
+    margin: 0 -16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .cancelar__pie .boton {
+    width: 100%;
+  }
+
+  .ticket-venta__acciones {
+    width: 100%;
+  }
+
+  .ticket-venta__acciones > * {
+    flex: 1 1 auto;
+  }
+}

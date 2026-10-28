@@ -8,6 +8,7 @@ Contexto rápido y planeación vigente. Actualizado: 2026-10-20.
 - [Gestión de colaboradores](gestion-colaboradores.md): empleados, invitaciones, sucursales y permisos.
 - [Registro de productos y catálogos](registro-productos.md): altas, variantes, importación y existencias.
 - [Módulo de compras](modulo-compras.md): recepción, impuestos, inventario y autorización de precios.
+- [Módulo de ventas](modulo-ventas.md): búsqueda, cobro, folios, cancelación e inventario.
 - [Planes actuales](planes-actuales.md): pendientes documentados y límites de aprobación.
 
 ## Organización

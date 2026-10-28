@@ -8,6 +8,7 @@
 - [Gestión de colaboradores](capabilities/gestion-colaboradores.md).
 - [Productos y catálogos](capabilities/registro-productos.md).
 - [Compras, inventario y precios](capabilities/modulo-compras.md).
+- [Ventas](capabilities/modulo-ventas.md).
 
 ## Estado del trabajo
 
@@ -43,6 +44,8 @@ Capability 33: [Puesto Cajero por defecto y «Crear nuevo» en selectores](capab
 
 Capability 34: [Registrar compra con ventanas para crear, datos reordenados y datos semilla](capabilities/34-compras-panel-lateral-y-semilla.md). **Verificada** el 2026-10-23 (aprobada el mismo día); pendiente prueba manual y aceptación final. Solo visual en Compras (ventanas modales, datos reordenados, Pieza por omisión, guía en vacío) más semilla al crear negocio: Pieza, Caja 12, Caja 24 y «Proveedor general». Diseño en artboards K1 y K2.
 
+Capability 37: [Ventas](capabilities/37-ventas.md). **En implementación** (aprobada el 2026-10-28 mediante aprobación del plan de Fase 0; autoriza solo la Fase 1). Fase 1 entregada y verificada localmente: tablas `ventas`, `venta_lineas` y `venta_folio_consecutivos` en centavos, búsqueda por código/nombre, registro y cancelación transaccionales, permisos `ventas.*` y rol Cajero solo con `ventas.registrar`. Fases 2 (captura), 3 (cobro solo en efectivo y venta terminada) 4 (historial, ticket y cancelación del mismo día con motivo de lista) y 5 (botón «Nueva venta» con F2 y accesos en Inicio) aprobadas y verificadas el mismo día; Fase 6 cerrada por decisión del usuario (bloqueo por URL y menú por permisos ya existentes; Inicio 01b pendiente). Pendientes: pruebas manuales, aceptación final y cobro con tarjeta/transferencia.
+
 Los planes previos, fases, guías, respaldos y capturas se conservan en [capabilities/historial/](capabilities/historial/), sin subcarpetas. El [índice anterior](capabilities/historial/00-plan-implementacion-anterior.md) conserva el registro detallado de IDs y aprobaciones; algunos estados estaban desactualizados respecto de sus documentos y no se reinterpretan como cierre.
 | ID  | Capability                                                                                                         | Estado            | Dependencias                                                                | Aprobación                                                                   | Notas                                                                                                                                                                                                        |
 | --- | ------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -66,10 +69,11 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 | 19  | [Precios, costos e historial por sucursal](capabilities/19-historial-costos-precios-sucursal/CAPABILITY.md) | En implementación | Productos, compras, precios por sucursal y RBAC | Revisión aprobada explícitamente el 2026-10-20 mediante “Implement the plan” | Eliminar montos de catálogo; vigente en `precios_sucursal`; historial inmutable separado |
 | 35  | [Control general de cuentas y tiendas en plataforma](capabilities/35-plataforma-cuentas-tiendas.md) | En implementación | Administración de plataforma 15 | Aprobada explícitamente el 2026-10-26 mediante aprobación del plan | Listado global de cuentas con fecha de registro; tiendas con fecha de creación, productos y empleados |
 | 36  | [Administrador de plataforma sin asistente ni shell de tiendas](capabilities/36-admin-plataforma-sin-asistente.md) | En implementación | Administración de plataforma 15 y 35 | Aprobada explícitamente el 2026-10-26 mediante aprobación del plan | `ADMIN_LECTURA` vuelve siempre a `/administracion-plataforma` |
+| 37  | [Ventas](capabilities/37-ventas.md) | Verificada | Productos, precios por sucursal, inventario, RBAC y Cajero 33 | Aprobada explícitamente el 2026-10-28 mediante aprobación del plan (solo Fase 1) | Fases 1–5 verificadas (cobro solo efectivo); fase 6 cerrada por decisión del usuario; Inicio 01b pendiente |
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `37`; `36` usado por administrador de plataforma sin asistente; `35` usado por cuentas y tiendas de plataforma; `34` usado por Compras; `33` usado por puesto Cajero; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `38`; `37` usado por Ventas; `36` usado por administrador de plataforma sin asistente; `35` usado por cuentas y tiendas de plataforma; `34` usado por Compras; `33` usado por puesto Cajero; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.

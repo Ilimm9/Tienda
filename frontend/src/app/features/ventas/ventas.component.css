@@ -1,0 +1,167 @@
+.ventas__rotulo {
+  margin: 0 0 6px;
+  color: var(--primary);
+}
+
+.ventas__periodo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ventas__fecha {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.ventas__metricas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+}
+
+.metrica span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.metrica strong {
+  color: var(--text);
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+
+.ventas__tabla {
+  overflow: hidden;
+}
+
+.ventas__filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+
+.ventas__buscar {
+  display: flex;
+  flex: 1 1 260px;
+  max-width: 420px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.ventas__buscar:focus-within,
+.ventas__select:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.ventas__buscar .pi {
+  color: var(--text-subtle);
+}
+
+.ventas__buscar input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ventas__select {
+  min-height: 42px;
+  padding: 0 12px;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  font: inherit;
+  font-size: 14px;
+}
+
+.tabla-ventas {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabla-ventas th {
+  padding: 10px 14px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-row-hover);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tabla-ventas td {
+  padding: 12px 14px;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+.tabla-ventas .numero {
+  text-align: right;
+}
+
+.tabla-ventas .folio {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.tabla-ventas .total {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.fila--cancelada .total {
+  color: var(--text-subtle);
+  text-decoration: line-through;
+}
+
+.ventas__pie {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .ventas__metricas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .ventas__buscar input,
+  .ventas__select {
+    font-size: 16px;
+  }
+
+  .metrica strong {
+    font-size: 22px;
+  }
+}

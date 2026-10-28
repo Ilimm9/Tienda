@@ -224,3 +224,35 @@ func ejecutar(db *gorm.DB, statements []string) error {
 		return nil
 	})
 }
+
+// MigrateRolCajeroVentas deja una sola vez los roles Cajero existentes con el permiso de ventas
+// (capability 37): quita los permisos anteriores de catálogo y compras y conserva los que el negocio agregó.
+func MigrateRolCajeroVentas(db *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`CREATE TABLE IF NOT EXISTS migraciones_aplicacion (
+			clave varchar(160) PRIMARY KEY,
+			ejecutada_en timestamptz NOT NULL DEFAULT now()
+		)`).Error; err != nil {
+			return err
+		}
+		result := tx.Exec(`INSERT INTO migraciones_aplicacion (clave) VALUES ('ventas_rol_cajero_v1') ON CONFLICT DO NOTHING`)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return nil
+		}
+		if err := tx.Exec(`DELETE FROM permisos_rol pr USING roles r, permisos p
+			WHERE pr.rol_id = r.id AND pr.permiso_id = p.id
+				AND lower(r.codigo) = lower(?) AND r.es_rol_sistema = false AND p.codigo IN ?`,
+			domain.CodigoRolCajero, domain.PermisosRolCajeroAnteriores).Error; err != nil {
+			return err
+		}
+		return tx.Exec(`INSERT INTO permisos_rol (id, rol_id, permiso_id, creado_en)
+			SELECT gen_random_uuid(), r.id, p.id, now()
+			FROM roles r JOIN permisos p ON p.codigo IN ?
+			WHERE lower(r.codigo) = lower(?) AND r.es_rol_sistema = false
+			ON CONFLICT (rol_id, permiso_id) DO NOTHING`,
+			domain.PermisosRolCajero, domain.CodigoRolCajero).Error
+	})
+}

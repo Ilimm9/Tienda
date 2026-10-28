@@ -26,6 +26,10 @@ export const PERMISOS = {
   precioVer: 'precios.ver',
   precioAutorizar: 'precios.autorizar',
   inventarioAjustar: 'inventario.ajustar',
+  ventaRegistrar: 'ventas.registrar',
+  ventaVer: 'ventas.ver',
+  ventaCancelar: 'ventas.cancelar',
+  ventaVerCostos: 'ventas.ver_costos',
 } as const;
 
 export type CodigoPermiso = (typeof PERMISOS)[keyof typeof PERMISOS];

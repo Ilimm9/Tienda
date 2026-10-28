@@ -34,8 +34,11 @@ const CodigoRolPropietario = "PROPIETARIO"
 // CodigoRolCajero identifica el rol básico que se siembra al crear un negocio; es editable.
 const CodigoRolCajero = "CAJERO"
 
-// PermisosRolCajero son los permisos iniciales del rol Cajero.
-var PermisosRolCajero = []string{PermisoCatalogoVer, PermisoCompraVer, PermisoCompraRegistrar}
+// PermisosRolCajero son los permisos iniciales del rol Cajero: cobrar y ver sus propias ventas.
+var PermisosRolCajero = []string{PermisoVentaRegistrar}
+
+// PermisosRolCajeroAnteriores son los permisos que el rol Cajero tenía antes de ventas (capability 37).
+var PermisosRolCajeroAnteriores = []string{PermisoCatalogoVer, PermisoCompraVer, PermisoCompraRegistrar}
 
 type PermisoRol struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`

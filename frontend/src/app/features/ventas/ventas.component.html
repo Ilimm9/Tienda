@@ -1,0 +1,150 @@
+<main class="pagina ventas">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="rotulo ventas__rotulo">{{ sucursal()?.nombre }}</p>
+      <h1>Ventas</h1>
+      <p class="descripcion">
+        Tickets cobrados en la sucursal. Abre uno para ver su detalle, reimprimirlo o cancelarlo.
+      </p>
+    </div>
+    <a *appPuede="P.ventaRegistrar" class="boton" routerLink="/ventas/nueva">
+      <i class="pi pi-plus" aria-hidden="true"></i> Nueva venta
+    </a>
+  </header>
+
+  <div class="ventas__periodo">
+    <div class="segmentado" role="group" aria-label="Periodo">
+      @for (opcion of periodos; track opcion.valor) {
+        <button
+          type="button"
+          class="segmentado__opcion"
+          [attr.aria-pressed]="periodo() === opcion.valor"
+          (click)="periodo.set(opcion.valor)"
+        >
+          {{ opcion.etiqueta }}
+        </button>
+      }
+    </div>
+    <span class="ventas__fecha">{{ etiqueta() }}</span>
+  </div>
+
+  @if (error()) {
+    <p class="aviso aviso--error" role="alert">
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <span
+        >{{ error() }}
+        <button type="button" class="boton-enlace" (click)="reintentar()">Reintentar</button></span
+      >
+    </p>
+  } @else {
+    <section class="ventas__metricas" aria-label="Resumen del periodo">
+      <article class="tarjeta metrica">
+        <span>Vendido</span>
+        <strong>{{ resumen() ? dinero(resumen()!.vendido) : '—' }}</strong>
+      </article>
+      <article class="tarjeta metrica">
+        <span>Tickets</span>
+        <strong>{{ resumen()?.tickets ?? '—' }}</strong>
+      </article>
+      <article class="tarjeta metrica">
+        <span>Ticket promedio</span>
+        <strong>{{ resumen() ? dinero(resumen()!.ticket_promedio) : '—' }}</strong>
+      </article>
+      <article class="tarjeta metrica">
+        <span>Efectivo en caja</span>
+        <strong>{{ resumen() ? dinero(resumen()!.efectivo) : '—' }}</strong>
+      </article>
+    </section>
+
+    <section class="tarjeta ventas__tabla" aria-label="Tickets">
+      <div class="ventas__filtros">
+        <label class="ventas__buscar">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <span class="sr-only">Buscar por folio o cajero</span>
+          <input
+            #buscar
+            type="search"
+            placeholder="Folio o cajero"
+            (input)="busqueda.set(buscar.value)"
+          />
+        </label>
+        <label>
+          <span class="sr-only">Forma de pago</span>
+          <select class="ventas__select" #forma (change)="alElegirFormaPago(forma.value)">
+            <option value="">Todas las formas de pago</option>
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TARJETA">Tarjeta</option>
+            <option value="TRANSFERENCIA">Transferencia</option>
+          </select>
+        </label>
+      </div>
+
+      @if (cargando()) {
+        <p class="estado-vacio" role="status">
+          <i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando ventas…
+        </p>
+      } @else if (!ventas().length) {
+        <div class="estado-vacio">
+          @if (listado()?.items?.length) {
+            Ningún ticket coincide con la búsqueda.
+          } @else {
+            Aún no hay tickets {{ textoPeriodo() }}.
+          }
+        </div>
+      } @else {
+        <div class="tabla-desplazable">
+          <table class="tabla-ventas">
+            <thead>
+              <tr>
+                <th scope="col">Folio</th>
+                <th scope="col">{{ periodo() === 'hoy' ? 'Hora' : 'Fecha' }}</th>
+                <th scope="col">Atendió</th>
+                <th scope="col">Artículos</th>
+                <th scope="col">Pago</th>
+                <th scope="col" class="numero">Total</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (venta of ventas(); track venta.id) {
+                <tr [class.fila--cancelada]="venta.estado === 'CANCELADA'">
+                  <td class="folio">{{ venta.folio }}</td>
+                  <td>{{ cuando(venta) }}</td>
+                  <td>{{ venta.atendio }}</td>
+                  <td>{{ venta.piezas }} {{ venta.piezas === 1 ? 'pieza' : 'piezas' }}</td>
+                  <td>
+                    <span
+                      class="pastilla pastilla--plana"
+                      [class]="claseFormaPago(venta.forma_pago)"
+                      >{{ formasPago[venta.forma_pago] }}</span
+                    >
+                  </td>
+                  <td class="numero total">{{ dinero(venta.total) }}</td>
+                  <td>
+                    @if (venta.estado === 'CANCELADA') {
+                      <span class="pastilla pastilla--plana pastilla--peligro">Cancelada</span>
+                    } @else {
+                      <span class="pastilla pastilla--plana pastilla--exito">Pagada</span>
+                    }
+                  </td>
+                  <td class="numero">
+                    <a class="boton-enlace" [routerLink]="['/ventas', venta.id]">Ver ticket</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (resumen(); as r) {
+        <footer class="ventas__pie">
+          {{ r.tickets + r.cancelados }} {{ r.tickets + r.cancelados === 1 ? 'ticket' : 'tickets' }}
+          {{ textoPeriodo() }} · {{ r.cancelados }}
+          {{ r.cancelados === 1 ? 'cancelado' : 'cancelados' }}
+        </footer>
+      }
+    </section>
+  }
+</main>

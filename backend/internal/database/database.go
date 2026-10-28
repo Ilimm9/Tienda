@@ -9,6 +9,7 @@ import (
 	negociodomain "tienda/backend/internal/domain/negocio"
 	plataformadomain "tienda/backend/internal/domain/plataforma"
 	preciodomain "tienda/backend/internal/domain/precio"
+	ventadomain "tienda/backend/internal/domain/venta"
 	"tienda/backend/internal/infrastructure"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
@@ -58,6 +59,7 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
 		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
 		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.HistorialCostoPrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
+		&ventadomain.Venta{}, &ventadomain.VentaLinea{}, &ventadomain.VentaFolioConsecutivo{},
 		&plataformadomain.RolPlataforma{}, &plataformadomain.RolUsuarioPlataforma{},
 		&plataformadomain.AuditoriaPlataforma{}, &plataformadomain.ActividadUsuarioDiaria{},
 	}
@@ -99,6 +101,9 @@ func Init(db *gorm.DB) error {
 	if err := negocioinfra.MigratePhaseFive(db); err != nil {
 		return err
 	}
+	if err := negocioinfra.MigrateRolCajeroVentas(db); err != nil {
+		return err
+	}
 	if err := negocioinfra.MigratePhaseSeven(db); err != nil {
 		return err
 	}
@@ -132,6 +137,14 @@ func Init(db *gorm.DB) error {
 		`ALTER TABLE producto_codigos DROP CONSTRAINT IF EXISTS chk_producto_codigo_propietario`,
 		`ALTER TABLE producto_codigos ADD CONSTRAINT chk_producto_codigo_propietario CHECK ((producto_id IS NOT NULL AND producto_variante_id IS NULL) OR (producto_id IS NULL AND producto_variante_id IS NOT NULL))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_producto_negocio_variante_unica ON producto_negocio (negocio_id, producto_variante_id) WHERE producto_variante_id IS NOT NULL`,
+		// Ventas (capability 37): importes en centavos no negativos, cantidades positivas y estados conocidos.
+		`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS chk_ventas_importes`,
+		`ALTER TABLE ventas ADD CONSTRAINT chk_ventas_importes CHECK (total_centavos >= 0 AND subtotal_centavos >= 0 AND iva_centavos >= 0 AND recibido_centavos >= total_centavos AND cambio_centavos = recibido_centavos - total_centavos)`,
+		`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS chk_ventas_estado`,
+		`ALTER TABLE ventas ADD CONSTRAINT chk_ventas_estado CHECK (estado IN ('PAGADA', 'CANCELADA') AND forma_pago IN ('EFECTIVO', 'TARJETA', 'TRANSFERENCIA'))`,
+		`ALTER TABLE venta_lineas DROP CONSTRAINT IF EXISTS chk_venta_lineas_cantidad`,
+		`ALTER TABLE venta_lineas ADD CONSTRAINT chk_venta_lineas_cantidad CHECK (cantidad > 0 AND precio_unitario_centavos >= 0 AND importe_centavos = precio_unitario_centavos * cantidad)`,
+		`CREATE INDEX IF NOT EXISTS idx_ventas_negocio_creado ON ventas (negocio_id, creado_en DESC)`,
 	} {
 		if err := db.Exec(statement).Error; err != nil {
 			return err

@@ -3,15 +3,18 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { LayoutStateService } from '../layout-state.service';
 import { ContextoService } from '../../contexto/contexto.service';
+import { PERMISOS } from '../../contexto/permisos';
+import { PuedeDirective } from '../../contexto/puede.directive';
 import { filtrarNavegacion, NAVIGATION_ITEMS, NavigationItem } from '../navigation.config';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, PuedeDirective],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
 })
 export class SidebarComponent {
+  readonly P = PERMISOS;
   readonly layout = inject(LayoutStateService);
   private readonly router = inject(Router);
   private readonly expandedGroups = signal(new Set<string>());

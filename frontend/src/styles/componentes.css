@@ -2160,3 +2160,16 @@ p-select.formulario-alta__select {
 .mosaico--chico .mosaico__celda > .pi {
   font-size: 48px;
 }
+
+/* Tecla de atajo junto a una acción, por ejemplo «Nueva venta F2». */
+.atajo-tecla {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 18%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+}

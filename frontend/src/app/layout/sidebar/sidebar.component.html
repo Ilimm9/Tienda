@@ -1,4 +1,17 @@
 <nav class="sidebar-nav" aria-label="Navegación principal">
+  <a
+    *appPuede="P.ventaRegistrar"
+    class="nueva-venta"
+    routerLink="/ventas/nueva"
+    aria-keyshortcuts="F2"
+    [attr.title]="layout.sidebarCollapsed() ? 'Nueva venta (F2)' : null"
+    (click)="closeAfterNavigation()"
+  >
+    <i class="pi pi-plus" aria-hidden="true"></i>
+    <span class="navigation-label">Nueva venta</span>
+    <kbd class="atajo-tecla">F2</kbd>
+  </a>
+
   <p class="section-label">Administración</p>
 
   <ul class="navigation-list">

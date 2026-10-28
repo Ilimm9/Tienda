@@ -9,6 +9,45 @@
   border-right: 1px solid var(--border);
 }
 
+.nueva-venta {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 0 12px 0 16px;
+  color: #fff;
+  border-radius: 12px;
+  background: var(--primary);
+  box-shadow: 0 6px 16px rgb(79 70 200 / 28%);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nueva-venta:hover {
+  background: var(--primary-hover);
+}
+
+.nueva-venta:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.nueva-venta .navigation-label {
+  flex: 1;
+}
+
+:host-context(.sidebar-collapsed) .nueva-venta {
+  justify-content: center;
+  padding: 0;
+}
+
+:host-context(.sidebar-collapsed) .nueva-venta .atajo-tecla {
+  display: none;
+}
+
 .section-label {
   margin: 0 12px 10px;
   color: var(--text-subtle);

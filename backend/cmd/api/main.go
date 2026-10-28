@@ -12,6 +12,7 @@ import (
 	negocioapplication "tienda/backend/internal/application/negocio"
 	plataformaapplication "tienda/backend/internal/application/plataforma"
 	precioapplication "tienda/backend/internal/application/precio"
+	ventaapplication "tienda/backend/internal/application/venta"
 	"tienda/backend/internal/config"
 	"tienda/backend/internal/database"
 	negociodomain "tienda/backend/internal/domain/negocio"
@@ -22,12 +23,14 @@ import (
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 	plataformainfra "tienda/backend/internal/infrastructure/plataforma"
 	precioinfra "tienda/backend/internal/infrastructure/precio"
+	ventainfra "tienda/backend/internal/infrastructure/venta"
 	transporthttp "tienda/backend/internal/interfaces/http"
 	comprahttp "tienda/backend/internal/interfaces/http/compra"
 	cuentahttp "tienda/backend/internal/interfaces/http/cuenta"
 	negociohttp "tienda/backend/internal/interfaces/http/negocio"
 	plataformahttp "tienda/backend/internal/interfaces/http/plataforma"
 	preciohttp "tienda/backend/internal/interfaces/http/precio"
+	ventahttp "tienda/backend/internal/interfaces/http/venta"
 
 	"github.com/gin-gonic/gin"
 )
@@ -112,6 +115,7 @@ func main() {
 	productHandler := transporthttp.NewProductHandler(productService, contextoService, rolService)
 	compraHandler := comprahttp.NewHandler(compraapplication.NewService(comprainfra.NewRepository(db)), contextoService)
 	precioHandler := preciohttp.NewHandler(precioapplication.NewService(precioinfra.NewRepository(db)), contextoService)
+	ventaHandler := ventahttp.NewHandler(ventaapplication.NewService(ventainfra.NewRepository(db)), contextoService, rolService)
 	plataformaHandler := plataformahttp.NewHandler(plataformaService)
 	router := gin.Default()
 	if err := router.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
@@ -221,6 +225,12 @@ func main() {
 	comprasGestion.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCompraRegistrar))
 	comprasGestion.POST("/compras", compraHandler.Create)
 	comprasGestion.POST("/compras/unidades", productHandler.CreateUnit)
+	// Ventas (capability 37). Listar y ver un ticket aceptan `ventas.ver` o `ventas.registrar` (solo propias); el handler decide.
+	negocioActual.GET("/ventas/productos", negociohttp.RequierePermiso(rolService, negociodomain.PermisoVentaRegistrar), ventaHandler.Productos)
+	negocioActual.POST("/ventas", negociohttp.RequierePermiso(rolService, negociodomain.PermisoVentaRegistrar), ventaHandler.Registrar)
+	negocioActual.GET("/ventas", ventaHandler.List)
+	negocioActual.GET("/ventas/:ventaId", ventaHandler.Get)
+	negocioActual.POST("/ventas/:ventaId/cancelar", negociohttp.RequierePermiso(rolService, negociodomain.PermisoVentaCancelar), ventaHandler.Cancelar)
 	negocioActual.GET("/precios/propuestas", negociohttp.RequierePermiso(rolService, negociodomain.PermisoPrecioVer), precioHandler.ListPending)
 	negocioActual.GET("/precios/historial", negociohttp.RequierePermiso(rolService, negociodomain.PermisoPrecioVer), precioHandler.ListHistory)
 	negocioActual.PATCH("/precios/propuestas/:propuestaId/autorizar", negociohttp.RequierePermiso(rolService, negociodomain.PermisoPrecioAutorizar), precioHandler.Authorize)

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { AtajoNuevaVentaService } from '../../features/ventas/atajo-nueva-venta.service';
 import { LayoutStateService } from '../layout-state.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
@@ -17,6 +18,7 @@ export class AppShellComponent {
   readonly layout = inject(LayoutStateService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly atajoVenta = inject(AtajoNuevaVentaService);
 
   constructor() {
     this.router.events
@@ -25,6 +27,11 @@ export class AppShellComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => this.layout.closeMobileMenu());
+  }
+
+  @HostListener('document:keydown.f2', ['$event'])
+  abrirNuevaVenta(evento: Event): void {
+    this.atajoVenta.alPresionarF2(evento as KeyboardEvent);
   }
 
   @HostListener('document:keydown.escape')

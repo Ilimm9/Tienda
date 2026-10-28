@@ -105,6 +105,8 @@ export const routes: Routes = [
       },
       {
         path: 'ventas',
+        canActivate: [contextoGuard],
+        data: { breadcrumb: 'Ventas' },
         loadChildren: () =>
           import('./features/ventas/ventas.routes').then((module) => module.VENTAS_ROUTES),
       },

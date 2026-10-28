@@ -1,0 +1,412 @@
+<main class="pagina nueva-venta">
+  @if (terminada(); as venta) {
+    <section class="tarjeta venta-terminada" aria-labelledby="titulo-venta-terminada">
+      <span class="venta-terminada__icono"><i class="pi pi-check" aria-hidden="true"></i></span>
+      <p class="rotulo venta-terminada__rotulo">Venta {{ venta.folio }} cobrada</p>
+      <h1 id="titulo-venta-terminada">{{ dineroPesos(venta.total) }}</h1>
+      <dl class="venta-terminada__detalle">
+        <div>
+          <dt>Forma de pago</dt>
+          <dd><strong>Efectivo</strong></dd>
+        </div>
+        <div>
+          <dt>Productos</dt>
+          <dd>{{ venta.piezas }} {{ venta.piezas === 1 ? 'pieza' : 'piezas' }}</dd>
+        </div>
+        <div>
+          <dt>Recibido</dt>
+          <dd>{{ dineroPesos(venta.recibido) }}</dd>
+        </div>
+        <div class="venta-terminada__cambio">
+          <dt>Cambio a entregar</dt>
+          <dd>{{ dineroPesos(venta.cambio) }}</dd>
+        </div>
+      </dl>
+      <p class="venta-terminada__nota">Las existencias de la sucursal ya se descontaron.</p>
+      <div class="venta-terminada__acciones">
+        <button type="button" class="boton boton--secundario" (click)="imprimir()">
+          <i class="pi pi-print" aria-hidden="true"></i> Imprimir ticket
+        </button>
+        <button #botonNuevaVenta type="button" class="boton" (click)="nuevaVenta()">
+          <i class="pi pi-plus" aria-hidden="true"></i> Nueva venta
+        </button>
+      </div>
+      <a class="boton-enlace" routerLink="/ventas">Ver ventas del día</a>
+    </section>
+
+    <app-ticket-impreso [venta]="venta" />
+  } @else {
+    <header class="encabezado-pagina">
+      <div>
+        <p class="rotulo nueva-venta__rotulo">Ventas · {{ sucursal()?.nombre }}</p>
+        <h1>Nueva venta</h1>
+        <p class="descripcion">
+          Escanea cada producto o búscalo por nombre. Se agrega a la lista; si vuelves a escanearlo,
+          sube la cantidad.
+        </p>
+      </div>
+      <a class="boton boton--secundario" routerLink="/ventas">
+        <i class="pi pi-arrow-left" aria-hidden="true"></i> Volver a ventas
+      </a>
+    </header>
+
+    <div class="nueva-venta__cuerpo">
+      <section class="nueva-venta__captura">
+        <div class="captura" [class.captura--abierta]="abierto()">
+          <label class="captura__campo">
+            <i class="pi pi-barcode" aria-hidden="true"></i>
+            <span class="sr-only">Código de barras o nombre del producto</span>
+            <input
+              #campo
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Escanea el código de barras o escribe el nombre del producto"
+              role="combobox"
+              aria-controls="coincidencias-venta"
+              [attr.aria-expanded]="abierto()"
+              [attr.aria-activedescendant]="
+                abierto() && coincidencias().length ? 'coincidencia-' + resaltado() : null
+              "
+              (input)="alEscribir(campo.value)"
+              (keydown)="alPresionarTecla($event)"
+            />
+            @if (buscando()) {
+              <i class="pi pi-spin pi-spinner captura__cargando" aria-hidden="true"></i>
+            }
+            <span class="captura__atajo"><kbd>Enter</kbd> agrega</span>
+          </label>
+
+          @if (abierto()) {
+            <ul
+              id="coincidencias-venta"
+              class="captura__lista"
+              role="listbox"
+              aria-label="Coincidencias"
+            >
+              @for (item of coincidencias(); track item.producto_negocio_id; let i = $index) {
+                <li
+                  [id]="'coincidencia-' + i"
+                  role="option"
+                  class="captura__opcion"
+                  [class.captura__opcion--resaltada]="i === resaltado()"
+                  [class.captura__opcion--agotada]="item.agotado"
+                  [attr.aria-selected]="i === resaltado()"
+                  [attr.aria-disabled]="item.agotado"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="agregar(item)"
+                >
+                  <span class="captura__producto">
+                    <strong>{{ item.nombre }}</strong>
+                    @if (item.codigo_barras) {
+                      <small>{{ item.codigo_barras }}</small>
+                    }
+                  </span>
+                  <span class="captura__existencia" [class.existencia--baja]="item.existencia_baja">
+                    {{ item.agotado ? 'Agotado' : item.existencia + ' pz' }}
+                  </span>
+                  <span class="captura__precio">{{ dinero(centavos(item.precio)) }}</span>
+                </li>
+              } @empty {
+                <li class="captura__vacio">No encontramos productos con «{{ texto() }}».</li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (aviso(); as mensaje) {
+          <p
+            class="aviso"
+            [class.aviso--error]="mensaje.tipo === 'error'"
+            [class.aviso--atencion]="mensaje.tipo === 'atencion'"
+            role="alert"
+          >
+            <i
+              class="pi"
+              [class.pi-times-circle]="mensaje.tipo === 'error'"
+              [class.pi-exclamation-triangle]="mensaje.tipo === 'atencion'"
+              aria-hidden="true"
+            ></i>
+            {{ mensaje.texto }}
+          </p>
+        }
+
+        <section class="tarjeta productos-venta" aria-labelledby="titulo-productos-venta">
+          <header class="productos-venta__encabezado">
+            <h2 id="titulo-productos-venta">
+              Productos de la venta
+              <span
+                >· {{ resumen().productos }}
+                {{ resumen().productos === 1 ? 'producto' : 'productos' }}</span
+              >
+            </h2>
+            @if (puedeVerCostos()) {
+              <label class="interruptor">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  [checked]="verificarCostos()"
+                  (change)="verificarCostos.set(!verificarCostos())"
+                />
+                <span class="interruptor__pista" aria-hidden="true"></span>
+                Verificar costos
+              </label>
+            }
+          </header>
+
+          @if (mostrarCostos() && bajoCosto()) {
+            <p class="aviso aviso--error productos-venta__alerta" role="status">
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              <span
+                >Hay productos que se venden por debajo de su costo.
+                <a *appPuede="P.precioVer" routerLink="/precios/validaciones">Validar costos</a>
+              </span>
+            </p>
+          }
+
+          @if (lineas().length) {
+            <div class="tabla-desplazable">
+              <table class="productos-venta__tabla">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Producto</th>
+                    <th scope="col" class="numero">Existencia</th>
+                    <th scope="col" class="numero">Precio</th>
+                    @if (mostrarCostos()) {
+                      <th scope="col" class="numero">Costo</th>
+                      <th scope="col" class="numero">Margen</th>
+                      <th scope="col" class="numero">Utilidad</th>
+                    }
+                    <th scope="col" class="centro">Cantidad</th>
+                    <th scope="col" class="numero">Importe</th>
+                    <th scope="col"><span class="sr-only">Quitar</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (linea of lineas(); track linea.productoNegocioId; let i = $index) {
+                    <tr
+                      [class.fila--ultima]="linea.productoNegocioId === ultima()"
+                      [class.fila--bajo-costo]="mostrarCostos() && nivelDe(linea) === 'negativo'"
+                    >
+                      <td class="indice">{{ i + 1 }}</td>
+                      <td>
+                        <strong class="producto__nombre">{{ linea.nombre }}</strong>
+                        @if (linea.codigoBarras) {
+                          <small class="producto__codigo">{{ linea.codigoBarras }}</small>
+                        }
+                      </td>
+                      <td class="numero" [class.existencia--baja]="linea.existenciaBaja">
+                        {{ linea.existencia }} pz
+                      </td>
+                      <td class="numero">{{ dinero(linea.precioCentavos) }}</td>
+                      @if (mostrarCostos()) {
+                        <td class="numero">
+                          {{
+                            linea.costoCentavos === null ? 'Sin costo' : dinero(linea.costoCentavos)
+                          }}
+                        </td>
+                        <td
+                          class="numero margen"
+                          [class.margen--negativo]="nivelDe(linea) === 'negativo'"
+                          [class.margen--bajo]="nivelDe(linea) === 'bajo'"
+                        >
+                          {{ porcentaje(margenDe(linea)) }}
+                        </td>
+                        <td class="numero" [class.margen--negativo]="nivelDe(linea) === 'negativo'">
+                          {{ utilidadDe(linea) === null ? '—' : dinero(utilidadDe(linea)!) }}
+                        </td>
+                      }
+                      <td class="centro">
+                        <span class="cantidad">
+                          <button
+                            type="button"
+                            [disabled]="linea.cantidad <= 1"
+                            (click)="cambiarCantidad(linea, -1)"
+                            [attr.aria-label]="'Quitar una pieza de ' + linea.nombre"
+                          >
+                            <i class="pi pi-minus" aria-hidden="true"></i>
+                          </button>
+                          <output [attr.aria-label]="'Cantidad de ' + linea.nombre">{{
+                            linea.cantidad
+                          }}</output>
+                          <button
+                            type="button"
+                            [disabled]="linea.cantidad >= linea.existencia"
+                            (click)="cambiarCantidad(linea, 1)"
+                            [attr.aria-label]="'Agregar una pieza de ' + linea.nombre"
+                            [title]="
+                              linea.cantidad >= linea.existencia ? 'No hay más existencias' : ''
+                            "
+                          >
+                            <i class="pi pi-plus" aria-hidden="true"></i>
+                          </button>
+                        </span>
+                      </td>
+                      <td class="numero importe">
+                        {{ dinero(linea.precioCentavos * linea.cantidad) }}
+                      </td>
+                      <td class="centro">
+                        <button
+                          type="button"
+                          class="quitar"
+                          (click)="quitar(linea)"
+                          [attr.aria-label]="'Quitar ' + linea.nombre"
+                        >
+                          <i class="pi pi-trash" aria-hidden="true"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="productos-venta__vacio">
+              <i class="pi pi-barcode" aria-hidden="true"></i>
+              <p>
+                <strong>Aún no hay productos</strong>Escanea el primero o escribe su nombre arriba.
+              </p>
+            </div>
+          }
+        </section>
+      </section>
+
+      <aside class="tarjeta resumen-venta" aria-labelledby="titulo-resumen-venta">
+        <h2 id="titulo-resumen-venta">Resumen</h2>
+        <dl>
+          <div>
+            <dt>Productos</dt>
+            <dd>{{ resumen().productos }}</dd>
+          </div>
+          <div>
+            <dt>Piezas</dt>
+            <dd>{{ resumen().piezas }} {{ resumen().piezas === 1 ? 'pieza' : 'piezas' }}</dd>
+          </div>
+          <div>
+            <dt>Subtotal</dt>
+            <dd>{{ dinero(resumen().subtotal) }}</dd>
+          </div>
+          <div>
+            <dt>IVA (16%)</dt>
+            <dd>{{ dinero(resumen().iva) }}</dd>
+          </div>
+        </dl>
+        <div class="resumen-venta__total">
+          <span>Total</span>
+          <strong>{{ dinero(resumen().total) }}</strong>
+        </div>
+        <div class="resumen-venta__acciones">
+          <button
+            type="button"
+            class="boton ancho"
+            [disabled]="!lineas().length"
+            (click)="abrirCobro()"
+          >
+            <i class="pi pi-check" aria-hidden="true"></i> Terminar venta
+          </button>
+          <button
+            type="button"
+            class="boton-enlace resumen-venta__vaciar"
+            [disabled]="!lineas().length"
+            (click)="vaciar()"
+          >
+            Cancelar y vaciar lista
+          </button>
+        </div>
+      </aside>
+    </div>
+  }
+
+  <dialog
+    #dialogoCobro
+    class="cobro"
+    aria-labelledby="titulo-cobro"
+    (cancel)="$event.preventDefault(); cerrarCobro()"
+  >
+    <form class="cobro__contenido" (submit)="$event.preventDefault(); confirmarCobro()">
+      <header class="cobro__encabezado">
+        <div>
+          <p class="rotulo cobro__rotulo">
+            Total a cobrar · {{ resumen().piezas }}
+            {{ resumen().piezas === 1 ? 'pieza' : 'piezas' }}
+          </p>
+          <h2 id="titulo-cobro">{{ dinero(resumen().total) }}</h2>
+        </div>
+        <button
+          type="button"
+          class="cobro__cerrar"
+          aria-label="Cerrar cobro"
+          (click)="cerrarCobro()"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <fieldset class="cobro__formas">
+        <legend>Forma de pago</legend>
+        <div class="cobro__opciones">
+          <button type="button" class="cobro__opcion cobro__opcion--activa" aria-pressed="true">
+            Efectivo
+          </button>
+          <button type="button" class="cobro__opcion" disabled title="Disponible más adelante">
+            Tarjeta
+          </button>
+          <button type="button" class="cobro__opcion" disabled title="Disponible más adelante">
+            Transferencia
+          </button>
+        </div>
+      </fieldset>
+
+      <label class="cobro__campo">
+        <span>Recibido</span>
+        <input
+          #campoRecibido
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          placeholder="0.00"
+          [attr.aria-invalid]="recibidoTexto() !== '' && recibido() === null"
+          (input)="recibidoTexto.set(campoRecibido.value)"
+        />
+      </label>
+      <div class="cobro__rapidos">
+        <button type="button" (click)="usarRecibido(resumen().total)">Exacto</button>
+        @for (billete of billetesRapidos(); track billete) {
+          <button type="button" (click)="usarRecibido(billete)">
+            {{ dinero(billete).replace('.00', '') }}
+          </button>
+        }
+      </div>
+
+      @if (falta() > 0) {
+        <p class="cobro__saldo cobro__saldo--falta" role="status">
+          <span>Falta</span><strong>{{ dinero(falta()) }}</strong>
+        </p>
+      } @else {
+        <p class="cobro__saldo cobro__saldo--cambio" role="status">
+          <span>Cambio</span><strong>{{ dinero(cambio() ?? 0) }}</strong>
+        </p>
+      }
+
+      @if (errorCobro(); as mensaje) {
+        <p class="aviso aviso--error" role="alert">
+          <i class="pi pi-times-circle" aria-hidden="true"></i>{{ mensaje }}
+        </p>
+      }
+
+      <footer class="cobro__pie">
+        <button type="button" class="boton-enlace" [disabled]="cobrando()" (click)="cerrarCobro()">
+          Seguir capturando
+        </button>
+        <button type="submit" class="boton" [disabled]="!puedeConfirmar()">
+          @if (cobrando()) {
+            <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Cobrando…
+          } @else {
+            Confirmar cobro
+          }
+        </button>
+      </footer>
+    </form>
+  </dialog>
+</main>

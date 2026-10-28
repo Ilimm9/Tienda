@@ -87,7 +87,7 @@ export class InvitacionNueva {
   );
   readonly rol = computed(() => this.roles().find((item) => item.id === this.rolId()) ?? null);
   readonly permisosDelRol = computed(() => {
-    const nombres: Record<string, string> = { negocios: 'Negocios', sucursales: 'Sucursales', roles: 'Roles y permisos', equipo: 'Equipo', catalogo: 'Catálogo', compras: 'Compras', precios: 'Costos y precios', inventario: 'Inventario' };
+    const nombres: Record<string, string> = { negocios: 'Negocios', sucursales: 'Sucursales', roles: 'Roles y permisos', equipo: 'Equipo', catalogo: 'Catálogo', compras: 'Compras', precios: 'Costos y precios', inventario: 'Inventario', ventas: 'Ventas' };
     const grupos = new Map<string, string[]>();
     for (const permiso of this.rol()?.permisos_detalle ?? []) {
       const seccion = nombres[permiso.codigo_modulo] ?? permiso.codigo_modulo;

@@ -41,6 +41,10 @@ func DependenciasPermiso(codigo string) []string {
 		return []string{PermisoCompraVer, PermisoCatalogoVer}
 	case PermisoPrecioAutorizar:
 		return []string{PermisoPrecioVer}
+	case PermisoVentaCancelar:
+		return []string{PermisoVentaVer}
+	case PermisoVentaVerCostos:
+		return []string{PermisoVentaRegistrar}
 	default:
 		return []string{}
 	}
@@ -78,6 +82,10 @@ const (
 	PermisoPrecioVer         = "precios.ver"
 	PermisoPrecioAutorizar   = "precios.autorizar"
 	PermisoInventarioAjustar = "inventario.ajustar"
+	PermisoVentaRegistrar    = "ventas.registrar"
+	PermisoVentaVer          = "ventas.ver"
+	PermisoVentaCancelar     = "ventas.cancelar"
+	PermisoVentaVerCostos    = "ventas.ver_costos"
 )
 
 // CatalogoPermisos es la fuente del sembrado idempotente del catálogo global.
@@ -105,4 +113,8 @@ var CatalogoPermisos = []Permiso{
 	{Codigo: PermisoPrecioVer, CodigoModulo: "precios", Nombre: "Ver propuestas de costos y precios"},
 	{Codigo: PermisoPrecioAutorizar, CodigoModulo: "precios", Nombre: "Autorizar costos y precios"},
 	{Codigo: PermisoInventarioAjustar, CodigoModulo: "inventario", Nombre: "Ajustar existencias"},
+	{Codigo: PermisoVentaRegistrar, CodigoModulo: "ventas", Nombre: "Cobrar ventas y ver las propias"},
+	{Codigo: PermisoVentaVer, CodigoModulo: "ventas", Nombre: "Ver todas las ventas"},
+	{Codigo: PermisoVentaCancelar, CodigoModulo: "ventas", Nombre: "Cancelar ventas"},
+	{Codigo: PermisoVentaVerCostos, CodigoModulo: "ventas", Nombre: "Ver costos y margen al vender"},
 }

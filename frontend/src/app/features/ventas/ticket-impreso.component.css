@@ -1,0 +1,50 @@
+.ticket-imprimible {
+  display: none;
+}
+
+@media print {
+  .ticket-imprimible {
+    display: block;
+    width: 72mm;
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .ticket-imprimible h2,
+  .ticket-imprimible p {
+    margin: 0 0 4px;
+    text-align: center;
+  }
+
+  .ticket-imprimible table {
+    width: 100%;
+    margin: 8px 0;
+    border-top: 1px dashed #000;
+    border-bottom: 1px dashed #000;
+    border-collapse: collapse;
+  }
+
+  .ticket-imprimible td {
+    padding: 2px 0;
+    vertical-align: top;
+  }
+
+  .ticket-imprimible td:last-child {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .ticket-imprimible dl {
+    margin: 0 0 8px;
+  }
+
+  .ticket-imprimible dl div {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ticket-imprimible dd {
+    margin: 0;
+  }
+}

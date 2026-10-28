@@ -61,6 +61,16 @@ describe('HomeComponent', () => {
     expect(rutas).toEqual(['/productos', '/compras', '/sucursales', '/equipo/empleados', '/negocios']);
   });
 
+  it('con ventas.registrar ofrece «Nueva venta» en la bienvenida y como primer acceso', async () => {
+    const fixture = await crear(['ventas.registrar', 'catalogo.ver'], false, 'listo', 'miembro');
+    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
+    expect(rutas).toEqual(['/ventas/nueva', '/productos']);
+    const boton = fixture.nativeElement.querySelector('.bienvenida a.boton') as HTMLAnchorElement;
+    expect(boton.getAttribute('href')).toBe('/ventas/nueva');
+    expect(boton.textContent).toContain('Nueva venta');
+    expect(boton.textContent).toContain('F2');
+  });
+
   it('muestra solo las secciones que el rol permite', async () => {
     const fixture = await crear([]);
 
