@@ -4,7 +4,7 @@
 - Aprobación explícita: 2026-10-23 («si la tienes claro dale al plan»). Decisiones: incluye «Proveedor general» (desactivable); unidades Pieza (1), Caja 12 y Caja 24; solo negocios nuevos, porque los datos actuales son de prueba y el usuario recreará la base (`docker compose down -v`). **Todo es visual**: no se modifica el cálculo de subtotal, impuestos y total ni el envío de la compra (lógica existente de Ilian).
 - Fecha: 2026-10-23.
 - Diseño: canvas de diseño, fila «Compras»: **K1 · Registrar compra: ventanas para crear** (interactivo) y **K2 · Compras vacías: guía y datos semilla**.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Frontend `features/compras`; backend del catálogo (raíz de `application`/`infrastructure`, donde viven unidades y proveedores) y alta de negocio (`negocio`). Base de conocimiento afectada: [modulo-compras.md](modulo-compras.md) y [registro-productos.md](registro-productos.md).
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Frontend `features/compras`; backend del catálogo (raíz de `application`/`infrastructure`, donde viven unidades y proveedores) y alta de negocio (`negocio`). Base de conocimiento afectada: [modulo-compras.md](../modulo-compras.md) y [registro-productos.md](../registro-productos.md).
 
 ## Problema
 
@@ -96,7 +96,7 @@
 - 2026-10-23: sin cambios en `subtotal`, `ieps`, `iva`, `taxes`, `total`, `pieces`, `detailSubtotal` ni `submit` (cuerpo enviado igual). Se quitaron solo las opciones «Crear nuevo…» de los selectores, sustituidas por botones «Nuevo…».
 - 2026-10-23: `go build`, `go vet` correctos; `go test ./...` pasa salvo `TestProductionAcceptsStrongOTPSecret` (falla previa registrada). Prueba unitaria: la semilla recibe el negocio creado y su falla no rompe el alta.
 - 2026-10-23: en base temporal `tienda_semilla_test` (migrada con `database.Init`, borrada al terminar): `TestCrearNegocioSiembraRolCajero` y `TestCatalogSeederSiembraUnidadesYProveedor` pasan (3 unidades `EMPAQUE` con factores 1/12/24, «Proveedor general» activo; segunda corrida sin errores ni duplicados).
-- 2026-10-23: `ng test` completo: 275 de 281; las 6 fallas son de `alta-inicial.spec.ts`, ya registradas como previas en [planes actuales](planes-actuales.md). `features/compras`: 15 de 15 (ventana de producto sin formulario incrustado, cierre por fondo, Pieza preseleccionada, etiquetas con factor, «Entran 8 piezas», 2 × Caja 12 = 24, número de cuenta condicional y limpieza). `ng build` correcto; `compras.component.css` rebasa el presupuesto de 4 kB (advertencia).
+- 2026-10-23: `ng test` completo: 275 de 281; las 6 fallas son de `alta-inicial.spec.ts`, ya registradas como previas en [planes actuales](../planes-actuales.md). `features/compras`: 15 de 15 (ventana de producto sin formulario incrustado, cierre por fondo, Pieza preseleccionada, etiquetas con factor, «Entran 8 piezas», 2 × Caja 12 = 24, número de cuenta condicional y limpieza). `ng build` correcto; `compras.component.css` rebasa el presupuesto de 4 kB (advertencia).
 - Pendiente: prueba manual en navegador de 360 a 1440 px tras recrear la base (`docker compose down -v` y reconstruir) y aceptación final.
 
 ## Historial de revisión

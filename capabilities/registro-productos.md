@@ -24,7 +24,7 @@ Base vigente según código local. Actualizado: 2026-10-23.
 | --- | --- |
 | `productos`, `producto_negocio` | Datos del artículo, vínculo comercial, SKU y valores del negocio. |
 | `marcas`, `categorias`, `producto_categorias` | Clasificación y asociaciones de categorías. |
-| `unidades_medida`, `producto_unidades` | Unidades, empaques y conversiones del producto. Un negocio nuevo trae Pieza (1), Caja 12 y Caja 24 como `EMPAQUE` ([34](34-compras-panel-lateral-y-semilla.md)). |
+| `unidades_medida`, `producto_unidades` | Unidades, empaques y conversiones del producto. Un negocio nuevo trae Pieza (1), Caja 12 y Caja 24 como `EMPAQUE` ([34](historial/34-compras-panel-lateral-y-semilla.md)). |
 | `proveedores`, `producto_proveedor` | Proveedores del negocio y asociación de suministro. Un producto puede tener varios proveedores y como máximo un principal ([27](historial/27-compras-cualquier-producto.md)). |
 | `producto_codigos`, `producto_imagenes` | Códigos y recursos visuales del artículo. |
 | `familias_producto`, `producto_variantes`, `producto_variante_atributos` | Agrupación de variantes y valores de sus atributos. |

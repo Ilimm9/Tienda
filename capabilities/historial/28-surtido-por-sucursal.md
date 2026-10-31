@@ -52,7 +52,7 @@ Que cada sucursal tenga su propio surtido dentro del catálogo único del negoci
 - Cambios de esquema.
 
 ## Relación con otras capabilities
-- Absorbe dos tareas abiertas de la [19](../19-historial-costos-precios-sucursal/CAPABILITY.md), trasladadas el 2026-10-22 por decisión del usuario.
+- Absorbe dos tareas abiertas de la [19](../19-historial-costos-precios-sucursal.md), trasladadas el 2026-10-22 por decisión del usuario.
 - Usa `SoloPropietario` de la [31](31-crear-productos-solo-propietario.md).
 - Compras ([27](27-compras-cualquier-producto.md)) lista todo el catálogo; recibir una compra agrega el producto al surtido de la sucursal.
 

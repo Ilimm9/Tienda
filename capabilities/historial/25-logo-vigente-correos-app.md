@@ -4,7 +4,7 @@
 - Aprobación explícita: 2026-10-22, el usuario indicó «lo puedes implementar por favor, cualquier detalle me dices por favor» tras revisar la propuesta de esta capability.
 - Fecha: 2026-10-22.
 - Fuente de identidad indicada por el usuario: `frontend/public/trace.svg`.
-- Coordinación: capability independiente de [24 · Corrección masiva de productos](historial/24-correccion-masiva-producto.md), actualmente trabajada por otro agente. No modificar su plan ni sus archivos de productos, importación o `backend/cmd/api/main.go`.
+- Coordinación: capability independiente de [24 · Corrección masiva de productos](24-correccion-masiva-producto.md), actualmente trabajada por otro agente. No modificar su plan ni sus archivos de productos, importación o `backend/cmd/api/main.go`.
 
 ## Problema y objetivo
 
@@ -86,7 +86,7 @@ Unificar la identidad visible con `trace.svg`, sin rediseñar la aplicación ni 
 - [x] Actualizar invitación, corregir MIME y retirar recursos anteriores.
 - [x] Ejecutar pruebas y revisión visual; documentar resultados y pendientes.
 - [x] Actualizar índices de estado y presentar la entrega para revisión.
-- [ ] Recibir aceptación final explícita; no se declara cerrada ni se archiva mientras esta entrega siga en revisión del usuario.
+- [ ] Recibir aceptación final explícita; no se declara cerrada mientras esta entrega siga en revisión del usuario. Archivada el 2026-10-31 por instrucción del usuario; archivar no la cierra.
 
 ## Decisiones y verificaciones registradas
 
