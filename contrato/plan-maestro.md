@@ -1,10 +1,16 @@
 # Plan maestro de producto — Stockion
 
 - **Estado:** Borrador para revisión de thrs e Ilian.
-- **Fecha:** 2026-10-30.
-- **Audiencia:** desarrolladores. La versión para la clienta se deriva después (sección 13).
+- **Fecha:** diagnóstico original del 2026-10-30; planeación actualizada el 2026-11-02.
+- **Audiencia:** desarrolladores. La versión para la clienta está en [plan para la Lic.](plan-lic.md); sus condiciones comerciales siguen pendientes de acuerdo (sección 13).
 - **Base analizada:** rama `thrs` en `da9e6fb` (igual que `origin/production`) y rama `origin/ventas` en `5cd61d7`.
 - **Alcance de este documento:** orienta y prioriza. **No autoriza implementación.** Cada bloque sigue necesitando su `capabilities/NN-nombre.md` aprobado, conforme a `AGENTS.md`.
+
+**Restricciones vigentes del usuario (2026-11-02): 20 horas semanales por persona y máximo 4 meses.** El calendario operativo propuesto está en [plan de desarrollo](plan-desarrolladores.md); decisiones en [preguntas](preguntas.md) y hallazgos en [revisión del plan](revision-plan.md). Las verificaciones técnicas de este documento corresponden al 2026-10-30 y no se han vuelto a ejecutar en esta revisión documental. El alcance completo sigue pendiente de validar contra las 640 horas del horizonte conservador de 16 semanas.
+
+**Actualización de propuestas de thrs:** `preguntas.md` registra 20–30 h por persona y fechas del 2026-11-10 al 2027-03-10, pendientes de Ilian y de agenda con la Lic. Se conserva 20 h como base para planificar, sin contar el escenario de 960 h hasta acordarlo. Dieciséis semanas desde el inicio propuesto llevan al 2027-03-02: quedan ocho días de margen de calendario, sin añadir automáticamente capacidad.
+
+**Reparto revisado antes del arranque:** el usuario confirma que este plan aún no ha iniciado. thrs conserva almacenamiento y asume autenticación; concentra Compras/Precios y administración. Ilian concentra Ventas, Inventario, migración de Odoo, clientes/envases y todo el motor sin conexión, cliente y servidor. Los ajustes de catálogo y Compras que necesitan migración o envases los publica thrs mediante contrato; Ilian no edita esos módulos. Las fases tienen carriles paralelos; el detalle está en el plan de desarrollo. Esta reasignación documental no aprueba implementación.
 
 ---
 
@@ -24,13 +30,17 @@
 
 **Ruta propuesta:**
 
-| Etapa | Nombre | Resultado | Duración estimada* |
+| Etapa | Nombre | Resultado | Ventana propuesta* |
 | --- | --- | --- | --- |
-| 1 | **Control confiable** | La Lic. administra compras, precios e inventario de ambas sucursales y autoriza desde el celular. Odoo sigue como POS. | 8–10 semanas |
-| 2 | **Mostrador sin fallas** | POS completo, caja, modo sin internet probado y reportes. Se apaga Odoo. | 10–12 semanas |
-| 3 | **Plataforma vendible** | Centro de decisiones, CFDI, suscripciones, alta autoservicio, legal y pentest. Primer cliente externo. | 10–12 semanas |
+| 0 | **Base existente** | Registro, acceso, catálogo, proveedores, compras, precios y equipo construidos; revisión y aceptación pendientes. No acredita cierre de capabilities ni POS integrado. | Previa al arranque; no añade semanas |
+| 1 | **Control confiable** | La Lic. administra compras, precios e inventario de ambas sucursales y autoriza desde el celular. Odoo sigue como POS. | Construcción S1–8; piloto S9–12 |
+| 2 | **Mostrador sin fallas** | POS completo, caja, modo sin internet probado y reportes. Se apaga Odoo tras las pruebas. | Base desde S2; construcción hasta S12; transición S13–14 |
+| 3 | **Revisión final** | Validar seguridad, recuperación, flujos y entrega; sin módulos nuevos. | Transversal S1–16; cierre S15–16 |
+| 4 | **Innovación y plataforma, interna** | Soporte, imágenes, inteligencia, SaaS y servicios futuros; F4-01 a F4-26 del plan de desarrollo. | Después de S16; sin fecha comprometida |
 
-\* Hipótesis: dos personas con dedicación principal. Si es parcial, multiplicar por 1.5–2. El total de 28–34 semanas (6.5–8 meses) **rebasa los 5 meses de la propuesta**. La Lic. ya dijo que acepta más tiempo si se cubren las necesidades reales. Recalibrar después de los dos primeros bloques: en este proyecto el código sale rápido y el cuello de botella es la validación manual.
+\* Ventanas solapadas de un calendario propuesto, no duraciones sumables ni una estimación validada. Límite vigente: cuatro meses. Dos personas a 20 h por semana aportan 640 h en 16 semanas, incluidas coordinación y pruebas. Validar esfuerzo y ruta crítica en S2. La estimación anterior de 28–34 semanas y su factor de dedicación parcial dejan de ser calendario vigente. «Plataforma vendible» pasa al futuro (§10, después de la entrega); no se compromete dentro de estos cuatro meses.
+
+Fases 1–3 son el compromiso de entrega propuesto; Fase 0 reconoce la base por aceptar. Fase 4, sus códigos y estrategia permanecen internos. Los posibles extras enumerados para la Lic. son opciones sin fecha ni desarrollo comprometido. Las exportaciones nuevas E1-17, E1-11.11 y E2-12 deben estimarse dentro de D-20, sin atribuirles esfuerzo cero por ser un desglose.
 
 ---
 
@@ -131,6 +141,8 @@ No hay CI (`.github/` no existe), ni pruebas E2E, ni pruebas en `application/com
 | Todos | **Monitoreo continuo** | **Falta**: solo healthchecks | E1-02 |
 | Todos | **Bitácora y recuperación documentada** | **Falta** | E1-04, E1-02 |
 
+La tabla anterior rastrea la propuesta original; sus cinco meses no son el plazo vigente. La versión actual añade exportaciones administrativas e inventario en Fase 1 y detalle de ventas en Fase 2 (E1-17, E1-11.11 y E2-12). Su alcance y estimación deben quedar en capabilities antes de implementarse.
+
 **Riesgo:** los tres últimos se ofrecieron «desde el mes 1». No guardar datos reales de la clienta hasta cerrar E1-02.
 
 ### 4.2 Observaciones de la Lic.
@@ -139,10 +151,10 @@ No hay CI (`.github/` no existe), ni pruebas E2E, ni pruebas en `application/com
 | --- | --- | --- |
 | Manejo de dos sucursales | Ya hay precio y stock por sucursal. Faltan transferencias y vista consolidada. | E1-11, E1-12 |
 | Trabajar sin internet | Arquitectura en sección 7 | E2-01 a E2-03 |
-| Plataforma de administración | Sección 2 y centro de decisiones | E3-01 |
+| Plataforma de administración | Compras, inventario, buzón, autorización móvil y vista consolidada en la entrega; centro avanzado de decisiones queda futuro | E1-07/08/11/12/14; F4-13 futuro |
 | Módulo de empleados con atributos | **Ya existe.** Mostrarlo en la propuesta. Agregar turnos y límites. | E2-04, E2-06 |
 | Compra alimenta inventario y detecta cambio de precio | Ya existe. Falta cerrar el aviso y la aprobación móvil. | E1-07, E1-08 |
-| El empleado captura, la Lic. valida | El flujo existe. Falta rol «Capturista», porque la migración de ventas le quita compras a Cajero. | E1-05, E1-08 |
+| El empleado captura, la Lic. valida | El flujo existe. Ilian define necesidades del vendedor y thrs integra Capturista en permisos centrales. | E1-03b, E1-05, E1-08 |
 | Producto nuevo validado por la Lic. | **Hoy no se cumple**: la compra lo crea directo (`compra_repository.go:149`). | E1-08 |
 | Buzón de pendientes | No existe | E1-07 |
 | Monitoreo y autorizaciones por celular | Responsive sí. PWA y notificaciones no. | E1-07, E1-14 |
@@ -211,7 +223,7 @@ Hoy es la sección que más separa a Stockion de un sistema de administración r
 | 3 | Sin `terminal_id` ni `turno_id` | No hay corte ni trazabilidad por caja | Agregar columnas |
 | 4 | Una sola fecha, `creado_en` | No distingue cuándo se vendió y cuándo llegó | `vendida_en` y `recibida_en` |
 | 5 | Sin existencia, responde 409 | Una venta offline ya ocurrió y **no puede rechazarse** | Modo sincronización: acepta y crea incidencia |
-| 6 | La capability sugiere `CHECK stock_actual >= 0` | Rompe la sincronización | **No agregarlo.** Controlar en la ruta en línea. |
+| 6 | La capability sugiere `CHECK stock_actual >= 0` | Rompe la sincronización | **No agregarlo.** Control preventivo en mostrador, preservando venta local primero incluso con red y conciliación de operaciones legítimas. |
 | 7 | IVA fijo 16 % | Desglose incorrecto en ticket | Línea con foto de impuestos (E1-06) |
 | 8 | Sin descuento ni forma de pago múltiple | Limita caja real | Modelar `venta_pagos` desde ya aunque la pantalla espere |
 | 9 | Cantidades enteras | Sin granel ni venta por caja | Decidir antes de congelar el contrato |
@@ -225,6 +237,8 @@ Hoy es la sección que más separa a Stockion de un sistema de administración r
 - Límites por rol: descuento máximo, cancelación, ver costos. Un encargado no cancela sus propias ventas.
 - Plantillas de rol: Encargado, Capturista, Cajero, Contador.
 - Soporte con acceso temporal, autorizado por el cliente y auditado.
+
+La lista es inventario de producto, no alcance íntegro de Fases 1–3. MFA se ubica en F4-03 y soporte temporal en F4-02, según la versión actual del plan de desarrollo. Cambiar contraseña con sesión y gestionar sesiones aún requiere decisión de alcance y tarea explícita; no se confunde con endurecimiento E1-03b.
 
 ### 5.5 Deuda técnica
 
@@ -268,12 +282,14 @@ Atacar **solo al tocar la zona**, salvo E3-09.
 
 **Metas operativas (por confirmar):**
 
-| Meta | Etapa 1 | Etapa 3 |
+| Meta | Inicio de operación (propuesta) | Objetivo avanzado futuro, fuera del compromiso actual |
 | --- | --- | --- |
 | RPO, pérdida máxima de datos | 24 h, idealmente 1 h | ≤ 5 min |
 | RTO, tiempo de recuperación | 8 h | ≤ 1 h |
 | Simulacro de restauración | Una vez antes de datos reales | Trimestral |
 | Disponibilidad | Monitoreada | 99.5 %, con página de estado |
+
+Estas metas no están aceptadas. D-21 debe fijar objetivos de entrega antes de datos reales; no se exige ni se promete RPO ≤ 5 min o RTO ≤ 1 h por el solo hecho de llegar a Fase 3. La recuperación de ventas aún locales requiere una política separada de los respaldos del servidor.
 
 ---
 
@@ -283,7 +299,7 @@ Atacar **solo al tocar la zona**, salvo E3-09.
 
 Hay que convertir la frase en algo comprobable:
 
-> **Ninguna venta se detiene ni se pierde por falta de internet o caída del servidor, y al reconectar todo se concilia sin duplicados ni intervención técnica.**
+> **Las ventas válidas se guardan localmente en equipos preparados y se sincronizan sin duplicados al reconectar, dentro de la ventana sin conexión acordada. Las incidencias de conciliación quedan visibles para resolverlas.**
 
 **Límites que debemos decir con franqueza a la Lic.:**
 
@@ -291,6 +307,8 @@ Hay que convertir la frase en algo comprobable:
 - Dos cajas sin internet no se ven entre sí: pueden vender la misma última pieza.
 - Si se destruye un equipo con ventas sin sincronizar, esas ventas se pierden, salvo que exista respaldo local (decisión D-3).
 - Correos, cobros en línea, autorizaciones remotas y timbrado CFDI requieren internet: se encolan o esperan.
+- La captura de una referencia de tarjeta no garantiza autorización bancaria: sin señal o aprobación confirmada de la terminal no se registra tarjeta; la caja ofrece otra forma de pago. La falta de internet del POS y la conectividad de la terminal son condiciones distintas.
+- Falla del almacenamiento local, falta de espacio o daño del equipo requiere contingencia operativa; no se promete durabilidad ilimitada de una PWA.
 
 ### 7.2 Qué funciona sin conexión
 
@@ -299,7 +317,7 @@ Hay que convertir la frase en algo comprobable:
 | Iniciar turno en equipo registrado | Sí | PIN local |
 | Buscar producto y consultar precio | Sí | Última copia sincronizada, con antigüedad visible |
 | Vender en efectivo | Sí | Folio por terminal |
-| Vender con terminal bancaria independiente | Sí | Se captura referencia manual |
+| Registrar cobro con terminal bancaria independiente | Sí en Stockion si la terminal autoriza | Sin señal o aprobación de la terminal se bloquea tarjeta y se ofrece otra forma de pago; no se inventa una confirmación |
 | Imprimir y reimprimir ticket | Sí | Según hardware (E2-08) |
 | Cancelar venta del turno | Sí | Permiso de la copia local; revisión al sincronizar |
 | Abrir y cerrar caja, movimientos | Sí | El corte definitivo se confirma al sincronizar |
@@ -340,6 +358,8 @@ Go: sync_operaciones (único por terminal + op_id) ─► servicios de dominio
 5. **Una venta ocurrida no se rechaza.** Stock negativo, precio viejo o permiso revocado generan incidencia en el buzón.
 6. **Versionado de contrato.** Cada operación lleva `schema_version`. El servidor debe aceptar versiones anteriores durante la ventana máxima sin conexión. Un equipo puede volver tras días con cola vieja.
 
+**Contrato pendiente D-22:** «una venta ocurrida no se rechaza» se refiere a preservar operaciones legítimas para conciliar, sin permitir escrituras de otro negocio, operaciones fabricadas o credenciales sin verificar. Definir recepción normal, cuarentena y recuperación administrativa cuando la terminal esté revocada. Conservar lo cobrado y la operación original además de cualquier cálculo esperado; no sustituir silenciosamente los importes para hacerlos coincidir.
+
 **Política de conflictos:**
 
 | Dato | Autoridad | Resolución |
@@ -365,7 +385,7 @@ Go: sync_operaciones (único por terminal + op_id) ─► servicios de dominio
 
 - `GET /sync/snapshot` inicial paginado y comprimido (800–5,000 productos).
 - `GET /sync/cambios` con cursor incremental y tombstones.
-- **Cuidado:** una secuencia simple como cursor puede saltarse filas de transacciones abiertas. Usar bitácora de cambios escrita en la misma transacción y leer solo hasta un límite seguro (`pg_snapshot_xmin`).
+- **Cuidado:** una secuencia simple como cursor puede saltarse filas de transacciones abiertas. La bitácora debe escribirse en la misma transacción, pero falta definir el algoritmo completo de lectura, paginación y retención. `pg_snapshot_xmin` devuelve un ID de transacción, no una posición intercambiable con el ID secuencial de la bitácora. Exigir una prueba con transacciones que confirmen en orden inverso antes de cerrar el contrato. Referencia: [funciones de snapshots de PostgreSQL](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT).
 
 **Cambios concretos ya identificados en el repo:**
 
@@ -412,6 +432,8 @@ Bandeja única para el propietario, y la pieza más visible para la Lic. Tipos i
 
 Contrato: tabla `tareas_negocio` con tipo, prioridad, sucursal, referencia, responsable, estado y vencimiento. Los módulos publican mediante interfaz de aplicación, sin importar repositories ajenos (regla de `AGENTS.md`).
 
+En Fase 1 se definen los tipos y se integran Compras/Inventario; los avisos de caja y sincronización se activan al integrar sus módulos en Fase 2. Definir un tipo no acredita que ya exista su fuente de eventos.
+
 ### Caja y turnos (E2-04)
 
 Apertura con fondo, entradas y salidas con motivo, corte a ciegas (el cajero cuenta sin ver lo esperado), diferencia con autorización, cierre por forma de pago, historial. Un turno por terminal.
@@ -422,7 +444,11 @@ Cliente opcional en venta. Envase como producto ligado: entregado, recibido, pen
 
 ### Reportes y tablero (E2-09)
 
-Los cinco cortes prometidos. Cada uno con exportación a Excel y sucursal o consolidado. Base: ventas, costo foto y utilidad. Consultas sobre vistas o tablas resumen para no afectar la operación.
+Los cinco cortes prometidos, con Excel y sucursal o consolidado. Base: ventas, costo foto y margen bruto; no se promete utilidad neta sin gastos y comisiones. Consultas sobre vistas o tablas resumen para no afectar la operación. thrs mantiene reportes E2-09; Ilian mantiene detalle exportable de ventas/caja/envases en E2-12.
+
+### Exportaciones por sección (E1-17, E1-11.11 y E2-12)
+
+thrs mantiene compras, productos y precios en E1-17. Ilian mantiene existencias, kardex, mermas, conteos y transferencias en E1-11.11, y ventas, detalle de tickets, cortes, devoluciones y envases en E2-12. Formato común acordado, filtros, permisos, aislamiento por negocio y descarga registrada en bitácora; los costos solo se incluyen con permiso. El formato común no autoriza mezclar repositories ni crear un depósito `shared` o `utils`.
 
 ### Centro de decisiones (E3-01)
 
@@ -431,6 +457,8 @@ Ver sección 9.
 ### CFDI 4.0 (E3-04)
 
 Por PAC, sin construir timbrado propio. Factura por ticket, autofactura con QR del ticket, factura global de público en general. **Depende de E1-06**: claves SAT por producto y desglose real de IVA e IEPS. Validar con contador; la investigación hecha solo llegó a fuentes secundarias.
+
+Alcance futuro interno F4-23 (antes E3-04), sin oferta de CFDI a la Lic. por ahora. Antes de retirar Odoo debe confirmarse internamente qué vía de facturación existente seguirá disponible; eso no incorpora timbrado a la entrega.
 
 ### Otros
 
@@ -470,33 +498,39 @@ Tamaño: **S** ≤ 3 días · **M** ≤ 2 semanas · **L** ≤ 4 semanas. Cada b
 
 ### Etapa 1 — Control confiable
 
-**Objetivo:** datos reales seguros y la Lic. decidiendo desde el celular. El POS corre solo como piloto.
+**Objetivo:** datos reales seguros y la Lic. decidiendo desde el celular. El POS corre solo como piloto. Construcción propuesta S1–8; piloto de compras reales S9–12.
 
 | Código | Bloque | Tamaño | Depende de |
 | --- | --- | --- | --- |
 | E1-01 | Estabilización: suites verdes, integración en CI, GitHub Actions, dependencias, `govulncheck`, higiene de secretos | M | — |
-| E1-02 | Respaldos, restauración probada, monitoreo, errores centralizados y staging | M | — |
-| E1-03 | Migraciones versionadas | M | E1-01 |
-| E1-03b | Endurecimiento de autenticación y servidor (sección 6) | M | E1-01 |
+| E1-16 | Almacenamiento privado en R2, API S3 y credenciales separadas | S | — |
+| E1-02 | Respaldos, restauración probada, monitoreo, errores centralizados y staging | M | E1-16 |
+| E1-03 | Migraciones versionadas; línea base con esquema estabilizado de ventas | M | E1-01 y entrega de contrato/modelo E1-05; no aceptación fiscal final |
+| E1-03b | Endurecimiento de autenticación y servidor (sección 6); integración central de Capturista por thrs | M | E1-01 para cierre y permisos acordados con Ilian |
 | E1-04 | Bitácora de auditoría por negocio | M | E1-03 |
-| E1-05 | **Ajuste e integración de ventas** (sección 5.3), rol Capturista | M | E1-03 |
+| E1-05 | **Ajuste e integración de ventas** por Ilian (sección 5.3); necesidades de permisos para Capturista | M | Reglas de granel/cajas y contrato de dinero/impuestos; integración fiscal final con E1-06 |
 | E1-06 | Impuestos por producto; dinero exacto en compras y precios; corrección de SKU | L | E1-03 |
 | E1-07 | Buzón de decisiones | M | E1-04 |
 | E1-08 | Producto nuevo con validación, aprobación masiva, reglas de margen | M | E1-07 |
-| E1-09 | Cuadre contra ticket, foto adjunta, corrección de compra | M | — |
-| E1-10 | Órdenes de compra y sugerencia de compra | M | E1-05 |
-| E1-11 | Kardex, mermas, conteos, alertas, transferencias | L | E1-07 |
+| E1-09 | Cuadre contra ticket, foto adjunta, corrección de compra | M | E1-06, E1-16; interfaz de E1-07 |
+| E1-10 | Órdenes de compra y sugerencia de compra | M | Contratos de E1-05/06 para construir; proveedores reales para cierre |
+| E1-11 | Kardex, mermas, conteos, alertas, transferencias | L | Contratos de movimientos y E1-07; E1-06 y buzón real para cierre |
 | E1-12 | Inicio con pendientes y vista consolidada | S–M | E1-07 |
 | E1-13 | Migración Odoo real, limpieza de negativos, exportación a Odoo | M | E1-06, E1-11 |
-| E1-14 | PWA instalable, notificaciones push y aprobación móvil | M | E1-07 |
-| E1-15 | Piloto con la Lic., lista de observaciones | S + continuo | Todos |
+| E1-17 | Exportación administrativa de compras, productos y precios por thrs; formato acordado para inventario E1-11.11 de Ilian | S–M | E1-04, E1-06; módulos de inventario para su exportación real |
+| E1-14 | Aprobación móvil y push por thrs; base PWA instalable suministrada por Ilian en E2-01 | M | E1-07; base E2-01 para instalación y push |
+| E1-15 | Piloto con la Lic., lista de observaciones | S + continuo | E1-01 a E1-14, E1-16/17 y revisión legal previa a datos reales |
 
 **Orden recomendado:**
 
-1. **Semana 1–2:** E1-01, E1-02. Ninguna otra entrega va a datos reales antes.
-2. **Semana 2–4:** E1-03, E1-03b, E1-05 e iniciar E1-06.
-3. **Semana 4–8:** E1-04, E1-07, E1-08, E1-09, E1-14.
-4. **Semana 6–10:** E1-10, E1-11, E1-12, E1-13, E1-15.
+1. **Semana 1–2:** E1-01, E1-16, E1-02 y contrato E1-05; identificar hardware y preparar revisión legal inicial. Ninguna otra entrega va a datos reales antes de las compuertas operativas y de privacidad.
+2. **Semana 3–4:** estabilizar contrato/modelo E1-05 para E1-03, sin esperar aceptación fiscal completa; E1-03b, E1-06 y E1-04; contratos de buzón y sincronización. Ilian prueba recorrido mínimo sin conexión en staging.
+3. **Semana 5–8:** completar E1-07 a E1-14 y E1-17 según dependencias, incluida migración por Ilian; construir núcleo local en paralelo con contratos estables.
+4. **Semana 9–12:** E1-15 durante cuatro semanas; completar POS e integración sin conexión.
+
+Este orden es una propuesta pendiente de validar por horas y dependencias; el detalle vigente está en [plan de desarrollo](plan-desarrolladores.md).
+
+**Responsables de Fase 1:** thrs mantiene E1-01/02/03/03b/04/06/07/08/09/10/12/14/16/17 y coordina E1-15. Ilian mantiene E1-05/11/13, incluida exportación de inventario E1-11.11, y adelanta su propio trabajo de Fase 2, contabilizado una sola vez. Compras y autenticación ya no se reparten entre ambos.
 
 **Criterios de salida:**
 
@@ -506,6 +540,7 @@ Tamaño: **S** ≤ 3 días · **M** ≤ 2 semanas · **L** ≤ 4 semanas. Cada b
 - [ ] Catálogo real migrado con conteo inicial en ambas sucursales.
 - [ ] Una transferencia real entre sucursales cerrada.
 - [ ] Cuatro semanas de compras reales sin pérdida de datos.
+- [ ] Excel de compras, productos, precios e inventario con permisos y bitácora comprobados (E1-17 y E1-11.11).
 
 ### Etapa 2 — Mostrador sin fallas
 
@@ -513,17 +548,20 @@ Tamaño: **S** ≤ 3 días · **M** ≤ 2 semanas · **L** ≤ 4 semanas. Cada b
 
 | Código | Bloque | Tamaño | Depende de |
 | --- | --- | --- | --- |
-| E2-01 | Núcleo local: service worker, IndexedDB, copia y sincronización de bajada | L | E1-05, E1-14 |
-| E2-02 | Terminales, credencial de dispositivo, PIN | L | E2-01 |
-| E2-03 | Venta local primero: outbox, `/sync/lote`, incidencias, pruebas de caos | L | E2-01, E2-02 |
+| E2-01 | Núcleo local de Ilian: PWA, service worker, IndexedDB, copia y bajada | L | Contratos E1-05/06; no depende de E1-14 |
+| E2-02 | Terminales, credencial y PIN de thrs | L | Contratos de identidad/persistencia para construir; integración E2-01/03 para cierre |
+| E2-03 | Motor completo de Ilian: venta local, outbox, servidor `/sync/lote`, incidencias y caos | L | Contratos E2-01/02 y de dominios; integración real para cierre |
 | E2-04 | Caja y turnos | L | E2-03 |
-| E2-05 | Tarjeta, transferencia y pagos mixtos | S–M | E2-03 |
+| E2-05 | Tarjeta, transferencia y pagos mixtos; sin aprobación de terminal no se registra tarjeta y se ofrece otra forma de pago | S–M | E2-03 |
 | E2-06 | Devoluciones, descuentos con límite, mayoreo, venta por caja | M | E2-03 |
-| E2-07 | Clientes y envases retornables | L | E2-03 |
+| E2-07 | Clientes y envases retornables de Ilian, integrados en Ventas | L | E2-03; contrato de envase en catálogo con thrs |
 | E2-08 | Impresora térmica, cajón, escáner, etiquetas | M | E2-03 |
-| E2-09 | Reportes de 5 dimensiones y tablero | L | E2-04 |
-| E2-10 | Compras y conteos sin conexión; inicio de vendedor | M | E2-03 |
+| E2-09 | Reportes de 5 dimensiones y tablero de thrs | L | Contratos de consulta para construir; E2-04 y datos reales para cierre |
+| E2-10 | Compras sin conexión (E2-10a, thrs) y conteos sin conexión (E2-10b, Ilian); inicio de vendedor bajo Ventas E2-03b | M | Contrato de transporte para construir; integración E2-03 para cierre |
+| E2-12 | Exportación de ventas, detalle de tickets, cortes, devoluciones y envases por Ilian | S–M | E2-04 y formato E1-17 |
 | E2-11 | Piloto en una caja, luego todas; corte de Odoo; capacitación; manual | M + continuo | Todos |
+
+**Responsables de Fase 2:** thrs mantiene E2-02/09/10a; Ilian mantiene E2-01/03a/03b/04/05/06/07/08/10b/12 y coordina E2-11. Construir contra contratos permite avanzar por sección; no acredita integración terminada ni elimina dependencias reales.
 
 **Criterios de salida:**
 
@@ -532,8 +570,38 @@ Tamaño: **S** ≤ 3 días · **M** ≤ 2 semanas · **L** ≤ 4 semanas. Cada b
 - [ ] Captura de 10 productos solo con lector, en menos de 30 segundos.
 - [ ] Respuesta a escaneo < 100 ms.
 - [ ] Aceptación escrita de la Lic.
+- [ ] Excel de ventas, tickets y cortes cuadra con reportes E2-09; devoluciones y envases exportables con permisos (E2-12).
+- [ ] Vía de facturación existente confirmada antes de retirar Odoo, sin incorporar CFDI a Stockion.
 
-### Etapa 3 — Plataforma vendible
+### Etapa 3 — Revisión final
+
+La seguridad y las pruebas comienzan con cada entrega. S15–16 se reservan para la revisión de la versión final, restauración cronometrada, correcciones, documentación y aceptación. El trabajo es F3-01 a F3-10 del [plan de desarrollo](plan-desarrolladores.md). La preparación legal se realiza antes de datos reales, y se revisa nuevamente al cierre. No se agregan módulos.
+
+thrs coordina seguridad, aislamiento, carga del servidor, restauración y cierre documental; Ilian coordina E2E, pruebas sin conexión, hardware y cierre operativo. Cada quien corrige deuda y observaciones de su sección. Las revisiones son cruzadas; los archivos no pasan a ser compartidos.
+
+### Fase 4 — Innovación y plataforma (interna, fuera de los cuatro meses)
+
+El inventario vigente F4-01 a F4-26 está en [Fase 4 del plan de desarrollo](plan-desarrolladores.md#fase-4-innovación-y-plataforma-interna). Incluye soporte, imágenes, inteligencia, cobros, pedidos y lealtad, además de los temas previos. No se presenta a la Lic. esta fase, sus códigos ni estrategia SaaS; los posibles extras de su plan son opciones sin compromiso de desarrollo o fecha. No pertenece a las 640 horas ni a las Fases 1–3.
+
+Los códigos E3 de la tabla siguiente son referencias históricas, no un segundo alcance que se deba construir o contabilizar. Correspondencia con el inventario vigente:
+
+| Código anterior | Código vigente |
+| --- | --- |
+| E3-01 | F4-13 y F4-14 |
+| E3-02 | F4-15 |
+| E3-03 | F4-16 |
+| E3-04 | F4-23, CFDI interno sin oferta actual a la Lic. |
+| E3-05 | F4-19 |
+| E3-06 | F4-24 |
+| E3-07 | F4-04 |
+| E3-08 | F4-05 |
+| E3-09 | F4-12 |
+| E3-10 | F4-06 |
+| E3-11 | F4-07 |
+| E3-12 | F4-01 y F4-02 |
+| E3-13 | F4-08 |
+
+F4-03, F4-09/10/11, F4-17/18, F4-20/21/22 y F4-25/26 amplían el inventario futuro. Cada idea requiere priorización, estimación y capability aprobada. No se convierte en condición de entrega a la Lic. por estar documentada aquí.
 
 **Objetivo:** un segundo negocio se da de alta solo y paga.
 
@@ -553,7 +621,7 @@ Tamaño: **S** ≤ 3 días · **M** ≤ 2 semanas · **L** ≤ 4 semanas. Cada b
 | E3-12 | Soporte: ayuda, tickets, estado del servicio, acceso temporal auditado | M | E1-04 |
 | E3-13 | Pentest externo y remediación | M | Todo lo anterior |
 
-**Criterios de salida:**
+**Criterios de salida para ofrecer plataforma a clientes externos:** no exigen construir las 26 ideas ni son criterios de Fases 1–3. El alcance comercial futuro se decide antes de comprometerlo.
 
 - [ ] Negocio nuevo operando en menos de 1 hora sin nuestra ayuda.
 - [ ] Pentest sin críticas ni altas abiertas.
@@ -601,23 +669,34 @@ Una capability no se cierra sin:
 | Datos iniciales sucios | Alta | Medio | Conteo inicial asistido (E1-13) |
 | Costos de terceros: WhatsApp, IA, PAC | Media | Medio | Modelarlos en los planes |
 
-### Decisiones pendientes
+### Registro de decisiones
+
+Fuente operativa: [preguntas](preguntas.md). Las decisiones comerciales y técnicas sin respuesta siguen abiertas; recomendar una opción no equivale a aprobarla.
 
 | ID | Decisión | Recomendación | Quién |
 | --- | --- | --- | --- |
-| D-1 | ¿Aceptar 3 etapas y orden? | Sí | thrs, Ilian |
-| D-2 | ¿Ajustar ventas antes de integrar? | **Sí** | thrs, Ilian |
+| D-1 | ¿Aceptar tres fases solapadas con revisión final como Fase 3? | thrs acepta las tres fases; pendiente de Ilian. Fase 4 interna posterior | thrs, Ilian |
+| D-2 | ¿Ajustar ventas antes de integrar? | **Resuelta: sí**, según plan de desarrollo | thrs, Ilian |
 | D-3 | ¿PWA o envoltura de escritorio (Tauri)? | PWA primero. Tauri solo si impresión silenciosa, cajón o durabilidad en disco lo exigen. Prueba técnica al iniciar E2-01 | Equipo |
 | D-4 | Ventana máxima sin conexión | 72 h | Lic. + equipo |
-| D-5 | ¿Granel y venta por caja desde ya? | Preguntar a la Lic. antes de E1-05: cambia el contrato | Lic. |
+| D-5 | ¿Granel y venta por caja desde ya? | **Resuelta: ambos**, según plan de desarrollo; unidades y factores reales pendientes de la Lic. | Equipo y Lic. |
 | D-6 | Herramienta de migraciones | `goose` | Equipo |
-| D-7 | Dedicación semanal real de cada quien | Necesaria para calendario | thrs, Ilian |
+| D-7 | Dedicación semanal real de cada quien | **Base: 20 h por persona; 40 h del equipo.** Propuesta posterior de thrs: 20–30 h por persona; aumento pendiente de Ilian, sin contar 960 h como compromiso | thrs, Ilian |
 | D-8 | ¿Cuántas cajas por sucursal y qué hardware? | Preguntar a la Lic. | Lic. |
 | D-9 | ¿Sin red entre cajas, o servidor local en tienda? | Sin servidor local; el riesgo se atiende con incidencias | Equipo |
-| D-10 | ¿La Lic. necesita facturar desde el sistema y cuándo? | Preguntar. Podría adelantar E3-04 | Lic. |
+| D-10 | ¿La Lic. necesita facturar desde el sistema y cuándo? | **Decidido:** no se ofrece por ahora; E3-04/F4-23 queda interna | Equipo |
 | D-11 | Lotes y caducidad: ¿FEFO real? | Alertas sí; descuento por lote solo si lo pide | Lic. |
 | D-12 | Nombre y marca comercial | Stockion, con búsqueda de marca ante IMPI antes de vender | thrs, Ilian |
 | D-13 | Figura legal: quién firma, factura y responde | Definir antes del contrato. Carpeta `contrato/` aún no contiene contrato | thrs, Ilian |
+| D-14 | Almacenamiento | **Resuelta: R2**, según plan de desarrollo; compatibilidad S3 no cubre toda la configuración de retención | Equipo |
+| D-15 | Tarjeta | **Resuelta: terminal independiente**; conectividad de la terminal se valida aparte | Equipo y Lic. |
+| D-16 | Recargas y servicios | **Resuelta: plus fuera de entrega** | Equipo |
+| D-17 | Pentest externo | **Resuelta: pruebas propias por ahora**, reconsiderar antes de cliente externo | Equipo |
+| D-18 | Plazo máximo | **Resuelta: cuatro meses**, usuario 2026-11-02 | Equipo |
+| D-19 | Inicio y fecha límite | Propuesta de thrs: 2026-11-10 a 2027-03-10; hito a 16 semanas el 2027-03-02. Pendiente de Ilian y de agenda con la Lic. | thrs, Ilian y Lic. |
+| D-20 | Alcance completo frente a capacidad disponible | Pendiente; estimar por persona incluyendo nuevas exportaciones. Base 640 h; aumento de dedicación no se presupone | thrs, Ilian y Lic. |
+| D-21 | Pérdida de datos y recuperación aceptables | Pendiente: RPO/RTO, retención, llaves y recuperación de archivos y operaciones locales | Equipo y Lic. |
+| D-22 | Conciliación segura de operaciones pendientes | Pendiente: identidad, pertenencia, terminal revocada, reloj, importes originales y cuarentena | Equipo |
 
 ### Preguntas para la Lic.
 
@@ -625,7 +704,7 @@ Una capability no se cierra sin:
 2. ¿Cuánto tiempo suele fallar el internet y con qué frecuencia?
 3. ¿Vende a granel, por caja, a crédito o a mayoreo?
 4. ¿Los envases se controlan con cliente, con proveedor o ambos?
-5. ¿Necesita facturar? ¿Cuántas al mes?
+5. ¿Tiene contador que pueda revisar impuestos por producto? La vía actual de facturación se confirma internamente antes del corte de Odoo; no se ofrece CFDI de Stockion.
 6. ¿Qué decisiones toma cada semana y qué número revisa primero?
 7. ¿Qué autorizaciones puede delegar a un encargado?
 8. ¿Conocería a otros dueños dispuestos a probar el sistema?
@@ -634,27 +713,30 @@ Una capability no se cierra sin:
 
 ## 13. Insumos para el documento de la clienta
 
-Lo trabajamos después. Queda anotado para no perderlo.
+El [plan para la Lic.](plan-lic.md) ya existe. Las respuestas comerciales de thrs están en [preguntas](preguntas.md), pendientes de Ilian y de acuerdo con la Lic.; se registran aquí como propuestas, no condiciones aprobadas. La revisión histórica cerrada no aprueba estas propuestas.
 
 **Formato que propuso Ilian (`thrs/propuestaClinicaDental.pdf`):** lista concreta de funciones por sección, hospedaje con precio anual, plazo, inversión separada por módulo, costos variables de terceros, IVA, garantía y tarifa por hora. Es más claro y más protector que la presentación actual, porque **dice exactamente qué se entrega**.
 
-**Lo que debe responder y hoy no responde:**
+**Propuestas actuales y puntos aún por cerrar:**
 
-| Tema | Falta definir |
+| Tema | Estado actual |
 | --- | --- |
-| $10,000 de infraestructura | La propuesta cubre «durante el proyecto». ¿Cuánto cuesta después? |
-| Calendario de pagos | La Lic. preguntó dos veces. Recomiendo por entrega aceptada, no por tiempo. |
-| Plazo | Por etapas, con criterios de aceptación |
-| Precio | **$50,000 fue calculado para un alcance mucho menor.** Decidir si se mantiene como precio de cliente fundador a cambio de caso de éxito y referencias, o si se reabre. Decidirlo con D-7 en la mano. |
+| Infraestructura | thrs propone incluir un año dentro del total de $60,000. Falta desde qué fecha corre, servicios/límites incluidos y costo posterior; no depende automáticamente de captar otros clientes |
+| Calendario de pagos | Última propuesta de thrs: Fase 0 $10,000; Fase 2 $20,000; Fase 3 $10,000; cuatro mensualidades de $5,000 después, con soporte/correcciones puntuales. Suma $60,000. Falta fecha de primera mensualidad, vencimientos y aceptación de ambas partes; Fase 1 sin cobro separado |
+| Plazo | Máximo cuatro meses; propuesta 2026-11-10 a 2027-03-10, hito interno 2027-03-02. Fechas y viabilidad pendientes de acuerdo |
+| Precio | Propuesta vigente de thrs: $60,000 total con infraestructura. La cifra anterior de $50,000 de desarrollo más $10,000 de infraestructura se conserva solo como antecedente; no se suma otra vez |
 | Fuera de alcance | Lista explícita |
 | Cambios | Proceso y tarifa por hora |
 | Garantía | Plazo y qué cubre |
-| Terceros | WhatsApp, PAC, IA, SMS, dominio |
+| Terceros | Distinguir servicios incluidos en el año de infraestructura y servicios de extras futuros; no incorporar PAC o IA a la entrega de Fases 1–3 por listarlos |
 | IVA | Decir si está incluido |
 | Datos | Son de la Lic.; exportación al terminar; confidencialidad |
 | Propiedad intelectual | Ya propuesta: el equipo la conserva. Formalizar en contrato. |
-| Soporte posterior | Horario, tiempo de respuesta, costo |
+| Soporte posterior | Última propuesta: incluido durante cuatro mensualidades de $5,000; falta delimitar correcciones, garantía, horario y respuesta. La propuesta previa «hasta fin de 2027» queda como antecedente, no como vigencia simultánea |
+| Beneficio de cliente fundador | thrs propone plus sin costo, condicionado a viabilidad económica; duración y condición sin resolver. Cinco años no equivalen a $60,000 con los precios tentativos de $450–800/mes: serían $27,000–48,000. Elegir duración fija o crédito definido, qué incluye y qué se paga después; sin prometer soporte indefinido |
 | Sin internet | Usar la definición y límites de 7.1. **No prometer «1000 %» sin esas condiciones.** |
+
+Estos importes son conciliación de las propuestas internas, no cotización aprobada ni análisis de rentabilidad. El plan de la Lic. conserva los compromisos funcionales y fechas como propuestas; condiciones de precio, pagos y soporte se incorporan tras acordarlas. Fase 0 sigue pendiente de su aceptación y no equivale a cerrar automáticamente cada capability anterior.
 
 **Mensaje clave para ella:** *«Ya tomamos sus observaciones: esto es una plataforma de administración, no otro punto de venta»*, mostrando la tabla 4.2 con lo ya construido, especialmente Equipo, Compras y Autorización de precios.
 
@@ -662,11 +744,17 @@ Lo trabajamos después. Queda anotado para no perderlo.
 
 ## 14. Siguientes pasos
 
-1. thrs e Ilian revisan este documento y resuelven D-1, D-2 y D-7.
+1. thrs e Ilian ratifican D-1, D-19 y D-20, reparto, capacidad base y eventual aumento de D-7; resolver propuestas comerciales antes de presentarlas como acordadas.
 2. Hacer las preguntas de la sección 12 a la Lic., sobre todo granel y cajas, antes de congelar ventas.
 3. Crear las capabilities de E1-01 y E1-02 y someterlas a aprobación.
 4. Crear la capability de E1-05 con Ilian.
-5. Después, redactar el documento para la clienta.
+5. Actualizar el documento existente para la clienta con las condiciones que se acuerden, sin incluir Fase 4 ni términos internos de SaaS.
+
+### Verificación de consistencia documental (2026-11-02)
+
+Se contrastaron completos el maestro, el plan de desarrollo, el plan para la Lic. y las preguntas modificadas por thrs. Se alinearon fases, responsables, exportaciones y referencias E3/F4; se distinguieron propuestas pendientes de acuerdos, y contrato/modelo inicial de la integración fiscal final.
+
+Verificados enlaces y anclas locales, correspondencias de códigos, cálculo de fechas y sumas de pagos/capacidad. No se ejecutaron pruebas funcionales ni se modificó código. Siguen abiertos D-7 (aumento), D-19 (ratificación), D-20 (esfuerzo), condiciones comerciales y las preguntas técnicas sin respuesta. El análisis histórico cerrado se conserva sin reabrirlo.
 
 ---
 

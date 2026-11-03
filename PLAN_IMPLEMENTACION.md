@@ -11,6 +11,12 @@
 
 ## Estado del trabajo
 
+Planeación de cierre revisada el 2026-11-02: [plan de desarrollo](contrato/plan-desarrolladores.md), [decisiones pendientes](contrato/preguntas.md) y [análisis previo, cerrado y conservado como antecedente](contrato/revision-plan.md). Base confirmada: **20 horas semanales por persona** y **máximo cuatro meses**. thrs propone aumentar a 20–30 h y trabajar del 2026-11-10 al 2027-03-10; falta acuerdo de Ilian y agenda con la Lic. Se conserva horizonte de 16 semanas y 640 h, sin asumir el escenario de 960 h; hito interno propuesto el 2027-03-02. Esta actualización documental no aprueba capabilities, no cierra entregas ni autoriza implementación.
+
+Reparto revisado antes del arranque, solicitado por el usuario: thrs conserva almacenamiento y asume autenticación; concentra Compras/Precios y administración. Ilian concentra Ventas, Inventario y motor sin conexión cliente/servidor. Cada fase tiene trabajo paralelo por sección, contratos de integración y responsable de archivos centrales; el detalle sigue como propuesta para revisión con Ilian. Este plan todavía no ha iniciado.
+
+Conciliación con las adecuaciones del usuario: Ilian también mantiene migración de Odoo y clientes/envases. Fase 0 reconoce base existente por aceptar; Fases 1–3 concentran la entrega; Fase 4 es interna y posterior. Maestro actualizado con E1-17, exportación de inventario E1-11.11 y E2-12; esfuerzo y capacidad pendientes en D-20. Precio, pagos, soporte e infraestructura se conservan como propuestas internas en `preguntas.md` y maestro §13, sin incorporarlos como condiciones aprobadas de la clienta. La revisión histórica cerrada no se reabre.
+
 [Planes actuales](capabilities/planes-actuales.md) concentra pendientes, fuentes y límites de autorización: producción segura, correo real/revisión Resend, verificación de plataforma, marca, sistema visual y revisiones de entregas.
 
 Capability 20: [Arreglos de invitaciones y permisos](capabilities/historial/20-arreglos-invitaciones.md). **Cerrada** el 2026-10-20 con aceptación final del usuario. Aprobada el 2026-10-19: seis temas implementados, PostgreSQL/Mailpit/Chromium comprobados; ampliar permisos de roles existentes requiere autorización específica adicional. ID 19 reservado para el borrador de precios por sucursal.
@@ -67,7 +73,7 @@ Los planes previos, fases, guías, respaldos y capturas se conservan en [capabil
 
 ## Convención y ciclo
 
-1. Crear plan directamente en `capabilities/NN-nombre.md` (siguiente ID libre: `35`; `34` usado por Compras; `33` usado por puesto Cajero; `32` usado por Inicio; `30` usado por Equipo; `26` usado por observaciones; `19` reservado para precios), sin nuevas carpetas.
+1. Crear plan directamente en `capabilities/NN-nombre.md`, sin nuevas carpetas. Confirmar y reservar el ID con ambos colaboradores: el diagnóstico de `contrato/plan-maestro.md` registra `35–37` usados en otras ramas y propone `38` como candidato, pendiente de comprobar antes de usarlo. `34` usado por Compras; `33` por puesto Cajero; `32` por Inicio; `30` por Equipo; `26` por observaciones; `19` reservado para precios.
 2. Definir alcance, reglas, contratos, pruebas, criterios de aceptación, tareas y decisiones; comenzar en `Borrador` o `En revisión`.
 3. Registrar aprobación explícita del usuario antes de pasar a `Aprobada` e implementar.
 4. Mantener avance y verificaciones; usar `En implementación` y después `Verificada` según corresponda.
