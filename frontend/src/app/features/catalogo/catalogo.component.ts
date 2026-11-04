@@ -3,7 +3,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
-import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { ContextoService } from '../../contexto/contexto.service';
@@ -30,7 +29,6 @@ const NO_PARENT_CATEGORY = '__sin_categoria_padre__';
     FormsModule,
     ReactiveFormsModule,
     InputTextModule,
-    TableModule,
     TextareaModule,
     SelectModule,
   ],
@@ -54,7 +52,7 @@ export class CatalogoComponent {
   readonly categoryParentFilter = signal<string | null>(null);
   readonly unitTypeFilter = signal<string | null>(null);
   readonly catalogPageFirst = signal(0);
-  readonly catalogStatusOptions: SelectOption[] = [
+  readonly catalogStatusOptions: Array<{ label: string; value: CatalogStatusFilter }> = [
     { label: 'Todos', value: 'all' },
     { label: 'Activos', value: 'active' },
     { label: 'Inactivos', value: 'inactive' },
@@ -75,6 +73,28 @@ export class CatalogoComponent {
   ]);
   readonly filteredItems = computed(() =>
     this.items().filter((item) => this.matchesCatalogFilters(item)),
+  );
+  readonly catalogRowsOptions = [10, 25, 50];
+  readonly catalogRows = signal(10);
+  readonly paginatedItems = computed(() =>
+    this.filteredItems().slice(this.catalogPageFirst(), this.catalogPageFirst() + this.catalogRows()),
+  );
+  readonly catalogPage = computed(() => Math.floor(this.catalogPageFirst() / this.catalogRows()));
+  readonly catalogTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredItems().length / this.catalogRows())),
+  );
+  readonly catalogRange = computed(() => {
+    const total = this.filteredItems().length;
+    if (!total) return 'Mostrando 0 registros';
+    return `Mostrando ${this.catalogPageFirst() + 1} a ${Math.min(total, this.catalogPageFirst() + this.catalogRows())} de ${total} registros`;
+  });
+  /** Cuántos registros caen en cada pestaña de estado. */
+  readonly catalogStatusCounts = computed<Record<CatalogStatusFilter, number>>(() => {
+    const activos = this.items().filter((item) => item.activo).length;
+    return { all: this.items().length, active: activos, inactive: this.items().length - activos };
+  });
+  private readonly categoryNames = computed(
+    () => new Map(this.items().map((item) => [item.id, item as Categoria])),
   );
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -191,6 +211,53 @@ export class CatalogoComponent {
 
   onCatalogTablePage(first: number): void {
     this.catalogPageFirst.set(first);
+  }
+
+  setCatalogRows(rows: number | string): void {
+    this.catalogRows.set(Number(rows) || 10);
+    this.resetCatalogPagination();
+  }
+
+  goToCatalogPage(page: number): void {
+    const last = this.catalogTotalPages() - 1;
+    this.onCatalogTablePage(Math.min(Math.max(0, page), last) * this.catalogRows());
+  }
+
+  initials(item: CatalogRecord): string {
+    return item.nombre
+      .trim()
+      .split(/\s+/)
+      .map((word) => word.charAt(0))
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  unitTypeLabel(tipo: string): string {
+    return this.unitTypeOptions.find((option) => option.value === tipo)?.label ?? tipo;
+  }
+
+  /** «1 kg = 1000 g» usando la unidad base del mismo tipo, o «Unidad base» si factor es 1. */
+  unitEquivalence(unit: UnidadMedida): string {
+    if (Number(unit.factor_a_base) === 1) return 'Unidad base';
+    const base = this.items().find(
+      (item) => (item as UnidadMedida).tipo === unit.tipo && Number((item as UnidadMedida).factor_a_base) === 1,
+    ) as UnidadMedida | undefined;
+    return `1 ${unit.simbolo} = ${unit.factor_a_base} ${base?.simbolo ?? 'de la base'}`;
+  }
+
+  /** Ruta «Padre › Hija» para mostrar dónde vive cada categoría. */
+  categoryPath(category: Categoria): string[] {
+    const path = [category.nombre];
+    let parentId = category.categoria_padre_id;
+    // Tope de niveles para no ciclar si los datos traen una referencia circular.
+    while (parentId && path.length < 6) {
+      const parent = this.categoryNames().get(parentId);
+      if (!parent) break;
+      path.unshift(parent.nombre);
+      parentId = parent.categoria_padre_id;
+    }
+    return path;
   }
 
   isFormPage(): boolean {

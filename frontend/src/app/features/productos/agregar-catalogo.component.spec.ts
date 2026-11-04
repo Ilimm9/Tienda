@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
 import { AgregarCatalogoComponent } from './agregar-catalogo.component';
 import { ProductosService } from './productos.service';
 
@@ -31,6 +32,7 @@ describe('AgregarCatalogoComponent', () => {
         { provide: ProductosService, useValue: service },
         { provide: ContextoService, useValue: { negocio: signal({ id: 'negocio-1' }), sucursal: signal({ id: 'sucursal-2', nombre: 'SUR' }) } },
         { provide: Router, useValue: router },
+        { provide: VistasService, useValue: { visible: () => true } },
       ],
     });
     fixture = TestBed.createComponent(AgregarCatalogoComponent);

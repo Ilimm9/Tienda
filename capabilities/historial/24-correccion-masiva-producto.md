@@ -50,7 +50,7 @@ Que la vista previa y el resultado de la carga masiva se lean de un vistazo aunq
 ### 6. Costo redondeado a 2 decimales
 - El Excel de la clienta guarda `8.380000000000001` aunque se vea `8.38`; antes se rechazaba por tener más de 4 decimales (20 filas del archivo 06).
 - Decisión del usuario (2026-10-22): el costo de la importación se redondea a 2 decimales. Cualquier número finito no negativo se acepta y se redondea (`8.380000000000001` → 8.38; `12.12345` → 12.12). Se siguen rechazando el texto, los negativos y los valores fuera de rango (más de 10 dígitos enteros).
-- Modifica la regla de precisión de la importación de la [capability 19](../19-historial-costos-precios-sucursal/CAPABILITY.md) (antes: hasta 4 decimales o error). La instrucción de la plantilla se actualiza.
+- Modifica la regla de precisión de la importación de la [capability 19](../19-historial-costos-precios-sucursal.md) (antes: hasta 4 decimales o error). La instrucción de la plantilla se actualiza.
 
 ### 7. Stock negativo
 - Decisión del usuario (2026-10-22): se sigue rechazando con el error actual. Sin cambios de código.

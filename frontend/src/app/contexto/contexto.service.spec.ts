@@ -50,8 +50,10 @@ describe('ContextoService', () => {
 
   it('revalida al recuperar foco, deduplica eventos y retira asignaciones revocadas', () => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const ahora = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     service.inicializar().subscribe();
     responder([negocio(negocioA, sucursales, ['precios.ver'])]);
+    ahora.mockReturnValue(1_000_000 + 61_000);
     window.dispatchEvent(new Event('focus'));
     document.dispatchEvent(new Event('visibilitychange'));
     responder([]);
@@ -59,6 +61,19 @@ describe('ContextoService', () => {
     expect(service.sucursal()).toBeNull();
     expect(service.permisos().size).toBe(0);
     expect(service.negocios()).toEqual([]);
+    vi.restoreAllMocks();
+  });
+
+  it('no vuelve a consultar al regresar a la pestaña antes de un minuto', () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const ahora = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    service.inicializar().subscribe();
+    responder([negocio(negocioA, sucursales)]);
+    ahora.mockReturnValue(1_000_000 + 30_000);
+    window.dispatchEvent(new Event('focus'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    http.expectNone(opcionesUrl);
+    expect(service.negocio()?.id).toBe(negocioA);
     vi.restoreAllMocks();
   });
 

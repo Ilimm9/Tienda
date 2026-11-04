@@ -43,7 +43,9 @@
               />
             </th>
             <th>Producto</th>
-            <th>Categoría</th>
+            @if (categoriasVisibles()) {
+              <th>Categoría</th>
+            }
             <th>Código</th>
           </tr>
         </thead>
@@ -66,11 +68,13 @@
                   <small>{{ producto.variantes_faltantes }} variantes</small>
                 }
               </td>
-              <td>{{ producto.categoria ?? '—' }}</td>
+              @if (categoriasVisibles()) {
+                <td>{{ producto.categoria ?? '—' }}</td>
+              }
               <td>{{ producto.codigo_barras ?? producto.sku ?? '—' }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="4" class="catalog-empty">Sin coincidencias.</td></tr>
+            <tr><td [attr.colspan]="categoriasVisibles() ? 4 : 3" class="catalog-empty">Sin coincidencias.</td></tr>
           }
         </tbody>
       </table>

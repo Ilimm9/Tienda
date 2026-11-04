@@ -12,6 +12,8 @@ Base vigente según código local. Actualizado: 2026-10-19.
 
 La contraseña exige mayúscula, número y símbolo; longitud validada entre 8 y 72 bytes. OTP y credenciales de sesión se guardan como hashes; vigencia, intentos y reenvíos dependen de configuración. No confundir crear una cuenta con crear un negocio.
 
+Sesión en el frontend (2026-11-03): los guards consultan `/auth/me` una sola vez y reutilizan el usuario en memoria al navegar; el backend sigue validando la sesión en cada petición. Un `401` de cualquier endpoint (salvo `/auth/*` e `/invitaciones/*`, que lo manejan sus pantallas) con sesión en memoria limpia el usuario y lleva al login. El contexto (`/contexto/opciones`) se guarda entre navegaciones y se revalida al volver a la pestaña solo si pasó más de un minuto; un cambio de contexto en otra pestaña se revalida de inmediato.
+
 ## Tablas principales
 
 | Tabla | Uso |

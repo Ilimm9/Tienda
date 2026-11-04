@@ -21,8 +21,10 @@ type ConfiguracionNegocio struct {
 	HoraCorteParcialCaja                      *time.Time `gorm:"type:time" json:"hora_corte_parcial_caja,omitempty"`
 	PreciosMayoreoHabilitados                 bool       `gorm:"not null;default:true" json:"precios_mayoreo_habilitados"`
 	DiasDevolucionEnvasePredeterminados       *int       `json:"dias_devolucion_envase_predeterminados,omitempty"`
-	CreadoEn                                  time.Time  `gorm:"autoCreateTime" json:"creado_en"`
-	ActualizadoEn                             time.Time  `gorm:"autoUpdateTime" json:"actualizado_en"`
+	// SeccionesOcultas guarda, separadas por coma, las secciones que el negocio ocultó en Configuración > Vistas.
+	SeccionesOcultas string    `gorm:"type:varchar(255);not null;default:''" json:"-"`
+	CreadoEn         time.Time `gorm:"autoCreateTime" json:"creado_en"`
+	ActualizadoEn    time.Time `gorm:"autoUpdateTime" json:"actualizado_en"`
 }
 
 func (ConfiguracionNegocio) TableName() string { return "configuraciones_negocio" }

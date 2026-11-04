@@ -6,7 +6,7 @@ import { AuthService } from '../auth/auth.service';
 import { fueraDePlataformaGuard, plataformaGuard } from './plataforma.guard';
 
 describe('plataformaGuard', () => {
-  const auth = { me: vi.fn() };
+  const auth = { asegurarSesion: vi.fn() };
   const router = { createUrlTree: vi.fn(() => new UrlTree()) };
 
   beforeEach(() => {
@@ -19,12 +19,12 @@ describe('plataformaGuard', () => {
   }
 
   it('acepta ADMIN_LECTURA', async () => {
-    auth.me.mockReturnValue(of({ autenticado: true, usuario: { id: '1', correo: 'admin@ejemplo.com', roles_plataforma: ['ADMIN_LECTURA'] } }));
+    auth.asegurarSesion.mockReturnValue(of({ id: '1', correo: 'admin@ejemplo.com', roles_plataforma: ['ADMIN_LECTURA'] }));
     await expect(firstValueFrom(run())).resolves.toBe(true);
   });
 
   it('rechaza roles de negocio', async () => {
-    auth.me.mockReturnValue(of({ autenticado: true, usuario: { id: '1', correo: 'propietario@ejemplo.com', roles_plataforma: [] } }));
+    auth.asegurarSesion.mockReturnValue(of({ id: '1', correo: 'propietario@ejemplo.com', roles_plataforma: [] }));
     await expect(firstValueFrom(run())).resolves.toBeInstanceOf(UrlTree);
     expect(router.createUrlTree).toHaveBeenCalledWith(['/sin-acceso']);
   });

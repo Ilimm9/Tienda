@@ -216,7 +216,7 @@ func TestSurtidoPorSucursal(t *testing.T) {
 
 	t.Run("fila repetida en el archivo y datos compartidos distintos", func(t *testing.T) {
 		filas := []domain.ProductImportRow{
-			{Fila: 2, Nombre: "Cloro", PrecioVenta: 21, StockInicial: 3, Marca: "Otra marca"},
+			{Fila: 2, Nombre: "Cloro", PrecioVenta: 21, StockInicial: 3, Categoria: "Otra categoría"},
 			{Fila: 3, Nombre: "Cloro", PrecioVenta: 22, StockInicial: 3},
 		}
 		prepared, preview, _, err := repo.ValidateProductImport(negocio.ID, sucursalB.ID, filas)

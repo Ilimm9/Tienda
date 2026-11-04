@@ -201,4 +201,19 @@ func TestCompraProveedoresVarios(t *testing.T) {
 			t.Fatal("se aceptaron dos proveedores principales")
 		}
 	})
+
+	t.Run("el listado solo incluye las compras de la sucursal pedida", func(t *testing.T) {
+		otra := negociodomain.Sucursal{ID: uuid.New(), NegocioID: negocio.ID, Codigo: "SUC-002", Nombre: "B", Activo: true}
+		if err := db.Create(&otra).Error; err != nil {
+			t.Fatal(err)
+		}
+		propias, err := compras.List(negocio.ID, sucursal.ID)
+		if err != nil || len(propias) == 0 {
+			t.Fatalf("compras de A = %d, err %v", len(propias), err)
+		}
+		ajenas, err := compras.List(negocio.ID, otra.ID)
+		if err != nil || len(ajenas) != 0 {
+			t.Fatalf("compras de B = %d, err %v", len(ajenas), err)
+		}
+	})
 }

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize, Observable, tap } from 'rxjs';
+import { finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -23,6 +23,8 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/auth`;
   readonly currentUser = signal<AuthenticatedUser | null>(null);
+  // Comparte una sola consulta de sesión entre guards que se resuelven en la misma navegación.
+  private sesionEnVuelo: Observable<AuthenticatedUser> | null = null;
   readonly isPlatformAdmin = computed(() =>
     this.currentUser()?.roles_plataforma?.includes('ADMIN_LECTURA') ?? false,
   );
@@ -55,10 +57,34 @@ export class AuthService {
     return this.http.post<MessageResponse>(`${this.url}/restablecer-contrasena`, payload);
   }
 
+  /** Consulta la sesión en la API y actualiza el usuario en memoria (sin sesión, lo limpia). */
   me(): Observable<SessionResponse> {
-    return this.http
-      .get<SessionResponse>(`${this.url}/me`)
-      .pipe(tap(({ usuario }) => this.currentUser.set(usuario)));
+    return this.http.get<SessionResponse>(`${this.url}/me`).pipe(
+      tap({
+        next: ({ usuario }) => this.currentUser.set(usuario),
+        error: () => this.currentUser.set(null),
+      }),
+    );
+  }
+
+  /**
+   * Sesión para los guards: se consulta una vez y luego se reutiliza en cada navegación.
+   * Si la sesión vence, la API responde 401 y el interceptor limpia el usuario y lleva al login.
+   */
+  asegurarSesion(): Observable<AuthenticatedUser> {
+    const usuario = this.currentUser();
+    if (usuario) return of(usuario);
+    this.sesionEnVuelo ??= this.me().pipe(
+      map(({ usuario }) => usuario),
+      finalize(() => (this.sesionEnVuelo = null)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    return this.sesionEnVuelo;
+  }
+
+  /** La sesión terminó fuera del flujo de logout (por ejemplo, expiró en el servidor). */
+  sesionTerminada(): void {
+    this.currentUser.set(null);
   }
 
   logout(): Observable<void> {

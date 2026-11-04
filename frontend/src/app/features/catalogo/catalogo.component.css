@@ -46,72 +46,6 @@
     color: var(--text-muted);
 }
 
-.catalog-filters {
-    display: grid;
-    gap: 1rem;
-    margin: 1.5rem 0 1rem;
-    padding: 1rem 1.15rem;
-    border: 1px solid var(--border);
-    border-radius: .55rem;
-    background: var(--surface-raised);
-}
-
-.catalog-filters-grid {
-    display: grid;
-    grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(10rem, 1fr));
-    gap: .75rem;
-}
-
-.catalog-filter-field,
-.catalog-filter-search {
-    display: grid;
-    gap: .35rem;
-    color: var(--text-muted);
-    font-size: .75rem;
-    font-weight: 600;
-}
-
-.catalog-filter-search-input {
-    position: relative;
-}
-
-.catalog-filter-search-input i {
-    position: absolute;
-    z-index: 1;
-    top: 50%;
-    left: .7rem;
-    color: var(--text-muted);
-    transform: translateY(-50%);
-}
-
-.catalog-filter-search-input input,
-.catalog-filter-field p-select {
-    width: 100%;
-}
-
-.catalog-filter-search-input input {
-    padding-left: 2rem;
-}
-
-.catalog-filters-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.catalog-filters-summary p,
-.catalog-filter-empty {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: .8rem;
-}
-
-.catalog-filter-empty {
-    padding: 2rem;
-    text-align: center;
-}
-
 .eyebrow {
     margin: 0;
     color: var(--primary);
@@ -121,53 +55,19 @@
     text-transform: uppercase;
 }
 
-.catalog-state,
-.empty-catalog {
+.catalog-state {
     min-width: 0;
     margin-top: 34px;
+    padding: 2rem;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);
 }
 
-.catalog-state {
-    padding: 2rem;
-}
-
 .error-state,
 .form-error {
     color: var(--danger);
-}
-
-.empty-catalog {
-    display: grid;
-    justify-items: center;
-    gap: .75rem;
-    min-height: 300px;
-    padding: 32px;
-    text-align: center;
-}
-
-.empty-catalog h2 {
-    margin: .5rem 0 0;
-    font-size: 1.2rem;
-}
-
-.empty-catalog p {
-    margin: 0 0 1rem;
-    color: var(--text-muted);
-}
-
-.empty-icon {
-    display: grid;
-    width: 4rem;
-    height: 4rem;
-    place-items: center;
-    border-radius: 50%;
-    color: var(--primary);
-    background: var(--primary-soft);
-    font-size: 1.5rem;
 }
 
 .primary-button,
@@ -197,60 +97,6 @@
 .primary-button:disabled,
 .secondary-button:disabled {
     opacity: .6;
-}
-
-.icon-button {
-    display: inline-grid;
-    width: 2.25rem;
-    height: 2.25rem;
-    padding: 0;
-    place-items: center;
-    border: 0;
-    border-radius: .4rem;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.icon-button:hover {
-    color: var(--primary);
-    background: var(--primary-soft);
-}
-
-.icon-button--danger:hover {
-    color: var(--danger);
-    background: var(--danger-soft, var(--surface-hover));
-}
-
-.catalog-actions-cell {
-    white-space: nowrap;
-}
-
-.catalog-row-actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .35rem;
-    white-space: nowrap;
-}
-
-.status {
-    display: inline-flex;
-    min-height: 1.75rem;
-    padding: .3rem .65rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    color: var(--success);
-    background: var(--success-soft);
-    font-size: .75rem;
-    font-weight: 600;
-    line-height: 1;
-}
-
-.status.inactive {
-    color: var(--text-muted);
-    background: var(--surface-hover);
 }
 
 .catalog-form {
@@ -315,13 +161,77 @@
     .form-grid {
         grid-template-columns: 1fr;
     }
+}
 
-    .catalog-filters-grid {
-        grid-template-columns: 1fr;
-    }
+/* ---------- Lista (kit global + piezas propias) ---------- */
+.catalog-filter-field {
+    flex: 1 1 190px;
+    min-width: 0;
+}
 
-    .catalog-filters-summary {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+.catalog-filter-field p-select {
+    width: 100%;
+}
+
+.catalogo-icono {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--primary-hover);
+    background: var(--primary-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.catalogo-icono--inactivo {
+    color: var(--text-muted);
+    background: var(--tone-neutral);
+}
+
+.catalogo-simbolo {
+    display: inline-block;
+    min-width: 40px;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.catalogo-tipo[data-tipo='PESO'] { color: var(--tone-butter-text); background: var(--tone-butter); }
+.catalogo-tipo[data-tipo='CANTIDAD'],
+.catalogo-tipo[data-tipo='EMPAQUE'] { color: var(--tone-sage-text); background: var(--tone-sage); }
+
+.catalogo-ruta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-subtle);
+    font-size: 11px;
+}
+
+.catalogo-ruta__parte {
+    padding: 2px 9px;
+    border-radius: 7px;
+    color: var(--text-body);
+    background: var(--surface-hover);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.catalogo-ruta__parte--actual {
+    color: var(--primary-hover);
+    background: var(--primary-soft);
+}
+
+.catalogo-filas {
+    width: 76px;
+    height: 36px;
 }

@@ -15,41 +15,49 @@ const ZONA = 'America/Mexico_City';
 const CONSEJOS = [
   {
     icono: 'pi-file-excel',
-    titulo: 'Carga productos sin preparar catálogos',
-    texto:
-      'No necesitas dar de alta marcas, categorías, unidades ni proveedores antes. Sube tu Excel y los nombres nuevos se crean con una sola confirmación.',
-    accion: 'Abrir carga masiva',
+    titulo: 'Sube tu Excel tal cual',
+    texto: 'Marcas, categorías y proveedores nuevos se crean solos.',
+    accion: 'Carga masiva',
     ruta: '/productos/importar',
   },
   {
     icono: 'pi-barcode',
-    titulo: 'El código de barras es opcional',
-    texto: 'Si un producto no trae código, regístralo igual con su nombre. Puedes agregar el código después, cuando lo tengas a la mano.',
+    titulo: '¿Sin código de barras?',
+    texto: 'Regístralo igual. El código lo agregas después.',
     accion: 'Ver productos',
     ruta: '/productos',
   },
   {
     icono: 'pi-map-marker',
-    titulo: 'Una sucursal nueva empieza vacía',
-    texto: 'El catálogo es de toda la empresa. Usa «Agregar del catálogo» para surtir otra sucursal sin volver a capturar productos.',
+    titulo: 'Surte otra sucursal',
+    texto: 'Toma productos del catálogo, sin volver a capturarlos.',
     accion: 'Ver productos',
     ruta: '/productos',
   },
   {
     icono: 'pi-shopping-bag',
-    titulo: 'Compra lo que no tienes registrado',
-    texto: 'Si al registrar una compra el producto no existe, usa «Crear nuevo…» ahí mismo. Un producto puede tener varios proveedores.',
+    titulo: '¿El producto no existe?',
+    texto: 'Créalo ahí mismo, desde la compra.',
     accion: 'Ver compras',
     ruta: '/compras',
   },
   {
     icono: 'pi-tag',
-    titulo: 'Cada sucursal tiene su precio',
-    texto: 'Al editar un producto, el precio se guarda en la sucursal activa y queda registrado en el historial de precios.',
+    titulo: 'Un precio por sucursal',
+    texto: 'Cada cambio queda guardado en el historial.',
     accion: 'Ver productos',
     ruta: '/productos',
   },
 ];
+
+interface Paso {
+  titulo: string;
+  icono: string;
+  hecho: boolean;
+  nota: string;
+  accion: string;
+  ruta: string;
+}
 
 interface Avance {
   productos: boolean;
@@ -103,10 +111,32 @@ export class HomeComponent {
     return avance ? 2 + Number(avance.productos) + Number(avance.equipo) + Number(avance.compras) : 0;
   });
   readonly mostrarPasos = computed(() => this.avance() !== null && this.hechos() < 5);
+  readonly pasos = computed<Paso[]>(() => {
+    const a = this.avance();
+    if (!a) return [];
+    return [
+      { titulo: 'Empresa', icono: 'pi-building', hecho: true, nota: `${this.contexto.negocio()?.nombre_comercial ?? 'Tu empresa'} ya está registrada.`, accion: 'Ver negocio', ruta: '/negocios' },
+      { titulo: 'Sucursal', icono: 'pi-map-marker', hecho: true, nota: `${this.contexto.sucursal()?.nombre ?? 'Tu sucursal'} ya abrió sus puertas.`, accion: 'Ver sucursales', ruta: '/sucursales' },
+      a.productos
+        ? { titulo: 'Productos', icono: 'pi-box', hecho: true, nota: 'Tu catálogo ya tiene productos.', accion: 'Ver productos', ruta: '/productos' }
+        : { titulo: 'Productos', icono: 'pi-box', hecho: false, nota: 'Súbelos uno por uno o todos con tu Excel.', accion: 'Cargar productos', ruta: '/productos/importar' },
+      a.equipo
+        ? { titulo: 'Equipo', icono: 'pi-users', hecho: true, nota: 'Ya tienes equipo trabajando contigo.', accion: 'Ver equipo', ruta: '/equipo/empleados' }
+        : { titulo: 'Equipo', icono: 'pi-users', hecho: false, nota: 'Invita a quien te ayuda en la tienda.', accion: 'Invitar', ruta: '/equipo/empleados/nuevo' },
+      a.compras
+        ? { titulo: 'Primera compra', icono: 'pi-shopping-bag', hecho: true, nota: 'Ya registraste compras.', accion: 'Ver compras', ruta: '/compras' }
+        : { titulo: 'Primera compra', icono: 'pi-shopping-bag', hecho: false, nota: 'Registra lo que compras y tu inventario se arma solo.', accion: 'Registrar compra', ruta: '/compras/nueva' },
+    ];
+  });
+  /** Primer paso pendiente: se resalta y se elige al entrar. */
+  readonly pasoSiguiente = computed(() => this.pasos().findIndex((p) => !p.hecho));
+  readonly pasoElegido = signal<number | null>(null);
+  readonly pasoActivo = computed(() => this.pasos()[this.pasoElegido() ?? this.pasoSiguiente()] ?? null);
 
   constructor() {
     effect((onCleanup) => {
       this.avance.set(null);
+      this.pasoElegido.set(null);
       const negocio = this.contexto.negocio();
       const sucursal = this.contexto.sucursal();
       if (this.alta() !== 'listo' || !negocio || !sucursal || negocio.tipo_miembro !== 'propietario') return;
@@ -114,7 +144,7 @@ export class HomeComponent {
       const consulta = forkJoin({
         productos: this.productos.listByBusiness(negocio.id, sucursal.id),
         equipo: this.empleados.listar(negocio.id),
-        compras: this.compras.list(negocio.id),
+        compras: this.compras.list(negocio.id, sucursal.id),
       }).subscribe({
         next: (r) =>
           this.avance.set({ productos: hayRegistros(r.productos), equipo: hayRegistros(r.equipo), compras: hayRegistros(r.compras) }),
@@ -122,6 +152,10 @@ export class HomeComponent {
       });
       onCleanup(() => consulta.unsubscribe());
     });
+  }
+
+  elegirPaso(indice: number): void {
+    this.pasoElegido.set(indice);
   }
 
   moverConsejo(paso: number): void {

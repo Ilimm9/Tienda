@@ -225,18 +225,13 @@ type ProductImportCatalogProposal struct {
 
 // ProductImportRow is the spreadsheet representation of a product.
 type ProductImportRow struct {
-	Fila            int
-	Nombre          string
-	Categoria       string
-	Marca           string
-	Proveedor       string
-	Descripcion     string
-	Presentacion    string
-	Contenido       *float64
-	UnidadContenido string
-	UnidadMedida    string
-	PrecioVenta     float64
-	CostoProveedor  float64
+	Fila           int
+	Nombre         string
+	Categoria      string
+	Proveedor      string
+	UnidadMedida   string
+	PrecioVenta    float64
+	CostoProveedor float64
 	// CostoCapturado distingue una celda de costo vacía de un costo 0.
 	CostoCapturado bool
 	StockInicial   float64
@@ -281,6 +276,9 @@ type CreateImportedProductInput struct {
 	Variantes       []ProductVariantAttributeInput
 	CostoCapturado  bool
 	UsuarioID       uuid.UUID
+	// FamiliaClave liga una variante importada a una familia existente encontrada
+	// por nombre (adecuación 1); vacía, la familia se calcula con los datos de la fila.
+	FamiliaClave string
 }
 
 type CatalogImportBrandRow struct {

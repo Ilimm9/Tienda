@@ -10,14 +10,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
 import { ImportReportComponent } from './import-report.component';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
@@ -59,13 +58,11 @@ interface VariantDimension {
     PuedeDirective,
     ImportReportComponent,
     CommonModule,
-    ButtonModule,
     CheckboxModule,
     FormsModule,
     ReactiveFormsModule,
     InputTextModule,
     SelectModule,
-    TableModule,
     TextareaModule,
   ],
   templateUrl: './productos.component.html',
@@ -75,6 +72,11 @@ export class ProductosComponent {
   readonly P = PERMISOS;
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
+  private readonly vistas = inject(VistasService);
+  /** Configuración > Vistas: un negocio puede ocultar Marcas y Categorías (sus datos se conservan). */
+  readonly marcasVisibles = computed(() => this.vistas.visible('marcas'));
+  readonly categoriasVisibles = computed(() => this.vistas.visible('categorias'));
+  readonly columnasLista = computed(() => (this.categoriasVisibles() ? 7 : 6));
   // Cambiar el precio al editar requiere precios.autorizar; sin él se conserva el vigente.
   // Crear e importar productos es solo del propietario (capability 31).
   readonly esPropietario = computed(() => this.contexto.negocio()?.tipo_miembro === 'propietario');
@@ -112,13 +114,29 @@ export class ProductosComponent {
     { id: 'Agotado', nombre: 'Agotado' },
   ];
   readonly productTypeOptions = [
-    { id: 'all', nombre: 'Todos' },
+    { id: 'all', nombre: 'Todos los tipos' },
     { id: 'simple', nombre: 'Productos simples' },
     { id: 'variants', nombre: 'Con variantes' },
   ];
   readonly filteredProducts = computed(() =>
     this.products().filter((product) => this.matchesProductFilters(product)),
   );
+  readonly productRowsOptions = [10, 25, 50];
+  readonly productRows = signal(10);
+  readonly expandedProducts = signal<ReadonlySet<string>>(new Set());
+  readonly paginatedProducts = computed(() =>
+    this.filteredProducts().slice(this.productPageFirst(), this.productPageFirst() + this.productRows()),
+  );
+  readonly productPage = computed(() => Math.floor(this.productPageFirst() / this.productRows()));
+  readonly productTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredProducts().length / this.productRows())),
+  );
+  readonly productRange = computed(() => {
+    const total = this.filteredProducts().length;
+    if (!total) return '0 de 0';
+    const first = this.productPageFirst() + 1;
+    return `${first}–${Math.min(total, this.productPageFirst() + this.productRows())} de ${total}`;
+  });
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
@@ -1045,12 +1063,13 @@ export class ProductosComponent {
     const brandControl = this.productForm.controls.marca_id;
     const categoryControl = this.productForm.controls.categoria_id;
 
-    if (product.marca && this.brandsLoaded && (brandControl.pristine || !brandControl.value)) {
+    if (this.marcasVisibles() && product.marca && this.brandsLoaded && (brandControl.pristine || !brandControl.value)) {
       const brand = this.findCatalogMatch(this.brands(), product.marca);
       if (brand) brandControl.setValue(brand.id);
       else warnings.push(`La marca "${product.marca}" no existe en el catálogo local.`);
     }
     if (
+      this.categoriasVisibles() &&
       product.categoria &&
       this.categoriesLoaded &&
       (categoryControl.pristine || !categoryControl.value)
@@ -1148,6 +1167,47 @@ export class ProductosComponent {
     this.productPageFirst.set(first);
   }
 
+  setProductRows(rows: number | string): void {
+    this.productRows.set(Number(rows) || 10);
+    this.resetProductPagination();
+  }
+
+  goToProductPage(page: number): void {
+    const last = this.productTotalPages() - 1;
+    this.onProductTablePage(Math.min(Math.max(0, page), last) * this.productRows());
+  }
+
+  toggleVariants(product: ProductRow): void {
+    const next = new Set(this.expandedProducts());
+    if (next.has(product.id)) next.delete(product.id);
+    else next.add(product.id);
+    this.expandedProducts.set(next);
+  }
+
+  isExpanded(product: ProductRow): boolean {
+    return this.expandedProducts().has(product.id);
+  }
+
+  /** Iniciales para la miniatura cuando el producto no tiene imagen. */
+  productInitials(product: ProductRow): string {
+    return product.nombre.trim().slice(0, 2).toUpperCase() || '—';
+  }
+
+  /** Tono fijo por producto para que la miniatura no cambie entre recargas. */
+  productTone(product: ProductRow): string {
+    const tones = ['salvia', 'durazno', 'mantequilla', 'lavanda'];
+    return tones[product.nombre.length % tones.length];
+  }
+
+  statusPill(status: string | null | undefined): string {
+    const pills: Record<string, string> = {
+      'en-stock': 'pastilla--exito',
+      'bajo-stock': 'pastilla--atencion',
+      agotado: 'pastilla--peligro',
+    };
+    return pills[this.getStatusClass(status)] ?? 'pastilla--neutra';
+  }
+
   private resetProductPagination(): void {
     this.productPageFirst.set(0);
   }
@@ -1166,8 +1226,8 @@ export class ProductosComponent {
 
   private matchesProductFilters(product: ProductRow): boolean {
     const query = this.normalizeProductFilter(this.productSearch());
-    const category = this.productCategoryFilter();
-    const brand = this.productBrandFilter();
+    const category = this.categoriasVisibles() ? this.productCategoryFilter() : null;
+    const brand = this.marcasVisibles() ? this.productBrandFilter() : null;
     const provider = this.productProviderFilter();
     const status = this.productStatusFilter();
     const type = this.productTypeFilter();

@@ -993,12 +993,17 @@ type variantBaseInput struct {
 	UnidadContenido *string
 	Presentacion    *string
 	ImagenURL       *string
+	// FamiliaClave, si viene, es la familia existente a la que se agrega la variante.
+	FamiliaClave string
 }
 
 // resolveVariantBase is the sole owner of a variant family base product.  It
 // reuses the parent on subsequent manual entries and spreadsheet rows.
 func (r *ProductRepository) resolveVariantBase(tx *gorm.DB, businessID uuid.UUID, input variantBaseInput) (domain.FamiliaProducto, domain.Producto, bool, error) {
-	familyKey := productBaseKey(input.Nombre, input.Presentacion, input.MarcaID, input.CategoriaID)
+	familyKey := input.FamiliaClave
+	if familyKey == "" {
+		familyKey = productBaseKey(input.Nombre, input.Presentacion, input.MarcaID, input.CategoriaID)
+	}
 	var family domain.FamiliaProducto
 	err := tx.Where("negocio_id = ? AND clave = ?", businessID, familyKey).First(&family).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1036,7 +1041,8 @@ func (r *ProductRepository) resolveVariantBase(tx *gorm.DB, businessID uuid.UUID
 	if err != nil {
 		return family, domain.Producto{}, false, err
 	}
-	if !sameVariantBaseData(tx, product, input) {
+	// Una variante importada a una familia existente hereda los datos del producto base.
+	if input.FamiliaClave == "" && !sameVariantBaseData(tx, product, input) {
 		return family, domain.Producto{}, false, errors.New("los datos compartidos no coinciden con el producto base existente")
 	}
 	return family, product, false, nil
@@ -1602,13 +1608,9 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		return nil, result, nil, errors.New("la sucursal no pertenece al negocio o está inactiva")
 	}
 	var categories []domain.Categoria
-	var brands []domain.Marca
 	var providers []domain.Proveedor
 	var units []domain.UnidadMedida
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&categories).Error; err != nil {
-		return nil, result, nil, err
-	}
-	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&brands).Error; err != nil {
 		return nil, result, nil, err
 	}
 	if err := r.db.Where("negocio_id = ? AND activo = TRUE", businessID).Find(&providers).Error; err != nil {
@@ -1618,14 +1620,10 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		return nil, result, nil, err
 	}
 	categoryIDs := make(map[string]uuid.UUID, len(categories))
-	brandIDs := make(map[string]uuid.UUID, len(brands))
 	providerIDs := make(map[string]uuid.UUID, len(providers))
 	unitIDs := make(map[string]uuid.UUID, len(units))
 	for _, item := range categories {
 		categoryIDs[catalogImportKey(item.Nombre)] = item.ID
-	}
-	for _, item := range brands {
-		brandIDs[catalogImportKey(item.Nombre)] = item.ID
 	}
 	for _, item := range providers {
 		providerIDs[catalogImportKey(item.Nombre)] = item.ID
@@ -1652,12 +1650,11 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		Nombre            string
 		Presentacion      string
 		FamiliaProductoID *uuid.UUID
-		MarcaID           *uuid.UUID
 		CategoriaID       *uuid.UUID
 	}
 	var existingProducts []productIdentity
 	if err := r.db.Table("productos AS p").
-		Select("pn.id AS oferta_id, p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id, p.marca_id, (SELECT pc.categoria_id FROM producto_categorias pc WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC LIMIT 1) AS categoria_id").
+		Select("pn.id AS oferta_id, p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.familia_producto_id, (SELECT pc.categoria_id FROM producto_categorias pc WHERE pc.producto_id = p.id ORDER BY pc.es_principal DESC LIMIT 1) AS categoria_id").
 		Joins("JOIN producto_negocio pn ON pn.producto_id = p.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Where("p.activo = TRUE").
 		Scan(&existingProducts).Error; err != nil {
@@ -1666,9 +1663,8 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	existingCodeSet := make(map[string]struct{}, len(existingCodes))
 	existingCodeOffers := make(map[string]uuid.UUID, len(existingCodes))
 	seenFileCodes := make(map[string]struct{})
-	seenNamePresentations := make(map[string]struct{})
+	seenSimpleNames := make(map[string]struct{})
 	seenVariantIdentities := make(map[string]struct{})
-	existingSimpleOffers := make(map[string]uuid.UUID, len(existingProducts))
 	existingSimpleData := make(map[uuid.UUID]productIdentity, len(existingProducts))
 	for _, code := range existingCodes {
 		existingCodeSet[code.Codigo] = struct{}{}
@@ -1676,31 +1672,69 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			existingCodeOffers[code.Codigo] = *code.OfertaID
 		}
 	}
+	// Adecuación 1: el Excel ya no trae Presentación ni Marca. El código de
+	// barras manda; sin código, un producto simple se busca por su nombre, o por
+	// «nombre presentación» cuando se registró con presentación en el formulario.
+	existingSimpleByName := make(map[string][]uuid.UUID, len(existingProducts))
+	addSimpleName := func(key string, offer uuid.UUID) {
+		for _, current := range existingSimpleByName[key] {
+			if current == offer {
+				return
+			}
+		}
+		existingSimpleByName[key] = append(existingSimpleByName[key], offer)
+	}
 	for _, product := range existingProducts {
-		if product.FamiliaProductoID == nil {
-			existingSimpleOffers[productImportNamePresentationKey(product.Nombre, product.Presentacion)] = product.OfertaID
-			existingSimpleData[product.OfertaID] = product
+		if product.FamiliaProductoID != nil {
+			continue
+		}
+		existingSimpleData[product.OfertaID] = product
+		addSimpleName(catalogImportKey(product.Nombre), product.OfertaID)
+		if presentation := strings.TrimSpace(product.Presentacion); presentation != "" {
+			addSimpleName(catalogImportKey(product.Nombre+" "+presentation), product.OfertaID)
 		}
 	}
 	var existingVariants []struct {
-		OfertaID     uuid.UUID  `gorm:"column:oferta_id"`
-		Nombre       string     `gorm:"column:nombre"`
-		Presentacion string     `gorm:"column:presentacion"`
-		MarcaID      *uuid.UUID `gorm:"column:marca_id"`
-		CategoriaID  *uuid.UUID `gorm:"column:categoria_id"`
-		Clave        string     `gorm:"column:clave"`
+		OfertaID uuid.UUID `gorm:"column:oferta_id"`
+		Nombre   string    `gorm:"column:nombre"`
+		Familia  string    `gorm:"column:familia"`
+		Clave    string    `gorm:"column:clave"`
 	}
 	if err := r.db.Table("producto_variantes AS pv").
-		Select("pn.id AS oferta_id, p.nombre, COALESCE(p.presentacion, '') AS presentacion, p.marca_id, pc.categoria_id, pv.clave").
+		Select("pn.id AS oferta_id, p.nombre, f.clave AS familia, pv.clave").
 		Joins("JOIN productos p ON p.id = pv.producto_id").
-		Joins("LEFT JOIN producto_categorias pc ON pc.producto_id = p.id AND pc.es_principal = TRUE").
+		Joins("JOIN familias_producto f ON f.id = pv.familia_producto_id").
 		Joins("JOIN producto_negocio pn ON pn.producto_variante_id = pv.id AND pn.negocio_id = ? AND pn.activo = TRUE", businessID).
 		Where("pv.activo = TRUE").Scan(&existingVariants).Error; err != nil {
 		return nil, result, nil, err
 	}
 	existingVariantOffers := make(map[string]uuid.UUID, len(existingVariants))
+	variantOffers := make(map[uuid.UUID]struct{}, len(existingVariants))
 	for _, variant := range existingVariants {
-		existingVariantOffers[productBaseKey(variant.Nombre, importOptionalString(variant.Presentacion), variant.MarcaID, variant.CategoriaID)+"\x00"+variant.Clave] = variant.OfertaID
+		existingVariantOffers[variant.Familia+"\x00"+variant.Clave] = variant.OfertaID
+		variantOffers[variant.OfertaID] = struct{}{}
+	}
+	// Familias de variantes por nombre del producto base.
+	var families []struct {
+		Clave  string `gorm:"column:clave"`
+		Nombre string `gorm:"column:nombre"`
+	}
+	if err := r.db.Table("familias_producto AS f").
+		Select("DISTINCT f.clave, p.nombre").
+		Joins("JOIN productos p ON p.familia_producto_id = f.id AND p.activo = TRUE").
+		Where("f.negocio_id = ? AND f.activo = TRUE", businessID).Scan(&families).Error; err != nil {
+		return nil, result, nil, err
+	}
+	familiesByName := make(map[string][]string, len(families))
+	for _, family := range families {
+		key := catalogImportKey(family.Nombre)
+		duplicate := false
+		for _, current := range familiesByName[key] {
+			duplicate = duplicate || current == family.Clave
+		}
+		if !duplicate {
+			familiesByName[key] = append(familiesByName[key], family.Clave)
+		}
 	}
 	// Estado de la sucursal activa: qué ofertas ya están en su surtido y con qué stock y precio.
 	var branchRows []struct {
@@ -1719,63 +1753,44 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	for _, item := range branchRows {
 		branchState[item.ProductoNegocioID] = importBranchState{stock: item.Stock, price: item.Precio, cost: item.Costo}
 	}
-	seenVariantBases := make(map[string]variantBaseInput)
-	seenVariantProviders := make(map[string]*uuid.UUID)
+	// Las variantes de una misma familia en el archivo comparan sus catálogos por
+	// nombre normalizado: así un catálogo nuevo (aún sin ID en la vista previa)
+	// se valida igual que al importar.
+	type fileVariantBase struct {
+		category string
+		unit     string
+		provider string
+	}
+	seenVariantBases := make(map[string]fileVariantBase)
 	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
 	proposals := make(map[string]domain.ProductImportCatalogProposal)
 
 	for _, row := range rows {
 		hasError := false
 		hasDuplicate := false
-		pendingCatalogs := make([]domain.ProductImportCatalogProposal, 0, 4)
+		pendingCatalogs := make([]domain.ProductImportCatalogProposal, 0, 3)
 		addError := func(field, reason string) {
 			hasError = true
 			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: field, Motivo: reason})
 		}
+		addDuplicate := func(field, reason string) {
+			hasDuplicate = true
+			addError(field, reason)
+		}
 		addWarning := func(field, reason string) {
 			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: row.Fila, Nombre: row.Nombre, Campo: field, Motivo: reason})
 		}
-		namePresentationKey := productImportNamePresentationKey(row.Nombre, row.Presentacion)
-		// A row with variant attributes is identified by its attribute combination.
-		// Empty barcode values must not turn different flavours/colours into
-		// duplicate simple products.
+		nameKey := catalogImportKey(row.Nombre)
+		_, codeInFile := seenFileCodes[row.CodigoBarras]
+		_, codeKnown := existingCodeSet[row.CodigoBarras]
+		codeKnown = row.CodigoBarras != "" && codeKnown
+		codeOffer, codeHasOffer := existingCodeOffers[row.CodigoBarras]
 		// existingOffer es la oferta del catálogo que corresponde a la fila, si existe.
 		existingOffer := uuid.Nil
-		if len(row.Variantes) == 0 {
-			if _, exists := seenNamePresentations[namePresentationKey]; exists {
-				hasDuplicate = true
-				field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
-				addError(field, reason)
-			} else if offer, exists := existingSimpleOffers[namePresentationKey]; exists {
-				codeOffer, codeKnown := existingCodeOffers[row.CodigoBarras]
-				switch {
-				case row.CodigoBarras == "" || (codeKnown && codeOffer == offer):
-					existingOffer = offer
-				case !codeKnown:
-					// Mismo nombre con otro código: probablemente es una variante (regla de la 24).
-					hasDuplicate = true
-					field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
-					addError(field, reason)
-				default:
-					hasDuplicate = true
-					addError("Código de barras", "pertenece a otro producto del negocio")
-				}
-			}
-		}
-		if row.CodigoBarras != "" && !hasError {
-			if _, exists := seenFileCodes[row.CodigoBarras]; exists {
-				hasDuplicate = true
-				addError("Código de barras", "está repetido en el archivo")
-			} else if _, exists := existingCodeSet[row.CodigoBarras]; exists && len(row.Variantes) == 0 && existingOffer == uuid.Nil {
-				// Producto simple identificado solo por su código.
-				codeOffer, hasOffer := existingCodeOffers[row.CodigoBarras]
-				if _, simple := existingSimpleData[codeOffer]; hasOffer && simple {
-					existingOffer = codeOffer
-				} else {
-					hasDuplicate = true
-					addError("Código de barras", "ya está registrado en el negocio")
-				}
-			}
+		familyKey := ""
+		existingFamily := false
+		if row.CodigoBarras != "" && codeInFile {
+			addDuplicate("Código de barras", "está repetido en el archivo")
 		}
 		var categoryID *uuid.UUID
 		if row.Categoria != "" {
@@ -1784,15 +1799,6 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Categoría", Nombre: strings.TrimSpace(row.Categoria)})
 			} else {
 				categoryID = &id
-			}
-		}
-		var brandID *uuid.UUID
-		if row.Marca != "" {
-			id, ok := brandIDs[catalogImportKey(row.Marca)]
-			if !ok {
-				pendingCatalogs = append(pendingCatalogs, domain.ProductImportCatalogProposal{Tipo: "Marca", Nombre: strings.TrimSpace(row.Marca)})
-			} else {
-				brandID = &id
 			}
 		}
 		var providerID *uuid.UUID
@@ -1813,34 +1819,71 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				unitID = &id
 			}
 		}
-		if len(row.Variantes) > 0 {
+		if !hasError && len(row.Variantes) == 0 {
+			_, nameInFile := seenSimpleNames[nameKey]
+			namedOffers := existingSimpleByName[nameKey]
+			switch {
+			case codeKnown:
+				// El código manda: la fila es el producto que ya tiene ese código.
+				if _, simple := existingSimpleData[codeOffer]; codeHasOffer && simple {
+					existingOffer = codeOffer
+					if data := existingSimpleData[codeOffer]; catalogImportKey(data.Nombre) != nameKey &&
+						catalogImportKey(strings.TrimSpace(data.Nombre+" "+data.Presentacion)) != nameKey {
+						addWarning("Nombre", fmt.Sprintf("el código pertenece a «%s»; se conservan los datos del catálogo", data.Nombre))
+					}
+				} else {
+					addDuplicate("Código de barras", "ya está registrado en el negocio")
+				}
+			case nameInFile:
+				field, reason := simpleProductDuplicateIssue(row.CodigoBarras, existingCodeSet, seenFileCodes)
+				addDuplicate(field, reason)
+			case row.CodigoBarras != "" && len(namedOffers) > 0:
+				// Mismo nombre con otro código: probablemente es una variante (regla de la 24).
+				addDuplicate("Variantes", "ya existe un producto con ese nombre y este código no está registrado; si es otra versión, indica la variante con el formato Atributo: valor")
+			case len(namedOffers) > 1:
+				addDuplicate("Producto", "hay varios productos con ese nombre; indica su código de barras")
+			case len(namedOffers) == 1:
+				existingOffer = namedOffers[0]
+			}
+		}
+		if !hasError && len(row.Variantes) > 0 {
 			variantKey, variantErr := productVariantKey(row.Variantes)
-			if variantErr != nil {
+			namedFamilies := familiesByName[nameKey]
+			switch {
+			case variantErr != nil:
 				addError("Variantes", variantErr.Error())
-			} else {
-				base := variantBaseInput{Nombre: row.Nombre, Descripcion: importOptionalString(row.Descripcion), MarcaID: brandID, CategoriaID: categoryID, UnidadMedidaID: unitID, Contenido: row.Contenido, UnidadContenido: importOptionalString(row.UnidadContenido), Presentacion: importOptionalString(row.Presentacion), ImagenURL: importOptionalString(row.ImagenURL)}
-				baseKey := productBaseKey(base.Nombre, base.Presentacion, base.MarcaID, base.CategoriaID)
-				if previous, exists := seenVariantBases[baseKey]; exists && !sameVariantBaseInput(previous, base) {
-					addError("Producto base", "los datos compartidos no coinciden con otra fila del archivo")
+			case len(namedFamilies) > 1:
+				addError("Producto base", "hay varios productos con ese nombre; indica su código de barras")
+			default:
+				if len(namedFamilies) == 1 {
+					familyKey, existingFamily = namedFamilies[0], true
 				} else {
-					seenVariantBases[baseKey] = base
+					familyKey = productBaseKey(row.Nombre, nil, nil, categoryID)
 				}
-				if previous, exists := seenVariantProviders[baseKey]; exists && !sameOptionalUUID(previous, providerID) {
-					addError("Proveedor", "debe ser el mismo para todas las variantes del producto")
+				current := fileVariantBase{category: catalogImportKey(row.Categoria), unit: catalogImportKey(row.UnidadMedida), provider: catalogImportKey(row.Proveedor)}
+				if previous, exists := seenVariantBases[nameKey]; exists {
+					if previous.category != current.category || previous.unit != current.unit {
+						addError("Producto base", "los datos compartidos no coinciden con otra fila del archivo")
+					} else if previous.provider != current.provider {
+						addError("Proveedor", "debe ser el mismo para todas las variantes del producto")
+					}
 				} else {
-					seenVariantProviders[baseKey] = providerID
+					seenVariantBases[nameKey] = current
 				}
-				variantIdentity := baseKey + "\x00" + variantKey
-				if _, exists := seenVariantIdentities[variantIdentity]; exists {
-					hasDuplicate = true
-					addError("Variantes", "la combinación está repetida en el archivo")
-				} else if offer, exists := existingVariantOffers[variantIdentity]; exists {
+				variantIdentity := familyKey + "\x00" + variantKey
+				if _, exists := seenVariantIdentities[nameKey+"\x00"+variantKey]; exists {
+					addDuplicate("Variantes", "la combinación está repetida en el archivo")
+				}
+				seenVariantIdentities[nameKey+"\x00"+variantKey] = struct{}{}
+				if codeKnown {
+					// El código manda también en variantes.
+					if _, variant := variantOffers[codeOffer]; codeHasOffer && variant {
+						existingOffer = codeOffer
+					} else {
+						addDuplicate("Código de barras", "ya está registrado en el negocio")
+					}
+				} else if offer, exists := existingVariantOffers[variantIdentity]; exists && existingFamily {
 					existingOffer = offer
-				}
-				seenVariantIdentities[variantIdentity] = struct{}{}
-				if _, exists := existingCodeSet[row.CodigoBarras]; row.CodigoBarras != "" && exists && existingCodeOffers[row.CodigoBarras] != existingOffer {
-					hasDuplicate = true
-					addError("Código de barras", "ya está registrado en el negocio")
 				}
 			}
 		}
@@ -1855,10 +1898,18 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 		if existingOffer != uuid.Nil {
 			// Los datos compartidos del catálogo no cambian; solo se avisa si la fila trae otros.
 			if data, simple := existingSimpleData[existingOffer]; simple && (len(pendingCatalogs) > 0 ||
-				(categoryID != nil && !sameOptionalUUID(categoryID, data.CategoriaID)) || (brandID != nil && !sameOptionalUUID(brandID, data.MarcaID))) {
+				(categoryID != nil && !sameOptionalUUID(categoryID, data.CategoriaID))) {
 				addWarning("Producto", "ya existe en el catálogo; se conservan los datos del catálogo")
 			} else if !simple && len(pendingCatalogs) > 0 {
 				addWarning("Producto", "ya existe en el catálogo; se conservan los datos del catálogo")
+			}
+			// Se registra antes de omitir la fila sin cambios para que un duplicado
+			// posterior en el archivo se siga detectando.
+			if row.CodigoBarras != "" {
+				seenFileCodes[row.CodigoBarras] = struct{}{}
+			}
+			if len(row.Variantes) == 0 {
+				seenSimpleNames[nameKey] = struct{}{}
 			}
 			accion, changed := importExistingAction(branchState, existingOffer, row, addWarning)
 			if !changed {
@@ -1867,12 +1918,6 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				continue
 			}
 			input := domain.CreateImportedProductInput{Nombre: row.Nombre, SucursalID: branchID, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial, Variantes: row.Variantes}
-			if row.CodigoBarras != "" {
-				seenFileCodes[row.CodigoBarras] = struct{}{}
-			}
-			if len(row.Variantes) == 0 {
-				seenNamePresentations[namePresentationKey] = struct{}{}
-			}
 			prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input, Accion: accion, ProductoNegocioID: existingOffer})
 			continue
 		}
@@ -1884,19 +1929,19 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			current.Productos++
 			proposals[key] = current
 		}
-		input := domain.CreateImportedProductInput{Nombre: row.Nombre, CategoriaID: categoryID, MarcaID: brandID, ProveedorID: providerID, SucursalID: branchID, Contenido: row.Contenido, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial}
-		input.Descripcion = importOptionalString(row.Descripcion)
-		input.Presentacion = importOptionalString(row.Presentacion)
-		input.UnidadContenido = importOptionalString(row.UnidadContenido)
+		input := domain.CreateImportedProductInput{Nombre: row.Nombre, CategoriaID: categoryID, ProveedorID: providerID, SucursalID: branchID, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial}
 		input.UnidadMedidaID = unitID
 		input.CodigoBarras = importOptionalString(row.CodigoBarras)
 		input.ImagenURL = importOptionalString(row.ImagenURL)
 		input.Variantes = row.Variantes
+		if existingFamily {
+			input.FamiliaClave = familyKey
+		}
 		if row.CodigoBarras != "" {
 			seenFileCodes[row.CodigoBarras] = struct{}{}
 		}
 		if len(row.Variantes) == 0 {
-			seenNamePresentations[namePresentationKey] = struct{}{}
+			seenSimpleNames[nameKey] = struct{}{}
 		}
 		prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input})
 	}
@@ -2055,7 +2100,10 @@ func (r *ProductRepository) CreateImportedProducts(businessID uuid.UUID, rows []
 		result.Creadas++
 		if len(row.Input.Variantes) > 0 {
 			result.VariantesCreadas++
-			baseKey := productBaseKey(row.Input.Nombre, row.Input.Presentacion, row.Input.MarcaID, row.Input.CategoriaID)
+			baseKey := row.Input.FamiliaClave
+			if baseKey == "" {
+				baseKey = productBaseKey(row.Input.Nombre, row.Input.Presentacion, row.Input.MarcaID, row.Input.CategoriaID)
+			}
 			if _, counted := accountedVariantBases[baseKey]; !counted {
 				if baseCreated {
 					result.ProductosBaseCreados++
@@ -2243,7 +2291,7 @@ func (r *ProductRepository) createImportedVariant(businessID uuid.UUID, input do
 		family, product, created, err := r.resolveVariantBase(tx, businessID, variantBaseInput{
 			Nombre: input.Nombre, Descripcion: input.Descripcion, MarcaID: input.MarcaID, CategoriaID: input.CategoriaID,
 			UnidadMedidaID: input.UnidadMedidaID, Contenido: input.Contenido, UnidadContenido: input.UnidadContenido,
-			Presentacion: input.Presentacion, ImagenURL: input.ImagenURL,
+			Presentacion: input.Presentacion, ImagenURL: input.ImagenURL, FamiliaClave: input.FamiliaClave,
 		})
 		if err != nil {
 			return err

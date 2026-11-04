@@ -1,4 +1,5 @@
 import { PermisoRequerido, PERMISOS } from '../contexto/permisos';
+import { SeccionOcultable } from '../contexto/vistas.service';
 
 export interface NavigationItem {
   readonly label: string;
@@ -8,6 +9,10 @@ export interface NavigationItem {
   readonly permiso?: PermisoRequerido;
   /** Regla de cuenta, no de un negocio: la sección Negocios depende de ser propietario o tener `negocios.ver`. */
   readonly acceso?: 'ver-negocios';
+  /** Sección que el negocio puede ocultar en Configuración > Vistas. */
+  readonly vista?: SeccionOcultable;
+  /** Solo la ve el propietario del negocio activo. */
+  readonly soloPropietario?: boolean;
   readonly children?: readonly NavigationItem[];
 }
 
@@ -21,8 +26,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     icon: 'pi pi-tags',
     children: [
       { label: 'Productos', icon: 'pi pi-tags', route: '/catalogo/productos', permiso: PERMISOS.catalogoVer },
-      { label: 'Marcas', icon: 'pi pi-bookmark', route: '/catalogo/marcas', permiso: PERMISOS.catalogoVer },
-      { label: 'Categorías', icon: 'pi pi-list', route: '/catalogo/categorias', permiso: PERMISOS.catalogoVer },
+      { label: 'Marcas', icon: 'pi pi-bookmark', route: '/catalogo/marcas', permiso: PERMISOS.catalogoVer, vista: 'marcas' },
+      { label: 'Categorías', icon: 'pi pi-list', route: '/catalogo/categorias', permiso: PERMISOS.catalogoVer, vista: 'categorias' },
       { label: 'Unidades de medida', icon: 'pi pi-sliders-h', route: '/catalogo/unidades-medida', permiso: PERMISOS.catalogoVer },
     ],
   },
@@ -39,6 +44,12 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     ],
   },
   { label: 'Roles y permisos', icon: 'pi pi-lock', route: '/roles-permisos', permiso: PERMISOS.rolVer },
+  {
+    label: 'Configuración',
+    icon: 'pi pi-cog',
+    soloPropietario: true,
+    children: [{ label: 'Vistas', icon: 'pi pi-eye', route: '/configuracion/vistas', soloPropietario: true }],
+  },
 ];
 
 /** Deja solo lo que `visible` permite; un grupo sin hijos visibles desaparece. */

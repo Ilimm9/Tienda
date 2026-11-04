@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
 import { BranchCatalogProduct } from './product.models';
 import { ProductosService } from './productos.service';
 
@@ -20,6 +21,9 @@ import { ProductosService } from './productos.service';
 export class AgregarCatalogoComponent {
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
+  /** Configuración > Vistas puede ocultar Categorías. */
+  private readonly vistas = inject(VistasService);
+  readonly categoriasVisibles = computed(() => this.vistas.visible('categorias'));
   private readonly router = inject(Router);
 
   readonly sucursal = this.contexto.sucursal;

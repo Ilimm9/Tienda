@@ -8,7 +8,7 @@
 
 ## Causa (verificada en código)
 
-- La [19](../19-historial-costos-precios-sucursal/CAPABILITY.md) movió los montos de `producto_negocio` a `precios_sucursal`. La creación y la importación se adaptaron; la edición no.
+- La [19](../19-historial-costos-precios-sucursal.md) movió los montos de `producto_negocio` a `precios_sucursal`. La creación y la importación se adaptaron; la edición no.
 - `ProductRepository.Update` (`backend/internal/infrastructure/product_repository.go:1093`) recibe `precio_venta`, solo valida que no sea negativo y **nunca lo escribe**. Lo mismo ocurre con el precio de las variantes existentes (`updateProductFamily`).
 - `UpdateProductInput` (`backend/internal/domain/product_view.go:111`) no trae `sucursal_id`, así que el backend no sabe en qué sucursal aplicar el precio.
 - El formulario (`productos.component.ts:1344`) sí envía el precio. Resultado: el guardado sale bien y el precio queda igual, sin mostrar error.

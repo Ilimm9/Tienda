@@ -6,7 +6,7 @@ import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
 describe('authGuard', () => {
-  const auth = { me: vi.fn() };
+  const auth = { asegurarSesion: vi.fn() };
   const router = { createUrlTree: vi.fn(() => new UrlTree()) };
 
   beforeEach(() => {
@@ -29,13 +29,13 @@ describe('authGuard', () => {
   }
 
   it('allows access when the session is valid', async () => {
-    auth.me.mockReturnValue(of({ usuario: { id: '1', correo: 'persona@ejemplo.com' } }));
+    auth.asegurarSesion.mockReturnValue(of({ id: '1', correo: 'persona@ejemplo.com' }));
 
     await expect(firstValueFrom(runGuard())).resolves.toBe(true);
   });
 
   it('redirects to login when the session is invalid', async () => {
-    auth.me.mockReturnValue(throwError(() => new Error('unauthorized')));
+    auth.asegurarSesion.mockReturnValue(throwError(() => new Error('unauthorized')));
 
     await expect(firstValueFrom(runGuard())).resolves.toBeInstanceOf(UrlTree);
     expect(router.createUrlTree).toHaveBeenCalledWith(['/login']);

@@ -3,7 +3,7 @@
 - Estado: **Verificada** (pendiente de prueba manual y aceptación final).
 - Aprobación explícita: 2026-10-23 («okey por favor implementalo»), sobre la propuesta del artboard **J1 · Inicio: bienvenida, pasos y consejos** del canvas de diseño.
 - Fecha: 2026-10-23.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Solo frontend: `features/home`. Sin cambios de backend ni de contratos.
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Solo frontend: `features/home`. Sin cambios de backend ni de contratos.
 
 ## Objetivo
 
@@ -23,7 +23,7 @@ Aplica solo cuando `estadoAlta` es `listo`. Las vistas de alta inicial (`requier
    - Fuentes, sin endpoints nuevos: `ProductosService.listByBusiness(negocio, sucursal)`, `EmpleadoService.listar(negocio)` y `ComprasService.list(negocio)`; un paso está hecho si `total > 0` (o `items.length` si falta `total`).
    - Si alguna consulta falla, la sección no se muestra. Si los cinco están hechos, tampoco.
    - Cada paso pendiente enlaza a su pantalla: `/productos/importar`, `/equipo/empleados/nuevo`, `/compras/nueva`.
-3. **Consejos** («¿Sabías que…?»), para todos, con anterior/siguiente y contador «n de 5». Textos verificados contra [registro-productos.md](registro-productos.md) y [modulo-compras.md](modulo-compras.md):
+3. **Consejos** («¿Sabías que…?»), para todos, con anterior/siguiente y contador «n de 5». Textos verificados contra [registro-productos.md](../registro-productos.md) y [modulo-compras.md](../modulo-compras.md):
    - Carga productos sin preparar catálogos: los nombres nuevos de marcas, categorías, unidades y proveedores se crean con una sola confirmación.
    - El código de barras es opcional.
    - Una sucursal nueva empieza vacía; «Agregar del catálogo».

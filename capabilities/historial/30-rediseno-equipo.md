@@ -8,7 +8,7 @@
 - Fecha: 2026-10-22.
 - ID 30 elegido por el usuario para no chocar con trabajo de Ilian (27 reservado para Compras; 28 y 29 libres).
 - Diseño: canvas «Stockion - Disenio», artboard interactivo **I1 · Equipo: alta en 3 pasos, invitaciones y puestos** (tercera fila). Colores provisionales: los actuales.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Dominio `negocio` en todas las capas; frontend `features/equipo`. Base de conocimiento afectada: [gestion-colaboradores.md](gestion-colaboradores.md).
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Dominio `negocio` en todas las capas; frontend `features/equipo`. Base de conocimiento afectada: [gestion-colaboradores.md](../gestion-colaboradores.md).
 
 ## Objetivo
 

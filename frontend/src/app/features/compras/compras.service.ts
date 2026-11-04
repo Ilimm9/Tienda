@@ -16,8 +16,10 @@ export class ComprasService {
   private base(id: string): string {
     return `${environment.apiUrl}/negocios/${id}`;
   }
-  list(id: string): Observable<PurchaseListResponse> {
-    return this.http.get<PurchaseListResponse>(`${this.base(id)}/compras`);
+  list(id: string, branchId: string): Observable<PurchaseListResponse> {
+    return this.http.get<PurchaseListResponse>(`${this.base(id)}/compras`, {
+      params: { sucursal_id: branchId },
+    });
   }
   providers(id: string): Observable<CatalogOption[]> {
     return this.http.get<CatalogOption[]>(`${this.base(id)}/catalogo/proveedores`);

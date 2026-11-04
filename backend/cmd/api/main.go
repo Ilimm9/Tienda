@@ -98,6 +98,7 @@ func main() {
 	contextoRepo := negocioinfra.NewContextoRepository(db)
 	contextoService := negocioapplication.NewContextoService(contextoRepo)
 	contextoHandler := negociohttp.NewContextoHandler(contextoService)
+	vistaHandler := negociohttp.NewVistaHandler(negocioapplication.NewVistaService(negocioinfra.NewVistaRepository(db), contextoRepo))
 	rolRepo := negocioinfra.NewRolRepository(db)
 	rolService := negocioapplication.NewRolService(rolRepo)
 	rolHandler := negociohttp.NewRolHandler(rolService)
@@ -195,6 +196,9 @@ func main() {
 	contexto.GET("/opciones", contextoHandler.Opciones)
 	negocioActual := router.Group("/api/v1/negocios/:negocioId")
 	negocioActual.Use(transporthttp.RequireAuth(sessionService, cfg.SessionCookieName()), transporthttp.RequireCSRF(), negociohttp.RequireNegocioActivo(contextoService))
+	// Configuración > Vistas: cualquier miembro la lee para armar su menú; solo el propietario la cambia.
+	negocioActual.GET("/configuracion/vistas", vistaHandler.Obtener)
+	negocioActual.PUT("/configuracion/vistas", vistaHandler.Guardar)
 	catalogoLectura := negocioActual.Group("")
 	catalogoLectura.Use(negociohttp.RequierePermiso(rolService, negociodomain.PermisoCatalogoVer))
 	catalogoLectura.GET("/catalogo/productos", productHandler.List)

@@ -1,0 +1,100 @@
+<main class="vistas-page">
+  <header class="vistas-header">
+    <p class="eyebrow">Configuración</p>
+    <h1>Vistas</h1>
+    <p>
+      Elige qué secciones ve tu equipo en <strong>{{ contexto.negocio()?.nombre_comercial }}</strong>. Ocultar una sección no borra
+      nada: sus datos se conservan y vuelven a aparecer si la muestras otra vez.
+    </p>
+  </header>
+
+  @if (cargando()) {
+    <section class="vistas-state">Cargando vistas...</section>
+  } @else {
+    <div class="vistas-layout">
+      <div class="vistas-main">
+        <section class="vistas-card" aria-labelledby="vistas-catalogo">
+          <div class="vistas-card-head">
+            <span class="vistas-card-icon" aria-hidden="true"><i class="pi pi-tags"></i></span>
+            <div>
+              <h2 id="vistas-catalogo">Catálogo</h2>
+              <p>Apaga lo que tu negocio no usa para simplificar el menú y el registro de productos.</p>
+            </div>
+          </div>
+          @for (seccion of secciones; track seccion.clave) {
+            <div class="vistas-row">
+              <div class="vistas-row-text">
+                <span class="vistas-row-title">
+                  <strong>{{ seccion.nombre }}</strong>
+                  <span class="vistas-pill" [class.vistas-pill--off]="!visible(seccion)">{{ visible(seccion) ? 'Visible' : 'Oculta' }}</span>
+                  @if (seccion.fija) {
+                    <span class="vistas-pill vistas-pill--fixed"><i class="pi pi-lock" aria-hidden="true"></i> Siempre visible</span>
+                  }
+                </span>
+                <span class="vistas-row-desc">{{ seccion.descripcion }}</span>
+              </div>
+              <button
+                type="button"
+                class="vistas-switch"
+                role="switch"
+                [attr.aria-checked]="visible(seccion)"
+                [attr.aria-label]="'Mostrar ' + seccion.nombre"
+                [class.vistas-switch--on]="visible(seccion)"
+                [disabled]="seccion.fija || guardando()"
+                (click)="alternar(seccion)"
+              >
+                <span class="vistas-knob"></span>
+              </button>
+            </div>
+          }
+        </section>
+
+        @if (aviso(); as texto) {
+          <p class="vistas-warning" role="note"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i>{{ texto }}</p>
+        }
+        @if (error(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        <p class="vistas-note">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Solo el propietario puede cambiar las vistas. El cambio aplica a todas las sucursales y a todo el equipo.
+        </p>
+
+        <footer class="vistas-footer">
+          <span>{{ cambios() === 0 ? 'Sin cambios pendientes.' : cambios() === 1 ? '1 cambio sin guardar.' : cambios() + ' cambios sin guardar.' }}</span>
+          <span class="vistas-footer-actions">
+            <button type="button" class="secondary-button" [disabled]="!cambios() || guardando()" (click)="descartar()">Descartar</button>
+            <button type="button" class="primary-button" [disabled]="!cambios() || guardando()" (click)="guardar()">
+              {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          </span>
+        </footer>
+      </div>
+
+      <aside class="vistas-preview" aria-label="Vista previa del menú">
+        <h2>Así verá el menú tu equipo</h2>
+        <p>Se actualiza mientras eliges.</p>
+        <div class="vistas-preview-menu">
+          <span class="vistas-preview-item vistas-preview-item--group"><i class="pi pi-tags" aria-hidden="true"></i> Catálogo</span>
+          @for (seccion of secciones; track seccion.clave) {
+            <span class="vistas-preview-item" [class.vistas-preview-item--off]="!visible(seccion)">
+              {{ seccion.nombre }}
+              @if (!visible(seccion)) {
+                <small>Oculta</small>
+              }
+            </span>
+          }
+          <span class="vistas-preview-item vistas-preview-item--rest">Proveedores · Compras · …</span>
+        </div>
+        <h3>En Productos también se oculta</h3>
+        <ul>
+          @for (efecto of efectos(); track efecto) {
+            <li>{{ efecto }}</li>
+          } @empty {
+            <li>Nada: todo está visible.</li>
+          }
+        </ul>
+      </aside>
+    </div>
+  }
+</main>

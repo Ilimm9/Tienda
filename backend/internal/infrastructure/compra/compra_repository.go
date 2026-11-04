@@ -21,9 +21,9 @@ type Repository struct{ db *gorm.DB }
 
 func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 
-func (r *Repository) List(businessID uuid.UUID) ([]compradomain.CompraProveedor, error) {
+func (r *Repository) List(businessID, branchID uuid.UUID) ([]compradomain.CompraProveedor, error) {
 	items := make([]compradomain.CompraProveedor, 0)
-	err := r.db.Where("negocio_id = ?", businessID).Order("fecha_recepcion DESC, creado_en DESC").Find(&items).Error
+	err := r.db.Where("negocio_id = ? AND sucursal_id = ?", businessID, branchID).Order("fecha_recepcion DESC, creado_en DESC").Find(&items).Error
 	return items, err
 }
 func (r *Repository) Get(businessID, id uuid.UUID) (compradomain.CompraProveedor, error) {

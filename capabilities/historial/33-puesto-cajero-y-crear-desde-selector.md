@@ -3,7 +3,7 @@
 - Estado: **Verificada** (pendiente de prueba manual y aceptación final).
 - Aprobación explícita: 2026-10-23 («Por default puedes tambien crear el puesto cajero con el rol sugerido de cajero… cuando se crea el negocio» y «en la parte donde escoger un puesto o un rol te indique crear uno nuevo y te redirija a su seccion… podrias hacer esas adecuaciones»).
 - Fecha: 2026-10-23.
-- Organización conforme a [AGENTS.md](../AGENTS.md). Dominio `negocio` (backend) y `features/equipo` (frontend). Base de conocimiento afectada: [gestion-colaboradores.md](gestion-colaboradores.md). Amplía la [30](30-rediseno-equipo.md) sin cambiar su contrato.
+- Organización conforme a [AGENTS.md](../../AGENTS.md). Dominio `negocio` (backend) y `features/equipo` (frontend). Base de conocimiento afectada: [gestion-colaboradores.md](../gestion-colaboradores.md). Amplía la [30](30-rediseno-equipo.md) sin cambiar su contrato.
 
 ## Alcance y reglas
 
