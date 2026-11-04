@@ -1,0 +1,28 @@
+/* Réplica del selector de contexto de la barra superior. */
+.sucursal-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  color: #fff;
+  border-radius: 12px;
+  background: var(--brand-ink-raised);
+}
+
+.sucursal-chip__icono {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  color: var(--tone-sage-text);
+  border-radius: 9px;
+  background: var(--tone-sage);
+  font-size: 14px;
+  place-items: center;
+}
+
+.sucursal-chip__linea {
+  color: var(--brand-ink-muted);
+  font-size: 12px;
+}

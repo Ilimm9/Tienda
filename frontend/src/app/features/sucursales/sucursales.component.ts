@@ -33,6 +33,10 @@ export class SucursalesComponent {
     this.route.snapshot.queryParamMap.get('estado') === 'archivado' ? 'archivado' : 'activo',
   );
   readonly buscar = signal('');
+  readonly estados = [
+    { valor: 'activo', etiqueta: 'Activas' },
+    { valor: 'archivado', etiqueta: 'Archivadas' },
+  ] as const;
   readonly loading = signal(true);
   readonly processingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -46,6 +50,11 @@ export class SucursalesComponent {
 
   constructor() {
     this.load();
+  }
+
+  /** Sucursal que el contexto tiene abierta para operar. */
+  esActual(branch: SucursalResumen): boolean {
+    return this.contexto.sucursal()?.id === branch.id;
   }
 
   setStatus(status: 'activo' | 'archivado'): void {

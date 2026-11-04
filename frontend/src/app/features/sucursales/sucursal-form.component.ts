@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, map } from 'rxjs';
 
 import { CambiosPendientesService } from '../../contexto/cambios-pendientes.service';
 import { ContextoService } from '../../contexto/contexto.service';
@@ -25,6 +26,7 @@ import { enfocarPrimerInvalido } from '../../shared/formularios/formulario';
   selector: 'app-sucursal-form',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './sucursal-form.component.html',
+  styleUrl: './sucursal-form.component.css',
 })
 export class SucursalFormComponent {
   private readonly formBuilder = inject(FormBuilder);
@@ -70,6 +72,65 @@ export class SucursalFormComponent {
     numero_exterior: ['', Validators.maxLength(30)],
     numero_interior: ['', Validators.maxLength(30)],
     referencias: [''],
+  });
+
+  /** Valores vivos (incluye controles deshabilitados) para la vista previa. */
+  private readonly valores = toSignal(this.form.valueChanges.pipe(map(() => this.form.getRawValue())), {
+    initialValue: this.form.getRawValue(),
+  });
+
+  private readonly negocioContexto = computed(() =>
+    this.contexto.negocios().find((item) => item.id === this.negocioId),
+  );
+
+  /** Principal vigente distinta de la que se edita; el contexto ya trae las sucursales activas. */
+  readonly principalActual = computed(
+    () =>
+      this.negocioContexto()?.sucursales.find(
+        (item) => item.es_principal && item.id !== this.sucursalId,
+      )?.nombre ?? null,
+  );
+
+  /** Siguiente código SUC-NNN libre entre las sucursales activas conocidas. */
+  readonly codigoSugerido = computed(() => {
+    const numeros = (this.negocioContexto()?.sucursales ?? [])
+      .map((item) => /^SUC-(\d+)$/i.exec(item.codigo)?.[1])
+      .filter((numero): numero is string => Boolean(numero))
+      .map(Number);
+    const siguiente = (numeros.length ? Math.max(...numeros) : 0) + 1;
+    return `SUC-${String(siguiente).padStart(3, '0')}`;
+  });
+
+  readonly vistaPrevia = computed(() => {
+    const valores = this.valores();
+    const ubicacion = [
+      [valores.calle.trim(), valores.numero_exterior.trim()].filter(Boolean).join(' '),
+      valores.colonia.trim(),
+      valores.ciudad.trim() || valores.municipio.trim(),
+    ].filter(Boolean);
+    return {
+      codigo: valores.codigo.trim().toUpperCase() || 'SUC-XXX',
+      nombre: valores.nombre.trim() || 'Nombre de sucursal',
+      tipo: valores.es_principal ? 'Principal' : 'Secundaria',
+      telefono: valores.telefono.trim() || '—',
+      ubicacion: ubicacion.join(', ') || 'Sin dirección',
+    };
+  });
+
+  readonly mensajePrincipal = computed(() => {
+    const marcada = this.valores().es_principal;
+    const actual = this.principalActual();
+    if (this.branch()?.es_principal) {
+      return 'Es la principal del negocio; para cambiarla, marca otra sucursal como principal.';
+    }
+    if (!actual) {
+      return marcada && !this.editing
+        ? 'Es la primera sucursal del negocio: será la principal.'
+        : 'La principal recibe productos y personas sin sucursal asignada.';
+    }
+    return marcada
+      ? `${actual} dejará de ser la principal al guardar.`
+      : `La principal recibe productos y personas sin sucursal asignada. Hoy es ${actual}.`;
   });
 
   constructor() {
@@ -144,15 +205,22 @@ export class SucursalFormComponent {
     return field.invalid && (field.dirty || field.touched);
   }
 
+  usarCodigoSugerido(): void {
+    this.form.controls.codigo.setValue(this.codigoSugerido());
+    this.form.controls.codigo.markAsDirty();
+  }
+
+  alternarPrincipal(): void {
+    const control = this.form.controls.es_principal;
+    if (control.disabled) return;
+    control.setValue(!control.value);
+    control.markAsDirty();
+  }
+
   cancelLink(): readonly string[] {
     return this.sucursalId
       ? ['/negocios', this.negocioId, 'sucursales', this.sucursalId]
       : ['/negocios', this.negocioId, 'sucursales'];
-  }
-
-  previewLocation(): string {
-    const value = this.form.getRawValue();
-    return [value.ciudad.trim(), value.estado.trim()].filter(Boolean).join(', ') || 'Sin dirección';
   }
 
   private load(): void {

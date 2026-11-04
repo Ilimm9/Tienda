@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { FechaMexicoPipe } from '../../shared/fecha-mexico.pipe';
@@ -20,6 +20,7 @@ import { CodigoPermiso, PERMISOS } from '../../contexto/permisos';
 export class NegociosComponent {
   private readonly negocioService = inject(NegocioService);
   private readonly feedback = inject(FeedbackService);
+  private readonly router = inject(Router);
 
   readonly negocios = signal<NegocioResumen[]>([]);
   readonly loading = signal(true);
@@ -27,6 +28,10 @@ export class NegociosComponent {
   readonly error = signal<string | null>(null);
   readonly estado = signal<'activo' | 'archivado'>('activo');
   readonly search = signal('');
+  readonly estados = [
+    { valor: 'activo', etiqueta: 'Activos' },
+    { valor: 'archivado', etiqueta: 'Archivados' },
+  ] as const;
   readonly filteredBusinesses = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('es-MX');
     if (!query) return this.negocios();
@@ -48,6 +53,37 @@ export class NegociosComponent {
 
   constructor() {
     this.load();
+  }
+
+  /** Negocio que el contexto tiene abierto para operar. */
+  esActual(business: NegocioResumen): boolean {
+    return this.contexto.negocio()?.id === business.id;
+  }
+
+  /** Nombre de la sucursal principal según el contexto; los archivados no aparecen ahí. */
+  principal(business: NegocioResumen): string {
+    const negocio = this.contexto.negocios().find((item) => item.id === business.id);
+    return negocio?.sucursales.find((item) => item.es_principal)?.nombre ?? '—';
+  }
+
+  iniciales(nombre: string): string {
+    return (
+      nombre
+        .trim()
+        .split(/\s+/)
+        .map((palabra) => palabra[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'N'
+    );
+  }
+
+  /** Cambia el contexto al negocio y abre su inicio, igual que el selector de la barra superior. */
+  entrar(business: NegocioResumen): void {
+    this.contexto.seleccionarNegocio(business.id);
+    if (this.contexto.negocio()?.id !== business.id) return;
+    this.feedback.info('Negocio activo', business.nombre_comercial);
+    void this.router.navigate(['/inicio']);
   }
 
   setStatus(status: 'activo' | 'archivado'): void {

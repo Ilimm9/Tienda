@@ -1,139 +1,151 @@
-<section class="business-page">
-  <header class="page-heading">
+<section class="pagina">
+  <header class="encabezado-pagina">
     <div>
-      <span class="eyebrow">Configuración global</span>
+      <span class="antetitulo">Configuración global</span>
       <h1>Mis negocios</h1>
-      <p>Administra los negocios asociados a tu cuenta.</p>
+      <p class="descripcion">Negocios asociados a tu cuenta. Entra a uno para trabajar con sus sucursales y su equipo.</p>
     </div>
     @if (puedeCrear()) {
-      <a class="primary-button" routerLink="/negocios/nuevo">
+      <a class="boton" routerLink="/negocios/nuevo">
         <i class="pi pi-plus" aria-hidden="true"></i>
         Registrar negocio
       </a>
     }
   </header>
 
-  <div class="business-toolbar surface-card">
-    <label class="search-field">
-      <span class="visually-hidden">Buscar por nombre o RFC</span>
+  <div class="flex flex-wrap items-center gap-3">
+    <label class="campo-grupo min-w-0 flex-[1_1_280px] sm:max-w-[420px]">
       <i class="pi pi-search" aria-hidden="true"></i>
+      <span class="sr-only">Buscar por nombre o RFC</span>
       <input
         type="search"
         placeholder="Buscar por nombre o RFC"
         [value]="search()"
         (input)="updateSearch($any($event.target).value)"
       />
+      @if (search()) {
+        <button type="button" class="campo-grupo__accion" aria-label="Limpiar búsqueda" (click)="updateSearch('')">
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
     </label>
-    <div class="status-tabs" aria-label="Filtrar por estado">
-      <button type="button" [class.active]="estado() === 'activo'" (click)="setStatus('activo')">
-        Activos
-      </button>
-      <button
-        type="button"
-        [class.active]="estado() === 'archivado'"
-        (click)="setStatus('archivado')"
-      >
-        Archivados
-      </button>
+    <div class="segmentado" role="group" aria-label="Filtrar por estado">
+      @for (opcion of estados; track opcion.valor) {
+        <button
+          type="button"
+          class="segmentado__opcion"
+          [attr.aria-pressed]="estado() === opcion.valor"
+          (click)="setStatus(opcion.valor)"
+        >
+          {{ opcion.etiqueta }}
+          @if (estado() === opcion.valor && !loading()) {
+            <span class="segmentado__contador">{{ negocios().length }}</span>
+          }
+        </button>
+      }
     </div>
   </div>
 
   @if (error()) {
-    <p class="status-message error" role="alert">{{ error() }}</p>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
 
   @if (loading()) {
-    <p class="status-message" role="status">Cargando negocios…</p>
-  } @else if (filteredBusinesses().length === 0) {
-    <div class="empty-state surface-card">
-      <span class="empty-icon"><i class="pi pi-briefcase" aria-hidden="true"></i></span>
-      <h2>
-        {{
-          search()
-            ? 'Sin coincidencias'
-            : estado() === 'activo'
-              ? 'Aún no tienes negocios'
-              : 'No tienes negocios archivados'
-        }}
-      </h2>
-      <p>
-        {{
-          search()
-            ? 'Prueba con otro nombre o RFC.'
-            : estado() === 'activo'
-              ? 'Registra tu primer negocio para comenzar.'
-              : 'Los negocios archivados aparecerán aquí.'
-        }}
-      </p>
-      @if (!search() && estado() === 'activo' && puedeCrear()) {
-        <a class="primary-button" routerLink="/negocios/nuevo">Registrar negocio</a>
-      }
+    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando negocios…</p>
+  } @else if (filteredBusinesses().length === 0 && !(estado() === 'activo' && !search() && puedeCrear())) {
+    <div class="tarjeta estado-vacio estado-vacio--guiado">
+      <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
+      <strong>
+        {{ search() ? 'Sin coincidencias' : estado() === 'activo' ? 'Aún no tienes negocios' : 'No tienes negocios archivados' }}
+      </strong>
+      <span>
+        {{ search() ? 'Prueba con otro nombre o RFC.' : estado() === 'activo' ? 'Pide a un propietario que te invite a su negocio.' : 'Los negocios archivados aparecerán aquí.' }}
+      </span>
     </div>
   } @else {
-    <div class="business-grid">
+    <div class="negocios-grid">
       @for (business of filteredBusinesses(); track business.id) {
-        <article class="business-card surface-card">
-          <div class="business-card-top">
-            <span class="business-icon"><i class="pi pi-building" aria-hidden="true"></i></span>
-            <span
-              class="status-pill"
-              [class.active]="business.estado === 'activo'"
-              [class.archived]="business.estado === 'archivado'"
-            >
-              {{ business.estado === 'activo' ? 'Activo' : 'Archivado' }}
+        @let actual = esActual(business);
+        @let archivado = business.estado === 'archivado';
+        <article class="negocio-card" [class.negocio-card--actual]="actual">
+          <div class="flex items-start gap-3">
+            <span class="avatar avatar--grande negocio-card__avatar" [class.avatar--neutro]="archivado" aria-hidden="true">
+              {{ iniciales(business.nombre_comercial) }}
             </span>
-          </div>
-          <h2>{{ business.nombre_comercial }}</h2>
-          <p class="legal-name">{{ business.rfc || 'RFC no registrado' }}</p>
-          <dl>
-            <div>
-              <dt>Mi relación</dt>
-              <dd>
-                <span class="relation-pill">{{
-                  business.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro'
-                }}</span>
-              </dd>
+            <div class="min-w-0 grow">
+              <h2 class="m-0 text-[17px]">
+                <a class="enlace-fila block truncate" [routerLink]="['/negocios', business.id]">{{ business.nombre_comercial }}</a>
+              </h2>
+              <span class="codigo">{{ business.rfc || 'RFC no registrado' }}</span>
             </div>
+            @if (actual) {
+              <span class="pastilla pastilla--exito">Trabajando aquí</span>
+            } @else if (archivado) {
+              <span class="pastilla pastilla--neutra">Archivado</span>
+            }
+          </div>
+
+          <dl class="negocio-card__datos">
             <div>
               <dt>Sucursales</dt>
-              <dd>{{ business.total_sucursales }}</dd>
+              <dd class="text-lg font-bold tabular-nums">{{ business.total_sucursales }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt>Principal</dt>
+              <dd class="truncate font-semibold" [title]="principal(business)">{{ principal(business) }}</dd>
             </div>
             <div>
-              <dt>Incorporación</dt>
-              <dd>{{ business.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
+              <dt>Alta</dt>
+              <dd class="font-semibold tabular-nums">{{ business.creado_en | fechaMexico: 'dd MMM yyyy' }}</dd>
             </div>
           </dl>
-          <div class="card-actions">
-            <a class="primary-button" [routerLink]="['/negocios', business.id]">Ver negocio</a>
-            @if (puedeEn(business, P.negocioArchivar)) {
-              @if (business.estado === 'activo') {
-                <button
-                  class="text-button danger-text"
-                  type="button"
-                  [disabled]="processingId() === business.id"
-                  (click)="archive(business)"
-                >
-                  Archivar
-                </button>
-              } @else {
-                <button
-                  class="text-button"
-                  type="button"
-                  [disabled]="processingId() === business.id"
-                  (click)="restore(business)"
-                >
-                  Restaurar
-                </button>
+
+          <div class="mt-auto flex items-center gap-2">
+            <span class="secundario">{{ business.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro' }}</span>
+            <span class="ml-auto flex items-center gap-1.5">
+              @if (puedeEn(business, P.negocioArchivar)) {
+                @if (archivado) {
+                  <button
+                    type="button"
+                    class="boton boton--secundario boton--compacto"
+                    [disabled]="processingId() === business.id"
+                    (click)="restore(business)"
+                  >
+                    <i class="pi pi-replay" aria-hidden="true"></i>Restaurar
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="icono-accion icono-accion--peligro"
+                    title="Archivar"
+                    [attr.aria-label]="'Archivar ' + business.nombre_comercial"
+                    [disabled]="processingId() === business.id"
+                    (click)="archive(business)"
+                  >
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
+                  </button>
+                }
               }
-            }
+              @if (!archivado) {
+                @if (actual) {
+                  <a class="boton boton--secundario boton--compacto" [routerLink]="['/negocios', business.id]">Configurar</a>
+                } @else {
+                  <button type="button" class="boton boton--compacto" (click)="entrar(business)">
+                    Entrar<i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  </button>
+                }
+              }
+            </span>
           </div>
         </article>
       }
       @if (estado() === 'activo' && !search() && puedeCrear()) {
-        <a class="create-card" routerLink="/negocios/nuevo">
-          <span><i class="pi pi-plus" aria-hidden="true"></i></span>
+        <a class="negocio-nuevo" routerLink="/negocios/nuevo">
+          <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-plus"></i></span>
           <strong>Registrar nuevo negocio</strong>
-          <small>Configura una nueva entidad comercial.</small>
+          <span class="secundario">
+            {{ negocios().length ? 'Otra razón social, con sus propias sucursales.' : 'Aún no tienes negocios. Registra el primero para comenzar.' }}
+          </span>
         </a>
       }
     </div>
