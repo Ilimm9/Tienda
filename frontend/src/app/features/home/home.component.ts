@@ -144,7 +144,7 @@ export class HomeComponent {
       const consulta = forkJoin({
         productos: this.productos.listByBusiness(negocio.id, sucursal.id),
         equipo: this.empleados.listar(negocio.id),
-        compras: this.compras.list(negocio.id),
+        compras: this.compras.list(negocio.id, sucursal.id),
       }).subscribe({
         next: (r) =>
           this.avance.set({ productos: hayRegistros(r.productos), equipo: hayRegistros(r.equipo), compras: hayRegistros(r.compras) }),

@@ -47,7 +47,7 @@ type CrearCompraInput struct {
 }
 
 type Repository interface {
-	List(uuid.UUID) ([]compra.CompraProveedor, error)
+	List(uuid.UUID, uuid.UUID) ([]compra.CompraProveedor, error)
 	Get(uuid.UUID, uuid.UUID) (compra.CompraProveedor, error)
 	ListProductos(uuid.UUID, uuid.UUID) ([]ProductoComprable, error)
 	Create(uuid.UUID, uuid.UUID, CrearCompraInput) (compra.CompraProveedor, error)
@@ -56,8 +56,8 @@ type Repository interface {
 type Service struct{ repo Repository }
 
 func NewService(repo Repository) *Service { return &Service{repo: repo} }
-func (s *Service) List(businessID uuid.UUID) ([]compra.CompraProveedor, error) {
-	return s.repo.List(businessID)
+func (s *Service) List(businessID, branchID uuid.UUID) ([]compra.CompraProveedor, error) {
+	return s.repo.List(businessID, branchID)
 }
 func (s *Service) Get(businessID, id uuid.UUID) (compra.CompraProveedor, error) {
 	return s.repo.Get(businessID, id)

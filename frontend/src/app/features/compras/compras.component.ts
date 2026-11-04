@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -171,7 +171,17 @@ export class ComprasComponent {
     this.form.controls.forma_pago.valueChanges.subscribe((forma) => {
       if (!['TRANSFERENCIA', 'TARJETA'].includes(forma)) this.form.controls.numero_cuenta.setValue('');
     });
-    this.createMode ? this.loadForm() : this.loadList();
+    if (this.createMode) {
+      this.loadForm();
+    } else {
+      // Solo un cambio real de negocio o sucursal recarga; la revalidación del contexto
+      // reemplaza los objetos con los mismos IDs.
+      const contextoLista = computed(() => `${this.businessId}:${this.context.sucursal()?.id ?? ''}`);
+      effect(() => {
+        contextoLista();
+        untracked(() => this.loadList());
+      });
+    }
   }
   private get businessId(): string {
     return this.context.negocio()?.id ?? '';
@@ -200,7 +210,15 @@ export class ComprasComponent {
     });
   }
   private loadList(): void {
-    this.service.list(this.businessId).subscribe({
+    const branchId = this.context.sucursal()?.id;
+    if (!branchId) {
+      this.purchases.set([]);
+      this.loading.set(false);
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(null);
+    this.service.list(this.businessId, branchId).subscribe({
       next: (r) => {
         this.purchases.set(r.items);
         this.loading.set(false);

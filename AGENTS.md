@@ -16,6 +16,12 @@ Estas reglas aplican a cualquier agente o colaborador automatizado que trabaje e
 - No asumir que una autorización conversacional elimina límites técnicos. `sudo`, acceso de red y escritura fuera del workspace siguen sujetos al sandbox y a sus aprobaciones.
 - Si una petición contradice estas reglas, detener la acción conflictiva, identificar la regla y pedir confirmación explícita.
 
+## Base de datos en producción
+
+- Las tablas ya diseñadas están en producción. Prohibido eliminar o renombrar columnas o campos existentes, eliminar tablas o cambiar un tipo de forma incompatible, tanto en migraciones como en modelos GORM.
+- Los cambios de esquema son aditivos: columnas nuevas nulas o con valor por defecto, tablas nuevas o índices nuevos. Un campo que ya no se use se deja de leer en el código, pero permanece en la tabla.
+- Si una petición requiere eliminar o renombrar un campo, detener la acción, explicar el impacto en los datos de producción y pedir confirmación explícita.
+
 ## Organización
 
 - Usar `PLAN_IMPLEMENTACION.md` como índice y estado general.

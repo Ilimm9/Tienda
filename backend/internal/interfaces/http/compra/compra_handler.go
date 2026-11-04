@@ -50,20 +50,24 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
+	branchID, err := uuid.Parse(c.Query("sucursal_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "La sucursal no es válida"})
+		return
+	}
 	permitidas, ok := h.sucursalesPermitidas(c, businessID)
 	if !ok {
 		return
 	}
-	todas, err := h.service.List(businessID)
+	// El listado es de la sucursal activa, no de todas las que el usuario puede operar.
+	if _, ok := permitidas[branchID]; !ok {
+		c.JSON(http.StatusNotFound, gin.H{"mensaje": "No fue posible encontrar la sucursal solicitada"})
+		return
+	}
+	items, err := h.service.List(businessID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las compras"})
 		return
-	}
-	items := todas[:0:0]
-	for _, item := range todas {
-		if _, ok := permitidas[item.SucursalID]; ok {
-			items = append(items, item)
-		}
 	}
 	c.JSON(http.StatusOK, gin.H{"items": items, "total": len(items)})
 }

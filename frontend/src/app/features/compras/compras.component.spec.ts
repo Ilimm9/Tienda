@@ -67,6 +67,28 @@ describe('ComprasComponent', () => {
     expect(celda.textContent?.trim()).toBe('21 oct 2026');
   });
 
+  it('lista las compras de la sucursal activa y recarga al cambiarla', async () => {
+    const sucursal = signal({ id: 'sucursal-1' });
+    await TestBed.configureTestingModule({
+      imports: [ComprasComponent],
+      providers: [
+        { provide: ComprasService, useValue: service },
+        { provide: ContextoService, useValue: { puede: () => true, negocio: signal({ id: 'negocio-1' }), sucursal } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: {} } } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ComprasComponent);
+    fixture.detectChanges();
+    expect(service.list).toHaveBeenLastCalledWith('negocio-1', 'sucursal-1');
+    const llamadas = service.list.mock.calls.length;
+
+    sucursal.set({ id: 'sucursal-2' });
+    fixture.detectChanges();
+    expect(service.list).toHaveBeenLastCalledWith('negocio-1', 'sucursal-2');
+    expect(service.list).toHaveBeenCalledTimes(llamadas + 1);
+  });
+
   it('acumula el resumen global de todos los productos y muestra cero al iniciar', async () => {
     const component = (await createFixture()).componentInstance;
     expect(component.total()).toBe(0);
