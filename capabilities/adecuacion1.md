@@ -90,6 +90,11 @@ Contrato implementado:
 Hallazgos corregidos durante la verificación:
 - La vista previa no mostraba las advertencias del repositorio (cambios de precio/stock, nombre distinto al del código): `prepareProductImport` solo copiaba errores. Ahora copia también advertencias (falla previa a esta adecuación).
 - Mensaje de «nombre existente con código nuevo» aclarado: «ya existe un producto con ese nombre y este código no está registrado; si es otra versión, indica la variante…».
+- Con los archivos de `thrs/docs-prueba` (convertidos a la plantilla nueva):
+  - La vista previa no detectaba variantes de una misma familia con proveedor o categoría distintos cuando esos catálogos eran nuevos (comparaba IDs aún vacíos); la importación sí fallaba. Ahora se comparan por nombre normalizado y vista previa e importación coinciden.
+  - Una fila repetida en el archivo dejaba de detectarse si la anterior ya existía sin cambios (se omitía antes de registrarse). Ahora se registra antes de omitirla.
+  - La plantilla antigua con «SKU interno» no se reconocía como anterior, y una exportación de Odoo daba «se esperaba la columna…». Ahora: «es la plantilla anterior; descarga la plantilla nueva» y «parece una exportación de Odoo; copia los datos a la plantilla nueva».
+  - Lista de la clienta (`06`, 948 filas, stock negativo de Odoo llevado a 0): 945 se importan (542 simples, 88 familias, 403 variantes); 3 errores reales de datos.
 
 ## Pruebas
 

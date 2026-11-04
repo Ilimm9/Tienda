@@ -7,8 +7,8 @@ import { AuthService } from '../auth/auth.service';
 export const plataformaGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.me().pipe(
-    map(({ usuario }) =>
+  return auth.asegurarSesion().pipe(
+    map((usuario) =>
       usuario.roles_plataforma?.includes('ADMIN_LECTURA')
         ? true
         : router.createUrlTree(['/sin-acceso']),

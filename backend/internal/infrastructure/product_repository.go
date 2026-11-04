@@ -1753,10 +1753,13 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 	for _, item := range branchRows {
 		branchState[item.ProductoNegocioID] = importBranchState{stock: item.Stock, price: item.Precio, cost: item.Costo}
 	}
+	// Las variantes de una misma familia en el archivo comparan sus catálogos por
+	// nombre normalizado: así un catálogo nuevo (aún sin ID en la vista previa)
+	// se valida igual que al importar.
 	type fileVariantBase struct {
-		categoryID *uuid.UUID
-		unitID     *uuid.UUID
-		providerID *uuid.UUID
+		category string
+		unit     string
+		provider string
 	}
 	seenVariantBases := make(map[string]fileVariantBase)
 	prepared := make([]domain.ValidatedProductImportRow, 0, len(rows))
@@ -1857,11 +1860,11 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				} else {
 					familyKey = productBaseKey(row.Nombre, nil, nil, categoryID)
 				}
-				current := fileVariantBase{categoryID: categoryID, unitID: unitID, providerID: providerID}
+				current := fileVariantBase{category: catalogImportKey(row.Categoria), unit: catalogImportKey(row.UnidadMedida), provider: catalogImportKey(row.Proveedor)}
 				if previous, exists := seenVariantBases[nameKey]; exists {
-					if !sameOptionalUUID(previous.categoryID, current.categoryID) || !sameOptionalUUID(previous.unitID, current.unitID) {
+					if previous.category != current.category || previous.unit != current.unit {
 						addError("Producto base", "los datos compartidos no coinciden con otra fila del archivo")
-					} else if !sameOptionalUUID(previous.providerID, current.providerID) {
+					} else if previous.provider != current.provider {
 						addError("Proveedor", "debe ser el mismo para todas las variantes del producto")
 					}
 				} else {
@@ -1900,6 +1903,14 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 			} else if !simple && len(pendingCatalogs) > 0 {
 				addWarning("Producto", "ya existe en el catálogo; se conservan los datos del catálogo")
 			}
+			// Se registra antes de omitir la fila sin cambios para que un duplicado
+			// posterior en el archivo se siga detectando.
+			if row.CodigoBarras != "" {
+				seenFileCodes[row.CodigoBarras] = struct{}{}
+			}
+			if len(row.Variantes) == 0 {
+				seenSimpleNames[nameKey] = struct{}{}
+			}
 			accion, changed := importExistingAction(branchState, existingOffer, row, addWarning)
 			if !changed {
 				result.Omitidas++
@@ -1907,12 +1918,6 @@ func (r *ProductRepository) ValidateProductImport(businessID, branchID uuid.UUID
 				continue
 			}
 			input := domain.CreateImportedProductInput{Nombre: row.Nombre, SucursalID: branchID, PrecioVenta: row.PrecioVenta, CostoProveedor: row.CostoProveedor, CostoCapturado: row.CostoCapturado, StockInicial: row.StockInicial, Variantes: row.Variantes}
-			if row.CodigoBarras != "" {
-				seenFileCodes[row.CodigoBarras] = struct{}{}
-			}
-			if len(row.Variantes) == 0 {
-				seenSimpleNames[nameKey] = struct{}{}
-			}
 			prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila, Input: input, Accion: accion, ProductoNegocioID: existingOffer})
 			continue
 		}

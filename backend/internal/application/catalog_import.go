@@ -24,8 +24,12 @@ var ErrNoImportErrors = errors.New("el archivo no tiene filas con errores")
 // (adecuación 1): plantilla, lectura y archivo de errores usan este orden.
 var productImportHeaders = []string{"Código de barras", "Nombre", "Variantes", "Precio de venta", "Costo", "Stock inicial", "Unidad de medida", "Categoría", "Proveedor"}
 
-// legacyProductImportHeaders identifica la plantilla anterior para explicar el rechazo.
-var legacyProductImportHeaders = []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación"}
+// legacyProductImportColumns identifica la plantilla anterior (empezaba con
+// Nombre y traía columnas que ya no existen) para explicar el rechazo.
+var legacyProductImportColumns = []string{"Marca", "Descripción", "Presentación", "Contenido", "SKU interno"}
+
+// odooProductExportColumns identifica una exportación de productos de Odoo sin convertir.
+var odooProductExportColumns = []string{"Referencia interna", "Cantidad a la mano", "Valores de las variantes", "Categoría de producto"}
 
 // Posición de cada columna de productImportHeaders.
 const (
@@ -424,13 +428,10 @@ func checkProductImportHeaders(content []byte, headers []string) error {
 		return ErrInvalidImportFile
 	}
 	first := rows[0]
-	legacy := len(first) >= len(legacyProductImportHeaders)
-	for index, expected := range legacyProductImportHeaders {
-		if legacy && cell(first, index) != expected {
-			legacy = false
-		}
+	if headerHasAny(first, odooProductExportColumns) {
+		return fmt.Errorf("%w: parece una exportación de Odoo; copia los datos a la plantilla nueva", ErrInvalidImportFile)
 	}
-	if legacy {
+	if cell(first, 0) == "Nombre" && headerHasAny(first, legacyProductImportColumns) {
 		return fmt.Errorf("%w: es la plantilla anterior; descarga la plantilla nueva", ErrInvalidImportFile)
 	}
 	for index, expected := range headers {
@@ -538,4 +539,17 @@ func mergeImportResults(first, second domain.CatalogImportResult) domain.Catalog
 		Errores:                   append(first.Errores, second.Errores...),
 		Advertencias:              append(first.Advertencias, second.Advertencias...),
 	}
+}
+
+// headerHasAny indica si la fila de encabezados contiene alguna de las columnas.
+func headerHasAny(header []string, columns []string) bool {
+	for index := range header {
+		value := cell(header, index)
+		for _, column := range columns {
+			if value == column {
+				return true
+			}
+		}
+	}
+	return false
 }

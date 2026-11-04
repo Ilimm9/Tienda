@@ -101,4 +101,28 @@ describe('AuthService', () => {
     expect(reset.request.body).toEqual(payload);
     reset.flush({ mensaje: 'ok' });
   });
+
+  it('consulta la sesión una vez y la reutiliza en las navegaciones siguientes', () => {
+    const resultados: string[] = [];
+    service.asegurarSesion().subscribe((usuario) => resultados.push(usuario.correo));
+    service.asegurarSesion().subscribe((usuario) => resultados.push(usuario.correo));
+    http.expectOne(`${environment.apiUrl}/auth/me`).flush({ usuario: { id: '1', correo: 'persona@ejemplo.com' } });
+
+    service.asegurarSesion().subscribe((usuario) => resultados.push(usuario.correo));
+    http.expectNone(`${environment.apiUrl}/auth/me`);
+    expect(resultados).toEqual(['persona@ejemplo.com', 'persona@ejemplo.com', 'persona@ejemplo.com']);
+  });
+
+  it('sin sesión limpia el usuario y vuelve a consultar en el siguiente intento', () => {
+    service.currentUser.set(null);
+    let fallo = false;
+    service.asegurarSesion().subscribe({ error: () => (fallo = true) });
+    http.expectOne(`${environment.apiUrl}/auth/me`).flush({}, { status: 401, statusText: 'Unauthorized' });
+    expect(fallo).toBe(true);
+    expect(service.currentUser()).toBeNull();
+
+    service.asegurarSesion().subscribe();
+    http.expectOne(`${environment.apiUrl}/auth/me`).flush({ usuario: { id: '1', correo: 'persona@ejemplo.com' } });
+    expect(service.currentUser()?.correo).toBe('persona@ejemplo.com');
+  });
 });

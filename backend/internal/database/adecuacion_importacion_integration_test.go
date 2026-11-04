@@ -152,6 +152,29 @@ func TestImportacionSinPresentacionNiMarca(t *testing.T) {
 		}
 	})
 
+	t.Run("variantes con catálogos nuevos distintos se rechazan desde la vista previa", func(t *testing.T) {
+		_, result := validar([]domain.ProductImportRow{
+			{Fila: 2, Nombre: "Amper", PrecioVenta: 20, StockInicial: 1, Proveedor: "Prov A", Variantes: talla("Energy")},
+			{Fila: 3, Nombre: "Amper", PrecioVenta: 20, StockInicial: 1, Proveedor: "Prov B", Variantes: talla("Blue")},
+			{Fila: 4, Nombre: "Amper", PrecioVenta: 20, StockInicial: 1, Proveedor: "Prov A", Categoria: "Bebidas nuevas", Variantes: talla("Red")},
+		})
+		if !strings.HasPrefix(errorDe(result, 3), "Proveedor:") || !strings.HasPrefix(errorDe(result, 4), "Producto base:") || errorDe(result, 2) != "" {
+			t.Fatalf("errores = %+v", result.Errores)
+		}
+	})
+
+	t.Run("un duplicado se detecta aunque la fila anterior no tenga cambios", func(t *testing.T) {
+		_, result := validar([]domain.ProductImportRow{
+			{Fila: 2, Nombre: "Gansito", PrecioVenta: 15, StockInicial: 4},
+			{Fila: 3, Nombre: "Gansito", PrecioVenta: 15, StockInicial: 3},
+			{Fila: 4, Nombre: "Coca-Cola 600 ml", CodigoBarras: "7501000000024", PrecioVenta: 18, StockInicial: 5},
+			{Fila: 5, Nombre: "Coca-Cola 600 ml", CodigoBarras: "7501000000024", PrecioVenta: 20, StockInicial: 5},
+		})
+		if errorDe(result, 3) == "" || !strings.Contains(errorDe(result, 5), "repetido en el archivo") {
+			t.Fatalf("errores = %+v", result.Errores)
+		}
+	})
+
 	t.Run("un producto nuevo no guarda presentación ni marca", func(t *testing.T) {
 		prepared, result := validar([]domain.ProductImportRow{{Fila: 2, Nombre: "Corona Mega", CodigoBarras: "7501000000048", PrecioVenta: 45, StockInicial: 12}})
 		if len(prepared) != 1 || prepared[0].Accion != "" || len(result.Errores) != 0 {

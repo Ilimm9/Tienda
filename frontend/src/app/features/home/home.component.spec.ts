@@ -54,25 +54,24 @@ describe('HomeComponent', () => {
     const fixture = await crear(['catalogo.ver', 'compras.ver', 'sucursales.ver', 'equipo.empleados.ver'], true, 'listo', 'miembro');
     const texto = fixture.nativeElement.textContent as string;
 
-    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Qué gusto verte de nuevo.');
-    expect(texto).toContain('Sucursal Reforma');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Empresa THRS');
+    expect(texto).toContain('Hoy estás en Sucursal Reforma.');
     expect(texto).toContain('Miembro');
     const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
-    expect(rutas).toEqual(['/productos', '/compras', '/sucursales', '/equipo/empleados', '/negocios']);
+    expect(rutas).toEqual(['/ventas', '/productos', '/compras', '/equipo/empleados', '/sucursales', '/negocios']);
   });
 
   it('muestra solo las secciones que el rol permite', async () => {
     const fixture = await crear([]);
 
-    const tarjetas = fixture.nativeElement.querySelectorAll('a.resumen-tarjeta');
-    expect(tarjetas).toHaveLength(1);
-    expect(tarjetas[0].getAttribute('href')).toBe('/negocios');
+    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
+    expect(rutas).toEqual(['/ventas', '/negocios']);
   });
 
   it('a un miembro no le muestra pasos ni consulta las listas', async () => {
     const fixture = await crear([], false, 'listo', 'miembro');
 
-    expect(fixture.nativeElement.querySelector('.pasos')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.guia')).toBeNull();
     expect(productos.listByBusiness).not.toHaveBeenCalled();
   });
 
@@ -80,13 +79,26 @@ describe('HomeComponent', () => {
     empleados.listar.mockReturnValueOnce(lista(2));
     const fixture = await crear([], true, 'listo', 'propietario');
     fixture.detectChanges();
-    const pasos = fixture.nativeElement.querySelector('.pasos');
+    const guia = fixture.nativeElement.querySelector('.guia');
+
+    const detalle = () => guia.querySelector('.guia__detalle a').getAttribute('href');
+    const tarjetas = guia.querySelectorAll('button.etapa');
 
     expect(productos.listByBusiness).toHaveBeenCalledWith('n1', 's1');
-    expect(pasos.textContent).toContain('3 de 5 listos');
-    expect(pasos.querySelector('a[href="/productos/importar"]')).not.toBeNull();
-    expect(pasos.querySelector('a[href="/equipo/empleados/nuevo"]')).toBeNull();
-    expect(pasos.querySelector('a[href="/compras/nueva"]')).not.toBeNull();
+    expect(guia.textContent).toContain('3 de 5');
+    expect(fixture.nativeElement.textContent).toContain('Te faltan 2 pasos');
+    expect(guia.querySelectorAll('.etapa--hecho')).toHaveLength(3);
+    // Al entrar se elige el primer pendiente.
+    expect(tarjetas[2].classList).toContain('etapa--siguiente');
+    expect(tarjetas[2].getAttribute('aria-pressed')).toBe('true');
+    expect(detalle()).toBe('/productos/importar');
+
+    tarjetas[3].click();
+    fixture.detectChanges();
+    expect(detalle()).toBe('/equipo/empleados');
+    tarjetas[4].click();
+    fixture.detectChanges();
+    expect(detalle()).toBe('/compras/nueva');
   });
 
   it('oculta los pasos si todo está hecho o si una consulta falla', async () => {
@@ -95,13 +107,13 @@ describe('HomeComponent', () => {
     compras.list.mockReturnValueOnce(lista(1));
     let fixture = await crear([], true, 'listo', 'propietario');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.pasos')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.guia')).toBeNull();
 
     TestBed.resetTestingModule();
     compras.list.mockReturnValueOnce(throwError(() => new Error('falla')));
     fixture = await crear([], true, 'listo', 'propietario');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.pasos')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.guia')).toBeNull();
   });
 
   it('recorre los consejos en ciclo', async () => {
@@ -109,20 +121,21 @@ describe('HomeComponent', () => {
     const titulo = () => fixture.nativeElement.querySelector('.consejo h2').textContent;
     const [anterior, siguiente] = fixture.nativeElement.querySelectorAll('.consejo__boton');
 
-    expect(titulo()).toContain('Carga productos sin preparar catálogos');
+    expect(titulo()).toContain('Sube tu Excel tal cual');
     anterior.click();
     fixture.detectChanges();
-    expect(titulo()).toContain('Cada sucursal tiene su precio');
+    expect(titulo()).toContain('Un precio por sucursal');
     siguiente.click();
     siguiente.click();
     fixture.detectChanges();
-    expect(titulo()).toContain('El código de barras es opcional');
+    expect(titulo()).toContain('¿Sin código de barras?');
   });
 
   it('oculta Negocios a quien solo fue invitado', async () => {
     const fixture = await crear([], false);
 
-    expect(fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')).toHaveLength(0);
+    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
+    expect(rutas).toEqual(['/ventas']);
   });
 
   it('ofrece el asistente cuando falta la empresa', async () => {

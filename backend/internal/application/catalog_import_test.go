@@ -437,6 +437,24 @@ func isImportFormatError(err error) bool {
 	return errors.Is(err, ErrInvalidImportFile)
 }
 
+func TestParseProductImportExplainsOlderAndOdooFiles(t *testing.T) {
+	cases := []struct {
+		name    string
+		headers []string
+		want    string
+	}{
+		{"plantilla con SKU interno", []string{"Nombre", "SKU interno", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}, "plantilla anterior"},
+		{"exportación de Odoo", []string{"Favorita", "Referencia interna", "Código de barras", "Nombre", "Valores de las variantes", "Precio de venta", "Coste", "Categoría de producto", "Cantidad a la mano", "Unidad de medida"}, "exportación de Odoo"},
+	}
+	for _, item := range cases {
+		file := workbook(t, item.headers, [][]string{{"Refresco"}})
+		_, _, err := parseProductImport(bytes.NewReader(file))
+		if err == nil || !isImportFormatError(err) || !strings.Contains(err.Error(), item.want) {
+			t.Fatalf("%s: error = %v, want %q", item.name, err, item.want)
+		}
+	}
+}
+
 func TestParseProductImportRejectsPreviousTemplateWithClearMessage(t *testing.T) {
 	legacy := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
 	file := workbook(t, legacy, [][]string{{"Refresco"}})

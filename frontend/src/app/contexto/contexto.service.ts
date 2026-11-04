@@ -12,6 +12,8 @@ import { comoLista, PermisoRequerido, PERMISOS } from './permisos';
 const negocioKey = 'tienda.contexto.negocio_id';
 const sucursalKey = 'tienda.contexto.sucursal_id';
 const altaPospuestaKey = 'tienda.alta_inicial.pospuesta';
+// Al volver a la pestaña solo se revalida si pasó este tiempo desde la última consulta.
+const revalidarTrasMs = 60_000;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable({ providedIn: 'root' })
@@ -28,6 +30,7 @@ export class ContextoService {
 
   // Deduplica inicializaciones concurrentes: varios guards pueden resolverse en la misma navegación.
   private enVuelo: Observable<EstadoContexto> | null = null;
+  private ultimaCarga = 0;
   private readonly router = inject(Router, { optional: true });
 
   constructor() {
@@ -39,6 +42,8 @@ export class ContextoService {
     };
     const revalidar = () => {
       if (document.visibilityState !== 'visible' || !this.inicializado() || this.enVuelo) return;
+      // focus y visibilitychange llegan juntos y en cambios rápidos de pestaña: basta una consulta por minuto.
+      if (Date.now() - this.ultimaCarga < revalidarTrasMs) return;
       const negocioAnterior = this.negocio()?.id;
       this.recargar().subscribe(() => {
         if (negocioAnterior && !this.negocios().some(negocio => negocio.id === negocioAnterior)) {
@@ -73,7 +78,10 @@ export class ContextoService {
     if (this.enVuelo) return this.enVuelo;
     this.estado.set('cargando');
     this.enVuelo = this.http.get<ContextoOpcionesResponse>(`${environment.apiUrl}/contexto/opciones`).pipe(
-      tap(({ items }) => this.resolver(items ?? [])),
+      tap(({ items }) => {
+        this.ultimaCarga = Date.now();
+        this.resolver(items ?? []);
+      }),
       map(() => this.estado()),
       catchError(() => {
         this.limpiarSeleccion();
