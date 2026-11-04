@@ -23,6 +23,7 @@ describe('NAVIGATION_ITEMS', () => {
       '/equipo/invitaciones',
       '/equipo/puestos',
       '/roles-permisos',
+      '/configuracion/vistas',
     ]);
   });
 
@@ -37,7 +38,7 @@ describe('NAVIGATION_ITEMS', () => {
   it('oculta lo que el rol no permite y retira los grupos vacíos', () => {
     const otorgados = ['catalogo.ver', 'equipo.invitaciones.ver'];
     const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (item) =>
-      [item.permiso ?? []].flat().every((codigo) => otorgados.includes(codigo)),
+      !item.soloPropietario && [item.permiso ?? []].flat().every((codigo) => otorgados.includes(codigo)),
     );
 
     expect(visibles.map((item) => item.label)).toEqual([
@@ -55,5 +56,21 @@ describe('NAVIGATION_ITEMS', () => {
 
     expect(visibles.some((item) => item.label === 'Negocios')).toBe(false);
     expect(visibles.some((item) => item.label === 'Inicio')).toBe(true);
+  });
+
+  it('Configuración > Vistas es solo del propietario', () => {
+    const configuracion = NAVIGATION_ITEMS.find((item) => item.label === 'Configuración');
+    expect(configuracion).toMatchObject({ soloPropietario: true });
+    expect(configuracion?.children?.map((item) => [item.label, item.route])).toEqual([['Vistas', '/configuracion/vistas']]);
+    const empleado = filtrarNavegacion(NAVIGATION_ITEMS, (item) => !item.soloPropietario);
+    expect(empleado.some((item) => item.label === 'Configuración')).toBe(false);
+  });
+
+  it('retira del menú las secciones ocultas en Vistas', () => {
+    const ocultas = new Set(['categorias', 'marcas']);
+    const visibles = filtrarNavegacion(NAVIGATION_ITEMS, (item) => !item.vista || !ocultas.has(item.vista));
+    expect(visibles.find((item) => item.label === 'Catálogo')?.children?.map((item) => item.label)).toEqual([
+      'Productos', 'Unidades de medida',
+    ]);
   });
 });

@@ -5,6 +5,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
+
+/** Configuración > Vistas: secciones ocultas del negocio en cada prueba. */
+const vistasOcultas = signal<string[]>([]);
+const vistasStub = { visible: (seccion?: string | null) => !seccion || !vistasOcultas().includes(seccion) };
 import { environment } from '../../../environments/environment';
 import { ProductRow } from './product.models';
 import { ProductosComponent } from './productos.component';
@@ -27,6 +32,7 @@ describe('ProductosComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: VistasService, useValue: vistasStub },
         {
           provide: ContextoService,
           useValue: {
@@ -642,6 +648,7 @@ describe('ProductosComponent carga masiva', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: VistasService, useValue: vistasStub },
         { provide: ContextoService, useValue: { negocio: signal({ id: negocioId }), sucursal, puede: () => true } },
         { provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'import' }, paramMap: new Map() } } },
         { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
@@ -716,6 +723,7 @@ describe('ProductosComponent · crear solo propietario', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: VistasService, useValue: vistasStub },
         {
           provide: ContextoService,
           useValue: { negocio: signal({ id: negocioId, tipo_miembro: tipoMiembro }), sucursal: signal({ id: 'sucursal-1' }), puede: () => true },
@@ -733,7 +741,28 @@ describe('ProductosComponent · crear solo propietario', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    vistasOcultas.set([]);
+    TestBed.resetTestingModule();
+  });
+
+  it('oculta categoría y marca de la lista cuando el negocio las ocultó en Vistas', () => {
+    const conCategoria = { ...producto, categoria: 'Bebidas', categoria_id: 'cat-1', marca: 'Acme', marca_id: 'marca-1' };
+    let page = montar('propietario', [conCategoria]);
+    expect([...page.querySelectorAll('th')].map((item) => item.textContent?.trim())).toContain('Categoría');
+    expect(page.textContent).toContain('Bebidas');
+    TestBed.resetTestingModule();
+
+    vistasOcultas.set(['categorias', 'marcas']);
+    page = montar('propietario', [conCategoria]);
+    const encabezados = [...page.querySelectorAll('th')].map((item) => item.textContent?.trim());
+    expect(encabezados).not.toContain('Categoría');
+    expect(page.textContent).not.toContain('Bebidas');
+    const filtros = [...page.querySelectorAll('.filter-field > span')].map((item) => item.textContent?.trim());
+    expect(filtros).not.toContain('Categoría');
+    expect(filtros).not.toContain('Marca');
+    expect(filtros).toContain('Proveedor');
+  });
 
   it('muestra «Agregar del catálogo», «Agregar nuevo producto» y «Carga masiva» al propietario', () => {
     const page = montar('propietario', [producto]);

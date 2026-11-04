@@ -94,6 +94,7 @@
               />
             </div>
           </label>
+          @if (categoriasVisibles()) {
           <label class="filter-field">
             <span>Categoría</span>
             <p-select
@@ -106,6 +107,8 @@
               [showClear]="true"
             />
           </label>
+          }
+          @if (marcasVisibles()) {
           <label class="filter-field">
             <span>Marca</span>
             <p-select
@@ -118,6 +121,7 @@
               [showClear]="true"
             />
           </label>
+          }
           <label class="filter-field">
             <span>Proveedor</span>
             <p-select
@@ -191,7 +195,9 @@
               <th>Nombre</th>
               <th>Precio</th>
               <th>Stock</th>
-              <th>Categoría</th>
+              @if (categoriasVisibles()) {
+                <th>Categoría</th>
+              }
               <th>Proveedor</th>
               <th>Estado</th>
               <th class="actions-column">Acciones</th>
@@ -247,7 +253,9 @@
                 }
               </td>
               <td>{{ hasVariants(product) ? variantStockTotal(product) : product.stock }} und.</td>
-              <td>{{ product.categoria || 'Sin categoría' }}</td>
+              @if (categoriasVisibles()) {
+                <td>{{ product.categoria || 'Sin categoría' }}</td>
+              }
               <td>{{ product.proveedor || 'Sin proveedor' }}</td>
               <td>
                 <span class="status" [class]="getStatusClass(product.estado)">
@@ -294,7 +302,7 @@
           </ng-template>
           <ng-template #expandedrow let-product>
             <tr class="variant-expansion-row">
-              <td colspan="9">
+              <td [attr.colspan]="columnasLista()">
                 <div class="variant-expansion">
                   <table class="variant-table">
                     <thead>
@@ -326,7 +334,7 @@
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="9" class="empty-message">
+              <td [attr.colspan]="columnasLista()" class="empty-message">
                 No hay productos que coincidan con los filtros.
               </td>
             </tr>
@@ -448,6 +456,7 @@
               }
             </label>
 
+            @if (categoriasVisibles()) {
             <label class="field">
               <span>Categoría</span>
               <p-select
@@ -469,6 +478,8 @@
               </section>
             }
 
+            }
+            @if (marcasVisibles()) {
             <label class="field">
               <span>Marca</span>
               <p-select
@@ -514,6 +525,7 @@
                   </button>
                 </div>
               </section>
+            }
             }
             <label class="field">
               <span>Proveedor </span>

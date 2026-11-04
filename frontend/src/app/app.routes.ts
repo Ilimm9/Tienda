@@ -182,6 +182,12 @@ export const routes: Routes = [
           import('./features/equipo/equipo.routes').then((module) => module.EQUIPO_ROUTES),
       },
       {
+        path: 'configuracion',
+        data: { breadcrumb: 'Configuración' },
+        loadChildren: () =>
+          import('./features/configuracion/configuracion.routes').then((module) => module.CONFIGURACION_ROUTES),
+      },
+      {
         path: 'roles-permisos',
         loadChildren: () =>
           import('./features/roles-permisos/roles-permisos.routes').then(

@@ -201,6 +201,7 @@ func (s *ProductService) prepareProductImport(businessID, branchID uuid.UUID, fi
 	result.Omitidas += validation.Omitidas
 	result.Invalidas += validation.Invalidas
 	result.Errores = append(result.Errores, validation.Errores...)
+	result.Advertencias = append(result.Advertencias, validation.Advertencias...)
 	if len(proposals) == 0 {
 		return prepared, rows, result, nil, nil
 	}

@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { LayoutStateService } from '../layout-state.service';
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
 import { filtrarNavegacion, NAVIGATION_ITEMS, NavigationItem } from '../navigation.config';
 
 @Component({
@@ -17,13 +18,20 @@ export class SidebarComponent {
   private readonly expandedGroups = signal(new Set<string>());
 
   private readonly contexto = inject(ContextoService);
+  private readonly vistas = inject(VistasService);
 
-  /** El menú refleja los permisos del negocio activo; cambia al cambiar de negocio o recargar el contexto. */
+  /**
+   * El menú refleja los permisos y las vistas del negocio activo; cambia al cambiar de negocio,
+   * recargar el contexto o guardar Configuración > Vistas.
+   */
   readonly navigationItems = computed(() =>
     filtrarNavegacion(
       NAVIGATION_ITEMS,
       (item) =>
-        this.contexto.puede(item.permiso) && (item.acceso !== 'ver-negocios' || this.contexto.puedeVerNegocios()),
+        this.contexto.puede(item.permiso) &&
+        (item.acceso !== 'ver-negocios' || this.contexto.puedeVerNegocios()) &&
+        (!item.soloPropietario || this.contexto.negocio()?.tipo_miembro === 'propietario') &&
+        this.vistas.visible(item.vista),
     ),
   );
 

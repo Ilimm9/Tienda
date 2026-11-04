@@ -52,17 +52,20 @@ func (importRepositoryStub) ValidateProductImport(_ uuid.UUID, _ uuid.UUID, rows
 			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Campo: "Código de barras", Motivo: "ya está registrado en el negocio"})
 			continue
 		}
+		if row.Fila == 2 {
+			result.Advertencias = append(result.Advertencias, domain.CatalogImportIssue{Fila: row.Fila, Nombre: row.Nombre, Campo: "Nombre", Motivo: "el código pertenece a «Agua»; se conservan los datos del catálogo"})
+		}
 		prepared = append(prepared, domain.ValidatedProductImportRow{Fila: row.Fila})
 	}
 	return prepared, result, nil, nil
 }
 
 func TestPreviewProductImportListsValidRowsAndNamesErrors(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := productImportHeaders
 	file := workbook(t, headers, [][]string{
-		{"Agua 1.5 L", "Bebidas", "", "", "", "", "", "", "12", "8.380000000000001", "4", "", "", ""},
-		{"Duplicado", "Bebidas", "", "", "", "", "", "", "10", "5", "1", "7501000000001", "", ""},
-		{"Negativo", "Bebidas", "", "", "", "", "", "", "10", "5", "-2", "", "", ""},
+		{"", "Agua 1.5 L", "", "12", "8.380000000000001", "4", "", "Bebidas", ""},
+		{"7501000000001", "Duplicado", "", "10", "5", "1", "", "Bebidas", ""},
+		{"", "Negativo", "", "10", "5", "-2", "", "Bebidas", ""},
 	})
 	service := NewProductService(importRepositoryStub{}, nil)
 
@@ -81,12 +84,15 @@ func TestPreviewProductImportListsValidRowsAndNamesErrors(t *testing.T) {
 	if names[3] != "Duplicado" || names[4] != "Negativo" {
 		t.Fatalf("errores = %#v, want names for parse and repository errors", preview.Errores)
 	}
+	if len(preview.Advertencias) != 1 || preview.Advertencias[0].Fila != 2 || preview.Advertencias[0].Campo != "Nombre" {
+		t.Fatalf("advertencias = %#v, want repository warning for row 2", preview.Advertencias)
+	}
 
 	content, err := service.ProductImportErrors(uuid.New(), uuid.New(), file)
 	if err != nil || len(content) == 0 {
 		t.Fatalf("ProductImportErrors() = %d bytes, %v", len(content), err)
 	}
-	clean := workbook(t, headers, [][]string{{"Agua 1.5 L", "Bebidas", "", "", "", "", "", "", "12", "8", "4", "", "", ""}})
+	clean := workbook(t, headers, [][]string{{"", "Agua 1.5 L", "", "12", "8", "4", "", "Bebidas", ""}})
 	if _, err := service.ProductImportErrors(uuid.New(), uuid.New(), clean); !errors.Is(err, ErrNoImportErrors) {
 		t.Fatalf("ProductImportErrors() error = %v, want ErrNoImportErrors", err)
 	}

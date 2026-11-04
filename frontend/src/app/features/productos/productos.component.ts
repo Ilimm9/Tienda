@@ -18,6 +18,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
+import { VistasService } from '../../contexto/vistas.service';
 import { ImportReportComponent } from './import-report.component';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
@@ -75,6 +76,11 @@ export class ProductosComponent {
   readonly P = PERMISOS;
   private readonly productosService = inject(ProductosService);
   private readonly contexto = inject(ContextoService);
+  private readonly vistas = inject(VistasService);
+  /** Configuración > Vistas: un negocio puede ocultar Marcas y Categorías (sus datos se conservan). */
+  readonly marcasVisibles = computed(() => this.vistas.visible('marcas'));
+  readonly categoriasVisibles = computed(() => this.vistas.visible('categorias'));
+  readonly columnasLista = computed(() => (this.categoriasVisibles() ? 9 : 8));
   // Cambiar el precio al editar requiere precios.autorizar; sin él se conserva el vigente.
   // Crear e importar productos es solo del propietario (capability 31).
   readonly esPropietario = computed(() => this.contexto.negocio()?.tipo_miembro === 'propietario');
@@ -1045,12 +1051,13 @@ export class ProductosComponent {
     const brandControl = this.productForm.controls.marca_id;
     const categoryControl = this.productForm.controls.categoria_id;
 
-    if (product.marca && this.brandsLoaded && (brandControl.pristine || !brandControl.value)) {
+    if (this.marcasVisibles() && product.marca && this.brandsLoaded && (brandControl.pristine || !brandControl.value)) {
       const brand = this.findCatalogMatch(this.brands(), product.marca);
       if (brand) brandControl.setValue(brand.id);
       else warnings.push(`La marca "${product.marca}" no existe en el catálogo local.`);
     }
     if (
+      this.categoriasVisibles() &&
       product.categoria &&
       this.categoriesLoaded &&
       (categoryControl.pristine || !categoryControl.value)
@@ -1166,8 +1173,8 @@ export class ProductosComponent {
 
   private matchesProductFilters(product: ProductRow): boolean {
     const query = this.normalizeProductFilter(this.productSearch());
-    const category = this.productCategoryFilter();
-    const brand = this.productBrandFilter();
+    const category = this.categoriasVisibles() ? this.productCategoryFilter() : null;
+    const brand = this.marcasVisibles() ? this.productBrandFilter() : null;
     const provider = this.productProviderFilter();
     const status = this.productStatusFilter();
     const type = this.productTypeFilter();

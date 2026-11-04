@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"tienda/backend/internal/domain"
 
@@ -132,29 +133,29 @@ func TestProviderImportTemplateHasExpectedHeaders(t *testing.T) {
 }
 
 func TestParseProductImportGeneratesSKUAndReportsFieldErrors(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := productImportHeaders
 	file := workbook(t, headers, [][]string{
-		{"Refresco", "", "Acme", "", "Botella", "600", "ml", "Mililitro", "18.50", "11.125", "4", "7501055303038", "Sabor: Cola", "Distribuidora Norte"},
-		{"", "", "", "", "", "-2", "", "", "-10", "0", "texto", "123", "", ""},
+		{"7501055303038", "Refresco", "Sabor: Cola", "18.50", "11.125", "4", "Mililitro", "", "Distribuidora Norte"},
+		{"123", "", "", "-10", "0", "texto", "", "", ""},
 	})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
 	}
-	if len(rows) != 1 || rows[0].Proveedor != "Distribuidora Norte" || rows[0].Categoria != "" || rows[0].Contenido == nil || *rows[0].Contenido != 600 {
+	if len(rows) != 1 || rows[0].Proveedor != "Distribuidora Norte" || rows[0].Categoria != "" || rows[0].UnidadMedida != "Mililitro" || rows[0].CodigoBarras != "7501055303038" {
 		t.Fatalf("rows = %#v, want one parsed product", rows)
 	}
-	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 4 || len(result.Advertencias) != 1 {
-		t.Fatalf("result = %#v, want one invalid row with four field errors and one warning", result)
+	if result.Procesadas != 2 || result.Invalidas != 1 || len(result.Errores) != 3 || len(result.Advertencias) != 1 {
+		t.Fatalf("result = %#v, want one invalid row with three field errors and one warning", result)
 	}
-	if result.Errores[0].Campo != "Nombre" || result.Errores[1].Campo != "Contenido" {
+	if result.Errores[0].Campo != "Nombre" || result.Errores[1].Campo != "Precio de venta" {
 		t.Fatalf("errors = %#v, want field-specific errors", result.Errores)
 	}
 }
 
 func TestParseProductImportWarnsForShortNumericBarcode(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Producto corto", "", "", "", "", "", "", "", "10", "2", "2", "1234567", "", ""}})
+	headers := productImportHeaders
+	file := workbook(t, headers, [][]string{{"1234567", "Producto corto", "", "10", "2", "2", "", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -184,8 +185,8 @@ func TestParseProductImportPreservesNumericBarcodeWithoutScientificNotation(t *t
 }
 
 func TestParseProductImportTreatsVisuallyEmptyBarcodeAsAbsent(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Producto sin código", "", "", "", "", "", "", "", "10", "2", "2", "\u200B\u200C\u200D\u2060\uFEFF", "", ""}})
+	headers := productImportHeaders
+	file := workbook(t, headers, [][]string{{"\u200B\u200C\u200D\u2060\uFEFF", "Producto sin código", "", "10", "2", "2", "", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -209,8 +210,8 @@ func TestParseProductImportRejectsLegacySKUHeader(t *testing.T) {
 }
 
 func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Huevo Kinder", "", "Kinder", "", "Unidad", "", "", "", "28", "12.5", "0", "", "Colección: Dinosaurios; Color: Azul: intenso", ""}})
+	headers := productImportHeaders
+	file := workbook(t, headers, [][]string{{"", "Huevo Kinder", "Colección: Dinosaurios; Color: Azul: intenso", "28", "12.5", "0", "", "", ""}})
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseProductImport() error = %v", err)
@@ -224,8 +225,8 @@ func TestParseProductImportParsesFlexibleVariantAttributes(t *testing.T) {
 }
 
 func TestParseProductImportRejectsLegacyEqualsVariantFormat(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
-	file := workbook(t, headers, [][]string{{"Refresco", "", "", "", "Botella", "", "", "", "18.50", "2", "4", "", "Sabor=Cola", ""}})
+	headers := productImportHeaders
+	file := workbook(t, headers, [][]string{{"", "Refresco", "Sabor=Cola", "18.50", "2", "4", "", "", ""}})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
 	if err != nil {
@@ -237,15 +238,15 @@ func TestParseProductImportRejectsLegacyEqualsVariantFormat(t *testing.T) {
 }
 
 func TestParseProductImportRoundsCostToTwoDecimals(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := productImportHeaders
 	file := workbook(t, headers, [][]string{
-		{"Sin costo", "", "", "", "", "", "", "", "10", "", "1", "", "", ""},
-		{"Cero", "", "", "", "", "", "", "", "10", "0", "1", "", "", ""},
-		{"Negativo", "", "", "", "", "", "", "", "10", "-1", "1", "", "", ""},
-		{"Texto", "", "", "", "", "", "", "", "10", "catorce", "1", "", "", ""},
-		{"Residuo de Excel", "", "", "", "", "", "", "", "10", "8.380000000000001", "1", "", "", ""},
-		{"Precisión", "", "", "", "", "", "", "", "10", "12.12345", "1", "", "", ""},
-		{"Mayor al precio", "", "", "", "", "", "", "", "10", "25.1234", "1", "", "", ""},
+		{"", "Sin costo", "", "10", "", "1", "", "", ""},
+		{"", "Cero", "", "10", "0", "1", "", "", ""},
+		{"", "Negativo", "", "10", "-1", "1", "", "", ""},
+		{"", "Texto", "", "10", "catorce", "1", "", "", ""},
+		{"", "Residuo de Excel", "", "10", "8.380000000000001", "1", "", "", ""},
+		{"", "Precisión", "", "10", "12.12345", "1", "", "", ""},
+		{"", "Mayor al precio", "", "10", "25.1234", "1", "", "", ""},
 	})
 
 	rows, result, err := parseProductImport(bytes.NewReader(file))
@@ -268,11 +269,11 @@ func TestParseProductImportRoundsCostToTwoDecimals(t *testing.T) {
 }
 
 func TestProductImportErrorsWorkbookKeepsOnlyRejectedRows(t *testing.T) {
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := productImportHeaders
 	file := workbook(t, headers, [][]string{
-		{"Correcto", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", ""},
-		{"Stock negativo", "Dulces", "", "", "", "", "", "", "10", "5", "-3", "", "", ""},
-		{"Duplicado", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", ""},
+		{"", "Correcto", "", "10", "5", "1", "", "Dulces", ""},
+		{"", "Stock negativo", "", "10", "5", "-3", "", "Dulces", ""},
+		{"", "Duplicado", "", "10", "5", "1", "", "Dulces", ""},
 	})
 	issues := []domain.CatalogImportIssue{
 		{Fila: 3, Campo: "Stock inicial", Motivo: "debe ser un número mayor o igual a cero"},
@@ -295,8 +296,8 @@ func TestProductImportErrorsWorkbookKeepsOnlyRejectedRows(t *testing.T) {
 	}
 	want := [][]string{
 		append(append([]string{}, headers...), "Errores"),
-		{"Stock negativo", "Dulces", "", "", "", "", "", "", "10", "5", "-3", "", "", "", "Stock inicial: debe ser un número mayor o igual a cero"},
-		{"Duplicado", "Dulces", "", "", "", "", "", "", "10", "5", "1", "", "", "", "Código de barras: está repetido en el archivo; otro motivo"},
+		{"", "Stock negativo", "", "10", "5", "-3", "", "Dulces", "", "Stock inicial: debe ser un número mayor o igual a cero"},
+		{"", "Duplicado", "", "10", "5", "1", "", "Dulces", "", "Código de barras: está repetido en el archivo; otro motivo"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("rows = %#v, want %#v", got, want)
@@ -352,7 +353,7 @@ func TestProductImportTemplateIncludesInstructions(t *testing.T) {
 		t.Fatalf("first sheet = %q, want Productos", book.GetSheetName(0))
 	}
 	productRows, err := book.GetRows("Productos")
-	if err != nil || len(productRows) == 0 || !reflect.DeepEqual(productRows[0], []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}) {
+	if err != nil || len(productRows) == 0 || !reflect.DeepEqual(productRows[0], []string{"Código de barras", "Nombre", "Variantes", "Precio de venta", "Costo", "Stock inicial", "Unidad de medida", "Categoría", "Proveedor"}) {
 		t.Fatalf("product headers = %#v, error = %v", productRows, err)
 	}
 	rows, err := book.GetRows("Instrucciones")
@@ -365,10 +366,13 @@ func TestProductImportTemplateIncludesInstructions(t *testing.T) {
 			instructions[row[0]] = row[1]
 		}
 	}
-	if instructions["Contenido y unidad de contenido"] != "Indican cuánto trae el empaque. Ejemplo: para una botella de 600 ml, escribe Contenido: 600 y Unidad de contenido: ml." {
-		t.Fatalf("content unit instruction = %q", instructions["Contenido y unidad de contenido"])
+	if _, legacy := instructions["Contenido y unidad de contenido"]; legacy {
+		t.Fatalf("instructions still describe removed content columns: %#v", instructions)
 	}
-	if instructions["Unidad de medida"] != "Es la unidad estandarizada del catálogo. Escribe su nombre completo, por ejemplo Mililitro. Si no existe, aparecerá en la vista previa para autorizar su creación." {
+	if !strings.Contains(instructions["Nombre"], "Coca-Cola 600 ml") || !strings.Contains(instructions["Productos existentes"], "El código de barras manda") {
+		t.Fatalf("name/identity instructions = %#v", instructions)
+	}
+	if instructions["Unidad de medida"] != "Es la unidad estandarizada del catálogo. Escribe su nombre completo, por ejemplo Pieza. Si no existe, aparecerá en la vista previa para autorizar su creación." {
 		t.Fatalf("measurement unit instruction = %q", instructions["Unidad de medida"])
 	}
 	if instructions["Variantes"] != "Opcional. Usa Atributo: valor; por ejemplo Colección: Dinosaurios o Sabor: Fresa; Color: Rojo." {
@@ -403,7 +407,7 @@ func workbook(t *testing.T, headers []string, data [][]string) []byte {
 
 func productWorkbookWithNumericBarcode(t *testing.T, barcode int64) []byte {
 	t.Helper()
-	headers := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	headers := productImportHeaders
 	book := excelize.NewFile()
 	defer book.Close()
 	for index, header := range headers {
@@ -412,14 +416,14 @@ func productWorkbookWithNumericBarcode(t *testing.T, barcode int64) []byte {
 			t.Fatal(err)
 		}
 	}
-	values := []string{"Producto numérico", "", "", "", "", "", "", "", "10", "", "1", "", "", ""}
+	values := []string{"", "Producto numérico", "", "10", "", "1", "", "", ""}
 	for index, value := range values {
 		cell, _ := excelize.CoordinatesToCellName(index+1, 2)
 		if err := book.SetCellValue("Sheet1", cell, value); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := book.SetCellValue("Sheet1", "L2", barcode); err != nil {
+	if err := book.SetCellValue("Sheet1", "A2", barcode); err != nil {
 		t.Fatal(err)
 	}
 	var buffer bytes.Buffer
@@ -431,4 +435,43 @@ func productWorkbookWithNumericBarcode(t *testing.T, barcode int64) []byte {
 
 func isImportFormatError(err error) bool {
 	return errors.Is(err, ErrInvalidImportFile)
+}
+
+func TestParseProductImportRejectsPreviousTemplateWithClearMessage(t *testing.T) {
+	legacy := []string{"Nombre", "Categoría", "Marca", "Descripción", "Presentación", "Contenido", "Unidad de contenido", "Unidad de medida", "Precio de venta", "Costo", "Stock inicial", "Código de barras", "Variantes", "Proveedor"}
+	file := workbook(t, legacy, [][]string{{"Refresco"}})
+	_, _, err := parseProductImport(bytes.NewReader(file))
+	if err == nil || !isImportFormatError(err) || !strings.Contains(err.Error(), "plantilla anterior") {
+		t.Fatalf("error = %v, want previous-template rejection", err)
+	}
+}
+
+func TestParseProductImportRequiresExactColumns(t *testing.T) {
+	cases := map[string][]string{
+		"columna extra":    append(append([]string{}, productImportHeaders...), "Marca"),
+		"orden distinto":   {"Nombre", "Código de barras", "Variantes", "Precio de venta", "Costo", "Stock inicial", "Unidad de medida", "Categoría", "Proveedor"},
+		"columna faltante": productImportHeaders[:8],
+	}
+	for name, headers := range cases {
+		t.Run(name, func(t *testing.T) {
+			file := workbook(t, headers, [][]string{{"", "Refresco", "", "18", "", "1"}})
+			rows, _, err := parseProductImport(bytes.NewReader(file))
+			if err == nil || !isImportFormatError(err) || len(rows) != 0 {
+				t.Fatalf("rows = %#v, error = %v; want rejected headers", rows, err)
+			}
+		})
+	}
+}
+
+func TestParseProductImportReadsNewColumnOrder(t *testing.T) {
+	file := workbook(t, productImportHeaders, [][]string{{"7501055303038", "Corona Mega", "Sabor: Clara", "45", "30.5", "12", "Pieza", "Cervezas", "Modelo"}})
+	rows, result, err := parseProductImport(bytes.NewReader(file))
+	if err != nil || len(result.Errores) != 0 || len(rows) != 1 {
+		t.Fatalf("rows = %#v, result = %#v, error = %v", rows, result, err)
+	}
+	row := rows[0]
+	if row.CodigoBarras != "7501055303038" || row.Nombre != "Corona Mega" || len(row.Variantes) != 1 || row.PrecioVenta != 45 ||
+		row.CostoProveedor != 30.5 || row.StockInicial != 12 || row.UnidadMedida != "Pieza" || row.Categoria != "Cervezas" || row.Proveedor != "Modelo" {
+		t.Fatalf("row = %#v", row)
+	}
 }
