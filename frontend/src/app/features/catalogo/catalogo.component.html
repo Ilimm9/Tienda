@@ -1,20 +1,20 @@
 @if (isListPage()) {
-<main class="catalog-page">
-  <header class="catalog-header">
+<section class="pagina">
+  <header class="encabezado-pagina">
     <div>
-      <p class="eyebrow">Catálogo</p>
+      <span class="antetitulo">Catálogo</span>
       <h1>{{ title }}</h1>
-      <p>{{ description }}</p>
+      <p class="descripcion">{{ description }}</p>
     </div>
     @if (items().length > 0) {
       <div class="catalog-actions">
         @if (canImport()) {
-          <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
-            <i class="pi pi-upload"></i> Carga masiva
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToImport()">
+            <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
           </button>
         }
-        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
-          <i class="pi pi-plus"></i> Agregar
+        <button *appPuede="P.catalogoGestionar" class="boton" type="button" (click)="navigateToCreate()">
+          <i class="pi pi-plus" aria-hidden="true"></i> Agregar
           {{
             section === 'proveedores'
               ? 'proveedor'
@@ -29,21 +29,21 @@
     }
   </header>
   @if (loading()) {
-    <section class="catalog-state">Cargando {{ title.toLowerCase() }}...</section>
+    <p class="tabla-tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando {{ title.toLowerCase() }}…</p>
   } @else if (error()) {
-    <section class="catalog-state error-state">{{ error() }}</section>
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   } @else if (!items().length) {
-    <section class="empty-catalog">
-      <span class="empty-icon"><i class="pi pi-tags"></i></span>
-      <h2>Sin {{ title.toLowerCase() }} disponibles</h2>
-      <p>Aún no hay registros para mostrar.</p>
-      <div class="catalog-actions">
+    <div class="tabla-tarjeta estado-vacio estado-vacio--guiado">
+      <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-tags"></i></span>
+      <strong>Sin {{ title.toLowerCase() }} disponibles</strong>
+      <span>Aún no hay registros para mostrar.</span>
+      <div class="catalog-actions mt-2">
         @if (canImport()) {
-          <button *appPuede="P.catalogoGestionar" class="secondary-button" type="button" (click)="navigateToImport()">
-            <i class="pi pi-upload"></i> Carga masiva
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToImport()">
+            <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
           </button>
         }
-        <button *appPuede="P.catalogoGestionar" class="primary-button" type="button" (click)="navigateToCreate()">
+        <button *appPuede="P.catalogoGestionar" class="boton boton--compacto" type="button" (click)="navigateToCreate()">
           {{
             section === 'unidades'
               ? 'Agregar nueva unidad de medida'
@@ -56,154 +56,198 @@
           }}
         </button>
       </div>
-    </section>
+    </div>
   } @else {
-    <section class="catalog-filters" aria-label="Filtros de catálogo">
-      <div class="catalog-filters-grid">
-        <label class="catalog-filter-search">
-          <span>Buscar</span>
-          <div class="catalog-filter-search-input">
-            <i class="pi pi-search" aria-hidden="true"></i>
-            <input
-              pInputText
-              [ngModel]="catalogSearch()"
-              (ngModelChange)="setCatalogSearch($event)"
-              [placeholder]="section === 'proveedores' ? 'Nombre, RFC, correo o teléfono...' : 'Buscar...'"
-            />
-          </div>
-        </label>
-        <label class="catalog-filter-field">
-          <span>Estado</span>
-          <p-select
-            [ngModel]="catalogStatusFilter()"
-            (ngModelChange)="setCatalogStatusFilter($event)"
-            [options]="catalogStatusOptions"
-            optionLabel="label"
-            optionValue="value"
+    <section class="tabla-tarjeta" [attr.aria-label]="'Lista de ' + title.toLowerCase()">
+      <div class="tabla-barra" role="search">
+        <div class="campo-grupo min-w-0 flex-[2_1_280px]">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <label class="sr-only" for="catalog-search">Buscar</label>
+          <input
+            id="catalog-search"
+            type="search"
+            [ngModel]="catalogSearch()"
+            (ngModelChange)="setCatalogSearch($event)"
+            [placeholder]="section === 'proveedores' ? 'Nombre, RFC, correo o teléfono' : section === 'unidades' ? 'Buscar unidad o símbolo' : 'Buscar ' + singularTitle.toLowerCase()"
           />
-        </label>
+          @if (catalogSearch()) {
+            <button type="button" class="campo-grupo__accion" aria-label="Limpiar búsqueda" (click)="setCatalogSearch('')">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
         @if (isCategory()) {
           <label class="catalog-filter-field">
-            <span>Categoría padre</span>
+            <span class="sr-only">Categoría padre</span>
             <p-select
               [ngModel]="categoryParentFilter()"
               (ngModelChange)="setCategoryParentFilter($event)"
               [options]="categoryParentFilterOptions()"
               optionLabel="label"
               optionValue="value"
-              placeholder="Todas"
+              placeholder="Todas las categorías padre"
               [showClear]="true"
             />
           </label>
         }
         @if (isUnit()) {
           <label class="catalog-filter-field">
-            <span>Tipo</span>
+            <span class="sr-only">Tipo</span>
             <p-select
               [ngModel]="unitTypeFilter()"
               (ngModelChange)="setUnitTypeFilter($event)"
               [options]="unitTypeOptions"
               optionLabel="label"
               optionValue="value"
-              placeholder="Todos"
+              placeholder="Todos los tipos"
               [showClear]="true"
             />
           </label>
         }
+        <div class="segmentado" role="group" aria-label="Filtrar por estado">
+          @for (opcion of catalogStatusOptions; track opcion.value) {
+            <button
+              type="button"
+              class="segmentado__opcion"
+              [attr.aria-pressed]="catalogStatusFilter() === opcion.value"
+              (click)="setCatalogStatusFilter(opcion.value)"
+            >
+              {{ opcion.label }}
+              <span class="segmentado__contador">{{ catalogStatusCounts()[opcion.value] }}</span>
+            </button>
+          }
+        </div>
       </div>
-      <div class="catalog-filters-summary">
-        <p>{{ filteredItems().length }} de {{ items().length }} registros</p>
-        <button class="secondary-button" type="button" (click)="clearCatalogFilters()">
-          <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
-        </button>
+
+      <div class="tabla-desplazable">
+        <table class="tabla" [style.min-width.px]="isProvider() ? 920 : section === 'marcas' ? 560 : 760">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              @if (isUnit()) {
+                <th scope="col">Símbolo</th>
+                <th scope="col">Tipo y equivalencia</th>
+              }
+              @if (isCategory()) {
+                <th scope="col">Ruta</th>
+                <th scope="col">Descripción</th>
+              }
+              @if (isProvider()) {
+                <th scope="col">Razón social</th>
+                <th scope="col">Contacto</th>
+              }
+              <th scope="col">Estado</th>
+              <th scope="col" class="derecha">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of paginatedItems(); track item.id) {
+              <tr>
+                <td>
+                  <span class="tabla-persona">
+                    <span class="catalogo-icono" [class.catalogo-icono--inactivo]="!item.activo" aria-hidden="true">
+                      @if (isCategory()) {
+                        <i class="pi pi-tag"></i>
+                      } @else if (isUnit()) {
+                        <i class="pi pi-sliders-h"></i>
+                      } @else {
+                        {{ initials(item) }}
+                      }
+                    </span>
+                    <span class="tabla-principal" [class.tenue]="!item.activo">{{ item.nombre }}</span>
+                  </span>
+                </td>
+                @if (isUnit()) {
+                  <td><span class="catalogo-simbolo">{{ $any(item).simbolo }}</span></td>
+                  <td>
+                    <span class="pastilla pastilla--plana catalogo-tipo" [attr.data-tipo]="$any(item).tipo">{{ unitTypeLabel($any(item).tipo) }}</span>
+                    <span class="secundario tabular-nums mt-1">{{ unitEquivalence($any(item)) }} · {{ $any(item).decimales }} decimales</span>
+                  </td>
+                }
+                @if (isCategory()) {
+                  <td>
+                    <span class="catalogo-ruta">
+                      @for (parte of categoryPath($any(item)); track $index; let ultima = $last) {
+                        @if ($index > 0) {
+                          <i class="pi pi-angle-right" aria-hidden="true"></i>
+                        }
+                        <span class="catalogo-ruta__parte" [class.catalogo-ruta__parte--actual]="ultima">{{ parte }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td class="max-w-[320px]" [class.tenue]="!$any(item).descripcion">{{ $any(item).descripcion || '—' }}</td>
+                }
+                @if (isProvider()) {
+                  <td>
+                    <span [class.tenue]="!$any(item).razon_social">{{ $any(item).razon_social || '—' }}</span>
+                    @if ($any(item).rfc) {
+                      <span class="codigo block">{{ $any(item).rfc }}</span>
+                    }
+                  </td>
+                  <td [class.tenue]="!$any(item).email && !$any(item).telefono">
+                    {{ $any(item).email || $any(item).telefono || '—' }}
+                    @if ($any(item).email && $any(item).telefono) {
+                      <span class="secundario tabular-nums">{{ $any(item).telefono }}</span>
+                    }
+                  </td>
+                }
+                <td>
+                  <span class="pastilla" [class.pastilla--exito]="item.activo" [class.pastilla--neutra]="!item.activo">{{ item.activo ? 'Activo' : 'Inactivo' }}</span>
+                </td>
+                <td class="derecha">
+                  <span class="acciones-fila">
+                    <button *appPuede="P.catalogoGestionar" class="icono-accion" type="button" title="Editar" [attr.aria-label]="'Editar ' + item.nombre" (click)="navigateToEdit(item)">
+                      <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      *appPuede="P.catalogoGestionar"
+                      class="icono-accion icono-accion--peligro"
+                      type="button"
+                      [disabled]="deletingId() === item.id"
+                      (click)="deleteCatalogItem(item)"
+                      [attr.aria-label]="'Eliminar ' + item.nombre"
+                      title="Eliminar"
+                    >
+                      <i class="pi" [class.pi-trash]="deletingId() !== item.id" [class.pi-spinner]="deletingId() === item.id" [class.pi-spin]="deletingId() === item.id" aria-hidden="true"></i>
+                    </button>
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="isProvider() || isUnit() || isCategory() ? 5 : 3" class="estado-vacio">
+                  No hay registros que coincidan con los filtros.
+                  <button class="boton-enlace" type="button" (click)="clearCatalogFilters()">Limpiar filtros</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-    </section>
-    <section class="catalog-card data-table-card">
-      <p-table
-        [value]="filteredItems()"
-        [paginator]="true"
-        [rows]="10"
-        [first]="catalogPageFirst()"
-        (onPage)="onCatalogTablePage($event.first)"
-        [rowsPerPageOptions]="[10, 25, 50]"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
-        [tableStyle]="{ 'min-width': isCategory() ? '42rem' : isProvider() ? '58rem' : '36rem' }"
-        class="app-table"
-        [class.app-table--categories]="isCategory()"
-        [class.app-table--providers]="isProvider()"
-        [class.app-table--brands]="section === 'marcas'"
-        responsiveLayout="scroll"
-        ><ng-template #header>
-          <tr>
-            <th>Nombre</th>
-            @if (isUnit()) {
-              <th>Símbolo</th>
-              <th>Tipo</th>
-            }
-            @if (isCategory()) {
-              <th>Descripción</th>
-            }
-            @if (isProvider()) {
-              <th>Razón social</th>
-              <th>Contacto</th>
-            }
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr> </ng-template
-        ><ng-template #body let-item>
-          <tr>
-            <td>{{ item.nombre }}</td>
-            @if (isUnit()) {
-              <td>{{ $any(item).simbolo }}</td>
-              <td>{{ $any(item).tipo }}</td>
-            }
-            @if (isCategory()) {
-              <td>{{ $any(item).descripcion || '—' }}</td>
-            }
-            @if (isProvider()) {
-              <td>{{ $any(item).razon_social || '—' }}</td>
-              <td>{{ $any(item).email || $any(item).telefono || '—' }}</td>
-            }
-            <td>
-              <span class="status" [class.inactive]="!item.activo">{{
-                item.activo ? 'Activo' : 'Inactivo'
-              }}</span>
-            </td>
-            <td class="catalog-actions-cell">
-              <div class="catalog-row-actions">
-                <button *appPuede="P.catalogoGestionar"
-                  class="icon-button"
-                  type="button"
-                  (click)="navigateToEdit(item)"
-                  aria-label="Editar"
-                >
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button *appPuede="P.catalogoGestionar"
-                  class="icon-button icon-button--danger"
-                  type="button"
-                  [disabled]="deletingId() === item.id"
-                  (click)="deleteCatalogItem(item)"
-                  [attr.aria-label]="'Eliminar ' + item.nombre"
-                  title="Eliminar"
-                >
-                  <i class="pi" [class.pi-trash]="deletingId() !== item.id" [class.pi-spinner]="deletingId() === item.id" [class.pi-spin]="deletingId() === item.id"></i>
-                </button>
-              </div>
-            </td>
-          </tr> </ng-template
-        ><ng-template #emptymessage>
-          <tr>
-            <td [attr.colspan]="isProvider() || isUnit() ? 5 : isCategory() ? 4 : 3" class="catalog-filter-empty">
-              No hay registros que coincidan con los filtros.
-            </td>
-          </tr>
-        </ng-template
-      ></p-table>
+
+      <nav class="tabla-paginador" aria-label="Paginación">
+        <span>{{ catalogRange() }}</span>
+        <span class="tabla-paginador__botones">
+          <label class="inline-flex items-center gap-2">
+            Filas por página
+            <select class="campo catalogo-filas" [ngModel]="catalogRows()" (ngModelChange)="setCatalogRows($event)">
+              @for (opcion of catalogRowsOptions; track opcion) {
+                <option [ngValue]="opcion">{{ opcion }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="icono-accion" aria-label="Página anterior" [disabled]="catalogPage() === 0" (click)="goToCatalogPage(catalogPage() - 1)">
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span aria-live="polite">Página {{ catalogPage() + 1 }} de {{ catalogTotalPages() }}</span>
+          <button type="button" class="icono-accion" aria-label="Página siguiente" [disabled]="catalogPage() + 1 >= catalogTotalPages()" (click)="goToCatalogPage(catalogPage() + 1)">
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </span>
+      </nav>
     </section>
   }
-</main>
+</section>
 }
 @if (isFormPage()) {
   <main class="catalog-page catalog-form-page">

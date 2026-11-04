@@ -2204,6 +2204,8 @@ p-select.formulario-alta__select {
 
 /* Índice lateral que lleva a cada sección del formulario. */
 .indice-secciones {
+  /* Ancla los textos sr-only: sin esto se posicionan contra el documento y crean un segundo scroll. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;

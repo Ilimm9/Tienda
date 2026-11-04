@@ -1,37 +1,22 @@
 @if (isListPage()) {
-  <section class="products-page">
-    <header class="products-header">
+  <section class="pagina">
+    <header class="encabezado-pagina">
       <div>
-        <p class="eyebrow">Vista administrador</p>
+        <span class="antetitulo">Catálogo</span>
         <h1>Productos</h1>
-        <p>Visualiza el catálogo de productos y sus existencias actuales.</p>
+        <p class="descripcion">Catálogo de la sucursal con su precio y existencias actuales.</p>
       </div>
       @if (!loading() && !error() && products().length > 0 && esPropietario()) {
-        <div class="products-actions">
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="secondary-button"
-            type="button"
-            (click)="navigateToAddFromCatalog()"
-          >
+        <div class="acciones-encabezado">
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToAddFromCatalog()">
             <i class="pi pi-th-large" aria-hidden="true"></i>
             Agregar del catálogo
           </button>
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="secondary-button"
-            type="button"
-            (click)="navigateToImport()"
-          >
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToImport()">
             <i class="pi pi-upload" aria-hidden="true"></i>
             Carga masiva
           </button>
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="primary-button"
-            type="button"
-            (click)="navigateToCreate()"
-          >
+          <button *appPuede="P.catalogoGestionar" class="boton" type="button" (click)="navigateToCreate()">
             <i class="pi pi-plus" aria-hidden="true"></i>
             Agregar nuevo producto
           </button>
@@ -40,114 +25,103 @@
     </header>
 
     @if (loading()) {
-      <div class="products-state loading-state" role="status">Cargando productos...</div>
+      <p class="tabla-tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando productos…</p>
     } @else if (error(); as message) {
-      <div class="products-state error-state" role="alert">{{ message }}</div>
+      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
     } @else if (products().length === 0) {
-      <div class="empty-products">
-        <span class="empty-icon"><i class="pi pi-tags" aria-hidden="true"></i></span>
-        <h2>Esta sucursal aún no tiene productos</h2>
+      <div class="tabla-tarjeta estado-vacio estado-vacio--guiado">
+        <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-tags"></i></span>
+        <strong>Esta sucursal aún no tiene productos</strong>
         @if (esPropietario()) {
-        <p>Agrega productos del catálogo del negocio, impórtalos o crea uno nuevo.</p>
-        <div class="products-actions">
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="secondary-button"
-            type="button"
-            (click)="navigateToAddFromCatalog()"
-          >
-            <i class="pi pi-th-large" aria-hidden="true"></i> Agregar del catálogo
-          </button>
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="secondary-button"
-            type="button"
-            (click)="navigateToImport()"
-          >
-            <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
-          </button>
-          <button
-            *appPuede="P.catalogoGestionar"
-            class="primary-button"
-            type="button"
-            (click)="navigateToCreate()"
-          >
-            <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
-          </button>
-        </div>
+          <span>Agrega productos del catálogo del negocio, impórtalos o crea uno nuevo.</span>
+          <div class="acciones-encabezado mt-2">
+            <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToAddFromCatalog()">
+              <i class="pi pi-th-large" aria-hidden="true"></i> Agregar del catálogo
+            </button>
+            <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToImport()">
+              <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
+            </button>
+            <button *appPuede="P.catalogoGestionar" class="boton boton--compacto" type="button" (click)="navigateToCreate()">
+              <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
+            </button>
+          </div>
         } @else {
-        <p>Pide al propietario que agregue productos.</p>
+          <span>Pide al propietario que agregue productos.</span>
         }
       </div>
     } @else {
-      <section class="products-filters" aria-label="Filtros de productos">
-        <div class="products-filters-grid">
-          <label class="filter-search">
-            <span>Buscar</span>
-            <div class="filter-search-input">
-              <i class="pi pi-search" aria-hidden="true"></i>
-              <input
-                pInputText
-                [ngModel]="productSearch()"
-                (ngModelChange)="setProductSearch($event)"
-                placeholder="Nombre, sabor, SKU o código..."
-              />
-            </div>
-          </label>
-          @if (categoriasVisibles()) {
-          <label class="filter-field">
-            <span>Categoría</span>
-            <p-select
-              [ngModel]="productCategoryFilter()"
-              (ngModelChange)="setProductCategoryFilter($event)"
-              [options]="productCategoryOptions()"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todas"
-              [showClear]="true"
+      <section class="tabla-tarjeta" aria-label="Lista de productos">
+        <div class="tabla-barra" role="search">
+          <div class="campo-grupo min-w-0 flex-[2_1_280px]">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <label class="sr-only" for="product-search">Buscar productos</label>
+            <input
+              id="product-search"
+              type="search"
+              [ngModel]="productSearch()"
+              (ngModelChange)="setProductSearch($event)"
+              placeholder="Nombre, sabor, SKU o código de barras"
             />
-          </label>
+            @if (productSearch()) {
+              <button type="button" class="campo-grupo__accion" aria-label="Limpiar búsqueda" (click)="setProductSearch('')">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+          @if (categoriasVisibles()) {
+            <label class="filter-field">
+              <span class="sr-only">Categoría</span>
+              <p-select
+                [ngModel]="productCategoryFilter()"
+                (ngModelChange)="setProductCategoryFilter($event)"
+                [options]="productCategoryOptions()"
+                optionLabel="nombre"
+                optionValue="id"
+                placeholder="Todas las categorías"
+                [showClear]="true"
+              />
+            </label>
           }
           @if (marcasVisibles()) {
-          <label class="filter-field">
-            <span>Marca</span>
-            <p-select
-              [ngModel]="productBrandFilter()"
-              (ngModelChange)="setProductBrandFilter($event)"
-              [options]="productBrandOptions()"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todas"
-              [showClear]="true"
-            />
-          </label>
+            <label class="filter-field">
+              <span class="sr-only">Marca</span>
+              <p-select
+                [ngModel]="productBrandFilter()"
+                (ngModelChange)="setProductBrandFilter($event)"
+                [options]="productBrandOptions()"
+                optionLabel="nombre"
+                optionValue="id"
+                placeholder="Todas las marcas"
+                [showClear]="true"
+              />
+            </label>
           }
           <label class="filter-field">
-            <span>Proveedor</span>
+            <span class="sr-only">Proveedor</span>
             <p-select
               [ngModel]="productProviderFilter()"
               (ngModelChange)="setProductProviderFilter($event)"
               [options]="productProviderOptions()"
               optionLabel="nombre"
               optionValue="id"
-              placeholder="Todos"
+              placeholder="Todos los proveedores"
               [showClear]="true"
             />
           </label>
           <label class="filter-field">
-            <span>Estado</span>
+            <span class="sr-only">Estado</span>
             <p-select
               [ngModel]="productStatusFilter()"
               (ngModelChange)="setProductStatusFilter($event)"
               [options]="productStatusOptions"
               optionLabel="nombre"
               optionValue="id"
-              placeholder="Todos"
+              placeholder="Todas las existencias"
               [showClear]="true"
             />
           </label>
           <label class="filter-field">
-            <span>Tipo</span>
+            <span class="sr-only">Tipo</span>
             <p-select
               [ngModel]="productTypeFilter()"
               (ngModelChange)="setProductTypeFilter($event)"
@@ -157,190 +131,147 @@
             />
           </label>
         </div>
-        <div class="products-filters-header">
-          <div>
-            <!-- <h2>Filtros</h2> -->
-            <p>{{ filteredProducts().length }} de {{ products().length }} productos</p>
-          </div>
-          <button
-            class="secondary-button filter-clear-button"
-            type="button"
-            (click)="clearProductFilters()"
-          >
+
+        <div class="tabla-desplazable">
+          <table class="tabla min-w-[960px]">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                @if (categoriasVisibles()) {
+                  <th scope="col">Categoría</th>
+                }
+                <th scope="col">Proveedor</th>
+                <th scope="col" class="derecha">Precio</th>
+                <th scope="col" class="derecha">Stock</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="derecha">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (product of paginatedProducts(); track product.id) {
+                @let conVariantes = hasVariants(product);
+                @let abierto = isExpanded(product);
+                <tr>
+                  <td>
+                    <span class="tabla-persona">
+                      @if (product.imagen_url && !hasProductImageFailed(product.id)) {
+                        <img class="producto-miniatura" [src]="product.imagen_url" [alt]="product.nombre" (error)="handleProductImageError(product.id)" />
+                      } @else {
+                        <span class="producto-miniatura" [class]="'producto-miniatura--' + productTone(product)" aria-hidden="true">{{ productInitials(product) }}</span>
+                      }
+                      <span class="min-w-0">
+                        <span class="tabla-principal">{{ product.nombre }}</span>
+                        <span class="producto-detalle">
+                          @if (marcasVisibles() && product.marca) {
+                            <span>{{ product.marca }}</span>
+                          }
+                          @if (conVariantes) {
+                            <button type="button" class="producto-variantes" [attr.aria-expanded]="abierto" (click)="toggleVariants(product)">
+                              <i class="pi" [class.pi-chevron-down]="abierto" [class.pi-chevron-right]="!abierto" aria-hidden="true"></i>
+                              {{ product.variantes.length }} variantes
+                            </button>
+                          } @else if (product.sku || product.codigo_barras) {
+                            <span class="codigo">{{ product.sku || product.codigo_barras }}</span>
+                          }
+                        </span>
+                      </span>
+                    </span>
+                  </td>
+                  @if (categoriasVisibles()) {
+                    <td [class.tenue]="!product.categoria">{{ product.categoria || 'Sin categoría' }}</td>
+                  }
+                  <td [class.tenue]="!product.proveedor">{{ product.proveedor || 'Sin proveedor' }}</td>
+                  <td class="derecha tabular-nums font-semibold">
+                    @if (conVariantes) {
+                      <span class="tenue font-normal">Por variante</span>
+                    } @else {
+                      {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}
+                    }
+                  </td>
+                  <td class="derecha tabular-nums">{{ conVariantes ? variantStockTotal(product) : product.stock }} und.</td>
+                  <td>
+                    <span class="pastilla" [class]="statusPill(product.estado)">{{ product.estado || 'Sin estado' }}</span>
+                  </td>
+                  <td class="derecha">
+                    <span class="acciones-fila">
+                      <button *appPuede="P.catalogoGestionar" type="button" class="icono-accion" title="Editar" [attr.aria-label]="'Editar ' + product.nombre" (click)="navigateToEdit(product)">
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                      </button>
+                      <button
+                        *appPuede="P.catalogoGestionar"
+                        type="button"
+                        class="icono-accion icono-accion--peligro"
+                        title="Eliminar"
+                        [attr.aria-label]="'Eliminar ' + product.nombre"
+                        [disabled]="deletingProductId() === product.id"
+                        (click)="confirmDeactivate(product)"
+                      >
+                        <i [class]="deletingProductId() === product.id ? 'pi pi-spin pi-spinner' : 'pi pi-trash'" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+                @if (conVariantes && abierto) {
+                  @for (variant of product.variantes; track variant.id) {
+                    <tr class="variante-fila">
+                      <td>
+                        <span class="variante-nombre">
+                          <span class="variante-punto" aria-hidden="true"></span>
+                          <span class="font-medium">{{ variantAttributes(variant) }}</span>
+                          <span class="codigo">{{ variant.codigo_barras || 'Sin código de barras' }}</span>
+                        </span>
+                      </td>
+                      @if (categoriasVisibles()) {
+                        <td></td>
+                      }
+                      <td></td>
+                      <td class="derecha tabular-nums">{{ variant.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
+                      <td class="derecha tabular-nums">{{ variant.stock }} und.</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                  }
+                }
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="columnasLista()" class="estado-vacio">
+                    No hay productos que coincidan con los filtros.
+                    <button class="boton-enlace" type="button" (click)="clearProductFilters()">Limpiar filtros</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <nav class="tabla-paginador" aria-label="Paginación de productos">
+          <span>{{ productRange() }} · {{ filteredProducts().length }} de {{ products().length }} productos</span>
+          <span class="tabla-paginador__botones">
+            <label class="inline-flex items-center gap-2">
+              Filas por página
+              <select class="campo filas-por-pagina" [ngModel]="productRows()" (ngModelChange)="setProductRows($event)">
+                @for (opcion of productRowsOptions; track opcion) {
+                  <option [ngValue]="opcion">{{ opcion }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="icono-accion" aria-label="Página anterior" [disabled]="productPage() === 0" (click)="goToProductPage(productPage() - 1)">
+              <i class="pi pi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <span aria-live="polite">Página {{ productPage() + 1 }} de {{ productTotalPages() }}</span>
+            <button type="button" class="icono-accion" aria-label="Página siguiente" [disabled]="productPage() + 1 >= productTotalPages()" (click)="goToProductPage(productPage() + 1)">
+              <i class="pi pi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </span>
+        </nav>
+
+        <footer class="tabla-pie">
+          <span>Stock de la sucursal actual</span>
+          <button class="boton-enlace" type="button" (click)="clearProductFilters()">
             <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
           </button>
-        </div>
+        </footer>
       </section>
-      <div class="products-card data-table-card">
-        <p-table
-          [value]="filteredProducts()"
-          [loading]="false"
-          [paginator]="true"
-          [rows]="10"
-          [first]="productPageFirst()"
-          (onPage)="onProductTablePage($event.first)"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          [showCurrentPageReport]="true"
-          currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
-          [tableStyle]="{ 'min-width': '68rem' }"
-          dataKey="id"
-          class="app-table app-table--products"
-          styleClass="products-table"
-          responsiveLayout="scroll"
-        >
-          <ng-template #header>
-            <tr>
-              <th class="expander-column" aria-label="Variantes"></th>
-              <th class="image-column">Imagen</th>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              @if (categoriasVisibles()) {
-                <th>Categoría</th>
-              }
-              <th>Proveedor</th>
-              <th>Estado</th>
-              <th class="actions-column">Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-product let-expanded="expanded">
-            <tr>
-              <td class="expander-column">
-                @if (hasVariants(product)) {
-                  <button
-                    type="button"
-                    pButton
-                    pRowToggler
-                    [pRowToggler]="product"
-                    variant="text"
-                    severity="secondary"
-                    iconOnly
-                    rounded
-                    [attr.aria-label]="expanded ? 'Ocultar variantes' : 'Mostrar variantes'"
-                  >
-                    <i
-                      [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
-                      aria-hidden="true"
-                    ></i>
-                  </button>
-                }
-              </td>
-              <td class="image-column">
-                @if (product.imagen_url && !hasProductImageFailed(product.id)) {
-                  <img
-                    class="product-image"
-                    [src]="product.imagen_url"
-                    [alt]="product.nombre"
-                    (error)="handleProductImageError(product.id)"
-                  />
-                } @else {
-                  <span class="product-image image-placeholder"
-                    ><i class="pi pi-image" aria-hidden="true"></i
-                  ></span>
-                }
-              </td>
-              <td class="product-name">
-                {{ product.nombre }}
-                @if (product.variantes.length) {
-                  <small>{{ product.variantes.length }} variantes</small>
-                }
-              </td>
-              <td>
-                @if (hasVariants(product)) {
-                  <span class="variant-summary">Ver variantes</span>
-                } @else {
-                  {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}
-                }
-              </td>
-              <td>{{ hasVariants(product) ? variantStockTotal(product) : product.stock }} und.</td>
-              @if (categoriasVisibles()) {
-                <td>{{ product.categoria || 'Sin categoría' }}</td>
-              }
-              <td>{{ product.proveedor || 'Sin proveedor' }}</td>
-              <td>
-                <span class="status" [class]="getStatusClass(product.estado)">
-                  {{ product.estado || 'Sin estado' }}
-                </span>
-              </td>
-              <td class="actions-column">
-                <div class="table-actions">
-                  <button
-                    *appPuede="P.catalogoGestionar"
-                    type="button"
-                    pButton
-                    variant="text"
-                    severity="secondary"
-                    iconOnly
-                    rounded
-                    aria-label="Editar producto"
-                    (click)="navigateToEdit(product)"
-                  >
-                    <i class="pi pi-pencil" aria-hidden="true"></i>
-                  </button>
-                  <button
-                    *appPuede="P.catalogoGestionar"
-                    type="button"
-                    pButton
-                    variant="text"
-                    severity="danger"
-                    iconOnly
-                    rounded
-                    [disabled]="deletingProductId() === product.id"
-                    aria-label="Eliminar producto"
-                    (click)="confirmDeactivate(product)"
-                  >
-                    <i
-                      [class]="
-                        deletingProductId() === product.id ? 'pi pi-spin pi-spinner' : 'pi pi-trash'
-                      "
-                      aria-hidden="true"
-                    ></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #expandedrow let-product>
-            <tr class="variant-expansion-row">
-              <td [attr.colspan]="columnasLista()">
-                <div class="variant-expansion">
-                  <table class="variant-table">
-                    <thead>
-                      <tr>
-                        <th>Atributos</th>
-                        <th>Código de barras</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (variant of product.variantes; track variant.id) {
-                        <tr>
-                          <td>{{ variantAttributes(variant) }}</td>
-                          <td>
-                            <code>{{ variant.codigo_barras || '—' }}</code>
-                          </td>
-                          <td>
-                            {{ variant.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}
-                          </td>
-                          <td>{{ variant.stock }} und.</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td [attr.colspan]="columnasLista()" class="empty-message">
-                No hay productos que coincidan con los filtros.
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
     }
   </section>
 }
