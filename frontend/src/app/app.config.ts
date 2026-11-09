@@ -1,5 +1,10 @@
 import { provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+  provideZoneChangeDetection,
+} from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 import { definePreset } from '@primeuix/themes';
@@ -7,6 +12,7 @@ import Aura from '@primeuix/themes/aura';
 import { providePrimeNG } from 'primeng/config';
 
 import { authInterceptor } from './features/auth/auth.interceptor';
+import { sincronizarSesionEntrePestanas } from './features/auth/sesion-entre-pestanas';
 import { routes } from './app.routes';
 
 // Aura con la escala primaria en violeta (opción G): tablas, paginador, selects y foco coinciden con styles.css.
@@ -72,6 +78,7 @@ export const appConfig: ApplicationConfig = {
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
       withInterceptors([authInterceptor]),
     ),
+    provideAppInitializer(sincronizarSesionEntrePestanas),
     provideAnimationsAsync(),
     providePrimeNG({
       license: 'eyJpZCI6IjljM2JjZWRmLWZmYjMtNDVhMC04NzNhLTRjMTRjNzUwOTYyYSIsInByb2R1Y3QiOiJwcmltZXVpIiwidGllciI6ImNvbW11bml0eSIsInR5cGUiOiJkZXYiLCJpYXQiOjE3ODkwNzIzNjYsImV4cCI6MTgyMDYwODM2Nn0.SlEtFpXk4FXnlfVrdQ4myvNICX4ix5crMKr29h6W2duqf9hMMb-31XJAlPyaAiAmsp2wkWLehCHb0YjETE8zAA',

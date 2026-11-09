@@ -69,7 +69,10 @@ export class VerificationComponent implements OnDestroy {
           sessionStorage.removeItem(CHALLENGE_STORAGE_KEY);
           this.feedback.success('Correo verificado', 'Tu cuenta ya está activa.');
           const retorno = consumirRetornoInvitacion();
-          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate(['/inicio']));
+          // replaceUrl: el botón Atrás no regresa a la verificación ya usada.
+          void (retorno
+            ? this.router.navigateByUrl(retorno, { replaceUrl: true })
+            : this.router.navigate(['/inicio'], { replaceUrl: true }));
         },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible verificar el código.'),

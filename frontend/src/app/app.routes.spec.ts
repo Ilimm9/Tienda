@@ -4,6 +4,7 @@ import { PERMISOS } from './contexto/permisos';
 import { CATALOGO_ROUTES } from './features/catalogo/catalogo.routes';
 import { routes } from './app.routes';
 import { authGuard } from './features/auth/auth.guard';
+import { invitadoGuard } from './features/auth/invitado.guard';
 import { plataformaGuard } from './features/plataforma/plataforma.guard';
 
 describe('rutas principales', () => {
@@ -15,6 +16,19 @@ describe('rutas principales', () => {
     expect(authShell?.loadComponent).toBeDefined();
     expect(authShell?.children?.map((route) => route.path)).toEqual(['login', 'registro']);
     expect(authShell?.children?.every((route) => route.loadComponent !== undefined)).toBe(true);
+  });
+
+  it('protege las pantallas de visitante para que una sesión activa vuelva a la app', () => {
+    const authShell = routes.find(
+      (route) => route.path === '' && route.children?.some((child) => child.path === 'login'),
+    );
+    const recuperar = routes.find((route) => route.path === 'recuperar-contrasena');
+
+    expect(authShell?.canActivate).toEqual([invitadoGuard]);
+    expect(recuperar?.canActivate).toEqual([invitadoGuard]);
+    for (const publica of ['restablecer-contrasena', 'verificar-correo', 'invitacion/:token']) {
+      expect(routes.find((route) => route.path === publica)?.canActivate).toBeUndefined();
+    }
   });
 
   it('declara Proveedores como sección independiente protegida por contexto', () => {

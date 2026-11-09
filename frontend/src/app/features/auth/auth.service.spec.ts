@@ -125,4 +125,41 @@ describe('AuthService', () => {
     http.expectOne(`${environment.apiUrl}/auth/me`).flush({ usuario: { id: '1', correo: 'persona@ejemplo.com' } });
     expect(service.currentUser()?.correo).toBe('persona@ejemplo.com');
   });
+
+  describe.runIf(typeof BroadcastChannel !== 'undefined')('sincronización entre pestañas', () => {
+    let otraPestana: BroadcastChannel;
+    let recibidos: unknown[];
+
+    beforeEach(() => {
+      recibidos = [];
+      otraPestana = new BroadcastChannel('tienda.sesion');
+      otraPestana.onmessage = ({ data }) => recibidos.push(data);
+    });
+
+    afterEach(() => otraPestana.close());
+
+    const esperar = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+    it('avisa a otras pestañas al iniciar y cerrar sesión', async () => {
+      service.login({ correo: 'a@ejemplo.com', contrasena: 'x', recordarme: false }).subscribe();
+      http.expectOne(`${environment.apiUrl}/auth/login`).flush({ usuario: { id: '1', correo: 'a@ejemplo.com' } });
+      service.logout().subscribe();
+      http.expectOne(`${environment.apiUrl}/auth/logout`).flush(null);
+      await esperar();
+
+      expect(recibidos).toEqual(['inicio', 'cierre']);
+    });
+
+    it('un cierre en otra pestaña limpia el usuario y se reemite', async () => {
+      service.currentUser.set({ id: '1', correo: 'a@ejemplo.com', roles_plataforma: [] });
+      const avisos: string[] = [];
+      service.sesionEnOtraPestana.subscribe((aviso) => avisos.push(aviso));
+
+      otraPestana.postMessage('cierre');
+      await esperar();
+
+      expect(service.currentUser()).toBeNull();
+      expect(avisos).toEqual(['cierre']);
+    });
+  });
 });

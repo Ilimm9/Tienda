@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './features/auth/auth.guard';
+import { invitadoGuard } from './features/auth/invitado.guard';
 import { altaInicialGuard, asistenteGuard } from './contexto/alta-inicial.guard';
 import { contextoGuard } from './contexto/contexto.guard';
 import { permisoGuard } from './contexto/permiso.guard';
@@ -11,6 +12,8 @@ export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
   {
     path: '',
+    // Con sesión activa (en esta u otra pestaña) login y registro regresan a la app.
+    canActivate: [invitadoGuard],
     loadComponent: () =>
       import('./features/auth/auth-shell/auth-shell.component').then(
         (module) => module.AuthShellComponent,
@@ -39,6 +42,7 @@ export const routes: Routes = [
   },
   {
     path: 'recuperar-contrasena',
+    canActivate: [invitadoGuard],
     loadComponent: () =>
       import('./features/auth/recover-password/recover-password.component').then(
         (module) => module.RecoverPasswordComponent,

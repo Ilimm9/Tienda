@@ -287,7 +287,11 @@ Construir antes de ejecutar `up` evita reemplazar contenedores si la compilació
 
 Revisar siempre estado, espacio y logs antes y después. Tras actualizar Angular, hacer recarga forzada en el navegador.
 
-## 11. Diagnóstico rápido
+## 11. Acceso a PostgreSQL para soporte
+
+PostgreSQL no tiene puerto público. Usuarios de soporte, puente temporal, túnel SSH, pgAdmin y cierre seguro están en [pasos-update-server.md](pasos-update-server.md#4-conexión-remota-a-postgresql) (secciones 4 y 5).
+
+## 12. Diagnóstico rápido
 
 ### Cloudflare muestra Tunnel caído
 
@@ -336,7 +340,7 @@ sudo journalctl --disk-usage
 
 No borrar volúmenes para liberar espacio.
 
-## 12. Acciones prohibidas o peligrosas
+## 13. Acciones prohibidas o peligrosas
 
 - No ejecutar `docker compose down -v`: elimina PostgreSQL.
 - No ejecutar `docker volume rm` sobre volumen de Stockion.
@@ -349,7 +353,7 @@ No borrar volúmenes para liberar espacio.
 - No desactivar UFW para diagnosticar.
 - No ejecutar Git como `root`; usar `sudo -u stockion -H git -C /opt/stockion ...`.
 
-## 13. Limitación aceptada
+## 14. Limitación aceptada
 
 Esta demo no tiene respaldos de base de datos por decisión temporal. Una falla de disco, corrupción, eliminación o migración defectuosa puede causar pérdida total e irreversible.
 

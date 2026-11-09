@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { finalize, map, Observable, of, shareReplay, Subject, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -18,6 +18,16 @@ import {
   VerifyEmailResponse,
 } from './auth.models';
 
+/** Aviso que una pestaña manda a las demás del mismo navegador cuando la sesión cambia. */
+export type AvisoSesion = 'inicio' | 'cierre';
+
+const canalSesion = 'tienda.sesion';
+
+/** Primera pantalla tras tener sesión: las cuentas de plataforma no operan tiendas. */
+export function destinoTrasSesion(usuario: AuthenticatedUser): string {
+  return usuario.roles_plataforma?.includes('ADMIN_LECTURA') ? '/administracion-plataforma' : '/inicio';
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -28,11 +38,26 @@ export class AuthService {
   readonly isPlatformAdmin = computed(() =>
     this.currentUser()?.roles_plataforma?.includes('ADMIN_LECTURA') ?? false,
   );
+  // La cookie de sesión es compartida por todas las pestañas; el canal solo avisa que cambió.
+  private readonly canal = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(canalSesion);
+  private readonly avisosRemotos = new Subject<AvisoSesion>();
+  /** Inicios y cierres de sesión hechos en otra pestaña del mismo navegador. */
+  readonly sesionEnOtraPestana = this.avisosRemotos.asObservable();
+
+  constructor() {
+    if (!this.canal) return;
+    this.canal.onmessage = ({ data }: MessageEvent) => {
+      if (data !== 'inicio' && data !== 'cierre') return;
+      if (data === 'cierre') this.currentUser.set(null);
+      this.avisosRemotos.next(data);
+    };
+    inject(DestroyRef).onDestroy(() => this.canal?.close());
+  }
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.url}/login`, payload)
-      .pipe(tap(({ usuario }) => this.currentUser.set(usuario)));
+      .pipe(tap(({ usuario }) => this.sesionIniciada(usuario)));
   }
 
   register(payload: RegisterRequest): Observable<RegisterResponse> {
@@ -42,7 +67,7 @@ export class AuthService {
   verifyEmail(payload: VerifyEmailRequest): Observable<VerifyEmailResponse> {
     return this.http
       .post<VerifyEmailResponse>(`${this.url}/verificar-correo`, payload)
-      .pipe(tap(({ usuario }) => this.currentUser.set(usuario)));
+      .pipe(tap(({ usuario }) => this.sesionIniciada(usuario)));
   }
 
   resendVerification(payload: ResendVerificationRequest): Observable<RegisterResponse> {
@@ -88,8 +113,29 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
+    // Se limpia antes de que quien se suscribe navegue: invitadoGuard debe ver la sesión cerrada.
+    let avisado = false;
+    const cerrar = () => {
+      this.currentUser.set(null);
+      if (avisado) return;
+      avisado = true;
+      this.avisar('cierre');
+    };
     return this.http
       .post<void>(`${this.url}/logout`, {})
-      .pipe(finalize(() => this.currentUser.set(null)));
+      .pipe(tap({ next: cerrar, error: cerrar }), finalize(cerrar));
+  }
+
+  private sesionIniciada(usuario: AuthenticatedUser): void {
+    this.currentUser.set(usuario);
+    this.avisar('inicio');
+  }
+
+  private avisar(aviso: AvisoSesion): void {
+    try {
+      this.canal?.postMessage(aviso);
+    } catch {
+      // Canal cerrado: las demás pestañas lo notarán en su siguiente consulta a la API.
+    }
   }
 }

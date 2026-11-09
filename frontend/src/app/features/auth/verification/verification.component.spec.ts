@@ -51,7 +51,7 @@ describe('VerificationComponent', () => {
     component.submit();
     expect(auth.verifyEmail).toHaveBeenCalledWith({ desafio_id: 'challenge-1', codigo: '123456' });
     expect(feedback.success).toHaveBeenCalledWith('Correo verificado', 'Tu cuenta ya está activa.');
-    expect(router.navigate).toHaveBeenCalledWith(['/inicio']);
+    expect(router.navigate).toHaveBeenCalledWith(['/inicio'], { replaceUrl: true });
     fixture.destroy();
   });
 

@@ -38,7 +38,7 @@ describe('LoginComponent', () => {
     component.submit();
 
     expect(auth.login).toHaveBeenCalledWith(component.form.getRawValue());
-    expect(router.navigate).toHaveBeenCalledWith(['/inicio']);
+    expect(router.navigate).toHaveBeenCalledWith(['/inicio'], { replaceUrl: true });
     expect(component.loading()).toBe(false);
   });
 

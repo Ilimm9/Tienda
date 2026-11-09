@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { consumirRetornoInvitacion } from '../../invitacion/retorno-invitacion';
-import { AuthService } from '../auth.service';
+import { AuthService, destinoTrasSesion } from '../auth.service';
 import { AuthTransitionService } from '../auth-transition.service';
 
 @Component({
@@ -51,11 +51,11 @@ export class LoginComponent {
       .subscribe({
         // Quien llegó desde un enlace de invitación vuelve a él para confirmar su acceso.
         next: ({ usuario }) => {
+          // replaceUrl: el botón Atrás no regresa al login.
           const retorno = consumirRetornoInvitacion();
-          const destino = usuario.roles_plataforma?.includes('ADMIN_LECTURA')
-            ? '/administracion-plataforma'
-            : '/inicio';
-          void (retorno ? this.router.navigateByUrl(retorno) : this.router.navigate([destino]));
+          void (retorno
+            ? this.router.navigateByUrl(retorno, { replaceUrl: true })
+            : this.router.navigate([destinoTrasSesion(usuario)], { replaceUrl: true }));
         },
         error: (response: HttpErrorResponse) =>
           this.error.set(response.error?.mensaje || 'No fue posible iniciar sesión.'),
