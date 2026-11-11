@@ -1,4 +1,3 @@
-@if (isListPage()) {
 <section class="pagina">
   <header class="encabezado-pagina">
     <div>
@@ -248,82 +247,291 @@
     </section>
   }
 </section>
-}
-@if (isFormPage()) {
-  <main class="catalog-page catalog-form-page">
-    <header class="catalog-header">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h1>{{ editingId ? 'Editar ' : 'Agregar ' }}{{ singularTitle }}</h1>
-        <p>Completa los datos para registrar el elemento en el catálogo.</p>
-      </div>
-      <div class="catalog-actions">
-        <button class="secondary-button" type="button" [disabled]="saving()" (click)="goToList()">Cancelar</button>
-        <button class="primary-button" type="submit" form="catalog-form" [disabled]="saving()">{{ saving() ? 'Guardando...' : 'Guardar' }}</button>
-      </div>
-    </header>
-    @if (loading()) {
-      <section class="catalog-state">Cargando {{ title.toLowerCase() }}...</section>
-    } @else if (error()) {
-      <section class="catalog-state error-state">{{ error() }}</section>
-    } @else {
-      <form id="catalog-form" [formGroup]="form" (ngSubmit)="save()" class="catalog-form catalog-page-card">
-        <label>Nombre *<input pInputText formControlName="nombre" /></label>
-        @if (hasError('nombre')) { <small>El nombre es obligatorio.</small> }
-        @if (isUnit()) {
-          <div class="form-grid">
-            <label>Símbolo *<input pInputText formControlName="simbolo" placeholder="g" /></label>
-            <label>Tipo *<p-select formControlName="tipo" [options]="unitTypeOptions" optionLabel="label" optionValue="value" placeholder="Selecciona un tipo" [style]="{ width: '100%' }"></p-select></label>
-            <label>Factor a unidad base *<input pInputText type="number" formControlName="factor_a_base" min="0.000001" /></label>
-            <label>Decimales *<input pInputText type="number" formControlName="decimales" min="0" max="6" /></label>
-          </div>
-        }
+
+@if (dialogo() === 'formulario') {
+  <app-modal
+    [titulo]="tituloFormulario"
+    [subtitulo]="subtituloFormulario"
+    [tamano]="isProvider() || isUnit() ? 'mediano' : 'chico'"
+    [sucio]="form.dirty"
+    [ocupado]="saving()"
+    (cerrar)="cerrarDialogo()"
+  >
+    <form id="catalog-form" class="contents" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <fieldset class="modal-seccion">
+        <legend class="modal-seccion__titulo">Datos generales</legend>
+        <div class="campo-bloque">
+          <label class="etiqueta" for="cat-nombre">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+          <input
+            id="cat-nombre"
+            class="campo"
+            formControlName="nombre"
+            maxlength="180"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="hasError('nombre') || !!nombreDuplicado()"
+            [placeholder]="isProvider() ? 'Ej. Distribuidora del Valle' : isCategory() ? 'Ej. Refrescos' : isUnit() ? 'Ej. Kilogramo' : 'Ej. Coca-Cola'"
+          />
+          @if (nombreDuplicado(); as igual) {
+            <p class="modal-alerta" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ya existe «{{ igual }}». Usa {{ esFemenino ? 'la' : 'el' }} que ya tienes o cambia el nombre.</p>
+          } @else if (hasError('nombre')) {
+            <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>El nombre es obligatorio.</small>
+          }
+        </div>
+
         @if (isCategory()) {
-          <label>Descripción<textarea pTextarea formControlName="descripcion" rows="3"></textarea></label>
-          <label>Categoría padre<p-select formControlName="categoria_padre_id" [options]="parentCategoryOptions" optionLabel="label" optionValue="value" placeholder="Sin categoría padre" [showClear]="true" [style]="{ width: '100%' }"></p-select></label>
-        }
-        @if (isProvider()) {
-          <div class="form-grid">
-            <label>Razón social<input pInputText formControlName="razon_social" /></label>
-            <label>RFC<input pInputText formControlName="rfc" /></label>
-            <label>Teléfono<input pInputText formControlName="telefono" /></label>
-            <label>Correo<input pInputText formControlName="email" /></label>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="cat-padre">Dentro de <span class="opcional">(opcional)</span></label>
+            <span class="campo-grupo campo-grupo--select">
+              <i class="pi pi-sitemap" aria-hidden="true"></i>
+              <select id="cat-padre" formControlName="categoria_padre_id">
+                <option value="">Ninguna · categoría principal</option>
+                @for (opcion of parentCategoryOptions; track opcion.value) {
+                  <option [value]="opcion.value">{{ opcion.label }}</option>
+                }
+              </select>
+            </span>
+            <small class="ayuda">Quedará en: <strong>{{ rutaCategoria() }}</strong></small>
           </div>
-          <label>Dirección<textarea pTextarea formControlName="direccion" rows="2"></textarea></label>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="cat-descripcion">Descripción <span class="opcional">(opcional)</span></label>
+            <textarea id="cat-descripcion" class="campo h-auto! py-3" rows="3" formControlName="descripcion" placeholder="Qué productos entran aquí"></textarea>
+          </div>
         }
-        @if (formError()) { <p class="form-error" role="alert">{{ formError() }}</p> }
-      </form>
-    }
-  </main>
+
+        @if (isUnit()) {
+          <div class="modal-rejilla">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-simbolo">Símbolo <span class="obligatorio" aria-hidden="true">*</span></label>
+              <input id="cat-simbolo" class="campo campo--monoespacio" formControlName="simbolo" maxlength="12" placeholder="kg" aria-required="true" />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-tipo">Tipo <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="campo-grupo campo-grupo--select">
+                <select id="cat-tipo" formControlName="tipo" aria-required="true">
+                  @for (opcion of unitTypeOptions; track opcion.value) {
+                    <option [value]="opcion.value">{{ opcion.label }}</option>
+                  }
+                </select>
+              </span>
+            </div>
+          </div>
+        }
+
+        @if (isProvider()) {
+          <div class="modal-rejilla">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-razon">Razón social <span class="opcional">(opcional)</span></label>
+              <input id="cat-razon" class="campo" formControlName="razon_social" placeholder="Nombre legal" />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-rfc">RFC <span class="opcional">(opcional)</span></label>
+              <input id="cat-rfc" class="campo campo--monoespacio campo--mayusculas" formControlName="rfc" maxlength="13" placeholder="ABC123456XY9" />
+            </div>
+          </div>
+        }
+      </fieldset>
+
+      @if (isUnit()) {
+        <fieldset class="modal-seccion">
+          <legend class="modal-seccion__titulo">Conversión</legend>
+          <div class="modal-nota">
+            <label class="etiqueta" for="cat-factor">Equivalencia con la unidad base <span class="obligatorio" aria-hidden="true">*</span></label>
+            <span class="flex flex-wrap items-center gap-2">
+              <strong class="tabular-nums">1 {{ form.controls.simbolo.value || 'unidad' }} =</strong>
+              <input id="cat-factor" class="campo w-32! tabular-nums" type="number" min="0.000001" step="any" formControlName="factor_a_base" />
+              <strong>{{ simboloBase() }}</strong>
+            </span>
+            <small class="ayuda m-0!">Así convertimos compras y ventas a la unidad base del tipo.</small>
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="cat-decimales">Decimales al vender <span class="obligatorio" aria-hidden="true">*</span></label>
+            <span class="campo-grupo campo-grupo--select">
+              <select id="cat-decimales" formControlName="decimales">
+                <option [ngValue]="0">0 · solo enteros</option>
+                @for (n of [1, 2, 3, 4, 5, 6]; track n) {
+                  <option [ngValue]="n">{{ n }}</option>
+                }
+              </select>
+            </span>
+            <small class="ayuda">En caja se verá: <strong class="tabular-nums">{{ ejemploCaja() }}</strong></small>
+          </div>
+        </fieldset>
+      }
+
+      @if (isProvider()) {
+        <fieldset class="modal-seccion">
+          <legend class="modal-seccion__titulo">Contacto <span class="pastilla-opcional">Opcional</span></legend>
+          <div class="modal-rejilla">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-telefono">Teléfono</label>
+              <input id="cat-telefono" class="campo tabular-nums" type="tel" formControlName="telefono" placeholder="55 1234 5678" />
+            </div>
+            <div class="campo-bloque">
+              <label class="etiqueta" for="cat-correo">Correo</label>
+              <input id="cat-correo" class="campo" type="email" formControlName="email" placeholder="ventas@proveedor.mx" />
+              @if (hasError('email')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Revisa el correo.</small>
+              }
+            </div>
+          </div>
+          <div class="campo-bloque">
+            <label class="etiqueta" for="cat-direccion">Dirección</label>
+            <textarea id="cat-direccion" class="campo h-auto! py-3" rows="2" formControlName="direccion" placeholder="Calle, número, colonia"></textarea>
+          </div>
+        </fieldset>
+      }
+
+      @if (!editingId) {
+        <label class="modal-casilla">
+          <input type="checkbox" class="casilla" [ngModel]="seguirAgregando()" (ngModelChange)="seguirAgregando.set($event)" [ngModelOptions]="{ standalone: true }" />
+          Seguir agregando: la ventana queda abierta al guardar
+        </label>
+      }
+
+      @if (formError()) {
+        <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ formError() }}</p>
+      }
+    </form>
+
+    <ng-container modal-pie>
+      <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+      <button class="boton boton--secundario" type="button" [disabled]="saving()" (click)="modalCerrar()">Cancelar</button>
+      <button class="boton" type="submit" form="catalog-form" [disabled]="saving() || !!nombreDuplicado()" [attr.aria-busy]="saving()">
+        <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+        {{ saving() ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Guardar ' + singularLower }}
+      </button>
+    </ng-container>
+  </app-modal>
 }
 
-@if (isImportPage()) {
-  <main class="catalog-page catalog-form-page">
-    <header class="catalog-header">
-      <div><p class="eyebrow">Catálogo</p><h1>Importar {{ title.toLowerCase() }}</h1><p>Descarga la plantilla, complétala y sube el archivo XLSX.</p></div>
-      <div class="catalog-actions">
-        <button class="secondary-button" type="button" [disabled]="importing()" (click)="goToList()">Cancelar</button>
-        <button class="primary-button" type="button" (click)="importCatalog()" [disabled]="!importFile || importing()">{{ importing() ? 'Importando...' : 'Importar archivo' }}</button>
+@if (dialogo() === 'masiva') {
+  <app-modal
+    [titulo]="'Agregar ' + title.toLowerCase()"
+    subtitulo="Pega una lista o sube un archivo. Revisamos duplicados antes de guardar."
+    tamano="grande"
+    [sucio]="dialogoSucio()"
+    [ocupado]="importing()"
+    (cerrar)="cerrarDialogo()"
+  >
+    <div class="segmentado modal-pestanas" role="group" aria-label="Origen de los datos">
+      <button type="button" class="segmentado__opcion" [attr.aria-pressed]="origenMasiva() === 'pegar'" [disabled]="importing()" (click)="origenMasiva.set('pegar')">
+        <i class="pi pi-clipboard" aria-hidden="true"></i> Pegar lista
+      </button>
+      <button type="button" class="segmentado__opcion" [attr.aria-pressed]="origenMasiva() === 'archivo'" [disabled]="importing()" (click)="origenMasiva.set('archivo')">
+        <i class="pi pi-upload" aria-hidden="true"></i> Subir archivo
+      </button>
+    </div>
+
+    @if (origenMasiva() === 'pegar') {
+      <div class="masiva-rejilla">
+        <div class="campo-bloque">
+          <label class="etiqueta" for="cat-lista">Pega tu lista</label>
+          <textarea
+            id="cat-lista"
+            class="campo campo--monoespacio masiva-texto"
+            rows="12"
+            spellcheck="false"
+            [disabled]="importing()"
+            [ngModel]="textoLista()"
+            (ngModelChange)="textoLista.set($event)"
+            [placeholder]="formatoLista.ejemplo"
+          ></textarea>
+          <small class="ayuda">{{ formatoLista.ayuda }} Ejemplo: <code class="codigo">{{ formatoLista.ejemplo }}</code></small>
+        </div>
+        <section class="masiva-vista" aria-label="Vista previa" aria-live="polite">
+          <header class="masiva-vista__encabezado">
+            <span class="modal-seccion__titulo m-0!">Vista previa</span>
+            <span class="flex flex-wrap gap-1.5">
+              @for (chip of chipsResumen(); track chip.estado) {
+                <span class="pastilla masiva-estado" [attr.data-estado]="chip.estado">{{ chip.texto }}</span>
+              }
+            </span>
+          </header>
+          <ol class="masiva-lista">
+            @for (renglon of renglones(); track renglon.numero) {
+              <li class="masiva-renglon">
+                <span class="masiva-renglon__numero tabular-nums">{{ renglon.numero }}</span>
+                <span class="min-w-0 flex-1">
+                  <strong class="block truncate">{{ renglon.nombre }}</strong>
+                  @if (renglon.detalle) {
+                    <span class="masiva-renglon__detalle" [class.masiva-renglon__detalle--error]="renglon.estado === 'error'">{{ renglon.detalle }}</span>
+                  }
+                </span>
+                <span class="pastilla masiva-estado" [attr.data-estado]="renglon.estado">{{ etiquetaEstado(renglon.estado) }}</span>
+              </li>
+            } @empty {
+              <li class="masiva-vacia">Pega al menos un renglón para ver qué se agregará.</li>
+            }
+          </ol>
+          @if (pegadoFallas().length) {
+            <div class="modal-alerta m-3!" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              <span>
+                No se guardaron:
+                @for (falla of pegadoFallas(); track falla.nombre) {
+                  <span class="block"><strong>{{ falla.nombre }}</strong>: {{ falla.motivo }}</span>
+                }
+              </span>
+            </div>
+          }
+        </section>
       </div>
-    </header>
-    <section class="catalog-form import-form catalog-page-card">
-      <a class="template-link" [href]="templateUrl()"><i class="pi pi-download"></i> Descargar plantilla</a>
-      <div class="file-dropzone" [class.is-dragging]="importDropActive" [class.has-file]="importFile" [class.is-disabled]="importing()" role="button" tabindex="0" (click)="openFilePicker($event, importInput)" (keydown.enter)="importInput.click()" (keydown.space)="importInput.click(); $event.preventDefault()" (dragover)="onImportDragOver($event)" (dragleave)="onImportDragLeave($event)" (drop)="onImportDrop($event)">
-        <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing()" />
-        <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i></span>
-        @if (importFile) {
-          <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small>
-          <button class="remove-file-button" type="button" aria-label="Quitar archivo seleccionado" [disabled]="importing()" (click)="removeImportFile($event, importInput)" (keydown)="$event.stopPropagation()"><i class="pi pi-times" aria-hidden="true"></i></button>
-        } @else { <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span><small>Solo archivos XLSX, máximo 5 MB</small> }
-      </div>
-      <section class="import-output" aria-live="polite">
-        @if (importError()) { <p class="form-error">{{ importError() }}</p> }
-        @else if (importResult(); as result) {
-          <section class="import-result"><strong>Resultado de la importación</strong><p>{{ result.creadas }} creadas · {{ result.omitidas }} omitidas · {{ result.invalidas }} inválidas</p>
-            @if (result.errores.length) { <ul>@for (issue of result.errores; track issue.fila + issue.motivo) { <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li> }</ul> }
+    } @else {
+      <div class="flex flex-col gap-4">
+        <div
+          class="file-dropzone"
+          [class.is-dragging]="importDropActive"
+          [class.has-file]="importFile"
+          [class.is-disabled]="importing()"
+          role="button"
+          tabindex="0"
+          aria-label="Elegir archivo XLSX"
+          (click)="openFilePicker($event, importInput)"
+          (keydown.enter)="importInput.click()"
+          (keydown.space)="importInput.click(); $event.preventDefault()"
+          (dragover)="onImportDragOver($event)"
+          (dragleave)="onImportDragLeave($event)"
+          (drop)="onImportDrop($event)"
+        >
+          <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing()" />
+          <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'" aria-hidden="true"></i></span>
+          @if (importFile) {
+            <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small>
+            <button class="remove-file-button" type="button" aria-label="Quitar archivo seleccionado" [disabled]="importing()" (click)="removeImportFile($event, importInput)" (keydown)="$event.stopPropagation()"><i class="pi pi-times" aria-hidden="true"></i></button>
+          } @else {
+            <strong>Arrastra tu archivo o elígelo</strong><small>Excel (.xlsx) · máximo 5 MB</small>
+          }
+        </div>
+        <div class="modal-nota flex-row! flex-wrap items-center justify-between">
+          <span>Columnas: <span class="codigo">{{ columnasPlantilla }}</span></span>
+          <a class="boton-enlace inline-flex items-center gap-1.5" [href]="templateUrl()"><i class="pi pi-download" aria-hidden="true"></i> Descargar plantilla</a>
+        </div>
+        @if (importError()) {
+          <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ importError() }}</p>
+        }
+        @if (importResult(); as result) {
+          <section class="aviso aviso--atencion m-0 flex-col items-start!" aria-live="polite">
+            <strong>{{ result.creadas }} agregados · {{ result.omitidas }} omitidos · {{ result.invalidas }} con errores</strong>
+            @if (result.errores.length) {
+              <ul class="m-0 pl-4">
+                @for (issue of result.errores; track issue.fila + issue.motivo) {
+                  <li>Fila {{ issue.fila }}: {{ issue.motivo }}</li>
+                }
+              </ul>
+            }
           </section>
-        } @else { <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p> }
-      </section>
-    </section>
-  </main>
+        }
+      </div>
+    }
+
+    <ng-container modal-pie>
+      <p class="leyenda-obligatorios">{{ notaMasiva }}</p>
+      <button class="boton boton--secundario" type="button" [disabled]="importing()" (click)="modalCerrar()">Cancelar</button>
+      <button class="boton" type="button" [disabled]="bloquearMasiva()" [attr.aria-busy]="importing()" (click)="ejecutarMasiva()">
+        <i class="pi" [class.pi-check]="!importing()" [class.pi-spinner]="importing()" [class.pi-spin]="importing()" aria-hidden="true"></i>
+        {{ textoBotonMasiva }}
+      </button>
+    </ng-container>
+  </app-modal>
 }

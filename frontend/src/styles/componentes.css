@@ -2334,3 +2334,216 @@ p-select.formulario-alta__select {
     transition: none;
   }
 }
+
+/* ---------- Ventana modal (app-modal) ----------
+   Todo blanco, aire amplio y una sola sombra. El morado resalta títulos de sección y foco;
+   el crema queda para avisos y notas. En pantallas chicas es hoja inferior. */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+.modal__fondo {
+  position: fixed;
+  inset: 0;
+  background: rgb(23 37 84 / 50%);
+  animation: modal-fondo 160ms ease-out;
+}
+.modal__panel {
+  position: relative;
+  display: flex;
+  width: min(var(--modal-ancho, 580px), 100%);
+  max-height: calc(100dvh - 64px);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: 0 24px 60px -24px rgb(23 37 84 / 40%);
+  animation: modal-entrada 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.modal__encabezado {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 28px 24px 4px 32px;
+}
+.modal__titulos {
+  min-width: 0;
+  flex: 1;
+  padding-top: 2px;
+}
+.modal__titulos h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.modal__titulos p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.modal__cerrar {
+  margin-top: -4px;
+}
+.modal__cuerpo {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 32px 8px;
+  overflow-y: auto;
+}
+.modal__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 24px 32px 28px;
+}
+.modal__pie:empty {
+  display: none;
+}
+.modal__pie .leyenda-obligatorios {
+  margin-right: auto;
+}
+.modal-seccion {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.modal-seccion__titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 2px;
+  padding: 0;
+  color: var(--primary-hover);
+  font-size: 14px;
+  font-weight: 600;
+}
+.modal-rejilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.pastilla-opcional {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fbf4e1;
+  color: #7a5a12;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.modal-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #f1e6c6;
+  border-radius: 12px;
+  background: #fdf9ee;
+  color: var(--text-body);
+  font-size: 13.5px;
+}
+.modal-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}
+.modal-alerta--atencion {
+  background: #fbf4e1;
+  color: #6b4a00;
+}
+.modal-alerta .pi {
+  margin-top: 2px;
+  font-size: 14px;
+}
+.modal-casilla {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-body);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.modal-casilla .casilla {
+  margin: 0;
+}
+.modal-pestanas {
+  align-self: flex-start;
+}
+@keyframes modal-fondo {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes modal-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+@keyframes modal-hoja {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@media (max-width: 640px) {
+  .modal {
+    place-items: end center;
+    padding: 0;
+  }
+  .modal__panel {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 24px 24px 0 0;
+    animation-name: modal-hoja;
+  }
+  .modal__encabezado {
+    padding: 22px 16px 0 20px;
+  }
+  .modal__cuerpo {
+    padding: 20px 20px 8px;
+  }
+  .modal__pie {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 16px 20px 24px;
+  }
+  .modal__pie .boton {
+    width: 100%;
+  }
+  .modal__pie .leyenda-obligatorios {
+    display: none;
+  }
+  .modal-rejilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal__fondo,
+  .modal__panel {
+    animation: none;
+  }
+}

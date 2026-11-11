@@ -8,7 +8,6 @@ import { ContextoService } from '../../contexto/contexto.service';
 import { environment } from '../../../environments/environment';
 import { CatalogoComponent } from './catalogo.component';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
-import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 
 describe('CatalogoComponent', () => {
   let component: CatalogoComponent;
@@ -141,63 +140,112 @@ describe('CatalogoComponent', () => {
     expect(component.importFile).toBeNull();
   });
 
-  it('navigates brands to the dedicated pages', () => {
+  it('abre las ventanas de agregar, carga masiva y edición sin salir de la lista', () => {
     component.navigateToCreate();
-    component.navigateToImport();
-    component.navigateToEdit({ id: 'marca-1', nombre: 'Marca', activo: true });
+    expect(component.dialogo()).toBe('formulario');
+    expect(component.editingId).toBeNull();
 
-    expect(router.navigate).toHaveBeenNthCalledWith(1, ['/catalogo/marcas', 'nuevo']);
-    expect(router.navigate).toHaveBeenNthCalledWith(2, ['/catalogo/marcas', 'importar']);
-    expect(router.navigate).toHaveBeenNthCalledWith(3, ['/catalogo/marcas', 'marca-1', 'editar']);
+    component.navigateToImport();
+    expect(component.dialogo()).toBe('masiva');
+    expect(component.origenMasiva()).toBe('pegar');
+
+    component.navigateToEdit({ id: 'marca-1', nombre: 'Marca', activo: true });
+    expect(component.dialogo()).toBe('formulario');
+    expect(component.form.controls.nombre.value).toBe('Marca');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('shows the inserted-record summary and returns to the catalog after confirmation', async () => {
-    const fire = vi.spyOn(Swal, 'fire').mockResolvedValue({ isConfirmed: true } as never);
+  it('avisa el nombre repetido sin importar acentos ni mayúsculas y no envía la petición', () => {
+    component.items.set([{ id: 'marca-1', nombre: 'Peñafiel', activo: true }]);
+    component.openCreate();
+    component.form.controls.nombre.setValue('  peñafiel ');
+
+    expect(component.nombreDuplicado()).toBe('Peñafiel');
+    component.save();
+    expect(component.formError()).toContain('Ya existe «Peñafiel»');
+  });
+
+  it('crea, avisa con un toast y cierra la ventana', () => {
+    const success = vi.spyOn(TestBed.inject(FeedbackService), 'success');
+    component.openCreate();
+    component.form.controls.nombre.setValue('Pepsi');
+
+    component.save();
+    http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas` }).flush(null);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
+
+    expect(success).toHaveBeenCalledWith('Marca agregada', '«Pepsi» ya está en marcas.');
+    expect(component.dialogo()).toBeNull();
+  });
+
+  it('con «seguir agregando» deja la ventana abierta y limpia el nombre', () => {
+    component.openCreate();
+    component.seguirAgregando.set(true);
+    component.form.controls.nombre.setValue('Pepsi');
+
+    component.save();
+    http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas` }).flush(null);
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
+
+    expect(component.dialogo()).toBe('formulario');
+    expect(component.form.controls.nombre.value).toBe('');
+  });
+
+  it('agrega solo los renglones nuevos de una lista pegada', async () => {
+    const success = vi.spyOn(TestBed.inject(FeedbackService), 'success');
+    component.items.set([{ id: 'marca-1', nombre: 'Coca-Cola', activo: true }]);
+    component.openImport();
+    component.textoLista.set('coca-cola\nPepsi\nPepsi');
+
+    expect(component.nuevosLista().map((r) => r.nombre)).toEqual(['Pepsi']);
+    const listo = component.agregarLista();
+    http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas` }).flush(null);
+    await listo;
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
+
+    expect(success).toHaveBeenCalledWith('1 marca agregada', 'Los repetidos y los que ya existían se omitieron.');
+    expect(component.dialogo()).toBeNull();
+  });
+
+  it('importa un archivo, avisa con un toast y cierra la ventana', () => {
+    const success = vi.spyOn(TestBed.inject(FeedbackService), 'success');
+    component.openImport();
+    component.origenMasiva.set('archivo');
     component.importFile = new File(['contenido'], 'marcas.xlsx');
 
     component.importCatalog();
-
     http
-      .expectOne({
-        method: 'POST',
-        url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/importar`,
-      })
+      .expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/importar` })
       .flush({ procesadas: 3, creadas: 3, omitidas: 0, invalidas: 0, errores: [] });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
 
-    await Promise.resolve();
-
-    expect(fire).toHaveBeenCalledWith(
-      expect.objectContaining({
-        icon: 'success',
-        title: 'Importación terminada',
-        text: '3 registros insertados · 0 omitidos · 0 inválidos',
-        confirmButtonText: 'Ver registros',
-      }),
-    );
-    expect(router.navigate).toHaveBeenCalledWith(['/catalogo/marcas']);
+    expect(success).toHaveBeenCalledWith('Importación terminada', '3 agregados · 0 omitidos · 0 con errores');
+    expect(component.dialogo()).toBeNull();
   });
 
-  it('uses a warning for a partial import and does not navigate after an API error', async () => {
-    const fire = vi.spyOn(Swal, 'fire').mockResolvedValue({ isConfirmed: true } as never);
+  it('deja abierta la importación con errores y no cierra ante un fallo de la API', () => {
+    const warning = vi.spyOn(TestBed.inject(FeedbackService), 'warning');
+    component.openImport();
     component.importFile = new File(['contenido'], 'marcas.xlsx');
 
     component.importCatalog();
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/importar`)
-      .flush({ procesadas: 2, creadas: 1, omitidas: 1, invalidas: 0, errores: [] });
+      .flush({ procesadas: 2, creadas: 1, omitidas: 0, invalidas: 1, errores: [{ fila: 3, motivo: 'Nombre vacío' }] });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
 
-    await Promise.resolve();
-    expect(fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'warning' }));
+    expect(warning).toHaveBeenCalledWith('Importación con observaciones', '1 agregados · 0 omitidos · 1 con errores');
+    expect(component.dialogo()).toBe('masiva');
+    expect(component.importResult()?.errores).toHaveLength(1);
 
-    router.navigate.mockClear();
-    fire.mockClear();
     component.importFile = new File(['contenido'], 'marcas.xlsx');
     component.importCatalog();
     http
       .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/importar`)
       .flush({ mensaje: 'Archivo inválido' }, { status: 400, statusText: 'Bad Request' });
 
-    expect(fire).not.toHaveBeenCalled();
+    expect(component.importError()).toBe('Archivo inválido');
+    expect(component.dialogo()).toBe('masiva');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 });

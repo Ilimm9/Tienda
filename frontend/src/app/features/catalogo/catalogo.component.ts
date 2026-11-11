@@ -1,17 +1,24 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { firstValueFrom, startWith } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogoService } from './catalogo.service';
 import { CatalogImportResult, CatalogRecord, Categoria, Proveedor, UnidadMedida } from './catalogo.models';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
-import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
+import { ModalComponent } from '../../shared/ui/modal/modal.component';
+import {
+  EstadoRenglon,
+  normalizar,
+  RenglonLista,
+  revisarLista,
+  SeccionCatalogo,
+} from './lista-pegada';
 
 interface SelectOption {
   label: string;
@@ -19,19 +26,21 @@ interface SelectOption {
 }
 
 type CatalogStatusFilter = 'all' | 'active' | 'inactive';
+type Dialogo = 'formulario' | 'masiva' | null;
+type OrigenMasiva = 'pegar' | 'archivo';
 const NO_PARENT_CATEGORY = '__sin_categoria_padre__';
+
+const ETIQUETAS_ESTADO: Record<EstadoRenglon, string> = {
+  nuevo: 'Nuevo',
+  existe: 'Ya existe',
+  repetido: 'Repetido',
+  error: 'Revisar',
+};
 
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [PuedeDirective,
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    InputTextModule,
-    TextareaModule,
-    SelectModule,
-  ],
+  imports: [PuedeDirective, CommonModule, FormsModule, ReactiveFormsModule, SelectModule, ModalComponent],
   templateUrl: './catalogo.component.html',
   styleUrl: './catalogo.component.css',
 })
@@ -43,7 +52,9 @@ export class CatalogoComponent {
   private readonly contexto = inject(ContextoService);
   private readonly router = inject(Router, { optional: true });
   private readonly feedback = inject(FeedbackService);
-  readonly section = this.route.snapshot.data['section'] as 'marcas' | 'categorias' | 'proveedores' | 'unidades';
+  private readonly modal = viewChild(ModalComponent);
+  readonly section = this.route.snapshot.data['section'] as SeccionCatalogo;
+  /** Las rutas …/nuevo, …/importar y …/:id/editar abren la ventana encima de la lista. */
   readonly pageMode = (this.route.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ?? 'list';
   readonly items = signal<CatalogRecord[]>([]);
   readonly parents = signal<Categoria[]>([]);
@@ -102,11 +113,19 @@ export class CatalogoComponent {
   readonly saving = signal(false);
   readonly deletingId = signal<string | null>(null);
   readonly formError = signal<string | null>(null);
+
+  readonly dialogo = signal<Dialogo>(null);
+  readonly seguirAgregando = signal(false);
+  readonly origenMasiva = signal<OrigenMasiva>('pegar');
+  readonly textoLista = signal('');
+
   importFile: File | null = null;
   importDropActive = false;
   readonly importing = signal(false);
   readonly importError = signal<string | null>(null);
   readonly importResult = signal<CatalogImportResult | null>(null);
+  readonly pegadoFallas = signal<Array<{ nombre: string; motivo: string }>>([]);
+
   readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(180)]],
     descripcion: [''],
@@ -118,14 +137,70 @@ export class CatalogoComponent {
     direccion: [''],
     simbolo: [''], tipo: ['PESO'], factor_a_base: [1, [Validators.min(0.000001)]], decimales: [2, [Validators.min(0), Validators.max(6)]],
   });
+  private readonly valores = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
+    initialValue: this.form.getRawValue(),
+  });
+
+  /** Aviso inmediato de nombre repetido; el servidor lo vuelve a comprobar. */
+  readonly nombreDuplicado = computed<string | null>(() => {
+    const valores = this.valores();
+    const nombre = normalizar(valores.nombre);
+    if (!nombre) return null;
+    const padre = valores.categoria_padre_id || null;
+    const igual = this.items().find(
+      (item) =>
+        item.id !== this.editingId &&
+        normalizar(item.nombre) === nombre &&
+        (this.section !== 'categorias' || ((item as Categoria).categoria_padre_id ?? null) === padre),
+    );
+    return igual?.nombre ?? null;
+  });
+
+  readonly rutaCategoria = computed(() => {
+    const valores = this.valores();
+    const nombre = valores.nombre?.trim() || 'Nueva categoría';
+    const padre = this.categoryNames().get(valores.categoria_padre_id ?? '') as Categoria | undefined;
+    return padre ? [...this.categoryPath(padre), nombre].join(' › ') : `${nombre} (principal)`;
+  });
+
+  readonly simboloBase = computed(() => {
+    const tipo = this.valores().tipo;
+    const base = this.items().find(
+      (item) => (item as UnidadMedida).tipo === tipo && Number((item as UnidadMedida).factor_a_base) === 1,
+    ) as UnidadMedida | undefined;
+    return base?.simbolo ?? 'de la unidad base';
+  });
+
+  readonly ejemploCaja = computed(() => {
+    const valores = this.valores();
+    const decimales = Math.min(6, Math.max(0, Number(valores.decimales) || 0));
+    return `${(1.25).toFixed(decimales)} ${valores.simbolo?.trim() || 'unidad'}`;
+  });
+
+  readonly renglones = computed<RenglonLista[]>(() =>
+    revisarLista(this.section, this.textoLista(), this.items(), (categoria) => this.categoryPath(categoria)),
+  );
+  readonly resumenLista = computed(() => {
+    const conteo: Record<EstadoRenglon, number> = { nuevo: 0, existe: 0, repetido: 0, error: 0 };
+    for (const renglon of this.renglones()) conteo[renglon.estado]++;
+    return conteo;
+  });
+  readonly chipsResumen = computed(() =>
+    (['nuevo', 'existe', 'repetido', 'error'] as EstadoRenglon[])
+      .filter((estado) => this.resumenLista()[estado] > 0)
+      .map((estado) => ({ estado, texto: `${this.resumenLista()[estado]} ${this.textoResumen(estado, this.resumenLista()[estado])}` })),
+  );
+  readonly nuevosLista = computed(() => this.renglones().filter((renglon) => renglon.estado === 'nuevo'));
+
+  readonly dialogoSucio = computed(() => {
+    if (this.dialogo() === 'masiva') return Boolean(this.textoLista().trim()) || Boolean(this.importFile);
+    return this.dialogo() === 'formulario' && this.form.dirty;
+  });
+
   constructor() {
-    if (this.pageMode === 'list') this.load();
-    else if (this.pageMode === 'create') {
-      this.prepareCreate();
-      if (this.section === 'categorias') this.loadParentCategories();
-    }
-    else if (this.pageMode === 'import') this.prepareImport();
-    else this.loadForEdit();
+    this.load();
+    if (this.pageMode === 'create') this.openCreate();
+    else if (this.pageMode === 'import') this.openImport();
   }
   get title(): string {
     return this.section === 'marcas'
@@ -143,12 +218,44 @@ export class CatalogoComponent {
           ? 'Proveedor'
           : 'Unidad de medida';
   }
+  /** «marca», «categoría», «proveedor» o «unidad de medida», para frases. */
+  get singularLower(): string {
+    return this.singularTitle.toLowerCase();
+  }
+  get esFemenino(): boolean {
+    return this.section !== 'proveedores';
+  }
   get description(): string {
     return this.section === 'marcas'
       ? 'Administra las marcas de tus productos.'
       : this.section === 'categorias'
         ? 'Organiza los productos por categorías.'
         : this.section === 'proveedores' ? 'Administra tus proveedores de inventario.' : 'Administra las unidades normalizadas del catálogo.';
+  }
+  get tituloFormulario(): string {
+    if (this.editingId) return `Editar ${this.singularLower}`;
+    return `${this.esFemenino ? 'Nueva' : 'Nuevo'} ${this.singularLower}`;
+  }
+  get subtituloFormulario(): string {
+    return this.section === 'marcas'
+      ? 'Aparecerá al registrar productos.'
+      : this.section === 'categorias'
+        ? 'Agrupa tus productos para encontrarlos y reportarlos.'
+        : this.section === 'proveedores'
+          ? 'Solo el nombre es obligatorio; lo demás puede esperar.'
+          : 'Cómo se mide lo que compras y vendes.';
+  }
+  get formatoLista(): { ayuda: string; ejemplo: string } {
+    if (this.section === 'categorias') return { ayuda: 'Una por renglón. Usa > para indicar dónde va.', ejemplo: 'Bebidas > Aguas' };
+    if (this.section === 'unidades') return { ayuda: 'Nombre, símbolo, tipo, equivalencia y decimales (opcional).', ejemplo: 'Caja, cja, cantidad, 12' };
+    if (this.section === 'proveedores') return { ayuda: 'Nombre, RFC, teléfono, correo. Solo el nombre es obligatorio.', ejemplo: 'Lala, , 81 2233 4455, ventas@lala.mx' };
+    return { ayuda: 'Una marca por renglón.', ejemplo: 'Peñafiel' };
+  }
+  get columnasPlantilla(): string {
+    if (this.section === 'categorias') return 'Nombre, Categoría padre, Descripción';
+    if (this.section === 'unidades') return 'Nombre, Símbolo, Tipo, Factor a base, Decimales';
+    if (this.section === 'proveedores') return 'Nombre, Razón social, RFC, Teléfono, Correo, Dirección';
+    return 'Nombre';
   }
   get parentCategoryOptions(): SelectOption[] {
     return this.parents()
@@ -169,16 +276,13 @@ export class CatalogoComponent {
         this.items.set(v);
         this.loading.set(false);
         if (this.section === 'categorias') this.parents.set(v as Categoria[]);
+        if (this.pageMode === 'edit' && !this.dialogo() && !this.editingId) this.abrirEdicionDeRuta(v);
       },
       error: () => {
         this.error.set(`No fue posible cargar ${this.title.toLowerCase()}.`);
         this.loading.set(false);
       },
     });
-  }
-
-  isListPage(): boolean {
-    return this.pageMode === 'list';
   }
 
   setCatalogSearch(value: string): void {
@@ -260,87 +364,238 @@ export class CatalogoComponent {
     return path;
   }
 
-  isFormPage(): boolean {
-    return this.pageMode === 'create' || this.pageMode === 'edit';
-  }
-
-  isImportPage(): boolean {
-    return this.pageMode === 'import';
-  }
-
-  private loadForEdit(): void {
-    const itemId = this.route.snapshot.paramMap.get('id');
-    if (!itemId) {
-      this.goToList();
-      return;
-    }
-    const negocioId = this.contexto.negocio()?.id ?? '';
-    const request = this.section === 'marcas'
-      ? this.service.marcas(negocioId)
-      : this.section === 'categorias'
-        ? this.service.categorias(negocioId)
-        : this.section === 'proveedores'
-          ? this.service.proveedores(negocioId)
-          : this.service.unidades(negocioId);
-    this.loading.set(true);
-    request.subscribe({
-      next: (items) => {
-        this.items.set(items);
-        if (this.section === 'categorias') this.parents.set(items as Categoria[]);
-        this.loading.set(false);
-        const item = items.find((candidate) => candidate.id === itemId);
-        if (!item) {
-          this.error.set(`No fue posible encontrar ${this.title.toLowerCase().slice(0, -1)}.`);
-          return;
-        }
-        this.prepareEdit(item);
-      },
-      error: () => {
-        this.error.set(`No fue posible cargar ${this.title.toLowerCase()}.`);
-        this.loading.set(false);
-      },
-    });
-  }
+  /* ---------- Ventana individual ---------- */
 
   openCreate(): void {
-    this.prepareCreate();
-    this.navigateToCreate();
-  }
-
-  private prepareCreate(): void {
-    this.loading.set(false);
     this.editingId = null;
     this.form.reset();
     this.formError.set(null);
+    this.dialogo.set('formulario');
   }
 
-  private loadParentCategories(): void {
-    this.loading.set(true);
-    this.service.categorias(this.contexto.negocio()?.id ?? '').subscribe({
-      next: (categories) => {
-        this.parents.set(categories);
-        this.loading.set(false);
+  openEdit(item: CatalogRecord): void {
+    this.prepareEdit(item);
+    this.dialogo.set('formulario');
+  }
+
+  private abrirEdicionDeRuta(items: CatalogRecord[]): void {
+    const itemId = this.route.snapshot.paramMap?.get('id');
+    const item = items.find((candidate) => candidate.id === itemId);
+    if (!item) {
+      this.feedback.error(`No encontramos ${this.esFemenino ? 'esa' : 'ese'} ${this.singularLower}`, 'Puede que se haya eliminado.');
+      this.goToList();
+      return;
+    }
+    this.openEdit(item);
+  }
+
+  private prepareEdit(item: CatalogRecord): void {
+    this.editingId = item.id;
+    this.form.reset({
+      nombre: item.nombre,
+      descripcion: 'descripcion' in item ? (item.descripcion ?? '') : '',
+      categoria_padre_id: 'categoria_padre_id' in item ? (item.categoria_padre_id ?? '') : '',
+      razon_social: 'razon_social' in item ? (item.razon_social ?? '') : '',
+      rfc: 'rfc' in item ? (item.rfc ?? '') : '',
+      telefono: 'telefono' in item ? (item.telefono ?? '') : '',
+      email: 'email' in item ? (item.email ?? '') : '',
+      direccion: 'direccion' in item ? (item.direccion ?? '') : '',
+      simbolo: 'simbolo' in item ? item.simbolo : '',
+      tipo: 'tipo' in item ? item.tipo : 'PESO',
+      factor_a_base: 'factor_a_base' in item ? item.factor_a_base : 1,
+      decimales: 'decimales' in item ? item.decimales : 2,
+    });
+    this.formError.set(null);
+  }
+
+  save(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const duplicado = this.nombreDuplicado();
+    if (duplicado) {
+      this.formError.set(`Ya existe «${duplicado}». Usa ${this.esFemenino ? 'la' : 'el'} que ya tienes o cambia el nombre.`);
+      return;
+    }
+    const v = this.form.getRawValue();
+    if (this.section === 'unidades' && (!v.simbolo.trim() || !v.tipo.trim())) {
+      this.formError.set('Símbolo y tipo son obligatorios para la unidad.');
+      return;
+    }
+    this.saving.set(true);
+    this.formError.set(null);
+    const payload = this.payloadFormulario();
+    const negocioId = this.contexto.negocio()?.id ?? '';
+    const editando = Boolean(this.editingId);
+    const request = this.editingId
+      ? this.service.actualizar(negocioId, this.requestPath(), this.editingId, payload)
+      : this.service.crear(negocioId, this.requestPath(), payload);
+    request.subscribe({
+      next: () => {
+        this.saving.set(false);
+        const nombre = v.nombre.trim();
+        this.feedback.success(
+          editando ? 'Cambios guardados' : `${this.singularTitle} ${this.esFemenino ? 'agregada' : 'agregado'}`,
+          `«${nombre}» ya está en ${this.title.toLowerCase()}.`,
+        );
+        this.load();
+        if (!editando && this.seguirAgregando()) {
+          this.form.reset({ tipo: v.tipo, factor_a_base: 1, decimales: v.decimales, categoria_padre_id: v.categoria_padre_id });
+          this.modal()?.enfocarInicio();
+          return;
+        }
+        this.cerrarDialogo();
       },
-      error: () => {
-        this.parents.set([]);
-        this.loading.set(false);
-        this.formError.set('No fue posible cargar las categorías padre. Puedes crear la categoría sin asignarle una.');
+      error: (e) => {
+        this.saving.set(false);
+        this.formError.set(
+          e.error?.mensaje ?? 'No fue posible comunicarse con el servidor. Intenta de nuevo.',
+        );
       },
     });
   }
 
+  private payloadFormulario(): Record<string, unknown> {
+    const v = this.form.getRawValue();
+    const payload: Record<string, unknown> = { nombre: v.nombre.trim() };
+    if (this.section === 'categorias')
+      Object.assign(payload, {
+        descripcion: v.descripcion || null,
+        categoria_padre_id: v.categoria_padre_id || null,
+      });
+    if (this.section === 'proveedores')
+      Object.assign(payload, {
+        razon_social: v.razon_social || null,
+        rfc: v.rfc ? v.rfc.toUpperCase() : null,
+        telefono: v.telefono || null,
+        email: v.email || null,
+        direccion: v.direccion || null,
+      });
+    if (this.section === 'unidades')
+      Object.assign(payload, { simbolo: v.simbolo.trim(), tipo: v.tipo, factor_a_base: v.factor_a_base, decimales: v.decimales });
+    return payload;
+  }
+
+  hasError(name: string): boolean {
+    const c = this.form.get(name);
+    return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  /* ---------- Ventana masiva ---------- */
+
   openImport(): void {
     this.prepareImport();
-    this.navigateToImport();
+    this.textoLista.set('');
+    this.pegadoFallas.set([]);
+    this.origenMasiva.set('pegar');
+    this.dialogo.set('masiva');
   }
 
   private prepareImport(): void {
-    this.loading.set(false);
     this.importFile = null;
     this.importDropActive = false;
     this.importError.set(null);
     this.importResult.set(null);
   }
+
+  etiquetaEstado(estado: EstadoRenglon): string {
+    return ETIQUETAS_ESTADO[estado];
+  }
+
+  textoResumen(estado: EstadoRenglon, cantidad: number): string {
+    if (estado === 'nuevo') return cantidad === 1 ? 'nuevo' : 'nuevos';
+    if (estado === 'existe') return cantidad === 1 ? 'ya existe' : 'ya existen';
+    if (estado === 'repetido') return cantidad === 1 ? 'repetido' : 'repetidos';
+    return 'por revisar';
+  }
+
+  get textoBotonMasiva(): string {
+    if (this.origenMasiva() === 'archivo') return this.importing() ? 'Importando…' : 'Importar archivo';
+    if (this.importing()) return 'Agregando…';
+    const n = this.nuevosLista().length;
+    return n ? `Agregar ${n} ${n === 1 ? this.singularLower : this.title.toLowerCase()}` : 'Nada que agregar';
+  }
+
+  get notaMasiva(): string {
+    if (this.origenMasiva() === 'archivo') return 'Revisamos duplicados al importar.';
+    const omitidos = this.renglones().length - this.nuevosLista().length;
+    if (!this.renglones().length) return '';
+    return omitidos ? `${omitidos} ${omitidos === 1 ? 'renglón se omite' : 'renglones se omiten'}` : 'Todo listo para agregar';
+  }
+
+  bloquearMasiva(): boolean {
+    if (this.importing()) return true;
+    return this.origenMasiva() === 'archivo' ? !this.importFile : this.nuevosLista().length === 0;
+  }
+
+  ejecutarMasiva(): void {
+    if (this.origenMasiva() === 'archivo') this.importCatalog();
+    else void this.agregarLista();
+  }
+
+  /** Crea en orden los renglones nuevos; en categorías resuelve o crea primero los padres. */
+  async agregarLista(): Promise<void> {
+    const nuevos = this.nuevosLista();
+    if (!nuevos.length || this.importing()) return;
+    const omitidos = this.renglones().length - nuevos.length;
+    this.importing.set(true);
+    this.pegadoFallas.set([]);
+    const negocioId = this.contexto.negocio()?.id ?? '';
+    const fallas: Array<{ nombre: string; motivo: string }> = [];
+    let creados = 0;
+    let categorias = this.section === 'categorias' ? [...(this.items() as Categoria[])] : [];
+
+    for (const renglon of nuevos) {
+      try {
+        const payload: Record<string, unknown> = { ...renglon.payload };
+        if (this.section === 'categorias' && renglon.padres?.length) {
+          let padreId: string | null = null;
+          for (const nombrePadre of renglon.padres) {
+            let padre = categorias.find(
+              (c) => normalizar(c.nombre) === normalizar(nombrePadre) && (c.categoria_padre_id ?? null) === padreId,
+            );
+            if (!padre) {
+              await firstValueFrom(this.service.crear(negocioId, 'categorias', { nombre: nombrePadre, categoria_padre_id: padreId }));
+              creados++;
+              categorias = await firstValueFrom(this.service.categorias(negocioId));
+              padre = categorias.find(
+                (c) => normalizar(c.nombre) === normalizar(nombrePadre) && (c.categoria_padre_id ?? null) === padreId,
+              );
+            }
+            padreId = padre?.id ?? null;
+          }
+          payload['categoria_padre_id'] = padreId;
+        }
+        await firstValueFrom(this.service.crear(negocioId, this.requestPath(), payload));
+        creados++;
+        if (this.section === 'categorias') categorias = await firstValueFrom(this.service.categorias(negocioId));
+      } catch (e: unknown) {
+        const mensaje = (e as { error?: { mensaje?: string } })?.error?.mensaje;
+        fallas.push({ nombre: renglon.nombre, motivo: mensaje ?? 'No se pudo guardar.' });
+      }
+    }
+
+    this.importing.set(false);
+    this.load();
+    const plural = this.title.toLowerCase();
+    if (fallas.length) {
+      this.pegadoFallas.set(fallas);
+      this.textoLista.set(fallas.map((f) => nuevos.find((r) => r.nombre === f.nombre)?.linea ?? f.nombre).join('\n'));
+      this.feedback.warning(
+        `Se agregaron ${creados} de ${creados + fallas.length}`,
+        'Dejamos en la lista los renglones que no se pudieron guardar.',
+      );
+      return;
+    }
+    this.textoLista.set('');
+    this.feedback.success(
+      `${creados} ${creados === 1 ? this.singularLower : plural} ${creados === 1 ? (this.esFemenino ? 'agregada' : 'agregado') : this.esFemenino ? 'agregadas' : 'agregados'}`,
+      omitidos ? 'Los repetidos y los que ya existían se omitieron.' : undefined,
+    );
+    this.cerrarDialogo();
+  }
+
   onImportFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.setImportFile(input.files?.[0] ?? null);
@@ -381,24 +636,28 @@ export class CatalogoComponent {
     this.importResult.set(null);
   }
   templateUrl(): string {
-    return this.service.plantillaUrl(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'proveedores' | 'unidades');
+    return this.service.plantillaUrl(this.contexto.negocio()?.id ?? '', this.section);
   }
   importCatalog(): void {
     if (!this.importFile || !this.canImport()) return;
     this.importing.set(true);
     this.importError.set(null);
     this.importResult.set(null);
-    this.service.importar(this.contexto.negocio()?.id ?? '', this.section as 'marcas' | 'categorias' | 'proveedores' | 'unidades', this.importFile).subscribe({
+    this.service.importar(this.contexto.negocio()?.id ?? '', this.section, this.importFile).subscribe({
       next: (result) => {
         this.importing.set(false);
-        this.importResult.set(result);
-        const partial = result.omitidas > 0 || result.invalidas > 0;
-        void Swal.fire({
-          icon: partial ? 'warning' : 'success',
-          title: 'Importación terminada',
-          text: `${result.creadas} registros insertados · ${result.omitidas} omitidos · ${result.invalidas} inválidos`,
-          confirmButtonText: 'Ver registros',
-        }).then(() => this.goToList());
+        this.load();
+        const resumen = `${result.creadas} agregados · ${result.omitidas} omitidos · ${result.invalidas} con errores`;
+        if (result.invalidas > 0 || result.errores.length) {
+          // Se queda abierta para que se vean los renglones con error.
+          this.importResult.set(result);
+          this.importFile = null;
+          this.feedback.warning('Importación con observaciones', resumen);
+          return;
+        }
+        if (result.omitidas > 0) this.feedback.warning('Importación terminada', resumen);
+        else this.feedback.success('Importación terminada', resumen);
+        this.cerrarDialogo();
       },
       error: (error) => {
         this.importing.set(false);
@@ -406,79 +665,25 @@ export class CatalogoComponent {
       },
     });
   }
-  openEdit(item: CatalogRecord): void {
-    this.prepareEdit(item);
-    this.navigateToEdit(item);
+
+  /* ---------- Cierre y navegación ---------- */
+
+  /** Cancelar pasa por la ventana para confirmar si hay datos sin guardar. */
+  modalCerrar(): void {
+    const modal = this.modal();
+    if (modal) void modal.solicitarCierre();
+    else this.cerrarDialogo();
   }
 
-  private prepareEdit(item: CatalogRecord): void {
-    this.editingId = item.id;
-    this.form.reset({
-      nombre: item.nombre,
-      descripcion: 'descripcion' in item ? (item.descripcion ?? '') : '',
-      categoria_padre_id: 'categoria_padre_id' in item ? (item.categoria_padre_id ?? '') : '',
-      razon_social: 'razon_social' in item ? (item.razon_social ?? '') : '',
-      rfc: 'rfc' in item ? (item.rfc ?? '') : '',
-      telefono: 'telefono' in item ? (item.telefono ?? '') : '',
-      email: 'email' in item ? (item.email ?? '') : '',
-      direccion: 'direccion' in item ? (item.direccion ?? '') : '',
-      simbolo: 'simbolo' in item ? item.simbolo : '',
-      tipo: 'tipo' in item ? item.tipo : 'PESO',
-      factor_a_base: 'factor_a_base' in item ? item.factor_a_base : 1,
-      decimales: 'decimales' in item ? item.decimales : 2,
-    });
-    this.formError.set(null);
+
+  cerrarDialogo(): void {
+    this.dialogo.set(null);
+    this.editingId = null;
+    this.seguirAgregando.set(false);
+    // Si se entró por …/nuevo, …/importar o …/editar, la URL vuelve a la lista.
+    if (this.pageMode !== 'list') this.goToList();
   }
-  save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    this.saving.set(true);
-    this.formError.set(null);
-    const v = this.form.getRawValue();
-    if (this.section === 'unidades' && (!v.simbolo.trim() || !v.tipo.trim())) {
-      this.formError.set('Símbolo y tipo son obligatorios para la unidad.');
-      this.saving.set(false);
-      return;
-    }
-    const payload: any = { nombre: v.nombre };
-    if (this.section === 'categorias')
-      Object.assign(payload, {
-        descripcion: v.descripcion || null,
-        categoria_padre_id: v.categoria_padre_id || null,
-      });
-    if (this.section === 'proveedores')
-      Object.assign(payload, {
-        razon_social: v.razon_social || null,
-        rfc: v.rfc || null,
-        telefono: v.telefono || null,
-        email: v.email || null,
-        direccion: v.direccion || null,
-      });
-    if (this.section === 'unidades') Object.assign(payload, { simbolo: v.simbolo, tipo: v.tipo, factor_a_base: v.factor_a_base, decimales: v.decimales });
-    const negocioId = this.contexto.negocio()?.id ?? '';
-    const requestPath = this.section === 'unidades' ? 'unidades-medida' : this.section;
-    const request = this.editingId
-      ? this.service.actualizar(negocioId, requestPath, this.editingId, payload)
-      : this.service.crear(negocioId, requestPath, payload);
-    request.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.goToList();
-      },
-      error: (e) => {
-        this.saving.set(false);
-        this.formError.set(
-          e.error?.mensaje ?? 'No fue posible comunicarse con el servidor. Intenta de nuevo.',
-        );
-      },
-    });
-  }
-  hasError(name: string): boolean {
-    const c = this.form.get(name);
-    return !!c && c.invalid && (c.dirty || c.touched);
-  }
+
   isCategory(): boolean {
     return this.section === 'categorias';
   }
@@ -487,6 +692,10 @@ export class CatalogoComponent {
   }
   isUnit(): boolean {
     return this.section === 'unidades';
+  }
+
+  private requestPath(): string {
+    return this.section === 'unidades' ? 'unidades-medida' : this.section;
   }
 
   private resetCatalogPagination(): void {
@@ -506,11 +715,9 @@ export class CatalogoComponent {
     }
     if (this.section === 'unidades' && this.unitTypeFilter() && (item as UnidadMedida).tipo !== this.unitTypeFilter()) return false;
 
-    const query = this.normalizeCatalogFilter(this.catalogSearch());
+    const query = normalizar(this.catalogSearch());
     if (!query) return true;
-    return this.catalogSearchableValues(item).some((value) =>
-      this.normalizeCatalogFilter(value).includes(query),
-    );
+    return this.catalogSearchableValues(item).some((value) => normalizar(value).includes(query));
   }
 
   private catalogSearchableValues(item: CatalogRecord): Array<string | null | undefined> {
@@ -529,31 +736,28 @@ export class CatalogoComponent {
     return [item.nombre];
   }
 
-  private normalizeCatalogFilter(value: string | null | undefined): string {
-    return (value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toLocaleLowerCase('es');
-  }
-
   canImport(): boolean {
     return this.section === 'marcas' || this.section === 'categorias' || this.section === 'proveedores' || this.section === 'unidades';
   }
 
+  /** Abre la ventana para agregar sin salir de la lista. */
   navigateToCreate(): void {
-    this.navigate([this.catalogBasePath(), 'nuevo']);
+    this.openCreate();
   }
 
   navigateToEdit(item: CatalogRecord): void {
-    this.navigate([this.catalogBasePath(), item.id, 'editar']);
+    this.openEdit(item);
+  }
+
+  navigateToImport(): void {
+    this.openImport();
   }
 
   async deleteCatalogItem(item: CatalogRecord): Promise<void> {
     if (this.deletingId()) return;
     this.deletingId.set(item.id);
     const negocioId = this.contexto.negocio()?.id ?? '';
-    const requestPath = this.section === 'unidades' ? 'unidades-medida' : this.section;
+    const requestPath = this.requestPath();
     this.service.comprobarEliminacion(negocioId, requestPath, item.id).subscribe({
       next: async (check) => {
         this.deletingId.set(null);
@@ -565,7 +769,7 @@ export class CatalogoComponent {
           return;
         }
         const confirmed = await this.feedback.confirmDanger({
-          titulo: `Eliminar ${this.singularTitle.toLowerCase()}`,
+          titulo: `Eliminar ${this.singularLower}`,
           descripcion: `Se eliminará “${item.nombre}” porque no tiene vinculaciones.`,
           textoConfirmar: 'Sí, eliminar',
         });
@@ -574,8 +778,7 @@ export class CatalogoComponent {
         this.service.eliminar(negocioId, requestPath, item.id).subscribe({
           next: () => {
             this.deletingId.set(null);
-            const feminine = this.section === 'marcas' || this.section === 'categorias';
-            this.feedback.success(`${this.singularTitle} ${feminine ? 'eliminada' : 'eliminado'}`);
+            this.feedback.success(`${this.singularTitle} ${this.esFemenino ? 'eliminada' : 'eliminado'}`);
             this.load();
           },
           error: (response) => {
@@ -595,20 +798,12 @@ export class CatalogoComponent {
     });
   }
 
-  navigateToImport(): void {
-    this.navigate([this.catalogBasePath(), 'importar']);
-  }
-
   goToList(): void {
-    this.navigate([this.catalogBasePath()]);
+    void this.router?.navigate([this.catalogBasePath()], { replaceUrl: true });
   }
 
   private catalogBasePath(): string {
     if (this.section === 'proveedores') return '/proveedores';
     return this.section === 'unidades' ? '/catalogo/unidades-medida' : `/catalogo/${this.section}`;
-  }
-
-  private navigate(commands: string[]): void {
-    void this.router?.navigate(commands);
   }
 }

@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { forkJoin } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import { iniciales } from '../equipo/presentacion';
+import { MiembroRolesComponent } from './miembro-roles.component';
 import { MiembroRoles, RolApiError, RolResumen } from './rol.models';
 import { RolService } from './rol.service';
 
@@ -20,7 +21,7 @@ const ESTADOS_MEMBRESIA: Record<string, string> = {
 
 @Component({
   selector: 'app-roles',
-  imports: [CommonModule, RouterLink, TableModule],
+  imports: [CommonModule, RouterLink, TableModule, MiembroRolesComponent],
   templateUrl: './roles.component.html',
 })
 export class RolesComponent {
@@ -42,8 +43,20 @@ export class RolesComponent {
   readonly puedeGestionar = computed(() => this.misPermisos().includes('roles.gestionar'));
   readonly puedeAsignar = computed(() => this.misPermisos().includes('roles.asignar'));
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  /** Membresía con la ventana «Asignar roles» abierta; la ruta miembros/:id la abre al entrar. */
+  readonly asignando = signal<string | null>(this.route.snapshot.paramMap?.get('membresiaId') ?? null);
+  private readonly entroPorRuta = Boolean(this.asignando());
+
   constructor() {
     this.load();
+  }
+
+  cerrarAsignacion(recargar = false): void {
+    this.asignando.set(null);
+    if (recargar) this.load();
+    if (this.entroPorRuta) void this.router.navigate(['/roles-permisos'], { replaceUrl: true });
   }
 
   readonly iniciales = iniciales;

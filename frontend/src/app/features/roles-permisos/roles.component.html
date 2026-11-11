@@ -183,13 +183,14 @@
             </td>
             <td class="text-right!">
               @if (puedeAsignar()) {
-                <a
+                <button
+                  type="button"
                   class="boton boton--secundario boton--compacto"
-                  [routerLink]="['miembros', miembro.membresia_id]"
                   [attr.aria-label]="'Asignar roles a ' + (miembro.nombre || miembro.correo)"
+                  (click)="asignando.set(miembro.membresia_id)"
                 >
                   <i class="pi pi-user-edit" aria-hidden="true"></i>Asignar roles
-                </a>
+                </button>
               }
             </td>
           </tr>
@@ -209,3 +210,7 @@
     </section>
   }
 </section>
+
+@if (asignando(); as membresiaId) {
+  <app-miembro-roles [membresiaId]="membresiaId" (cerrar)="cerrarAsignacion()" (guardado)="cerrarAsignacion(true)" />
+}

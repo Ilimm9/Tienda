@@ -19,6 +19,8 @@ Suspensión o baja ocultan el negocio y todas sus asignaciones al empleado y blo
 
 Alta en 3 pasos ([30 · Rediseño de Equipo](historial/30-rediseno-equipo.md)): datos → sucursales (la del contexto propuesta como principal) → invitación con la principal y el rol sugerido por el puesto. Se puede volver al paso 1 (actualiza, no duplica) o al 2; sin sucursal o sin correo no se invita. Teléfono: 10 dígitos sin lada (API los exige). Número de empleado: botón «Generar» `S`+iniciales de la sucursal + consecutivo (`SC-003`), editable y único. Puesto: `empleados.puesto_id` → `puestos_negocio` (catálogo común a todas las sucursales, sin conteos); al asignar debe estar activo, conservar uno inactivo se permite. Invitaciones muestra solo la sucursal del contexto y pagina de 10 en 10. Los selectores de puesto y de rol (alta de empleado, nueva invitación, alta de puesto) terminan en «+ Crear nuevo…», visible con `equipo.empleados.gestionar` o `roles.gestionar`, que lleva a Puestos o a Nuevo rol; con datos sin guardar en el empleado se pide confirmación.
 
+Puestos y Asignar roles se abren como ventanas modales: «Agregar puesto» (nombre, rol sugerido, aviso de nombre repetido o parecido, «Seguir agregando») y «Asignar roles» desde Miembros en Roles y permisos; la ruta `roles-permisos/miembros/:membresiaId` abre esa ventana sobre la lista.
+
 El contexto se recarga tras cambiar roles/asignaciones y al volver a la pestaña; no hay sincronización instantánea mientras otra sesión permanece en primer plano. Implementación y pruebas: [20 · Arreglos de invitaciones](historial/20-arreglos-invitaciones.md).
 
 ## Tablas principales

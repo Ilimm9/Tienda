@@ -1,8 +1,10 @@
 <nav class="sidebar-nav" aria-label="Navegación principal">
-  <p class="section-label">Administración</p>
-
   <ul class="navigation-list">
-    @for (item of navigationItems(); track item.label) {
+    @for (bloque of bloques(); track bloque.item.label) {
+      @let item = bloque.item;
+      @if (bloque.encabezado) {
+        <li class="section-label" role="presentation">{{ bloque.encabezado }}</li>
+      }
       <li>
         @if (item.children?.length) {
           <button

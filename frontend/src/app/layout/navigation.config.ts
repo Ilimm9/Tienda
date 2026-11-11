@@ -14,13 +14,15 @@ export interface NavigationItem {
   /** Solo la ve el propietario del negocio activo. */
   readonly soloPropietario?: boolean;
   readonly children?: readonly NavigationItem[];
+  /** Título del bloque del menú que abre este elemento (General, Operación…). */
+  readonly grupo?: string;
 }
 
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
-  { label: 'Inicio', icon: 'pi pi-home', route: '/inicio' },
+  { label: 'Inicio', icon: 'pi pi-home', route: '/inicio', grupo: 'General' },
   { label: 'Negocios', icon: 'pi pi-briefcase', route: '/negocios', acceso: 'ver-negocios' },
   { label: 'Sucursales', icon: 'pi pi-map-marker', route: '/sucursales', permiso: PERMISOS.sucursalVer },
-  { label: 'Ventas', icon: 'pi pi-shopping-cart', route: '/ventas' },
+  { label: 'Ventas', icon: 'pi pi-shopping-cart', route: '/ventas', grupo: 'Operación' },
   {
     label: 'Catálogo',
     icon: 'pi pi-tags',
@@ -37,6 +39,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   {
     label: 'Equipo',
     icon: 'pi pi-users',
+    grupo: 'Personas',
     children: [
       { label: 'Empleados', icon: 'pi pi-user', route: '/equipo/empleados', permiso: PERMISOS.empleadoVer },
       { label: 'Invitaciones', icon: 'pi pi-send', route: '/equipo/invitaciones', permiso: PERMISOS.invitacionVer },
@@ -47,6 +50,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   {
     label: 'Configuración',
     icon: 'pi pi-cog',
+    grupo: 'Ajustes',
     soloPropietario: true,
     children: [{ label: 'Vistas', icon: 'pi pi-eye', route: '/configuracion/vistas', soloPropietario: true }],
   },

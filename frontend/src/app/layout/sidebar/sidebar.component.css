@@ -2,19 +2,21 @@
   display: flex;
   min-height: 0;
   flex-direction: column;
-  padding: 20px 14px;
+  padding: 8px 14px 20px;
   overflow-y: auto;
   color: var(--text-muted);
   background: var(--surface-sidebar);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-soft);
+  box-shadow: 8px 0 24px -20px rgb(44 46 106 / 18%);
 }
 
 .section-label {
-  margin: 0 12px 10px;
+  margin: 0;
+  padding: 14px 12px 6px;
   color: var(--text-subtle);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -53,8 +55,12 @@
 }
 
 .navigation-link:hover {
-  color: var(--text);
-  background: var(--surface-hover);
+  color: var(--brand-ink);
+  background: #f5f4fa;
+}
+
+.navigation-link:hover > i:first-child {
+  color: var(--primary);
 }
 
 /* Activo suave: la topbar ya es el bloque índigo, aquí basta lavanda con barra violeta. */
@@ -79,7 +85,7 @@
 
 .group-button.active:hover {
   color: var(--text);
-  background: var(--surface-hover);
+  background: #f5f4fa;
 }
 
 .navigation-link:focus-visible {

@@ -1,6 +1,6 @@
 # Registro de productos y catálogos
 
-Base vigente según código local. Actualizado: 2026-11-03.
+Base vigente según código local. Actualizado: 2026-11-11.
 
 ## Flujo y reglas
 
@@ -8,6 +8,7 @@ Base vigente según código local. Actualizado: 2026-11-03.
 - Crear un producto y la carga masiva son solo del propietario del negocio (`403 SOLO_PROPIETARIOS` para los demás); «Crear nuevo…» en Registrar compra sigue disponible y crea el producto sin precio ([31](historial/31-crear-productos-solo-propietario.md)).
 - Crear, editar o importar un producto fija su proveedor principal (el que se muestra en Productos) sin borrar los demás proveedores que lo surten; Registrar compra liga cada producto comprado a su proveedor ([27](historial/27-compras-cualquier-producto.md)).
 - Marca, categoría, unidad y proveedor son catálogos asociados. Catálogo permite gestionarlos; Proveedores tiene sección propia. Validar referencias del mismo negocio y dependencias antes de borrar.
+- Alta, edición y carga masiva de marcas, categorías, unidades y proveedores se hacen en ventanas modales sobre la lista (`app-modal`, `shared/ui/modal`); las rutas `…/nuevo`, `…/importar` y `…/:id/editar` siguen y abren la ventana. La carga masiva acepta **pegar una lista** (un renglón por registro; categorías con `Padre > Hija`, unidades `Nombre, símbolo, tipo, equivalencia[, decimales]`, proveedores `Nombre, RFC, teléfono, correo`) o subir el XLSX. La lista pegada se revisa en el navegador (nuevo / ya existe / repetido / revisar, sin distinguir acentos ni mayúsculas) y se crea renglón por renglón con el `POST` individual; en categorías crea primero los padres que falten. Éxitos y errores se avisan con toasts (ngx-sonner); Swal solo para confirmar borrados o descartar cambios.
 - Plantilla de carga masiva ([adecuación 1](adecuacion1.md)): `Código de barras | Nombre | Variantes | Precio de venta | Costo | Stock inicial | Unidad de medida | Categoría | Proveedor`. Los encabezados deben coincidir exactamente en nombre y orden, sin columnas extra (solo se tolera `Errores` al final, para volver a subir el archivo de errores); la plantilla anterior se rechaza con «es la plantilla anterior; descarga la plantilla nueva». Marca, Descripción, Presentación, Contenido y Unidad de contenido ya no se importan; el formulario conserva Presentación y Descripción (opcionales) y Marca mientras la sección esté visible.
 - La importación XLSX primero valida y muestra errores, advertencias y catálogos nuevos; después procesa una tarea con progreso. SKU vacío se genera por negocio. La columna de código de barras sigue obligatoria, pero sus celdas pueden estar vacías.
 - La carga masiva usa la sucursal del contexto (sin selector propio). La vista previa y el resultado agrupan Errores, Advertencias, Catálogos nuevos y Correctos en secciones compactables, con filtro por columna y paginación de 10 en 10; los errores se descargan en XLSX con el formato de la plantilla más la columna `Errores`, listo para corregir y volver a subir. El costo importado se redondea a 2 decimales; el stock negativo se rechaza ([24](historial/24-correccion-masiva-producto.md)).

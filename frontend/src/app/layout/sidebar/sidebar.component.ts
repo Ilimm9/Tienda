@@ -35,6 +35,26 @@ export class SidebarComponent {
     ),
   );
 
+  /**
+   * Cada elemento visible con el título de bloque que le toca. El título sale una vez, sobre el
+   * primer elemento visible de su bloque, aunque el que lo declara esté oculto por permisos.
+   */
+  readonly bloques = computed(() => {
+    let actual = '';
+    const grupoDe = new Map<string, string>();
+    for (const item of NAVIGATION_ITEMS) {
+      actual = item.grupo ?? actual;
+      grupoDe.set(item.label, actual);
+    }
+    let anterior = '';
+    return this.navigationItems().map((item) => {
+      const grupo = grupoDe.get(item.label) ?? '';
+      const encabezado = grupo !== anterior ? grupo : null;
+      anterior = grupo;
+      return { item, encabezado };
+    });
+  });
+
   isGroupExpanded(item: NavigationItem): boolean {
     return this.isGroupActive(item) || this.expandedGroups().has(item.label);
   }

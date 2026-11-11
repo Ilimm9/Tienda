@@ -24,9 +24,10 @@ export const ROLES_PERMISOS_ROUTES: Routes = [
       },
       {
         path: 'miembros/:membresiaId',
+        // Abre la ventana «Asignar roles» encima de la lista.
         data: { breadcrumb: 'Asignar roles', permiso: PERMISOS.rolAsignar },
         loadComponent: () =>
-          import('./miembro-roles.component').then((module) => module.MiembroRolesComponent),
+          import('./roles.component').then((module) => module.RolesComponent),
       },
       {
         path: ':rolId',

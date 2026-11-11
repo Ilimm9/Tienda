@@ -24,10 +24,7 @@ Estas reglas aplican a cualquier agente o colaborador automatizado que trabaje e
 
 ## Organización
 
-- Usar `PLAN_IMPLEMENTACION.md` como índice y estado general.
-- Mantener especificaciones funcionales dentro de `capabilities/`.
-- Mantener únicamente planes actuales, bases de conocimiento y `README.md` en la raíz de `capabilities/`. La única subcarpeta es `historial/`, sin subcarpetas internas; los documentos históricos conservan número y nombre descriptivo.
-- Actualizar las bases `flujo-registro.md`, `gestion-colaboradores.md`, `registro-productos.md` (incluye catálogos) y `modulo-compras.md` cuando cambien sus flujos, reglas o tablas.
+- `capabilities/` es una guía opcional de lo que se hace, no un proceso obligatorio. Escribir un plan ahí solo cuando ayude o el usuario lo pida; no exige numeración, estados, aprobaciones formales ni estructura fija de carpetas. Planes nuevos: `thrs-nombre-descriptivo.md`, sin número.
 - Mantener código ejecutable dentro de `backend/` y `frontend/`; no duplicarlo en `capabilities/`.
 - Organizar backend por dominio dentro de cada capa. Un dominio debe usar el mismo nombre de carpeta en `domain`, `application`, `infrastructure` e `interfaces/http` cuando tenga responsabilidades en esas capas.
 - Usar nombres de dominio singulares, descriptivos y en minúsculas, por ejemplo `cuenta`, `negocio`, `catalogo` o `inventario`.

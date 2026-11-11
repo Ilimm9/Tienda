@@ -7,63 +7,16 @@
         Un solo nombre por puesto: evita tener «Cajera», «cajero» y «Caja» para lo mismo.
       </p>
     </div>
+    @if (puedeGestionar() && !error()) {
+      <button type="button" class="boton" (click)="abrir()">
+        <i class="pi pi-plus" aria-hidden="true"></i> Agregar puesto
+      </button>
+    }
   </header>
 
   @if (error()) {
     <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   } @else {
-    @if (puedeGestionar()) {
-      <form class="tarjeta flex flex-col gap-3 p-5" (ngSubmit)="agregar()" novalidate aria-label="Agregar puesto">
-        <div class="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end">
-          <div class="campo-bloque">
-            <label class="etiqueta" for="nuevo-puesto">Nuevo puesto</label>
-            <span class="campo-grupo">
-              <i class="pi pi-briefcase" aria-hidden="true"></i>
-              <input
-                id="nuevo-puesto"
-                name="nuevo"
-                type="text"
-                maxlength="120"
-                placeholder="Ej. Repartidor"
-                aria-describedby="nuevo-puesto-ayuda"
-                [attr.aria-invalid]="duplicado() || !!errorNuevo()"
-                [ngModel]="nuevo()"
-                (ngModelChange)="nuevo.set($event); errorNuevo.set(null)"
-              />
-            </span>
-          </div>
-          @if (puedeVerRoles()) {
-            <div class="campo-bloque">
-              <label class="etiqueta" for="nuevo-rol">Rol sugerido al invitar</label>
-              <span class="campo-grupo campo-grupo--select">
-                <i class="pi pi-lock" aria-hidden="true"></i>
-                <select id="nuevo-rol" name="nuevoRol" [ngModel]="nuevoRol()" (ngModelChange)="elegirRol($event)">
-                  <option value="">Sin rol sugerido</option>
-                  @for (rol of roles(); track rol.id) {
-                    <option [value]="rol.id">{{ rol.nombre }}</option>
-                  }
-                  @if (puedeCrearRol()) {
-                    <option [value]="CREAR_NUEVO">+ Crear nuevo rol…</option>
-                  }
-                </select>
-              </span>
-            </div>
-          }
-          <button type="submit" class="boton" [disabled]="saving() || duplicado()" [attr.aria-busy]="saving()">
-            <i class="pi" [class.pi-plus]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
-            Agregar
-          </button>
-        </div>
-        @if (duplicado()) {
-          <small id="nuevo-puesto-ayuda" class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ese puesto ya existe en el catálogo.</small>
-        } @else if (errorNuevo()) {
-          <small id="nuevo-puesto-ayuda" class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ errorNuevo() }}</small>
-        } @else {
-          <small id="nuevo-puesto-ayuda" class="ayuda">El rol sugerido se propone al invitar a alguien con este puesto; se puede cambiar.</small>
-        }
-      </form>
-    }
-
     <section class="tabla-tarjeta" aria-label="Catálogo de puestos" [attr.aria-busy]="loading()">
       <div class="tabla-desplazable">
         <table class="tabla min-w-[640px]">
@@ -151,3 +104,85 @@
     </section>
   }
 </section>
+
+@if (dialogoAbierto()) {
+  <app-modal
+    titulo="Nuevo puesto"
+    subtitulo="Catálogo de todo el negocio, igual para todas las sucursales."
+    [sucio]="!!nuevo().trim()"
+    [ocupado]="saving()"
+    (cerrar)="cerrar()"
+  >
+    <form id="form-puesto" class="contents" (ngSubmit)="agregar()" novalidate>
+      <fieldset class="modal-seccion">
+        <legend class="modal-seccion__titulo">Datos del puesto</legend>
+        <div class="campo-bloque">
+          <label class="etiqueta" for="nuevo-puesto">Nombre del puesto <span class="obligatorio" aria-hidden="true">*</span></label>
+          <input
+            id="nuevo-puesto"
+            class="campo"
+            name="nuevo"
+            type="text"
+            maxlength="120"
+            autocomplete="off"
+            placeholder="Ej. Repartidor"
+            aria-required="true"
+            [attr.aria-invalid]="duplicado() || !!errorNuevo()"
+            [ngModel]="nuevo()"
+            (ngModelChange)="nuevo.set($event); errorNuevo.set(null)"
+          />
+          @if (duplicado()) {
+            <p class="modal-alerta" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Ese puesto ya existe en el catálogo.</p>
+          } @else if (parecido(); as similar) {
+            <p class="modal-alerta modal-alerta--atencion"><i class="pi pi-info-circle" aria-hidden="true"></i>¿Es lo mismo que «{{ similar }}»? Un solo nombre por puesto mantiene limpios los reportes.</p>
+          } @else if (errorNuevo()) {
+            <p class="modal-alerta" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ errorNuevo() }}</p>
+          }
+        </div>
+        @if (puedeVerRoles()) {
+          <div class="campo-bloque">
+            <label class="etiqueta" for="nuevo-rol">Rol sugerido al invitar <span class="opcional">(opcional)</span></label>
+            <span class="campo-grupo campo-grupo--select">
+              <i class="pi pi-lock" aria-hidden="true"></i>
+              <select id="nuevo-rol" name="nuevoRol" [ngModel]="nuevoRol()" (ngModelChange)="elegirRol($event)">
+                <option value="">Sin rol sugerido</option>
+                @for (rol of roles(); track rol.id) {
+                  <option [value]="rol.id">{{ rol.nombre }}</option>
+                }
+                @if (puedeCrearRol()) {
+                  <option [value]="CREAR_NUEVO">+ Crear nuevo rol…</option>
+                }
+              </select>
+            </span>
+            <small class="ayuda">Se propone al invitar a alguien con este puesto; se puede cambiar en cada invitación.</small>
+          </div>
+        }
+      </fieldset>
+
+      @if (puestos().length) {
+        <section class="modal-seccion" aria-label="Puestos que ya tienes">
+          <h3 class="modal-seccion__titulo">Puestos que ya tienes</h3>
+          <span class="flex flex-wrap gap-1.5">
+            @for (puesto of puestos(); track puesto.id) {
+              <span class="pastilla pastilla--plana">{{ puesto.nombre }}</span>
+            }
+          </span>
+        </section>
+      }
+
+      <label class="modal-casilla">
+        <input type="checkbox" class="casilla" name="seguir" [ngModel]="seguirAgregando()" (ngModelChange)="seguirAgregando.set($event)" />
+        Seguir agregando: la ventana queda abierta al guardar
+      </label>
+    </form>
+
+    <ng-container modal-pie>
+      <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+      <button type="button" class="boton boton--secundario" [disabled]="saving()" (click)="cancelar()">Cancelar</button>
+      <button type="submit" form="form-puesto" class="boton" [disabled]="saving() || duplicado()" [attr.aria-busy]="saving()">
+        <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+        {{ saving() ? 'Guardando…' : 'Guardar puesto' }}
+      </button>
+    </ng-container>
+  </app-modal>
+}

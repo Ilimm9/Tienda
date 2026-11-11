@@ -1,11 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { ContextoService } from '../../../contexto/contexto.service';
 import { PERMISOS } from '../../../contexto/permisos';
 import { FeedbackService } from '../../../shared/feedback/feedback.service';
+import { ModalComponent } from '../../../shared/ui/modal/modal.component';
 import { CREAR_NUEVO } from '../presentacion';
 import { RolResumen } from '../../roles-permisos/rol.models';
 import { RolService } from '../../roles-permisos/rol.service';
@@ -14,7 +15,7 @@ import { PuestoService } from '../puesto.service';
 
 @Component({
   selector: 'app-puestos',
-  imports: [FormsModule],
+  imports: [FormsModule, ModalComponent],
   templateUrl: './puestos.html',
 })
 export class Puestos {
@@ -31,6 +32,9 @@ export class Puestos {
   readonly nuevo = signal('');
   readonly nuevoRol = signal('');
   readonly errorNuevo = signal<string | null>(null);
+  readonly dialogoAbierto = signal(false);
+  readonly seguirAgregando = signal(false);
+  private readonly modal = viewChild(ModalComponent);
 
   readonly negocioId = computed(() => this.contexto.negocio()?.id ?? '');
   readonly puedeGestionar = computed(() => this.contexto.puede(PERMISOS.empleadoGestionar));
@@ -46,9 +50,35 @@ export class Puestos {
   }
   /** Aviso inmediato; el servidor vuelve a comprobarlo sin distinguir mayúsculas. */
   readonly duplicado = computed(() => {
-    const nombre = this.nuevo().trim().toLowerCase();
-    return Boolean(nombre) && this.puestos().some((puesto) => puesto.nombre.toLowerCase() === nombre);
+    const nombre = normalizar(this.nuevo());
+    return Boolean(nombre) && this.puestos().some((puesto) => normalizar(puesto.nombre) === nombre);
   });
+
+  /** «Cajera» frente a «Cajero»: mismo inicio, distinto nombre. Solo sugiere, no bloquea. */
+  readonly parecido = computed<string | null>(() => {
+    const nombre = normalizar(this.nuevo());
+    if (nombre.length < 4 || this.duplicado()) return null;
+    const raiz = nombre.slice(0, 4);
+    return this.puestos().find((puesto) => normalizar(puesto.nombre).startsWith(raiz))?.nombre ?? null;
+  });
+
+  abrir(): void {
+    this.nuevo.set('');
+    this.nuevoRol.set('');
+    this.errorNuevo.set(null);
+    this.seguirAgregando.set(false);
+    this.dialogoAbierto.set(true);
+  }
+
+  cerrar(): void {
+    this.dialogoAbierto.set(false);
+  }
+
+  cancelar(): void {
+    const modal = this.modal();
+    if (modal) void modal.solicitarCierre();
+    else this.cerrar();
+  }
 
   constructor() {
     this.load();
@@ -73,7 +103,9 @@ export class Puestos {
         this.puestos.update((items) => [...items, puesto].sort((a, b) => a.nombre.localeCompare(b.nombre)));
         this.nuevo.set('');
         this.nuevoRol.set('');
-        this.feedback.success('Puesto agregado');
+        this.feedback.success('Puesto agregado', `«${puesto.nombre}» ya está en el catálogo.`);
+        if (this.seguirAgregando()) this.modal()?.enfocarInicio();
+        else this.cerrar();
       },
       error: (response: HttpErrorResponse) => {
         this.saving.set(false);
@@ -130,4 +162,8 @@ export class Puestos {
     const cuerpo = response.error as { mensaje?: string; campos?: Record<string, string> } | null;
     return cuerpo?.campos?.['nombre'] ? `El nombre ${cuerpo.campos['nombre']}.` : (cuerpo?.mensaje ?? 'Intenta nuevamente.');
   }
+}
+
+function normalizar(valor: string): string {
+  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').replace(/\s+/g, ' ').trim();
 }

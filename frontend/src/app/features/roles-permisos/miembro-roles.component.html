@@ -1,60 +1,50 @@
-<section class="pagina max-w-[760px]">
-  <header class="encabezado-pagina">
-    <div>
-      <h1>Asignar roles</h1>
-      <p class="descripcion">Los permisos de una persona son la suma de sus roles.</p>
-    </div>
-    <a class="boton boton--secundario" routerLink="/roles-permisos">
-      <i class="pi pi-arrow-left" aria-hidden="true"></i>Roles y permisos
-    </a>
-  </header>
-
-  @if (error()) {
-    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
-  }
-
+<app-modal
+  titulo="Asignar roles"
+  subtitulo="Los permisos de una persona son la suma de sus roles."
+  tamano="mediano"
+  [sucio]="cambiado()"
+  [ocupado]="saving()"
+  (cerrar)="cerrar.emit()"
+>
   @if (loading()) {
-    <p class="tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
+    <p class="estado-vacio m-0" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
   } @else if (miembro(); as persona) {
-    <form class="formulario-g" (ngSubmit)="guardar()" novalidate>
-      <header class="tarjeta-encabezado">
+    <form id="form-miembro-roles" class="contents" (ngSubmit)="guardar()" novalidate>
+      <div class="opcion opcion--compacta cursor-default! py-3!">
         <span class="avatar avatar--grande" aria-hidden="true">{{ iniciales(persona.nombre, persona.correo) }}</span>
-        <div class="min-w-0 flex-1">
-          <strong class="tabla-principal truncate">{{ persona.nombre || persona.correo }}</strong>
+        <span class="min-w-0 flex-1">
+          <strong class="truncate">{{ persona.nombre || persona.correo }}</strong>
           <span class="secundario truncate">
             {{ persona.nombre ? persona.correo + ' · ' : '' }}{{ persona.tipo_miembro === 'propietario' ? 'Propietario' : 'Miembro' }}
           </span>
-        </div>
-      </header>
+        </span>
+      </div>
 
       <fieldset
-        class="formulario-g__seccion"
+        class="modal-seccion"
         [attr.aria-invalid]="sinRoles()"
         [attr.aria-describedby]="sinRoles() ? 'roles-error' : null"
         tabindex="-1"
       >
-        <legend class="contents">
-          <span class="seccion-encabezado items-center">
-            <span class="titulo flex-1">Roles <span class="obligatorio" aria-hidden="true">*</span></span>
-            <span class="contador">{{ seleccionados().size }} de {{ roles().length }}</span>
-          </span>
+        <legend class="modal-seccion__titulo w-full">
+          <span class="flex-1">Roles <span class="obligatorio" aria-hidden="true">*</span></span>
+          <span class="contador">{{ seleccionados().size }} de {{ roles().length }}</span>
         </legend>
 
         @if (sinRoles()) {
-          <p id="roles-error" class="error-campo" role="alert">
+          <p id="roles-error" class="modal-alerta m-0" role="alert">
             <i class="pi pi-exclamation-circle" aria-hidden="true"></i>Selecciona al menos un rol. Sin roles, la persona no puede hacer nada en el negocio.
           </p>
         }
 
-        <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+        <ul class="m-0 grid list-none gap-2.5 p-0 sm:grid-cols-2">
           @for (rol of roles(); track rol.id) {
-            <li>
-              <label class="opcion">
+            <li class="min-w-0">
+              <label class="opcion h-full">
                 <input type="checkbox" class="casilla" [checked]="estaSeleccionado(rol.id)" (change)="alternar(rol.id)" />
                 <span class="min-w-0 flex-1">
                   <span class="flex flex-wrap items-center gap-2">
                     <strong>{{ rol.nombre }}</strong>
-                    <span class="codigo">{{ rol.codigo }}</span>
                     @if (rol.es_rol_sistema) {
                       <span class="pastilla pastilla--plana">Sistema</span>
                     }
@@ -62,28 +52,36 @@
                   <span class="secundario">
                     {{ rol.es_rol_sistema ? 'Concentra todos los permisos del negocio.' : rol.descripcion || 'Sin descripción.' }}
                   </span>
+                  <span class="ayuda mt-1 block">{{ rol.total_permisos === 1 ? '1 permiso' : rol.total_permisos + ' permisos' }}</span>
                 </span>
-                <span class="ayuda">{{ rol.total_permisos === 1 ? '1 permiso' : rol.total_permisos + ' permisos' }}</span>
               </label>
             </li>
           } @empty {
-            <li class="aviso aviso--atencion">
+            <li class="aviso aviso--atencion sm:col-span-2">
               <i class="pi pi-info-circle" aria-hidden="true"></i>
               <span>Este negocio todavía no tiene roles activos. <a routerLink="/roles-permisos/nuevo">Crear un rol</a></span>
             </li>
           }
         </ul>
-        <p class="ayuda">Solo puedes otorgar roles cuyos permisos tú también tienes.</p>
+        <p class="modal-nota m-0 flex-row! items-center">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>Solo puedes otorgar roles cuyos permisos tú también tienes.
+        </p>
       </fieldset>
 
-      <footer class="formulario-g__acciones">
-        <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
-        <a class="boton boton--fantasma" routerLink="/roles-permisos">Cancelar</a>
-        <button type="submit" class="boton" [disabled]="saving()" [attr.aria-busy]="saving()">
-          <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
-          {{ saving() ? 'Guardando…' : 'Guardar roles' }}
-        </button>
-      </footer>
+      @if (error()) {
+        <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+      }
     </form>
+  } @else if (error()) {
+    <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
   }
-</section>
+
+  <ng-container modal-pie>
+    <p class="leyenda-obligatorios">Los campos con <span class="obligatorio" aria-hidden="true">*</span> son obligatorios.</p>
+    <button type="button" class="boton boton--secundario" [disabled]="saving()" (click)="cancelar()">Cancelar</button>
+    <button type="submit" form="form-miembro-roles" class="boton" [disabled]="saving() || !miembro()" [attr.aria-busy]="saving()">
+      <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+      {{ saving() ? 'Guardando…' : 'Guardar roles' }}
+    </button>
+  </ng-container>
+</app-modal>
