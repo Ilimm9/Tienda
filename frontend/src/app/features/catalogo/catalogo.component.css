@@ -322,3 +322,13 @@
 .masiva-estado[data-estado='existe'] { color: var(--text-muted); background: var(--tone-neutral); }
 .masiva-estado[data-estado='repetido'] { color: var(--tone-butter-text); background: var(--tone-butter); }
 .masiva-estado[data-estado='error'] { color: var(--danger); background: var(--danger-soft); }
+
+.masiva-reporte__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-soft);
+}

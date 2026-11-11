@@ -470,7 +470,7 @@ func (h *ProductHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 	if e := h.products.CreateCategory(businessID, i); e != nil {
-		c.JSON(400, gin.H{"mensaje": e.Error()})
+		catalogWriteError(c, e)
 		return
 	}
 	c.Status(201)
@@ -490,7 +490,7 @@ func (h *ProductHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 	if e := h.products.UpdateCategory(businessID, id, i); e != nil {
-		c.JSON(400, gin.H{"mensaje": e.Error()})
+		catalogWriteError(c, e)
 		return
 	}
 	c.Status(204)
@@ -547,6 +547,89 @@ func (h *ProductHandler) checkCatalogDeletion(c *gin.Context, checkFn func(uuid.
 }
 
 const maxCatalogImportSize = 5 << 20
+
+// maxCatalogListSize limita el cuerpo JSON de una lista pegada.
+const maxCatalogListSize = 1 << 20
+
+// catalogWriteError responde 409 a una categoría con nombre repetido y
+// 400 al resto de errores de validación.
+func catalogWriteError(c *gin.Context, err error) {
+	if errors.Is(err, domain.ErrCategoriaDuplicada) {
+		c.JSON(http.StatusConflict, gin.H{"mensaje": "Ya existe una categoría con ese nombre"})
+		return
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+}
+
+func (h *ProductHandler) ImportBrandList(c *gin.Context)    { h.importCatalogList(c, "marcas") }
+func (h *ProductHandler) ImportCategoryList(c *gin.Context) { h.importCatalogList(c, "categorias") }
+func (h *ProductHandler) ImportUnitList(c *gin.Context)     { h.importCatalogList(c, "unidades") }
+func (h *ProductHandler) ImportProviderList(c *gin.Context) { h.importCatalogList(c, "proveedores") }
+
+// importCatalogList recibe una lista pegada ({"renglones": [...]}) y la importa
+// con el mismo importador transaccional del XLSX.
+func (h *ProductHandler) importCatalogList(c *gin.Context, section string) {
+	businessID, ok := parseID(c, "negocioId")
+	if !ok {
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCatalogListSize)
+	var (
+		result domain.CatalogImportResult
+		err    error
+	)
+	switch section {
+	case "marcas":
+		var body struct {
+			Renglones []domain.CatalogImportBrandRow `json:"renglones"`
+		}
+		if !bindCatalogList(c, &body) {
+			return
+		}
+		result, err = h.products.ImportBrandList(businessID, body.Renglones)
+	case "categorias":
+		var body struct {
+			Renglones []domain.CatalogImportCategoryRow `json:"renglones"`
+		}
+		if !bindCatalogList(c, &body) {
+			return
+		}
+		result, err = h.products.ImportCategoryList(businessID, body.Renglones)
+	case "unidades":
+		var body struct {
+			Renglones []domain.CatalogImportUnitRow `json:"renglones"`
+		}
+		if !bindCatalogList(c, &body) {
+			return
+		}
+		result, err = h.products.ImportUnitList(businessID, body.Renglones)
+	default:
+		var body struct {
+			Renglones []domain.CatalogImportProviderRow `json:"renglones"`
+		}
+		if !bindCatalogList(c, &body) {
+			return
+		}
+		result, err = h.products.ImportProviderList(businessID, body.Renglones)
+	}
+	if err != nil {
+		if errors.Is(err, application.ErrCatalogListEmpty) || errors.Is(err, application.ErrCatalogListTooLarge) {
+			c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible guardar la lista; no se agregó ningún registro"})
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func bindCatalogList(c *gin.Context, body any) bool {
+	if err := c.ShouldBindJSON(body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "La lista no tiene un formato válido"})
+		return false
+	}
+	return true
+}
 
 func (h *ProductHandler) BrandImportTemplate(c *gin.Context) {
 	h.catalogImportTemplate(c, "marcas")

@@ -281,6 +281,9 @@ func (r *ProductRepository) CreateCategory(businessID uuid.UUID, i domain.Create
 	if err := validarCategoriaPadre(r.db, businessID, uuid.Nil, i.CategoriaPadreID); err != nil {
 		return err
 	}
+	if err := validarCategoriaUnica(r.db, businessID, uuid.Nil, i.Nombre); err != nil {
+		return err
+	}
 	return r.db.Create(&domain.Categoria{NegocioID: businessID, Nombre: i.Nombre, CategoriaPadreID: i.CategoriaPadreID, Descripcion: i.Descripcion, Activo: true}).Error
 }
 func (r *ProductRepository) UpdateCategory(businessID, id uuid.UUID, i domain.UpdateCategoriaInput) error {
@@ -303,6 +306,11 @@ func (r *ProductRepository) UpdateCategory(businessID, id uuid.UUID, i domain.Up
 	}
 	if len(values) == 0 {
 		return nil
+	}
+	if i.Nombre != nil {
+		if err := validarCategoriaUnica(r.db, businessID, id, *i.Nombre); err != nil {
+			return err
+		}
 	}
 	result := r.db.Model(&domain.Categoria{}).Where("id = ? AND negocio_id = ?", id, businessID).Updates(values)
 	if result.RowsAffected == 0 && result.Error == nil {
@@ -327,104 +335,14 @@ func (r *ProductRepository) CheckCategoryDeletion(businessID, id uuid.UUID) (dom
 	})
 }
 
-func (r *ProductRepository) ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error) {
-	result := domain.CatalogImportResult{Errores: make([]domain.CatalogImportIssue, 0)}
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		var current []domain.Categoria
-		if err := tx.Where("negocio_id = ?", businessID).Find(&current).Error; err != nil {
-			return err
-		}
-		existing := make(map[string]uuid.UUID, len(current))
-		for _, category := range current {
-			existing[catalogImportKey(category.Nombre)] = category.ID
-		}
-
-		candidates := make(map[string]domain.CatalogImportCategoryRow, len(rows))
-		for _, row := range rows {
-			key := catalogImportKey(row.Nombre)
-			if _, duplicate := candidates[key]; duplicate {
-				result.Omitidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría está repetida en el archivo"})
-				continue
-			}
-			if _, exists := existing[key]; exists {
-				result.Omitidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría ya existe"})
-				continue
-			}
-			candidates[key] = row
-		}
-
-		states := make(map[string]int, len(candidates))
-		ordered := make([]string, 0, len(candidates))
-		var visit func(string) bool
-		visit = func(key string) bool {
-			switch states[key] {
-			case 2:
-				return true
-			case 3:
-				return false
-			case 1:
-				return false
-			}
-			states[key] = 1
-			row := candidates[key]
-			parent := catalogImportKey(row.CategoriaPadre)
-			if parent != "" {
-				if _, exists := existing[parent]; !exists {
-					if _, included := candidates[parent]; !included || !visit(parent) {
-						states[key] = 3
-						return false
-					}
-				}
-			}
-			states[key] = 2
-			ordered = append(ordered, key)
-			return true
-		}
-		for key := range candidates {
-			visit(key)
-		}
-
-		for key, row := range candidates {
-			if states[key] != 2 {
-				result.Invalidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: row.Fila, Motivo: "La categoría padre no existe o forma una jerarquía circular"})
-			}
-		}
-
-		created := make(map[string]uuid.UUID, len(ordered))
-		for _, key := range ordered {
-			row := candidates[key]
-			parentKey := catalogImportKey(row.CategoriaPadre)
-			var parentID *uuid.UUID
-			if id, exists := existing[parentKey]; parentKey != "" && exists {
-				parentID = &id
-			} else if id, exists := created[parentKey]; parentKey != "" && exists {
-				parentID = &id
-			}
-			category := domain.Categoria{ID: uuid.New(), NegocioID: businessID, Nombre: strings.TrimSpace(row.Nombre), CategoriaPadreID: parentID, Activo: true}
-			if description := strings.TrimSpace(row.Descripcion); description != "" {
-				category.Descripcion = &description
-			}
-			if err := tx.Create(&category).Error; err != nil {
-				return err
-			}
-			created[key] = category.ID
-			result.Creadas++
-		}
-		return nil
-	})
-	return result, err
-}
-
 func catalogImportKey(value string) string {
-	return strings.ToLower(strings.Map(func(r rune) rune {
+	sinMarcas := strings.Map(func(r rune) rune {
 		if unicode.Is(unicode.Mn, r) {
 			return -1
 		}
 		return r
-	}, norm.NFD.String(strings.TrimSpace(value))))
+	}, norm.NFD.String(value))
+	return strings.ToLower(strings.Join(strings.Fields(sinMarcas), " "))
 }
 
 func validarCategoriaPadre(db *gorm.DB, businessID, categoryID uuid.UUID, parentID *uuid.UUID) error {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/mail"
 	"regexp"
 	"strconv"
 	"strings"
@@ -327,12 +326,16 @@ func parseUnitImport(file io.Reader) ([]domain.CatalogImportUnitRow, domain.Cata
 	for index, row := range rows {
 		factor, factorErr := strconv.ParseFloat(cell(row, 3), 64)
 		decimals, decimalsErr := strconv.Atoi(cell(row, 4))
-		if cell(row, 0) == "" || cell(row, 1) == "" || cell(row, 2) == "" || factorErr != nil || decimalsErr != nil || factor <= 0 || decimals < 0 || decimals > 6 {
-			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "La unidad requiere nombre, símbolo, tipo, factor válido y decimales entre 0 y 6"})
+		if factorErr != nil || decimalsErr != nil {
+			addInvalid(&result, &domain.CatalogImportIssue{Fila: index + 2, Motivo: "La unidad requiere nombre, símbolo, tipo, factor válido y decimales entre 0 y 6"})
 			continue
 		}
-		valid = append(valid, domain.CatalogImportUnitRow{Fila: index + 2, Nombre: cell(row, 0), Simbolo: cell(row, 1), Tipo: cell(row, 2), FactorABase: factor, Decimales: decimals})
+		unit, issue := validateUnitRow(domain.CatalogImportUnitRow{Fila: index + 2, Nombre: cell(row, 0), Simbolo: cell(row, 1), Tipo: cell(row, 2), FactorABase: factor, Decimales: decimals})
+		if issue != nil {
+			addInvalid(&result, issue)
+			continue
+		}
+		valid = append(valid, unit)
 	}
 	return valid, result, nil
 }
@@ -344,13 +347,12 @@ func parseBrandImport(file io.Reader) ([]domain.CatalogImportBrandRow, domain.Ca
 	}
 	valid := make([]domain.CatalogImportBrandRow, 0, len(rows))
 	for index, row := range rows {
-		nombre := cell(row, 0)
-		if nombre == "" {
-			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "El nombre es obligatorio"})
+		brand, issue := validateBrandRow(domain.CatalogImportBrandRow{Fila: index + 2, Nombre: cell(row, 0)})
+		if issue != nil {
+			addInvalid(&result, issue)
 			continue
 		}
-		valid = append(valid, domain.CatalogImportBrandRow{Fila: index + 2, Nombre: nombre})
+		valid = append(valid, brand)
 	}
 	return valid, result, nil
 }
@@ -362,13 +364,12 @@ func parseCategoryImport(file io.Reader) ([]domain.CatalogImportCategoryRow, dom
 	}
 	valid := make([]domain.CatalogImportCategoryRow, 0, len(rows))
 	for index, row := range rows {
-		nombre := cell(row, 0)
-		if nombre == "" {
-			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: index + 2, Motivo: "El nombre es obligatorio"})
+		category, issue := validateCategoryRow(domain.CatalogImportCategoryRow{Fila: index + 2, Nombre: cell(row, 0), Descripcion: cell(row, 1), CategoriaPadre: cell(row, 2)})
+		if issue != nil {
+			addInvalid(&result, issue)
 			continue
 		}
-		valid = append(valid, domain.CatalogImportCategoryRow{Fila: index + 2, Nombre: nombre, Descripcion: cell(row, 1), CategoriaPadre: cell(row, 2)})
+		valid = append(valid, category)
 	}
 	return valid, result, nil
 }
@@ -380,22 +381,12 @@ func parseProviderImport(file io.Reader) ([]domain.CatalogImportProviderRow, dom
 	}
 	valid := make([]domain.CatalogImportProviderRow, 0, len(rows))
 	for index, row := range rows {
-		rowNumber := index + 2
-		nombre, email := cell(row, 0), cell(row, 4)
-		if nombre == "" {
-			result.Invalidas++
-			result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Nombre", Motivo: "es obligatorio"})
+		provider, issue := validateProviderRow(domain.CatalogImportProviderRow{Fila: index + 2, Nombre: cell(row, 0), RazonSocial: cell(row, 1), RFC: cell(row, 2), Telefono: cell(row, 3), Email: cell(row, 4), Direccion: cell(row, 5)})
+		if issue != nil {
+			addInvalid(&result, issue)
 			continue
 		}
-		if email != "" {
-			address, parseErr := mail.ParseAddress(email)
-			if parseErr != nil || address.Address != email {
-				result.Invalidas++
-				result.Errores = append(result.Errores, domain.CatalogImportIssue{Fila: rowNumber, Campo: "Correo", Motivo: "debe ser una dirección válida"})
-				continue
-			}
-		}
-		valid = append(valid, domain.CatalogImportProviderRow{Fila: rowNumber, Nombre: nombre, RazonSocial: cell(row, 1), RFC: cell(row, 2), Telefono: cell(row, 3), Email: email, Direccion: cell(row, 5)})
+		valid = append(valid, provider)
 	}
 	return valid, result, nil
 }

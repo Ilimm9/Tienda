@@ -25,7 +25,22 @@ export type CatalogRecord = Marca | Categoria | Proveedor | UnidadMedida;
 
 export interface CatalogImportIssue {
   fila: number;
+  campo?: string;
   motivo: string;
+}
+
+/** Lo que no se agregó de una lista pegada, con su número de renglón. */
+export interface RenglonOmitido {
+  numero: number;
+  nombre: string;
+  motivo: string;
+  /** Dato inválido que se puede corregir (no un repetido ni un existente). */
+  corregible: boolean;
+  linea: string;
+}
+export interface ReporteLista {
+  creadas: number;
+  omitidos: RenglonOmitido[];
 }
 export interface CatalogImportResult {
   procesadas: number;

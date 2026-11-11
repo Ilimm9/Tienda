@@ -191,20 +191,61 @@ describe('CatalogoComponent', () => {
     expect(component.form.controls.nombre.value).toBe('');
   });
 
-  it('agrega solo los renglones nuevos de una lista pegada', async () => {
+  it('envía la lista en una sola petición y cierra si todo se agregó', () => {
     const success = vi.spyOn(TestBed.inject(FeedbackService), 'success');
-    component.items.set([{ id: 'marca-1', nombre: 'Coca-Cola', activo: true }]);
     component.openImport();
-    component.textoLista.set('coca-cola\nPepsi\nPepsi');
+    component.textoLista.set('Pepsi\nBimbo');
 
-    expect(component.nuevosLista().map((r) => r.nombre)).toEqual(['Pepsi']);
-    const listo = component.agregarLista();
-    http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas` }).flush(null);
-    await listo;
+    component.agregarLista();
+    const req = http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/lista` });
+    expect(req.request.body).toEqual({ renglones: [{ fila: 1, nombre: 'Pepsi' }, { fila: 2, nombre: 'Bimbo' }] });
+    req.flush({ procesadas: 2, creadas: 2, omitidas: 0, invalidas: 0, errores: [] });
     http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
 
-    expect(success).toHaveBeenCalledWith('1 marca agregada', 'Los repetidos y los que ya existían se omitieron.');
+    expect(success).toHaveBeenCalledWith('2 marcas agregadas');
     expect(component.dialogo()).toBeNull();
+  });
+
+  it('muestra el reporte de lo omitido y devuelve a la caja lo que se puede corregir', () => {
+    const warning = vi.spyOn(TestBed.inject(FeedbackService), 'warning');
+    component.items.set([{ id: 'marca-1', nombre: 'Coca-Cola', activo: true }]);
+    component.openImport();
+    component.textoLista.set(`coca-cola\nPepsi\nPepsi\n${'x'.repeat(181)}\nBimbo\nLala`);
+
+    expect(component.nuevosLista().map((r) => r.nombre)).toEqual(['Pepsi', 'Bimbo', 'Lala']);
+    component.agregarLista();
+    const req = http.expectOne({ method: 'POST', url: `${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/lista` });
+    expect(req.request.body.renglones.map((r: { fila: number }) => r.fila)).toEqual([2, 5, 6]);
+    // El backend detecta que Lala ya existía (otra persona la agregó) y crea el resto.
+    req.flush({ procesadas: 3, creadas: 2, omitidas: 1, invalidas: 0, errores: [{ fila: 6, motivo: 'La marca ya existe' }] });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas`).flush([]);
+
+    expect(warning).toHaveBeenCalledWith('2 marcas agregadas', '4 renglones no se agregaron; revisa el reporte.');
+    expect(component.dialogo()).toBe('masiva');
+    const reporte = component.reporteLista();
+    expect(reporte?.creadas).toBe(2);
+    expect(reporte?.omitidos.map((o) => [o.numero, o.corregible])).toEqual([[1, false], [3, false], [4, true], [6, false]]);
+    expect(reporte?.omitidos[3].motivo).toBe('La marca ya existe');
+    expect(component.textoLista()).toBe('');
+
+    component.corregirOmitidos();
+    expect(component.textoLista()).toBe('x'.repeat(181));
+    expect(component.reporteLista()).toBeNull();
+  });
+
+  it('si el servidor falla, conserva la lista y avisa que no se guardó nada', () => {
+    component.openImport();
+    component.textoLista.set('Pepsi');
+
+    component.agregarLista();
+    http
+      .expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/marcas/lista`)
+      .flush({ mensaje: 'No fue posible guardar la lista; no se agregó ningún registro' }, { status: 500, statusText: 'Server Error' });
+
+    expect(component.importing()).toBe(false);
+    expect(component.textoLista()).toBe('Pepsi');
+    expect(component.listaError()).toContain('ningún registro');
+    expect(component.dialogo()).toBe('masiva');
   });
 
   it('importa un archivo, avisa con un toast y cierra la ventana', () => {

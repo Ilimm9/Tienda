@@ -439,6 +439,37 @@
           ></textarea>
           <small class="ayuda">{{ formatoLista.ayuda }} Ejemplo: <code class="codigo">{{ formatoLista.ejemplo }}</code></small>
         </div>
+        @if (reporteLista(); as reporte) {
+        <section class="masiva-vista" aria-label="Resultado" aria-live="polite">
+          <header class="masiva-vista__encabezado">
+            <span class="modal-seccion__titulo m-0!">Resultado</span>
+            <span class="flex flex-wrap gap-1.5">
+              <span class="pastilla masiva-estado" data-estado="nuevo">{{ reporte.creadas }} {{ reporte.creadas === 1 ? 'agregado' : 'agregados' }}</span>
+              <span class="pastilla masiva-estado" data-estado="existe">{{ reporte.omitidos.length }} sin agregar</span>
+            </span>
+          </header>
+          <ol class="masiva-lista">
+            @for (omitido of reporte.omitidos; track omitido.numero) {
+              <li class="masiva-renglon">
+                <span class="masiva-renglon__numero tabular-nums">{{ omitido.numero }}</span>
+                <span class="min-w-0 flex-1">
+                  <strong class="block truncate">{{ omitido.nombre || '(sin nombre)' }}</strong>
+                  <span class="masiva-renglon__detalle" [class.masiva-renglon__detalle--error]="omitido.corregible">{{ omitido.motivo }}</span>
+                </span>
+                <span class="pastilla masiva-estado" [attr.data-estado]="omitido.corregible ? 'error' : 'existe'">{{ omitido.corregible ? 'Revisar' : 'Omitido' }}</span>
+              </li>
+            }
+          </ol>
+          <div class="masiva-reporte__acciones">
+            @if (corregibles().length) {
+              <button type="button" class="boton boton--secundario" (click)="corregirOmitidos()">
+                <i class="pi pi-pencil" aria-hidden="true"></i> Corregir {{ corregibles().length }} {{ corregibles().length === 1 ? 'renglón' : 'renglones' }}
+              </button>
+            }
+            <button type="button" class="boton-enlace" (click)="nuevaLista()">Pegar otra lista</button>
+          </div>
+        </section>
+        } @else {
         <section class="masiva-vista" aria-label="Vista previa" aria-live="polite">
           <header class="masiva-vista__encabezado">
             <span class="modal-seccion__titulo m-0!">Vista previa</span>
@@ -464,18 +495,14 @@
               <li class="masiva-vacia">Pega al menos un renglón para ver qué se agregará.</li>
             }
           </ol>
-          @if (pegadoFallas().length) {
+          @if (listaError()) {
             <div class="modal-alerta m-3!" role="alert">
               <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-              <span>
-                No se guardaron:
-                @for (falla of pegadoFallas(); track falla.nombre) {
-                  <span class="block"><strong>{{ falla.nombre }}</strong>: {{ falla.motivo }}</span>
-                }
-              </span>
+              <span>{{ listaError() }}</span>
             </div>
           }
         </section>
+        }
       </div>
     } @else {
       <div class="flex flex-col gap-4">

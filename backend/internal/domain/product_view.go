@@ -281,33 +281,38 @@ type CreateImportedProductInput struct {
 	FamiliaClave string
 }
 
+// Los renglones de catálogo vienen del XLSX o de una lista pegada (JSON);
+// `fila` es el renglón de origen para el reporte.
 type CatalogImportBrandRow struct {
-	Fila   int
-	Nombre string
+	Fila   int    `json:"fila"`
+	Nombre string `json:"nombre"`
 }
 
 type CatalogImportCategoryRow struct {
-	Fila           int
-	Nombre         string
-	Descripcion    string
-	CategoriaPadre string
+	Fila        int    `json:"fila"`
+	Nombre      string `json:"-"`
+	Descripcion string `json:"-"`
+	// CategoriaPadre (XLSX) es un nombre o una ruta «A > B», buscada en cualquier nivel.
+	CategoriaPadre string `json:"-"`
+	// Ruta (lista) es la ruta completa desde la raíz, incluido el nombre al final.
+	Ruta []string `json:"ruta"`
 }
 type CatalogImportProviderRow struct {
-	Fila        int
-	Nombre      string
-	RazonSocial string
-	RFC         string
-	Telefono    string
-	Email       string
-	Direccion   string
+	Fila        int    `json:"fila"`
+	Nombre      string `json:"nombre"`
+	RazonSocial string `json:"-"`
+	RFC         string `json:"rfc"`
+	Telefono    string `json:"telefono"`
+	Email       string `json:"email"`
+	Direccion   string `json:"-"`
 }
 type CatalogImportUnitRow struct {
-	Fila        int
-	Nombre      string
-	Simbolo     string
-	Tipo        string
-	FactorABase float64
-	Decimales   int
+	Fila        int     `json:"fila"`
+	Nombre      string  `json:"nombre"`
+	Simbolo     string  `json:"simbolo"`
+	Tipo        string  `json:"tipo"`
+	FactorABase float64 `json:"factor_a_base"`
+	Decimales   int     `json:"decimales"`
 }
 type CreateCategoriaInput struct {
 	Nombre           string     `json:"nombre" binding:"required"`

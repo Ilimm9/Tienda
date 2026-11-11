@@ -4,10 +4,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { firstValueFrom, startWith } from 'rxjs';
+import { startWith } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
 import { CatalogoService } from './catalogo.service';
-import { CatalogImportResult, CatalogRecord, Categoria, Proveedor, UnidadMedida } from './catalogo.models';
+import { CatalogImportResult, CatalogRecord, Categoria, Proveedor, ReporteLista, UnidadMedida } from './catalogo.models';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
@@ -124,7 +124,9 @@ export class CatalogoComponent {
   readonly importing = signal(false);
   readonly importError = signal<string | null>(null);
   readonly importResult = signal<CatalogImportResult | null>(null);
-  readonly pegadoFallas = signal<Array<{ nombre: string; motivo: string }>>([]);
+  /** Resultado de guardar una lista pegada: se muestra en lugar de la vista previa. */
+  readonly reporteLista = signal<ReporteLista | null>(null);
+  readonly listaError = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(180)]],
@@ -141,19 +143,16 @@ export class CatalogoComponent {
     initialValue: this.form.getRawValue(),
   });
 
-  /** Aviso inmediato de nombre repetido; el servidor lo vuelve a comprobar. */
+  /**
+   * Aviso inmediato de nombre repetido; el servidor lo vuelve a comprobar.
+   * En categorías el nombre es único en todo el negocio, no solo entre hermanas.
+   */
   readonly nombreDuplicado = computed<string | null>(() => {
-    const valores = this.valores();
-    const nombre = normalizar(valores.nombre);
+    const nombre = normalizar(this.valores().nombre);
     if (!nombre) return null;
-    const padre = valores.categoria_padre_id || null;
-    const igual = this.items().find(
-      (item) =>
-        item.id !== this.editingId &&
-        normalizar(item.nombre) === nombre &&
-        (this.section !== 'categorias' || ((item as Categoria).categoria_padre_id ?? null) === padre),
-    );
-    return igual?.nombre ?? null;
+    const igual = this.items().find((item) => item.id !== this.editingId && normalizar(item.nombre) === nombre);
+    if (!igual) return null;
+    return this.section === 'categorias' ? this.categoryPath(igual as Categoria).join(' › ') : igual.nombre;
   });
 
   readonly rutaCategoria = computed(() => {
@@ -487,7 +486,8 @@ export class CatalogoComponent {
   openImport(): void {
     this.prepareImport();
     this.textoLista.set('');
-    this.pegadoFallas.set([]);
+    this.reporteLista.set(null);
+    this.listaError.set(null);
     this.origenMasiva.set('pegar');
     this.dialogo.set('masiva');
   }
@@ -534,66 +534,84 @@ export class CatalogoComponent {
     else void this.agregarLista();
   }
 
-  /** Crea en orden los renglones nuevos; en categorías resuelve o crea primero los padres. */
-  async agregarLista(): Promise<void> {
-    const nuevos = this.nuevosLista();
+  /**
+   * Envía los renglones nuevos en una sola petición. El backend los guarda en
+   * una transacción: omite lo inválido, repetido o existente y crea el resto.
+   */
+  agregarLista(): void {
+    const renglones = this.renglones();
+    const nuevos = renglones.filter((renglon) => renglon.estado === 'nuevo');
     if (!nuevos.length || this.importing()) return;
-    const omitidos = this.renglones().length - nuevos.length;
     this.importing.set(true);
-    this.pegadoFallas.set([]);
+    this.listaError.set(null);
     const negocioId = this.contexto.negocio()?.id ?? '';
-    const fallas: Array<{ nombre: string; motivo: string }> = [];
-    let creados = 0;
-    let categorias = this.section === 'categorias' ? [...(this.items() as Categoria[])] : [];
+    const cuerpo = nuevos.map((renglon) => ({ fila: renglon.numero, ...renglon.payload }));
 
-    for (const renglon of nuevos) {
-      try {
-        const payload: Record<string, unknown> = { ...renglon.payload };
-        if (this.section === 'categorias' && renglon.padres?.length) {
-          let padreId: string | null = null;
-          for (const nombrePadre of renglon.padres) {
-            let padre = categorias.find(
-              (c) => normalizar(c.nombre) === normalizar(nombrePadre) && (c.categoria_padre_id ?? null) === padreId,
-            );
-            if (!padre) {
-              await firstValueFrom(this.service.crear(negocioId, 'categorias', { nombre: nombrePadre, categoria_padre_id: padreId }));
-              creados++;
-              categorias = await firstValueFrom(this.service.categorias(negocioId));
-              padre = categorias.find(
-                (c) => normalizar(c.nombre) === normalizar(nombrePadre) && (c.categoria_padre_id ?? null) === padreId,
-              );
-            }
-            padreId = padre?.id ?? null;
-          }
-          payload['categoria_padre_id'] = padreId;
+    this.service.importarLista(negocioId, this.section, cuerpo).subscribe({
+      next: (resultado) => {
+        this.importing.set(false);
+        this.load();
+        const porNumero = new Map(renglones.map((renglon) => [renglon.numero, renglon]));
+        const omitidos = [
+          // Lo que la vista previa ya descartó y no se envió.
+          ...renglones
+            .filter((renglon) => renglon.estado !== 'nuevo')
+            .map((renglon) => ({
+              numero: renglon.numero,
+              nombre: renglon.nombre,
+              motivo: renglon.detalle.replace(/^Se omite: /, ''),
+              corregible: renglon.estado === 'error',
+              linea: renglon.linea,
+            })),
+          // Lo que el backend no guardó; con campo es un dato inválido.
+          ...resultado.errores.map((issue) => {
+            const renglon = porNumero.get(issue.fila);
+            return {
+              numero: issue.fila,
+              nombre: renglon?.nombre ?? '',
+              motivo: issue.campo ? `${issue.campo}: ${issue.motivo}` : issue.motivo,
+              corregible: Boolean(issue.campo),
+              linea: renglon?.linea ?? '',
+            };
+          }),
+        ].sort((a, b) => a.numero - b.numero);
+
+        this.textoLista.set('');
+        const titulo = `${resultado.creadas} ${this.textoAgregados(resultado.creadas)}`;
+        if (!omitidos.length) {
+          this.feedback.success(titulo);
+          this.cerrarDialogo();
+          return;
         }
-        await firstValueFrom(this.service.crear(negocioId, this.requestPath(), payload));
-        creados++;
-        if (this.section === 'categorias') categorias = await firstValueFrom(this.service.categorias(negocioId));
-      } catch (e: unknown) {
-        const mensaje = (e as { error?: { mensaje?: string } })?.error?.mensaje;
-        fallas.push({ nombre: renglon.nombre, motivo: mensaje ?? 'No se pudo guardar.' });
-      }
-    }
+        this.reporteLista.set({ creadas: resultado.creadas, omitidos });
+        this.feedback.warning(titulo, `${omitidos.length} ${omitidos.length === 1 ? 'renglón no se agregó' : 'renglones no se agregaron'}; revisa el reporte.`);
+      },
+      error: (error) => {
+        this.importing.set(false);
+        this.listaError.set(error.error?.mensaje ?? 'No fue posible guardar la lista. No se agregó ningún registro.');
+      },
+    });
+  }
 
-    this.importing.set(false);
-    this.load();
-    const plural = this.title.toLowerCase();
-    if (fallas.length) {
-      this.pegadoFallas.set(fallas);
-      this.textoLista.set(fallas.map((f) => nuevos.find((r) => r.nombre === f.nombre)?.linea ?? f.nombre).join('\n'));
-      this.feedback.warning(
-        `Se agregaron ${creados} de ${creados + fallas.length}`,
-        'Dejamos en la lista los renglones que no se pudieron guardar.',
-      );
-      return;
-    }
+  /** «3 marcas agregadas», «1 proveedor agregado»… */
+  private textoAgregados(n: number): string {
+    const sustantivo = n === 1 ? this.singularLower : this.title.toLowerCase();
+    const participio = this.esFemenino ? (n === 1 ? 'agregada' : 'agregadas') : n === 1 ? 'agregado' : 'agregados';
+    return `${sustantivo} ${participio}`;
+  }
+
+  readonly corregibles = computed(() => this.reporteLista()?.omitidos.filter((omitido) => omitido.corregible) ?? []);
+
+  /** Devuelve a la caja los renglones con datos inválidos para corregirlos. */
+  corregirOmitidos(): void {
+    this.textoLista.set(this.corregibles().map((omitido) => omitido.linea).join('\n'));
+    this.reporteLista.set(null);
+  }
+
+  /** Cierra el reporte para pegar otra lista. */
+  nuevaLista(): void {
     this.textoLista.set('');
-    this.feedback.success(
-      `${creados} ${creados === 1 ? this.singularLower : plural} ${creados === 1 ? (this.esFemenino ? 'agregada' : 'agregado') : this.esFemenino ? 'agregadas' : 'agregados'}`,
-      omitidos ? 'Los repetidos y los que ya existían se omitieron.' : undefined,
-    );
-    this.cerrarDialogo();
+    this.reporteLista.set(null);
   }
 
   onImportFile(event: Event): void {

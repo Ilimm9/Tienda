@@ -37,6 +37,14 @@ export class CatalogoService {
     data.append('archivo', file);
     return this.http.post<CatalogImportResult>(`${this.api}/negocios/${negocioId}/catalogo/${section}/importar`, data);
   }
+  /** Guarda una lista pegada en una sola transacción (omite lo inválido, repetido o existente). */
+  importarLista(
+    negocioId: string,
+    section: 'marcas' | 'categorias' | 'proveedores' | 'unidades',
+    renglones: Array<Record<string, unknown>>,
+  ): Observable<CatalogImportResult> {
+    return this.http.post<CatalogImportResult>(`${this.api}/negocios/${negocioId}/catalogo/${section}/lista`, { renglones });
+  }
   plantillaUrl(negocioId: string, section: 'marcas' | 'categorias' | 'proveedores' | 'unidades'): string {
     if (section === 'unidades') return `${this.api}/negocios/${negocioId}/catalogo/unidades/importacion/plantilla`;
     return `${this.api}/negocios/${negocioId}/catalogo/${section}/importacion/plantilla`;

@@ -50,6 +50,7 @@ type ProductRepository interface {
 	CheckCategoryDeletion(businessID, categoryID uuid.UUID) (domain.CatalogDeletionCheck, error)
 	DeleteCategory(businessID, categoryID uuid.UUID) error
 	ImportCategories(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
+	ImportCategoryPaths(businessID uuid.UUID, rows []domain.CatalogImportCategoryRow) (domain.CatalogImportResult, error)
 	ImportProviders(businessID uuid.UUID, rows []domain.CatalogImportProviderRow) (domain.CatalogImportResult, error)
 	ImportUnits(businessID uuid.UUID, rows []domain.CatalogImportUnitRow) (domain.CatalogImportResult, error)
 	ValidateProductImport(uuid.UUID, uuid.UUID, []domain.ProductImportRow) ([]domain.ValidatedProductImportRow, domain.CatalogImportResult, []domain.ProductImportCatalogProposal, error)
@@ -247,10 +248,26 @@ func (s *ProductService) ListProviders(id uuid.UUID) ([]domain.Proveedor, error)
 	return s.products.ListProviders(id)
 }
 func (s *ProductService) CreateProvider(id uuid.UUID, i domain.CreateProveedorInput) error {
+	if err := normalizarRFCOpcional(i.RFC); err != nil {
+		return err
+	}
 	return s.products.CreateProvider(id, i)
 }
 func (s *ProductService) UpdateProvider(businessID, id uuid.UUID, i domain.UpdateProveedorInput) error {
+	if err := normalizarRFCOpcional(i.RFC); err != nil {
+		return err
+	}
 	return s.products.UpdateProvider(businessID, id, i)
+}
+
+// normalizarRFCOpcional deja el RFC en mayúsculas y rechaza un formato inválido.
+func normalizarRFCOpcional(rfc *string) error {
+	if rfc == nil {
+		return nil
+	}
+	valor, err := domain.NormalizarRFC(*rfc)
+	*rfc = valor
+	return err
 }
 func (s *ProductService) DeleteProvider(businessID, id uuid.UUID) error {
 	return s.products.DeleteProvider(businessID, id)
@@ -262,9 +279,21 @@ func (s *ProductService) ListUnits(businessID uuid.UUID) ([]domain.UnidadMedida,
 	return s.products.ListUnits(businessID)
 }
 func (s *ProductService) CreateUnit(businessID uuid.UUID, i domain.CreateUnidadMedidaInput) error {
+	tipo, err := domain.NormalizarTipoUnidad(i.Tipo)
+	if err != nil {
+		return err
+	}
+	i.Tipo = tipo
 	return s.products.CreateUnit(businessID, i)
 }
 func (s *ProductService) UpdateUnit(businessID, id uuid.UUID, i domain.UpdateUnidadMedidaInput) error {
+	if i.Tipo != nil {
+		tipo, err := domain.NormalizarTipoUnidad(*i.Tipo)
+		if err != nil {
+			return err
+		}
+		i.Tipo = &tipo
+	}
 	return s.products.UpdateUnit(businessID, id, i)
 }
 func (s *ProductService) DeleteUnit(businessID, id uuid.UUID) error {

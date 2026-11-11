@@ -1,6 +1,8 @@
 # Ajuste: carga por lista en una sola transacción
 
-Creado: 2026-11-11.
+Creado e implementado: 2026-11-11. Pendiente: prueba manual del usuario.
+
+> **Cambio respecto al plan:** al probar contra PostgreSQL apareció el índice único `idx_categorias_negocio_nombre_ci` (negocio + nombre). El usuario eligió respetarlo: **el nombre de categoría es único en todo el negocio** (no por padre). Las secciones de abajo que hablan de «único dentro del mismo padre» quedan sustituidas por esta regla; las rutas `A > B` siguen sirviendo para ubicar y crear ancestros.
 
 ## Contexto
 
@@ -125,6 +127,13 @@ Errores: `400` (JSON inválido, lista vacía o más de 1000 renglones), `403` (p
 ## Decisiones (usuario, 2026-11-11)
 
 - Omitir y seguir, con reporte final.
-- Categorías: nombre único dentro del mismo padre (opción B).
+- ~~Categorías: nombre único dentro del mismo padre (opción B).~~ Sustituida: nombre único en el negocio, por el índice existente (usuario, 2026-11-11).
 - Validar RFC y tipo de unidad en el backend.
 - Planes sin número, con prefijo `thrs-`; `capabilities/` es una guía opcional.
+
+## Resultado de la implementación
+
+- Backend: `domain/catalog_rules.go` (RFC, tipo, longitudes, `ErrCategoriaDuplicada`), `application/catalog_list.go` (validadores compartidos XLSX/lista y `Import*List`), `infrastructure/catalog_category_import.go` (árbol de categorías, `ImportCategoryPaths`, nuevo `ImportCategories`), handler `importCatalogList` y 4 rutas `/lista`.
+- Frontend: `lista-pegada.ts` con las mismas reglas, `importarLista` en el servicio, `agregarLista()` con una sola petición y reporte en la ventana.
+- Pruebas: unitarias Go (validadores, servicio, handler), integración contra PostgreSQL temporal (rutas, XLSX por nombre/ruta/orden, nombre único individual, rollback), specs de Angular, `ng build`, recorrido HTTP completo (registro → negocio → 4 listas) y prueba en navegador (vista previa, reporte, «Corregir», aviso de nombre repetido).
+- Integración: `LISTA_TEST_DATABASE_URL=<base _test migrada> go test ./internal/infrastructure -run 'TestImportCateg|TestCategoriaIndividual|TestImportLista'`.
