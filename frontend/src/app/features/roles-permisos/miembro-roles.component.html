@@ -10,7 +10,7 @@
     <p class="estado-vacio m-0" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando roles…</p>
   } @else if (miembro(); as persona) {
     <form id="form-miembro-roles" class="contents" (ngSubmit)="guardar()" novalidate>
-      <div class="opcion opcion--compacta cursor-default! py-3!">
+      <div class="modal-caja modal-caja--persona">
         <span class="avatar avatar--grande" aria-hidden="true">{{ iniciales(persona.nombre, persona.correo) }}</span>
         <span class="min-w-0 flex-1">
           <strong class="truncate">{{ persona.nombre || persona.correo }}</strong>

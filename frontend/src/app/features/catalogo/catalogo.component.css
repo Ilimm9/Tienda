@@ -262,7 +262,8 @@
 .masiva-vista {
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-soft);
+    background: var(--surface-raised);
     border-radius: 14px;
 }
 

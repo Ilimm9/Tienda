@@ -2489,8 +2489,141 @@ p-select.formulario-alta__select {
 .modal-casilla .casilla {
   margin: 0;
 }
+/* Pestañas dentro de la ventana: fondo blanco, sin el crema de los filtros de página. */
 .modal-pestanas {
   align-self: flex-start;
+  border-color: var(--border-soft);
+  background: var(--surface-raised);
+}
+.modal-pestanas .segmentado__opcion {
+  color: var(--text-muted);
+}
+.modal-pestanas .segmentado__opcion[aria-pressed='true'] {
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(23 37 84 / 12%);
+}
+.modal-pestanas .segmentado__opcion[aria-pressed='true'] .pi {
+  color: var(--primary);
+}
+
+/* Caja blanca con borde suave: agrupa contenido sin sombras ni color de fondo. */
+.modal-caja {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+.modal-caja--fila {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  color: var(--text-body);
+  font-size: 13px;
+}
+.modal-caja--zona {
+  padding: 10px;
+}
+.modal-caja--persona {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+/* Zona para soltar archivos dentro de una ventana (tablero 12). */
+.modal .file-dropzone {
+  min-height: 0;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-row-hover);
+  transform: none;
+}
+.modal .file-dropzone:hover,
+.modal .file-dropzone:focus-visible,
+.modal .file-dropzone.is-dragging {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  transform: none;
+}
+.modal .file-dropzone:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-border);
+}
+.modal .file-dropzone.has-file {
+  border-style: solid;
+  border-color: var(--primary-border);
+  background: var(--primary-tint);
+}
+.modal .file-dropzone strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.modal .file-dropzone small {
+  font-size: 13px;
+}
+.modal .dropzone-icon {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border-radius: 15px;
+  background: var(--primary-soft);
+  font-size: 20px;
+}
+
+/* «Seguir agregando»: casilla en caja crema con título y explicación. */
+.modal-casilla--caja {
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #f1e6c6;
+  border-radius: 14px;
+  background: #fdf9ee;
+}
+.modal-casilla--caja .casilla {
+  width: 18px;
+  height: 18px;
+}
+.modal-casilla--caja strong {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Tarjetas de selección dentro de ventanas: borde morado y casilla rellena al elegir. */
+.modal .opcion {
+  border-color: var(--border-soft);
+  border-radius: 14px;
+}
+.modal .opcion:hover {
+  border-color: #a9a3ea;
+}
+.modal .opcion:has(:checked) {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  box-shadow: inset 0 0 0 0.5px var(--primary);
+}
+.modal .opcion .casilla {
+  width: 18px;
+  height: 18px;
+}
+
+/* Lista de resultados de la carga masiva tras importar un archivo. */
+.modal-resultado {
+  gap: 10px;
+  color: var(--text-body);
+  font-size: 13.5px;
+}
+.modal-resultado ul {
+  margin: 0;
+  padding-left: 18px;
 }
 @keyframes modal-fondo {
   from {

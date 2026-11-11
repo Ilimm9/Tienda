@@ -170,9 +170,9 @@
         </section>
       }
 
-      <label class="modal-casilla">
+      <label class="modal-casilla modal-casilla--caja">
         <input type="checkbox" class="casilla" name="seguir" [ngModel]="seguirAgregando()" (ngModelChange)="seguirAgregando.set($event)" />
-        Seguir agregando: la ventana queda abierta al guardar
+        <span><strong>Seguir agregando</strong>La ventana queda abierta al guardar.</span>
       </label>
     </form>
 

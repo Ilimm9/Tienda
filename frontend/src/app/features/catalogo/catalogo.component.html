@@ -383,9 +383,9 @@
       }
 
       @if (!editingId) {
-        <label class="modal-casilla">
+        <label class="modal-casilla modal-casilla--caja">
           <input type="checkbox" class="casilla" [ngModel]="seguirAgregando()" (ngModelChange)="seguirAgregando.set($event)" [ngModelOptions]="{ standalone: true }" />
-          Seguir agregando: la ventana queda abierta al guardar
+          <span><strong>Seguir agregando</strong>La ventana queda abierta al guardar.</span>
         </label>
       }
 
@@ -506,31 +506,33 @@
       </div>
     } @else {
       <div class="flex flex-col gap-4">
-        <div
-          class="file-dropzone"
-          [class.is-dragging]="importDropActive"
-          [class.has-file]="importFile"
-          [class.is-disabled]="importing()"
-          role="button"
-          tabindex="0"
-          aria-label="Elegir archivo XLSX"
-          (click)="openFilePicker($event, importInput)"
-          (keydown.enter)="importInput.click()"
-          (keydown.space)="importInput.click(); $event.preventDefault()"
-          (dragover)="onImportDragOver($event)"
-          (dragleave)="onImportDragLeave($event)"
-          (drop)="onImportDrop($event)"
-        >
-          <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing()" />
-          <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'" aria-hidden="true"></i></span>
-          @if (importFile) {
-            <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small>
-            <button class="remove-file-button" type="button" aria-label="Quitar archivo seleccionado" [disabled]="importing()" (click)="removeImportFile($event, importInput)" (keydown)="$event.stopPropagation()"><i class="pi pi-times" aria-hidden="true"></i></button>
-          } @else {
-            <strong>Arrastra tu archivo o elígelo</strong><small>Excel (.xlsx) · máximo 5 MB</small>
-          }
+        <div class="modal-caja modal-caja--zona">
+          <div
+            class="file-dropzone"
+            [class.is-dragging]="importDropActive"
+            [class.has-file]="importFile"
+            [class.is-disabled]="importing()"
+            role="button"
+            tabindex="0"
+            aria-label="Elegir archivo XLSX"
+            (click)="openFilePicker($event, importInput)"
+            (keydown.enter)="importInput.click()"
+            (keydown.space)="importInput.click(); $event.preventDefault()"
+            (dragover)="onImportDragOver($event)"
+            (dragleave)="onImportDragLeave($event)"
+            (drop)="onImportDrop($event)"
+          >
+            <input #importInput class="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" [disabled]="importing()" />
+            <span class="dropzone-icon"><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-upload'" aria-hidden="true"></i></span>
+            @if (importFile) {
+              <strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small>
+              <button class="remove-file-button" type="button" aria-label="Quitar archivo seleccionado" [disabled]="importing()" (click)="removeImportFile($event, importInput)" (keydown)="$event.stopPropagation()"><i class="pi pi-times" aria-hidden="true"></i></button>
+            } @else {
+              <strong>Arrastra tu archivo o elígelo</strong><small>Excel (.xlsx) · máximo 5 MB</small>
+            }
+          </div>
         </div>
-        <div class="modal-nota flex-row! flex-wrap items-center justify-between">
+        <div class="modal-caja modal-caja--fila">
           <span>Columnas: <span class="codigo">{{ columnasPlantilla }}</span></span>
           <a class="boton-enlace inline-flex items-center gap-1.5" [href]="templateUrl()"><i class="pi pi-download" aria-hidden="true"></i> Descargar plantilla</a>
         </div>
@@ -538,7 +540,7 @@
           <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ importError() }}</p>
         }
         @if (importResult(); as result) {
-          <section class="aviso aviso--atencion m-0 flex-col items-start!" aria-live="polite">
+          <section class="modal-caja modal-resultado" aria-live="polite">
             <strong>{{ result.creadas }} agregados · {{ result.omitidas }} omitidos · {{ result.invalidas }} con errores</strong>
             @if (result.errores.length) {
               <ul class="m-0 pl-4">
