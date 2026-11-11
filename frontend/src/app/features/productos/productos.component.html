@@ -1,738 +1,985 @@
-@if (isListPage()) {
-  <section class="pagina">
-    <header class="encabezado-pagina">
-      <div>
-        <span class="antetitulo">Catálogo</span>
-        <h1>Productos</h1>
-        <p class="descripcion">Catálogo de la sucursal con su precio y existencias actuales.</p>
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <span class="antetitulo">Catálogo</span>
+      <h1>Productos</h1>
+      <p class="descripcion">Catálogo de la sucursal con su precio y existencias actuales.</p>
+    </div>
+    @if (!loading() && !error() && products().length > 0 && esPropietario()) {
+      <div class="acciones-encabezado">
+        <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToAddFromCatalog()">
+          <i class="pi pi-th-large" aria-hidden="true"></i>
+          Agregar del catálogo
+        </button>
+        <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToImport()">
+          <i class="pi pi-upload" aria-hidden="true"></i>
+          Carga masiva
+        </button>
+        <button *appPuede="P.catalogoGestionar" class="boton" type="button" (click)="navigateToCreate()">
+          <i class="pi pi-plus" aria-hidden="true"></i>
+          Agregar nuevo producto
+        </button>
       </div>
-      @if (!loading() && !error() && products().length > 0 && esPropietario()) {
-        <div class="acciones-encabezado">
-          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToAddFromCatalog()">
-            <i class="pi pi-th-large" aria-hidden="true"></i>
-            Agregar del catálogo
+    }
+  </header>
+
+  @if (loading()) {
+    <p class="tabla-tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando productos…</p>
+  } @else if (error(); as message) {
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+  } @else if (products().length === 0) {
+    <div class="tabla-tarjeta estado-vacio estado-vacio--guiado">
+      <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-tags"></i></span>
+      <strong>Esta sucursal aún no tiene productos</strong>
+      @if (esPropietario()) {
+        <span>Agrega productos del catálogo del negocio, impórtalos o crea uno nuevo.</span>
+        <div class="acciones-encabezado mt-2">
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToAddFromCatalog()">
+            <i class="pi pi-th-large" aria-hidden="true"></i> Agregar del catálogo
           </button>
-          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario" type="button" (click)="navigateToImport()">
-            <i class="pi pi-upload" aria-hidden="true"></i>
-            Carga masiva
+          <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToImport()">
+            <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
           </button>
-          <button *appPuede="P.catalogoGestionar" class="boton" type="button" (click)="navigateToCreate()">
-            <i class="pi pi-plus" aria-hidden="true"></i>
-            Agregar nuevo producto
+          <button *appPuede="P.catalogoGestionar" class="boton boton--compacto" type="button" (click)="navigateToCreate()">
+            <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
           </button>
         </div>
+      } @else {
+        <span>Pide al propietario que agregue productos.</span>
       }
-    </header>
-
-    @if (loading()) {
-      <p class="tabla-tarjeta estado-vacio" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando productos…</p>
-    } @else if (error(); as message) {
-      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
-    } @else if (products().length === 0) {
-      <div class="tabla-tarjeta estado-vacio estado-vacio--guiado">
-        <span class="seccion-icono seccion-icono--redondo" aria-hidden="true"><i class="pi pi-tags"></i></span>
-        <strong>Esta sucursal aún no tiene productos</strong>
-        @if (esPropietario()) {
-          <span>Agrega productos del catálogo del negocio, impórtalos o crea uno nuevo.</span>
-          <div class="acciones-encabezado mt-2">
-            <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToAddFromCatalog()">
-              <i class="pi pi-th-large" aria-hidden="true"></i> Agregar del catálogo
+    </div>
+  } @else {
+    <section class="tabla-tarjeta" aria-label="Lista de productos">
+      <div class="tabla-barra" role="search">
+        <div class="campo-grupo min-w-0 flex-[2_1_280px]">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <label class="sr-only" for="product-search">Buscar productos</label>
+          <input
+            id="product-search"
+            type="search"
+            [ngModel]="productSearch()"
+            (ngModelChange)="setProductSearch($event)"
+            placeholder="Nombre, sabor, SKU o código de barras"
+          />
+          @if (productSearch()) {
+            <button type="button" class="campo-grupo__accion" aria-label="Limpiar búsqueda" (click)="setProductSearch('')">
+              <i class="pi pi-times" aria-hidden="true"></i>
             </button>
-            <button *appPuede="P.catalogoGestionar" class="boton boton--secundario boton--compacto" type="button" (click)="navigateToImport()">
-              <i class="pi pi-upload" aria-hidden="true"></i> Carga masiva
-            </button>
-            <button *appPuede="P.catalogoGestionar" class="boton boton--compacto" type="button" (click)="navigateToCreate()">
-              <i class="pi pi-plus" aria-hidden="true"></i> Agregar nuevo producto
-            </button>
-          </div>
-        } @else {
-          <span>Pide al propietario que agregue productos.</span>
-        }
-      </div>
-    } @else {
-      <section class="tabla-tarjeta" aria-label="Lista de productos">
-        <div class="tabla-barra" role="search">
-          <div class="campo-grupo min-w-0 flex-[2_1_280px]">
-            <i class="pi pi-search" aria-hidden="true"></i>
-            <label class="sr-only" for="product-search">Buscar productos</label>
-            <input
-              id="product-search"
-              type="search"
-              [ngModel]="productSearch()"
-              (ngModelChange)="setProductSearch($event)"
-              placeholder="Nombre, sabor, SKU o código de barras"
-            />
-            @if (productSearch()) {
-              <button type="button" class="campo-grupo__accion" aria-label="Limpiar búsqueda" (click)="setProductSearch('')">
-                <i class="pi pi-times" aria-hidden="true"></i>
-              </button>
-            }
-          </div>
-          @if (categoriasVisibles()) {
-            <label class="filter-field">
-              <span class="sr-only">Categoría</span>
-              <p-select
-                [ngModel]="productCategoryFilter()"
-                (ngModelChange)="setProductCategoryFilter($event)"
-                [options]="productCategoryOptions()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Todas las categorías"
-                [showClear]="true"
-              />
-            </label>
           }
-          @if (marcasVisibles()) {
-            <label class="filter-field">
-              <span class="sr-only">Marca</span>
-              <p-select
-                [ngModel]="productBrandFilter()"
-                (ngModelChange)="setProductBrandFilter($event)"
-                [options]="productBrandOptions()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Todas las marcas"
-                [showClear]="true"
-              />
-            </label>
-          }
-          <label class="filter-field">
-            <span class="sr-only">Proveedor</span>
-            <p-select
-              [ngModel]="productProviderFilter()"
-              (ngModelChange)="setProductProviderFilter($event)"
-              [options]="productProviderOptions()"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todos los proveedores"
-              [showClear]="true"
-            />
-          </label>
-          <label class="filter-field">
-            <span class="sr-only">Estado</span>
-            <p-select
-              [ngModel]="productStatusFilter()"
-              (ngModelChange)="setProductStatusFilter($event)"
-              [options]="productStatusOptions"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todas las existencias"
-              [showClear]="true"
-            />
-          </label>
-          <label class="filter-field">
-            <span class="sr-only">Tipo</span>
-            <p-select
-              [ngModel]="productTypeFilter()"
-              (ngModelChange)="setProductTypeFilter($event)"
-              [options]="productTypeOptions"
-              optionLabel="nombre"
-              optionValue="id"
-            />
-          </label>
         </div>
+        @if (categoriasVisibles()) {
+          <label class="filter-field">
+            <span class="sr-only">Categoría</span>
+            <p-select
+              class="campo-select"
+              panelStyleClass="campo-select__panel"
+              [checkmark]="true"
+              [ngModel]="productCategoryFilter()"
+              (ngModelChange)="setProductCategoryFilter($event)"
+              [options]="productCategoryOptions()"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Todas las categorías"
+              [showClear]="true"
+            />
+          </label>
+        }
+        @if (marcasVisibles()) {
+          <label class="filter-field">
+            <span class="sr-only">Marca</span>
+            <p-select
+              class="campo-select"
+              panelStyleClass="campo-select__panel"
+              [checkmark]="true"
+              [ngModel]="productBrandFilter()"
+              (ngModelChange)="setProductBrandFilter($event)"
+              [options]="productBrandOptions()"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Todas las marcas"
+              [showClear]="true"
+            />
+          </label>
+        }
+        <label class="filter-field">
+          <span class="sr-only">Proveedor</span>
+          <p-select
+            class="campo-select"
+            panelStyleClass="campo-select__panel"
+            [checkmark]="true"
+            [ngModel]="productProviderFilter()"
+            (ngModelChange)="setProductProviderFilter($event)"
+            [options]="productProviderOptions()"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Todos los proveedores"
+            [showClear]="true"
+          />
+        </label>
+        <label class="filter-field">
+          <span class="sr-only">Estado</span>
+          <p-select
+            class="campo-select"
+            panelStyleClass="campo-select__panel"
+            [checkmark]="true"
+            [ngModel]="productStatusFilter()"
+            (ngModelChange)="setProductStatusFilter($event)"
+            [options]="productStatusOptions"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Todas las existencias"
+            [showClear]="true"
+          />
+        </label>
+        <label class="filter-field">
+          <span class="sr-only">Tipo</span>
+          <p-select
+            class="campo-select"
+            panelStyleClass="campo-select__panel"
+            [checkmark]="true"
+            [ngModel]="productTypeFilter()"
+            (ngModelChange)="setProductTypeFilter($event)"
+            [options]="productTypeOptions"
+            optionLabel="nombre"
+            optionValue="id"
+          />
+        </label>
+      </div>
 
-        <div class="tabla-desplazable">
-          <table class="tabla min-w-[960px]">
-            <thead>
+      <div class="tabla-desplazable">
+        <table class="tabla min-w-[960px]">
+          <thead>
+            <tr>
+              <th scope="col">Producto</th>
+              @if (categoriasVisibles()) {
+                <th scope="col">Categoría</th>
+              }
+              <th scope="col">Proveedor</th>
+              <th scope="col" class="derecha">Precio</th>
+              <th scope="col" class="derecha">Stock</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="derecha">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of paginatedProducts(); track product.id) {
+              @let conVariantes = hasVariants(product);
+              @let abierto = isExpanded(product);
               <tr>
-                <th scope="col">Producto</th>
-                @if (categoriasVisibles()) {
-                  <th scope="col">Categoría</th>
-                }
-                <th scope="col">Proveedor</th>
-                <th scope="col" class="derecha">Precio</th>
-                <th scope="col" class="derecha">Stock</th>
-                <th scope="col">Estado</th>
-                <th scope="col" class="derecha">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (product of paginatedProducts(); track product.id) {
-                @let conVariantes = hasVariants(product);
-                @let abierto = isExpanded(product);
-                <tr>
-                  <td>
-                    <span class="tabla-persona">
-                      @if (product.imagen_url && !hasProductImageFailed(product.id)) {
-                        <img class="producto-miniatura" [src]="product.imagen_url" [alt]="product.nombre" (error)="handleProductImageError(product.id)" />
-                      } @else {
-                        <span class="producto-miniatura" [class]="'producto-miniatura--' + productTone(product)" aria-hidden="true">{{ productInitials(product) }}</span>
-                      }
-                      <span class="min-w-0">
-                        <span class="tabla-principal">{{ product.nombre }}</span>
-                        <span class="producto-detalle">
-                          @if (marcasVisibles() && product.marca) {
-                            <span>{{ product.marca }}</span>
-                          }
-                          @if (conVariantes) {
-                            <button type="button" class="producto-variantes" [attr.aria-expanded]="abierto" (click)="toggleVariants(product)">
-                              <i class="pi" [class.pi-chevron-down]="abierto" [class.pi-chevron-right]="!abierto" aria-hidden="true"></i>
-                              {{ product.variantes.length }} variantes
-                            </button>
-                          } @else if (product.sku || product.codigo_barras) {
-                            <span class="codigo">{{ product.sku || product.codigo_barras }}</span>
-                          }
-                        </span>
+                <td>
+                  <span class="tabla-persona">
+                    @if (product.imagen_url && !hasProductImageFailed(product.id)) {
+                      <img class="producto-miniatura" [src]="product.imagen_url" [alt]="product.nombre" (error)="handleProductImageError(product.id)" />
+                    } @else {
+                      <span class="producto-miniatura" [class]="'producto-miniatura--' + productTone(product)" aria-hidden="true">{{ productInitials(product) }}</span>
+                    }
+                    <span class="min-w-0">
+                      <span class="tabla-principal">{{ product.nombre }}</span>
+                      <span class="producto-detalle">
+                        @if (marcasVisibles() && product.marca) {
+                          <span>{{ product.marca }}</span>
+                        }
+                        @if (conVariantes) {
+                          <button type="button" class="producto-variantes" [attr.aria-expanded]="abierto" (click)="toggleVariants(product)">
+                            <i class="pi" [class.pi-chevron-down]="abierto" [class.pi-chevron-right]="!abierto" aria-hidden="true"></i>
+                            {{ product.variantes.length }} variantes
+                          </button>
+                        } @else if (product.sku || product.codigo_barras) {
+                          <span class="codigo">{{ product.sku || product.codigo_barras }}</span>
+                        }
                       </span>
                     </span>
-                  </td>
-                  @if (categoriasVisibles()) {
-                    <td [class.tenue]="!product.categoria">{{ product.categoria || 'Sin categoría' }}</td>
+                  </span>
+                </td>
+                @if (categoriasVisibles()) {
+                  <td [class.tenue]="!product.categoria">{{ product.categoria || 'Sin categoría' }}</td>
+                }
+                <td [class.tenue]="!product.proveedor">{{ product.proveedor || 'Sin proveedor' }}</td>
+                <td class="derecha tabular-nums font-semibold">
+                  @if (conVariantes) {
+                    <span class="tenue font-normal">Por variante</span>
+                  } @else {
+                    {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}
                   }
-                  <td [class.tenue]="!product.proveedor">{{ product.proveedor || 'Sin proveedor' }}</td>
-                  <td class="derecha tabular-nums font-semibold">
-                    @if (conVariantes) {
-                      <span class="tenue font-normal">Por variante</span>
-                    } @else {
-                      {{ product.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}
+                </td>
+                <td class="derecha tabular-nums">{{ conVariantes ? variantStockTotal(product) : product.stock }} und.</td>
+                <td>
+                  <span class="pastilla" [class]="statusPill(product.estado)">{{ product.estado || 'Sin estado' }}</span>
+                </td>
+                <td class="derecha">
+                  <span class="acciones-fila">
+                    <button *appPuede="P.catalogoGestionar" type="button" class="icono-accion" title="Editar" [attr.aria-label]="'Editar ' + product.nombre" (click)="navigateToEdit(product)">
+                      <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      *appPuede="P.catalogoGestionar"
+                      type="button"
+                      class="icono-accion icono-accion--peligro"
+                      title="Eliminar"
+                      [attr.aria-label]="'Eliminar ' + product.nombre"
+                      [disabled]="deletingProductId() === product.id"
+                      (click)="confirmDeactivate(product)"
+                    >
+                      <i [class]="deletingProductId() === product.id ? 'pi pi-spin pi-spinner' : 'pi pi-trash'" aria-hidden="true"></i>
+                    </button>
+                  </span>
+                </td>
+              </tr>
+              @if (conVariantes && abierto) {
+                @for (variant of product.variantes; track variant.id) {
+                  <tr class="variante-fila">
+                    <td>
+                      <span class="variante-nombre">
+                        <span class="variante-punto" aria-hidden="true"></span>
+                        <span class="font-medium">{{ variantAttributes(variant) }}</span>
+                        <span class="codigo">{{ variant.codigo_barras || 'Sin código de barras' }}</span>
+                      </span>
+                    </td>
+                    @if (categoriasVisibles()) {
+                      <td></td>
                     }
-                  </td>
-                  <td class="derecha tabular-nums">{{ conVariantes ? variantStockTotal(product) : product.stock }} und.</td>
-                  <td>
-                    <span class="pastilla" [class]="statusPill(product.estado)">{{ product.estado || 'Sin estado' }}</span>
-                  </td>
-                  <td class="derecha">
-                    <span class="acciones-fila">
-                      <button *appPuede="P.catalogoGestionar" type="button" class="icono-accion" title="Editar" [attr.aria-label]="'Editar ' + product.nombre" (click)="navigateToEdit(product)">
-                        <i class="pi pi-pencil" aria-hidden="true"></i>
-                      </button>
-                      <button
-                        *appPuede="P.catalogoGestionar"
-                        type="button"
-                        class="icono-accion icono-accion--peligro"
-                        title="Eliminar"
-                        [attr.aria-label]="'Eliminar ' + product.nombre"
-                        [disabled]="deletingProductId() === product.id"
-                        (click)="confirmDeactivate(product)"
-                      >
-                        <i [class]="deletingProductId() === product.id ? 'pi pi-spin pi-spinner' : 'pi pi-trash'" aria-hidden="true"></i>
-                      </button>
-                    </span>
-                  </td>
-                </tr>
-                @if (conVariantes && abierto) {
-                  @for (variant of product.variantes; track variant.id) {
-                    <tr class="variante-fila">
-                      <td>
-                        <span class="variante-nombre">
-                          <span class="variante-punto" aria-hidden="true"></span>
-                          <span class="font-medium">{{ variantAttributes(variant) }}</span>
-                          <span class="codigo">{{ variant.codigo_barras || 'Sin código de barras' }}</span>
-                        </span>
-                      </td>
-                      @if (categoriasVisibles()) {
-                        <td></td>
-                      }
-                      <td></td>
-                      <td class="derecha tabular-nums">{{ variant.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
-                      <td class="derecha tabular-nums">{{ variant.stock }} und.</td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  }
+                    <td></td>
+                    <td class="derecha tabular-nums">{{ variant.precio | currency: 'MXN' : 'symbol-narrow' : '1.2-2' }}</td>
+                    <td class="derecha tabular-nums">{{ variant.stock }} und.</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
                 }
-              } @empty {
-                <tr>
-                  <td [attr.colspan]="columnasLista()" class="estado-vacio">
-                    No hay productos que coincidan con los filtros.
-                    <button class="boton-enlace" type="button" (click)="clearProductFilters()">Limpiar filtros</button>
-                  </td>
-                </tr>
               }
-            </tbody>
-          </table>
-        </div>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="columnasLista()" class="estado-vacio">
+                  No hay productos que coincidan con los filtros.
+                  <button class="boton-enlace" type="button" (click)="clearProductFilters()">Limpiar filtros</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
-        <nav class="tabla-paginador" aria-label="Paginación de productos">
-          <span>{{ productRange() }} · {{ filteredProducts().length }} de {{ products().length }} productos</span>
-          <span class="tabla-paginador__botones">
-            <label class="inline-flex items-center gap-2">
-              Filas por página
-              <select class="campo filas-por-pagina" [ngModel]="productRows()" (ngModelChange)="setProductRows($event)">
-                @for (opcion of productRowsOptions; track opcion) {
-                  <option [ngValue]="opcion">{{ opcion }}</option>
-                }
-              </select>
-            </label>
-            <button type="button" class="icono-accion" aria-label="Página anterior" [disabled]="productPage() === 0" (click)="goToProductPage(productPage() - 1)">
-              <i class="pi pi-chevron-left" aria-hidden="true"></i>
-            </button>
-            <span aria-live="polite">Página {{ productPage() + 1 }} de {{ productTotalPages() }}</span>
-            <button type="button" class="icono-accion" aria-label="Página siguiente" [disabled]="productPage() + 1 >= productTotalPages()" (click)="goToProductPage(productPage() + 1)">
-              <i class="pi pi-chevron-right" aria-hidden="true"></i>
-            </button>
-          </span>
-        </nav>
-
-        <footer class="tabla-pie">
-          <span>Stock de la sucursal actual</span>
-          <button class="boton-enlace" type="button" (click)="clearProductFilters()">
-            <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
+      <nav class="tabla-paginador" aria-label="Paginación de productos">
+        <span>{{ productRange() }} · {{ filteredProducts().length }} de {{ products().length }} productos</span>
+        <span class="tabla-paginador__botones">
+          <label class="inline-flex items-center gap-2">
+            Filas por página
+            <select class="campo filas-por-pagina" [ngModel]="productRows()" (ngModelChange)="setProductRows($event)">
+              @for (opcion of productRowsOptions; track opcion) {
+                <option [ngValue]="opcion">{{ opcion }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="icono-accion" aria-label="Página anterior" [disabled]="productPage() === 0" (click)="goToProductPage(productPage() - 1)">
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
           </button>
-        </footer>
-      </section>
-    }
-  </section>
-}
+          <span aria-live="polite">Página {{ productPage() + 1 }} de {{ productTotalPages() }}</span>
+          <button type="button" class="icono-accion" aria-label="Página siguiente" [disabled]="productPage() + 1 >= productTotalPages()" (click)="goToProductPage(productPage() + 1)">
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </span>
+      </nav>
+
+      <footer class="tabla-pie">
+        <span>Stock de la sucursal actual</span>
+        <button class="boton-enlace" type="button" (click)="clearProductFilters()">
+          <i class="pi pi-filter-slash" aria-hidden="true"></i> Limpiar filtros
+        </button>
+      </footer>
+    </section>
+  }
+</section>
 
 @if (isFormPage()) {
-  <section class="product-page">
-    <header class="form-page-header">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h1>{{ editingProduct() ? 'Editar producto' : 'Agregar producto' }}</h1>
-        <p>Escanea el código de barras o completa los datos para registrar el producto.</p>
-      </div>
-      <div class="products-actions">
-        <button
-          class="secondary-button"
-          type="button"
-          [disabled]="saving()"
-          (click)="closeCreateDialog()"
-        >
-          Cancelar
-        </button>
-        <button
-          class="primary-button"
-          type="submit"
-          form="product-form"
-          [disabled]="!canSubmitProduct()"
-        >
-          {{
-            saving() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Guardar producto'
-          }}
-        </button>
-      </div>
-    </header>
-
-    @if (loading()) {
-      <div class="products-state loading-state" role="status">Cargando producto...</div>
-    } @else if (error(); as message) {
-      <div class="products-state error-state" role="alert">{{ message }}</div>
+  <app-modal
+    #modalProducto
+    [titulo]="editingProduct() ? 'Editar producto' : 'Producto nuevo'"
+    subtitulo="Escanea el código de barras o completa los datos para registrar el producto."
+    tamano="grande"
+    [completoEnMovil]="true"
+    [sucio]="productForm.dirty"
+    [ocupado]="saving() || agregandoASucursal()"
+    (cerrar)="closeCreateDialog()"
+  >
+    @if (editLoading()) {
+      <p class="pf-estado" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando producto...</p>
+    } @else if (editError(); as message) {
+      <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
     } @else {
-      <form
-        id="product-form"
-        class="product-form form-page-card"
-        [formGroup]="productForm"
-        (ngSubmit)="saveProduct()"
-      >
-        @if (!productForm.controls.tiene_variantes.value) {
-        <section class="barcode-lookup-card" [class.field--error]="hasError('codigo_barras')">
-          <div class="field">
-            <span>Código de barras <small class="optional-label">(opcional)</small></span>
-            <div class="barcode-input-row">
-              <input
-                pInputText
-                formControlName="codigo_barras"
-                inputmode="numeric"
-                maxlength="14"
-                placeholder="Ej. 7501055303038"
-                (input)="onBarcodeChanged()"
-                (keydown.enter)="onBarcodeEnter($event)"
-              />
-              <button
-                class="secondary-button"
-                type="button"
-                [disabled]="!canLookupProduct()"
-                (click)="lookupProduct()"
-              >
-                @if (imageLookupLoading()) {
-                  Buscando...
-                } @else {
-                  Buscar producto
-                }
-              </button>
+      <form id="product-form" class="pf" [formGroup]="productForm" (ngSubmit)="saveProduct()" novalidate>
+        <section class="pf-seccion" aria-labelledby="pf-identificacion">
+          <h3 id="pf-identificacion" class="pf-seccion__titulo">Identificación</h3>
+
+          @if (!productForm.controls.tiene_variantes.value) {
+            <div class="campo-bloque" [class.field--error]="hasError('codigo_barras')">
+              <label class="etiqueta" for="pf-codigo">Código de barras <span class="opcional">(opcional)</span></label>
+              <div class="pf-codigo">
+                <input
+                  id="pf-codigo"
+                  class="campo campo--monoespacio"
+                  formControlName="codigo_barras"
+                  inputmode="numeric"
+                  maxlength="14"
+                  placeholder="Escanea o escribe el código. Ej. 7501055303038"
+                  [attr.aria-invalid]="hasError('codigo_barras')"
+                  (input)="onBarcodeChanged()"
+                  (keydown.enter)="onBarcodeEnter($event)"
+                />
+                <button class="boton boton--secundario" type="button" [disabled]="!canLookupProduct()" (click)="lookupProduct()">
+                  <i class="pi" [class.pi-search]="!imageLookupLoading()" [class.pi-spinner]="imageLookupLoading()" [class.pi-spin]="imageLookupLoading()" aria-hidden="true"></i>
+                  {{ imageLookupLoading() ? 'Buscando...' : 'Buscar datos' }}
+                </button>
+              </div>
+              @if (hasError('codigo_barras')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Usa únicamente entre 8 y 14 dígitos.</small>
+              } @else {
+                <small class="ayuda">Si lo encontramos, llenamos nombre, categoría, marca y presentación.</small>
+              }
+              @if (imageLookupError(); as message) {
+                <small class="pf-texto pf-texto--aviso">{{ message }}</small>
+              }
+              @for (warning of catalogLookupWarnings(); track warning) {
+                <small class="pf-texto pf-texto--aviso lookup-warning">{{ warning }} Selecciónala manualmente si corresponde.</small>
+              }
             </div>
-            @if (hasError('codigo_barras')) {
-              <small>Usa únicamente entre 8 y 14 dígitos.</small>
-            }
-            @if (imageLookupError(); as message) {
-              <small>{{ message }}</small>
-            }
-            @for (warning of catalogLookupWarnings(); track warning) {
-              <small class="lookup-warning"
-                >{{ warning }} Selecciónala manualmente si corresponde.</small
-              >
-            }
-            @if (lookupSources().length > 0) {
-              <span class="lookup-sources"
-                >Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de
-                guardar.</span
-              >
+          }
+
+          @if (lookupSources().length > 0 || previewImageURL()) {
+            <div class="pf-encontrado" [class.pf-encontrado--solo-imagen]="lookupSources().length === 0" role="status">
+              @if (previewImageURL(); as imageURL) {
+                <img class="pf-encontrado__imagen" [src]="imageURL" alt="Imagen del producto" (error)="handlePreviewImageError()" />
+              } @else {
+                <i class="pi pi-check" aria-hidden="true"></i>
+              }
+              @if (lookupSources().length > 0) {
+                <span class="lookup-sources">
+                  <strong>Encontramos este producto.</strong>
+                  Datos encontrados en {{ lookupSources().join(' y ') }}; puedes editarlos antes de guardar.
+                </span>
+              } @else {
+                <span>Imagen del producto</span>
+              }
+            </div>
+          }
+
+          <div class="campo-bloque">
+            <span class="etiqueta" id="pf-tipo">Tipo de producto <span class="obligatorio" aria-hidden="true">*</span></span>
+            <div class="pf-tipos" role="radiogroup" aria-labelledby="pf-tipo">
+              <label class="pf-tipo" [class.is-elegido]="!productForm.controls.tiene_variantes.value" [class.is-bloqueado]="tipoBloqueado()">
+                <input
+                  type="radio"
+                  name="pf-tipo"
+                  [checked]="!productForm.controls.tiene_variantes.value"
+                  [disabled]="tipoBloqueado()"
+                  (change)="elegirTipo(false)"
+                />
+                <span><strong>Producto simple</strong><small>Un solo código, precio y stock.</small></span>
+              </label>
+              <label class="pf-tipo" [class.is-elegido]="productForm.controls.tiene_variantes.value" [class.is-bloqueado]="tipoBloqueado()">
+                <input
+                  id="tiene-variantes"
+                  type="radio"
+                  name="pf-tipo"
+                  [checked]="productForm.controls.tiene_variantes.value"
+                  [disabled]="tipoBloqueado()"
+                  (change)="elegirTipo(true)"
+                />
+                <span><strong>Con variantes</strong><small>Por ejemplo: sabores, tamaños o colores.</small></span>
+              </label>
+            </div>
+            @if (tipoBloqueado()) {
+              <small class="ayuda">El producto ya tiene variantes; no puede volver a ser simple.</small>
             }
           </div>
         </section>
-        }
 
-        <section class="family-card shared-data-card">
-          <h2>Datos del producto</h2>
-          @for (message of catalogLoadErrors(); track message) {
-            <div class="form-error" role="alert">{{ message }}</div>
-          }
-          <div class="shared-data-layout">
-            <div class="product-image-preview">
-              @if (previewImageURL(); as imageURL) {
-                <img [src]="imageURL" alt="Imagen del producto" (error)="handlePreviewImageError()" />
-              } @else {
-                <i class="pi pi-image" aria-hidden="true"></i><span>Sin imagen</span>
-              }
-            </div>
-            <div class="shared-data-fields">
-            <label class="field" [class.field--error]="hasError('nombre')">
-              <span>Nombre del producto <b>*</b></span>
-              <input pInputText formControlName="nombre" placeholder="Ej. Galletas" />
-              @if (hasError('nombre')) {
-                <small>El nombre es obligatorio.</small>
-              }
-            </label>
+        <section class="pf-seccion" aria-labelledby="pf-datos">
+          <h3 id="pf-datos" class="pf-seccion__titulo">Datos del producto</h3>
+          <div class="campo-bloque" [class.field--error]="hasError('nombre')">
+            <label class="etiqueta" for="pf-nombre">Nombre del producto <span class="obligatorio" aria-hidden="true">*</span></label>
+            <input id="pf-nombre" class="campo" formControlName="nombre" placeholder="Ej. Galletas" aria-required="true" [attr.aria-invalid]="hasError('nombre')" />
+            @if (hasError('nombre')) {
+              <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>El nombre es obligatorio.</small>
+            }
+          </div>
 
+          <div class="pf-rejilla">
             @if (categoriasVisibles()) {
-            <label class="field">
-              <span>Categoría</span>
+              <div class="campo-bloque">
+                <span class="pf-etiqueta-accion">
+                  <label class="etiqueta" for="pf-categoria">Categoría <span class="opcional">(opcional)</span></label>
+                  <button type="button" class="pf-enlace" (click)="onCategorySelected('__new_category__')">+ Nueva</button>
+                </span>
+                <p-select
+                  inputId="pf-categoria"
+                  class="campo-select"
+                  panelStyleClass="campo-select__panel"
+                  appendTo="body"
+                  [checkmark]="true"
+                  formControlName="categoria_id"
+                  [options]="categoryOptions()"
+                  optionLabel="nombre"
+                  optionValue="id"
+                  placeholder="Seleccionar..."
+                  (onChange)="onCategorySelected($event.value)"
+                />
+              </div>
+            }
+            <div class="campo-bloque">
+              <label class="etiqueta" for="pf-proveedor">Proveedor <span class="opcional">(opcional)</span></label>
               <p-select
-                formControlName="categoria_id"
-                [options]="categoryOptions()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Seleccionar..."
-                [style]="{ width: '100%' }"
-                (onChange)="onCategorySelected($event.value)"
-              />
-            </label>
-            @if (categoryCreationVisible()) {
-              <section class="brand-create-form" [formGroup]="categoryForm">
-                <h3>Nueva categoría</h3>
-                <label class="field"><span>Nombre <b>*</b></span><input pInputText formControlName="nombre" maxlength="180" /></label>
-                @if (categoryCreationError(); as message) { <div class="form-error" role="alert">{{ message }}</div> }
-                <div class="brand-create-actions"><button class="secondary-button" type="button" (click)="categoryCreationVisible.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="categoryCreating()" (click)="createCategory()">{{ categoryCreating() ? 'Creando…' : 'Guardar categoría' }}</button></div>
-              </section>
-            }
-
-            }
-            @if (marcasVisibles()) {
-            <label class="field">
-              <span>Marca</span>
-              <p-select
-                formControlName="marca_id"
-                [options]="brandOptions()"
-                optionLabel="nombre"
-                optionValue="id"
-                placeholder="Sin marca"
-                [showClear]="true"
-                [style]="{ width: '100%' }"
-                (onChange)="onBrandSelected($event.value)"
-              />
-            </label>
-            @if (brandCreationVisible()) {
-              <section class="brand-create-form" [formGroup]="brandForm">
-                <h3>Nueva marca</h3>
-                <label class="field">
-                  <span>Nombre <b>*</b></span>
-                  <input pInputText formControlName="nombre" maxlength="180" />
-                  @if (brandForm.controls.nombre.invalid && brandForm.controls.nombre.touched) {
-                    <small>Captura el nombre de la marca.</small>
-                  }
-                </label>
-                @if (brandCreationError(); as message) {
-                  <div class="form-error" role="alert">{{ message }}</div>
-                }
-                <div class="brand-create-actions">
-                  <button
-                    class="secondary-button"
-                    type="button"
-                    [disabled]="brandCreating()"
-                    (click)="cancelBrandCreation()"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    class="primary-button"
-                    type="button"
-                    [disabled]="brandCreating()"
-                    (click)="createBrand()"
-                  >
-                    {{ brandCreating() ? 'Creando…' : 'Guardar marca' }}
-                  </button>
-                </div>
-              </section>
-            }
-            }
-            <label class="field">
-              <span>Proveedor </span>
-              <p-select
+                inputId="pf-proveedor"
+                class="campo-select"
+                panelStyleClass="campo-select__panel"
+                appendTo="body"
+                [checkmark]="true"
                 formControlName="proveedor_id"
                 [options]="providers()"
                 optionLabel="nombre"
                 optionValue="id"
                 placeholder="Sin proveedor"
                 [showClear]="true"
-                [style]="{ width: '100%' }"
               />
-            </label>
-
-            <label class="field">
-              <span>Presentación</span>
-              <input pInputText formControlName="presentacion" placeholder="Caja, bolsa, botella..." />
-            </label>
-            <label class="field" [class.field--error]="hasError('contenido')">
-              <span>Contenido</span>
-              <input pInputText type="number" formControlName="contenido" min="0" placeholder="Ej. 250" />
-              @if (hasError('contenido')) { <small>El contenido no puede ser negativo.</small> }
-            </label>
-            <label class="field">
-              <span>Unidad de contenido</span>
-              <p-select formControlName="unidad_medida_id" [options]="unitOptions()" optionLabel="nombre" optionValue="id" placeholder="Seleccionar unidad..." [showClear]="true" [style]="{ width: '100%' }" (onChange)="onUnitContentSelected($event.value)" />
-            </label>
-            @if (unitCreationVisible()) {
-              <section class="brand-create-form" [formGroup]="unitForm">
-                <h3>Nueva unidad de contenido</h3>
-                <div class="form-grid"><label class="field"><span>Nombre <b>*</b></span><input pInputText formControlName="nombre" placeholder="Mililitro" /></label><label class="field"><span>Símbolo <b>*</b></span><input pInputText formControlName="simbolo" placeholder="ml" /></label><label class="field"><span>Tipo <b>*</b></span><p-select formControlName="tipo" [options]="[{ label: 'Volumen', value: 'VOLUMEN' }, { label: 'Peso', value: 'PESO' }, { label: 'Cantidad', value: 'CANTIDAD' }]" optionLabel="label" optionValue="value" /></label></div>
-                @if (unitCreationError(); as message) { <div class="form-error" role="alert">{{ message }}</div> }
-                <div class="brand-create-actions"><button class="secondary-button" type="button" (click)="unitCreationVisible.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="unitCreating()" (click)="createUnit()">{{ unitCreating() ? 'Creando…' : 'Guardar unidad' }}</button></div>
-              </section>
-            }
-            <label class="field" [class.field--error]="hasError('precio_venta')">
-              <span>Precio base <b>*</b></span>
-              <input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" />
-              @if (hasError('precio_venta')) { <small>Captura un precio válido.</small> }
-              @if (editingProduct() && !puedeCambiarPrecio()) { <small class="price-locked">Necesitas permiso para cambiar precios.</small> }
-            </label>
-            @if (editingProduct() && mostrarMotivoPrecio()) {
-              <label class="field" [class.field--error]="hasError('motivo_precio')">
-                <span>Motivo del cambio de precio <small class="optional-label">(opcional)</small></span>
-                <input pInputText formControlName="motivo_precio" maxlength="200" placeholder="Edición del producto" />
-                @if (hasError('motivo_precio')) { <small>Usa hasta 200 caracteres.</small> }
-              </label>
-            }
-			<label class="field" [class.field--error]="hasError('costo_proveedor')">
-			  <span>Costo proveedor <b>*</b></span>
-			  <input pInputText type="number" formControlName="costo_proveedor" min="0" step="0.0001" />
-			  @if (hasError('costo_proveedor')) { <small>Captura un costo válido.</small> }
-			</label>
             </div>
           </div>
+
+          @if (categoryCreationVisible()) {
+            <section class="pf-sub" [formGroup]="categoryForm" aria-label="Nueva categoría">
+              <h4 class="pf-sub__titulo">Nueva categoría</h4>
+              <div class="campo-bloque">
+                <label class="etiqueta" for="pf-nueva-categoria">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+                <input id="pf-nueva-categoria" class="campo" formControlName="nombre" maxlength="180" />
+              </div>
+              @if (categoryCreationError(); as message) {
+                <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+              }
+              <div class="pf-sub__acciones">
+                <button class="boton boton--secundario boton--compacto" type="button" (click)="categoryCreationVisible.set(false)">Cancelar</button>
+                <button class="boton boton--compacto" type="button" [disabled]="categoryCreating()" (click)="createCategory()">{{ categoryCreating() ? 'Creando…' : 'Guardar categoría' }}</button>
+              </div>
+            </section>
+          }
+
+          <div class="pf-rejilla pf-rejilla--presentacion">
+            <div class="campo-bloque">
+              <label class="etiqueta" for="pf-presentacion">Presentación <span class="opcional">(opcional)</span></label>
+              <input id="pf-presentacion" class="campo" formControlName="presentacion" placeholder="Caja, bolsa, botella..." />
+            </div>
+            <div class="campo-bloque" [class.field--error]="hasError('contenido')">
+              <label class="etiqueta" for="pf-contenido">Contenido <span class="opcional">(opcional)</span></label>
+              <input id="pf-contenido" class="campo tabular-nums" type="number" formControlName="contenido" min="0" placeholder="Ej. 250" [attr.aria-invalid]="hasError('contenido')" />
+              @if (hasError('contenido')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>El contenido no puede ser negativo.</small>
+              }
+            </div>
+            <div class="campo-bloque">
+              <span class="pf-etiqueta-accion">
+                <label class="etiqueta" for="pf-unidad">Unidad de contenido</label>
+                <button type="button" class="pf-enlace" (click)="onUnitContentSelected('__new_unit__')">+ Nueva unidad</button>
+              </span>
+              <p-select
+                inputId="pf-unidad"
+                class="campo-select"
+                panelStyleClass="campo-select__panel"
+                appendTo="body"
+                [checkmark]="true"
+                formControlName="unidad_medida_id"
+                [options]="unitOptions()"
+                optionLabel="nombre"
+                optionValue="id"
+                placeholder="Seleccionar unidad..."
+                [showClear]="true"
+                (onChange)="onUnitContentSelected($event.value)"
+              />
+            </div>
+          </div>
+
+          @if (unitCreationVisible()) {
+            <section class="pf-sub" [formGroup]="unitForm" aria-label="Nueva unidad de contenido">
+              <h4 class="pf-sub__titulo">Nueva unidad de contenido</h4>
+              <div class="pf-rejilla pf-rejilla--tres">
+                <div class="campo-bloque">
+                  <label class="etiqueta" for="pf-unidad-nombre">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+                  <input id="pf-unidad-nombre" class="campo" formControlName="nombre" placeholder="Mililitro" />
+                </div>
+                <div class="campo-bloque">
+                  <label class="etiqueta" for="pf-unidad-simbolo">Símbolo <span class="obligatorio" aria-hidden="true">*</span></label>
+                  <input id="pf-unidad-simbolo" class="campo campo--monoespacio" formControlName="simbolo" placeholder="ml" />
+                </div>
+                <div class="campo-bloque">
+                  <label class="etiqueta" for="pf-unidad-tipo">Tipo <span class="obligatorio" aria-hidden="true">*</span></label>
+                  <p-select
+                    inputId="pf-unidad-tipo"
+                    class="campo-select"
+                    panelStyleClass="campo-select__panel"
+                    appendTo="body"
+                    [checkmark]="true"
+                    formControlName="tipo"
+                    [options]="[{ label: 'Volumen', value: 'VOLUMEN' }, { label: 'Peso', value: 'PESO' }, { label: 'Cantidad', value: 'CANTIDAD' }]"
+                    optionLabel="label"
+                    optionValue="value"
+                  />
+                </div>
+              </div>
+              @if (unitCreationError(); as message) {
+                <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+              }
+              <div class="pf-sub__acciones">
+                <button class="boton boton--secundario boton--compacto" type="button" (click)="unitCreationVisible.set(false)">Cancelar</button>
+                <button class="boton boton--compacto" type="button" [disabled]="unitCreating()" (click)="createUnit()">{{ unitCreating() ? 'Creando…' : 'Guardar unidad' }}</button>
+              </div>
+            </section>
+          }
         </section>
 
-        <section class="family-card product-mode-card">
-          <label class="variants-switch" for="tiene-variantes">
-            <p-checkbox formControlName="tiene_variantes" [binary]="true" inputId="tiene-variantes" [disabled]="!!editingProduct()?.variantes.length" (onChange)="onVariantsChanged()" />
-            <span><strong>Este producto tiene variantes</strong><small>Por ejemplo: sabores, tamaños o colores.</small></span>
-          </label>
+        <section class="pf-seccion" aria-labelledby="pf-precio">
+          <h3 id="pf-precio" class="pf-seccion__titulo">Precio e inventario</h3>
+          <div class="pf-rejilla">
+            <div class="campo-bloque" [class.field--error]="hasError('costo_proveedor')">
+              <label class="etiqueta" for="pf-costo">Costo proveedor <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="pf-moneda">
+                <span aria-hidden="true">$</span>
+                <input id="pf-costo" class="campo tabular-nums" type="number" formControlName="costo_proveedor" min="0" step="0.0001" placeholder="0.00" aria-required="true" [attr.aria-invalid]="hasError('costo_proveedor')" />
+              </span>
+              @if (hasError('costo_proveedor')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Captura un costo válido.</small>
+              }
+            </div>
+            <div class="campo-bloque" [class.field--error]="hasError('precio_venta')">
+              <label class="etiqueta" for="pf-precio-base">Precio base <span class="obligatorio" aria-hidden="true">*</span></label>
+              <span class="pf-moneda">
+                <span aria-hidden="true">$</span>
+                <input id="pf-precio-base" class="campo tabular-nums" type="number" formControlName="precio_venta" min="0" step="0.01" placeholder="0.00" aria-required="true" [attr.aria-invalid]="hasError('precio_venta')" />
+              </span>
+              @if (hasError('precio_venta')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Captura un precio válido.</small>
+              }
+              @if (editingProduct() && !puedeCambiarPrecio()) {
+                <small class="ayuda price-locked">Necesitas permiso para cambiar precios.</small>
+              }
+            </div>
+          </div>
+
+          @let margenActual = margen();
+          <p class="pf-margen" [class]="'pf-margen--' + margenActual.tono" aria-live="polite">
+            <span class="pf-margen__punto" aria-hidden="true"></span>
+            <strong class="tabular-nums">Margen {{ margenActual.porcentaje }}</strong>
+            <span>{{ margenActual.texto }}</span>
+          </p>
+
+          @if (editingProduct() && mostrarMotivoPrecio()) {
+            <div class="campo-bloque" [class.field--error]="hasError('motivo_precio')">
+              <label class="etiqueta" for="pf-motivo">Motivo del cambio de precio <span class="opcional">(opcional)</span></label>
+              <input id="pf-motivo" class="campo" formControlName="motivo_precio" maxlength="200" placeholder="Edición del producto" />
+              @if (hasError('motivo_precio')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Usa hasta 200 caracteres.</small>
+              }
+            </div>
+          }
+
           @if (!productForm.controls.tiene_variantes.value) {
-            <div class="simple-product-fields">
-              <label class="field"><span>{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }} <b>*</b></span><input pInputText type="number" formControlName="stock_inicial" min="0" /></label>
+            <div class="pf-rejilla">
+              <div class="campo-bloque" [class.field--error]="hasError('stock_inicial')">
+                <label class="etiqueta" for="pf-stock">{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }} <span class="obligatorio" aria-hidden="true">*</span></label>
+                <input id="pf-stock" class="campo tabular-nums" type="number" formControlName="stock_inicial" min="0" placeholder="0" aria-required="true" />
+                @if (editingProduct()) {
+                  <small class="ayuda">El stock corresponde a la sucursal activa.</small>
+                } @else {
+                  <small class="ayuda">Piezas en la sucursal activa.</small>
+                }
+              </div>
               @if (editingProduct()) {
-                <div class="stock-edit-actions">
-                  <small>El stock corresponde a la sucursal activa.</small>
-                  <button type="button" class="secondary-button" (click)="enableStockEditing()" [disabled]="stockEditing()">{{ stockEditing() ? 'Edición habilitada' : 'Editar stock' }}</button>
+                <div class="pf-stock-accion">
+                  <button type="button" class="boton boton--secundario" (click)="enableStockEditing()" [disabled]="stockEditing()">
+                    <i class="pi" [class.pi-pencil]="!stockEditing()" [class.pi-check]="stockEditing()" aria-hidden="true"></i>
+                    {{ stockEditing() ? 'Edición habilitada' : 'Editar stock' }}
+                  </button>
                 </div>
               }
-              <!-- <span class="auto-sku">El SKU interno se genera automáticamente.</span> -->
             </div>
           } @else {
-            <div class="variant-editor" formArrayName="variantes">
-              <div class="variant-editor-header"><h2>Variantes</h2></div>
-              <div class="dimension-new"><input pInputText [value]="newDimensionName()" (input)="newDimensionName.set($any($event.target).value)" placeholder="Ej. Sabor o Tamaño" /><button type="button" class="secondary-button" (click)="addDimension()">Agregar</button></div>
+            <div class="pf-variantes" formArrayName="variantes">
+              <div class="pf-dimension-nueva">
+                <label class="sr-only" for="pf-dimension">Nueva característica</label>
+                <input
+                  id="pf-dimension"
+                  class="campo"
+                  [value]="newDimensionName()"
+                  (input)="newDimensionName.set($any($event.target).value)"
+                  (keydown.enter)="$event.preventDefault(); addDimension()"
+                  placeholder="Nueva característica. Ej. Sabor o Tamaño"
+                />
+                <button type="button" class="boton boton--secundario" (click)="addDimension()">
+                  <i class="pi pi-plus" aria-hidden="true"></i> Agregar
+                </button>
+              </div>
+
               @for (dimension of variantDimensions(); track dimension.nombre; let dimensionIndex = $index) {
-                <div class="dimension-row"><strong>{{ dimension.nombre }}</strong><div class="dimension-values">@for (value of dimension.valores; track value; let valueIndex = $index) {<span class="dimension-chip">{{ value }} <button type="button" (click)="removeDimensionValue(dimensionIndex, valueIndex)">×</button></span>}<input pInputText [value]="dimension.nuevoValor" (input)="setDimensionValue(dimensionIndex, $any($event.target).value)" (keydown.enter)="$event.preventDefault(); addDimensionValue(dimensionIndex)" placeholder="Valor" /><button type="button" class="secondary-button" (click)="addDimensionValue(dimensionIndex)">Añadir</button></div><button type="button" class="icon-button" (click)="removeDimension(dimensionIndex)">×</button></div>
+                <div class="pf-dimension">
+                  <strong class="pf-dimension__nombre">{{ dimension.nombre }}</strong>
+                  <div class="pf-dimension__valores">
+                    @for (value of dimension.valores; track value; let valueIndex = $index) {
+                      <span class="pf-chip">
+                        {{ value }}
+                        <button type="button" [attr.aria-label]="'Quitar ' + value" (click)="removeDimensionValue(dimensionIndex, valueIndex)">
+                          <i class="pi pi-times" aria-hidden="true"></i>
+                        </button>
+                      </span>
+                    }
+                    <label class="sr-only" [attr.for]="'pf-valor-' + dimensionIndex">Nuevo valor de {{ dimension.nombre }}</label>
+                    <input
+                      [id]="'pf-valor-' + dimensionIndex"
+                      class="campo pf-dimension__entrada"
+                      [value]="dimension.nuevoValor"
+                      (input)="setDimensionValue(dimensionIndex, $any($event.target).value)"
+                      (keydown.enter)="$event.preventDefault(); addDimensionValue(dimensionIndex)"
+                      placeholder="Añadir valor…"
+                    />
+                    <button type="button" class="pf-enlace" (click)="addDimensionValue(dimensionIndex)">Añadir</button>
+                  </div>
+                  <button type="button" class="icono-accion icono-accion--peligro" [attr.aria-label]="'Quitar ' + dimension.nombre" title="Quitar característica" (click)="removeDimension(dimensionIndex)">
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                  </button>
+                </div>
               }
-              <div class="variant-actions"><span>El precio base se aplica automáticamente a las variantes.</span><button type="button" class="primary-button" [disabled]="!canGenerateCombinations()" (click)="generateCombinations()">Generar combinaciones</button></div>
-              @if (variantControls.length > 0) {<div class="variant-table-wrap"><table class="variant-edit-table"><thead><tr>@for (dimension of variantDimensions(); track dimension.nombre) {<th>{{ dimension.nombre }}</th>}<th>Código de barras</th><th>Precio</th><th>{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }}</th><th></th></tr></thead><tbody>@for (variant of variantControls.controls; track $index; let index = $index) {<tr [formGroupName]="index">@for (attribute of variantAttributeValues(index); track attribute.nombre) {<td>{{ attribute.valor }}</td>}<td><input pInputText formControlName="codigo_barras" /></td><td><input pInputText type="number" formControlName="precio_venta" min="0" step="0.01" /></td><td><input pInputText type="number" formControlName="stock_inicial" min="0" /></td><td><button type="button" class="icon-button danger" (click)="removeVariant(index)">×</button></td></tr>}</tbody></table></div>}
-              @if (editingProduct()) { <button type="button" class="secondary-button" (click)="enableStockEditing()" [disabled]="stockEditing()">{{ stockEditing() ? 'Edición de stock habilitada' : 'Editar stock de variantes' }}</button> }
+
+              <div class="pf-variantes__acciones">
+                <span class="ayuda m-0">{{ leyendaVariantes() }}</span>
+                <button type="button" class="boton boton--secundario boton--compacto" [disabled]="!canGenerateCombinations()" (click)="generateCombinations()">
+                  <i class="pi pi-refresh" aria-hidden="true"></i> Generar combinaciones
+                </button>
+              </div>
+
+              @if (variantControls.length > 0) {
+                <div class="pf-tabla">
+                  <table>
+                    <thead>
+                      <tr>
+                        @for (dimension of dimensionesTabla(); track dimension.nombre) {
+                          <th scope="col">{{ dimension.nombre }}</th>
+                        }
+                        <th scope="col">Código de barras</th>
+                        <th scope="col">Precio</th>
+                        <th scope="col">{{ editingProduct() ? 'Stock actual' : 'Stock inicial' }} <span class="obligatorio" aria-hidden="true">*</span></th>
+                        <th scope="col"><span class="sr-only">Quitar</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (variant of variantControls.controls; track variant; let index = $index) {
+                        <tr [formGroupName]="index">
+                          @for (dimension of dimensionesTabla(); track dimension.nombre) {
+                            <td class="pf-tabla__valor">{{ variantAttributeValue(index, dimension.nombre) }}</td>
+                          }
+                          <td><input class="campo campo--monoespacio" formControlName="codigo_barras" placeholder="Opcional" [attr.aria-label]="'Código de barras de la variante ' + (index + 1)" /></td>
+                          <td><input class="campo tabular-nums pf-tabla__numero" type="number" formControlName="precio_venta" min="0" step="0.01" [attr.aria-label]="'Precio de la variante ' + (index + 1)" /></td>
+                          <td><input class="campo tabular-nums pf-tabla__numero" type="number" formControlName="stock_inicial" min="0" [attr.aria-label]="'Stock de la variante ' + (index + 1)" /></td>
+                          <td>
+                            <button type="button" class="icono-accion icono-accion--peligro" [attr.aria-label]="'Quitar variante ' + (index + 1)" (click)="removeVariant(index)">
+                              <i class="pi pi-times" aria-hidden="true"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else if (dimensionesTabla().length === 0) {
+                <p class="pf-vacio">Agrega una característica y sus valores; las combinaciones aparecen aquí al momento.</p>
+              }
+              @if (editingProduct()) {
+                <button type="button" class="boton boton--secundario boton--compacto pf-variantes__stock" (click)="enableStockEditing()" [disabled]="stockEditing()">
+                  {{ stockEditing() ? 'Edición de stock habilitada' : 'Editar stock de variantes' }}
+                </button>
+              }
             </div>
           }
         </section>
 
-        <details class="family-card optional-details">
-          <summary>Detalles opcionales</summary>
-          <div class="form-grid">
-            @if (branches().length > 1 && !editingProduct()) {
-              <label class="field">
-                <span>Sucursal <b>*</b></span>
-                <p-select formControlName="sucursal_id" [options]="branches()" optionLabel="nombre" optionValue="id" placeholder="Seleccionar..." [style]="{ width: '100%' }" (onChange)="onBranchSelected()" />
-              </label>
+        <details class="pf-detalles optional-details" [open]="detallesConError()">
+          <summary>
+            <i class="pi pi-chevron-right pf-detalles__chevron" aria-hidden="true"></i>
+            Detalles opcionales
+            <small>{{ resumenDetalles() }}</small>
+          </summary>
+          <div class="pf-detalles__cuerpo">
+            @if (marcasVisibles() || (branches().length > 1 && !editingProduct())) {
+              <div class="pf-rejilla">
+                @if (marcasVisibles()) {
+                  <div class="campo-bloque">
+                    <span class="pf-etiqueta-accion">
+                      <label class="etiqueta" for="pf-marca">Marca <span class="opcional">(opcional)</span></label>
+                      <button type="button" class="pf-enlace" (click)="onBrandSelected('__new_brand__')">+ Nueva</button>
+                    </span>
+                    <p-select
+                      inputId="pf-marca"
+                      class="campo-select"
+                      panelStyleClass="campo-select__panel"
+                      appendTo="body"
+                      [checkmark]="true"
+                      formControlName="marca_id"
+                      [options]="brandOptions()"
+                      optionLabel="nombre"
+                      optionValue="id"
+                      placeholder="Sin marca"
+                      [showClear]="true"
+                      (onChange)="onBrandSelected($event.value)"
+                    />
+                  </div>
+                }
+                @if (branches().length > 1 && !editingProduct()) {
+                  <div class="campo-bloque" [class.field--error]="hasError('sucursal_id')">
+                    <label class="etiqueta" for="pf-sucursal">Sucursal <span class="obligatorio" aria-hidden="true">*</span></label>
+                    <p-select
+                      inputId="pf-sucursal"
+                      class="campo-select"
+                      panelStyleClass="campo-select__panel"
+                      appendTo="body"
+                      [checkmark]="true"
+                      formControlName="sucursal_id"
+                      [options]="branches()"
+                      optionLabel="nombre"
+                      optionValue="id"
+                      placeholder="Seleccionar..."
+                      (onChange)="onBranchSelected()"
+                    />
+                    @if (hasError('sucursal_id')) {
+                      <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Elige la sucursal.</small>
+                    }
+                  </div>
+                }
+              </div>
             }
-            <label class="field full-field"><span>Descripción</span><textarea pInputTextarea formControlName="descripcion" rows="3"></textarea></label>
+            @if (marcasVisibles() && brandCreationVisible()) {
+              <section class="pf-sub" [formGroup]="brandForm" aria-label="Nueva marca">
+                <h4 class="pf-sub__titulo">Nueva marca</h4>
+                <div class="campo-bloque" [class.field--error]="brandForm.controls.nombre.invalid && brandForm.controls.nombre.touched">
+                  <label class="etiqueta" for="pf-nueva-marca">Nombre <span class="obligatorio" aria-hidden="true">*</span></label>
+                  <input id="pf-nueva-marca" class="campo" formControlName="nombre" maxlength="180" />
+                  @if (brandForm.controls.nombre.invalid && brandForm.controls.nombre.touched) {
+                    <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Captura el nombre de la marca.</small>
+                  }
+                </div>
+                @if (brandCreationError(); as message) {
+                  <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+                }
+                <div class="pf-sub__acciones">
+                  <button class="boton boton--secundario boton--compacto" type="button" [disabled]="brandCreating()" (click)="cancelBrandCreation()">Cancelar</button>
+                  <button class="boton boton--compacto" type="button" [disabled]="brandCreating()" (click)="createBrand()">{{ brandCreating() ? 'Creando…' : 'Guardar marca' }}</button>
+                </div>
+              </section>
+            }
+            <div class="campo-bloque" [class.field--error]="hasError('descripcion')">
+              <label class="etiqueta" for="pf-descripcion">Descripción <span class="opcional">(opcional)</span></label>
+              <textarea id="pf-descripcion" class="campo pf-textarea" formControlName="descripcion" rows="3" placeholder="Notas internas para tu equipo."></textarea>
+              @if (hasError('descripcion')) {
+                <small class="error-campo" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>Usa hasta 2000 caracteres.</small>
+              }
+            </div>
           </div>
         </details>
 
-        <div class="form-section multimedia-section" aria-disabled="true">
-          <h3>Multimedia</h3>
-          <p>La carga de imágenes propias estará disponible próximamente.</p>
-          <div class="multimedia-placeholder">
-            <i class="pi pi-image" aria-hidden="true"></i
-            ><span>Carga de imágenes no disponible</span>
+        <section class="pf-seccion multimedia-section" aria-labelledby="pf-multimedia" aria-disabled="true">
+          <h3 id="pf-multimedia" class="pf-seccion__titulo">Multimedia <span class="pf-proximamente">Próximamente</span></h3>
+          <p class="ayuda m-0">La carga de imágenes propias estará disponible próximamente.</p>
+          <div class="pf-multimedia">
+            <i class="pi pi-image" aria-hidden="true"></i><span>Carga de imágenes no disponible</span>
           </div>
-        </div>
+        </section>
 
         @for (message of catalogLoadErrors(); track message) {
-          <div class="form-error" role="alert">{{ message }}</div>
+          <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
         }
         @if (formError) {
-          <div class="form-error" role="alert">{{ formError }}</div>
+          <p class="aviso aviso--error m-0 form-error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ formError }}</p>
         }
         @if (productoEnOtraSucursal(); as existente) {
-          <div class="existing-product-notice">
+          <div class="pf-existente existing-product-notice">
             <p>
               <strong>{{ existente.nombre }}</strong> ya está en el catálogo del negocio, pero no en esta sucursal.
               Puedes agregarlo con el precio, costo y stock que capturaste, sin duplicarlo.
             </p>
-            <button class="primary-button" type="button" [disabled]="agregandoASucursal()" (click)="agregarExistenteASucursal()">
+            <button class="boton boton--compacto" type="button" [disabled]="agregandoASucursal()" (click)="agregarExistenteASucursal()">
               {{ agregandoASucursal() ? 'Agregando...' : 'Agregar a esta sucursal' }}
             </button>
           </div>
         }
       </form>
     }
-  </section>
+
+    <ng-container modal-pie>
+      @if (!editLoading() && !editError()) {
+        <p class="modal-pie__nota" [class.modal-pie__nota--falta]="datosFaltantes() > 0" aria-live="polite">{{ notaPieProducto() }}</p>
+      }
+      <button class="boton boton--secundario" type="button" [disabled]="saving()" (click)="modalProducto.solicitarCierre()">Cancelar</button>
+      <button class="boton" type="submit" form="product-form" [disabled]="!canSubmitProduct() || editLoading() || !!editError()" [attr.aria-busy]="saving()">
+        <i class="pi" [class.pi-check]="!saving()" [class.pi-spinner]="saving()" [class.pi-spin]="saving()" aria-hidden="true"></i>
+        {{ saving() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Guardar producto' }}
+      </button>
+    </ng-container>
+  </app-modal>
+}
+
+@if (isAddFromCatalogPage()) {
+  <app-modal
+    #modalCatalogo
+    titulo="Agregar del catálogo del negocio"
+    subtitulo="Productos que el negocio ya tiene y esta sucursal todavía no vende."
+    tamano="grande"
+    [completoEnMovil]="true"
+    [sucio]="agregarCatalogo.seleccion().size > 0"
+    [ocupado]="agregarCatalogo.guardando()"
+    (cerrar)="closeCreateDialog()"
+  >
+    <app-agregar-catalogo #agregarCatalogo (agregado)="onAddedFromCatalog()" (cerrar)="modalCatalogo.solicitarCierre()" />
+
+    <ng-container modal-pie>
+      <p class="modal-pie__nota">
+        {{ agregarCatalogo.seleccion().size }} de {{ agregarCatalogo.productos().length }} elegidos
+        @if (agregarCatalogo.visibles().length) {
+          ·
+          <button type="button" class="pf-enlace" (click)="agregarCatalogo.alternarVisibles()">
+            {{ agregarCatalogo.todosVisiblesElegidos() ? 'Quitar todos' : 'Elegir todos' }}
+          </button>
+        }
+      </p>
+      <button class="boton boton--secundario" type="button" [disabled]="agregarCatalogo.guardando()" (click)="modalCatalogo.solicitarCierre()">Cancelar</button>
+      <button class="boton" type="button" [disabled]="agregarCatalogo.guardando() || agregarCatalogo.seleccion().size === 0" (click)="agregarCatalogo.agregarElegidos()">
+        <i class="pi" [class.pi-plus]="!agregarCatalogo.guardando()" [class.pi-spinner]="agregarCatalogo.guardando()" [class.pi-spin]="agregarCatalogo.guardando()" aria-hidden="true"></i>
+        {{ agregarCatalogo.guardando() ? 'Agregando...' : agregarCatalogo.seleccion().size === 1 ? 'Agregar 1 producto' : 'Agregar ' + agregarCatalogo.seleccion().size + ' productos' }}
+      </button>
+    </ng-container>
+  </app-modal>
 }
 
 @if (isImportPage()) {
-  <section class="product-page">
-    <header class="form-page-header">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h1>Carga masiva de productos</h1>
-        <p>Importa productos desde un archivo XLSX.</p>
-      </div>
-      <div class="products-actions">
-        <button
-          class="secondary-button"
-          type="button"
-          [disabled]="importing()"
-          (click)="closeCreateDialog()"
-        >
-          Cancelar
-        </button>
-        @if (importPreview(); as preview) {
-          <button
-            class="primary-button"
-            type="button"
-            (click)="importExistingProducts()"
-            [disabled]="preview.insertables === 0 || importing()"
-          >
-            {{ importing() ? 'Importando...' : (preview.catalogos_nuevos ?? []).length ? 'Autorizar e importar' : 'Importar productos' }}
-          </button>
+  <app-modal
+    #modalImportacion
+    titulo="Carga masiva de productos"
+    subtitulo="Importa desde un archivo XLSX. Revisa errores y advertencias antes de autorizar."
+    tamano="amplio"
+    [completoEnMovil]="true"
+    [sucio]="!!importFile && !importResult()"
+    [ocupado]="importing()"
+    (cerrar)="closeCreateDialog()"
+  >
+    <p class="cm-sucursal import-branch">
+      <i class="pi pi-map-marker" aria-hidden="true"></i>
+      <span>
+        @if (importSucursal(); as sucursal) {
+          Se importa en <strong>{{ sucursal.nombre }}</strong>, tu sucursal activa. Cámbiala desde el menú superior.
         } @else {
-          <button
-            class="primary-button"
-            type="button"
-            (click)="validateProductImport()"
-            [disabled]="!importFile || !importBranchId || importing()"
-          >
-            {{ importing() ? 'Validando...' : 'Validar archivo' }}
-          </button>
+          Selecciona una sucursal en el menú superior.
         }
-      </div>
-    </header>
-    <section class="product-form import-form form-page-card">
-      <div class="import-intro">
-        <span class="import-intro-icon"><i class="pi pi-file-excel"></i></span>
-        <div>
-          <strong>Prepara tu archivo</strong>
-          <p>Descarga la plantilla, llénala y sube el archivo XLSX.</p>
-        </div>
-        <a class="template-link import-intro-link" [href]="productImportTemplateUrl()"
-          ><i class="pi pi-download"></i> Descargar plantilla</a
-        >
-      </div>
-      <div class="import-setup" [class.import-setup--split]="importFile">
-        <p class="import-branch">
-          <i class="pi pi-map-marker" aria-hidden="true"></i>
-          <span>
-            @if (importSucursal(); as sucursal) {
-              Se importará en <strong>{{ sucursal.nombre }}</strong>
+      </span>
+    </p>
+
+    @if (importFile) {
+      <div class="cm-archivo">
+        <span class="cm-archivo__icono" aria-hidden="true"><i class="pi pi-file-check"></i></span>
+        <span class="cm-archivo__datos">
+          <strong>{{ importFile.name }}</strong>
+          <small>
+            @if (importPreview(); as preview) {
+              {{ preview.procesadas }} filas leídas · {{ preview.insertables }} se importarían{{ preview.omitidas ? ' · ' + preview.omitidas + ' omitidas (repetidas o sin cambios)' : '' }}
+            } @else if (importResult()) {
+              Archivo importado
             } @else {
-              Selecciona una sucursal en el menú superior
+              Archivo listo para validar
             }
-            <small>Es tu sucursal activa; cámbiala desde el menú superior.</small>
-          </span>
-        </p>
-        <div
-          class="file-dropzone"
-          [class.is-dragging]="importDropActive"
-          [class.has-file]="importFile"
-          [class.file-dropzone--compact]="importFile"
-          [class.is-disabled]="importing()"
-          role="button"
-          tabindex="0"
-          (click)="openImportFilePicker($event, importInput)"
-          (keydown.enter)="importInput.click()"
-          (dragover)="onImportDragOver($event)"
-          (dragleave)="onImportDragLeave($event)"
-          (drop)="onImportDrop($event)"
+          </small>
+        </span>
+        <button class="pf-enlace" type="button" [disabled]="importing()" (click)="importInput.click()">Cambiar</button>
+        <a class="cm-archivo__plantilla template-link" [href]="productImportTemplateUrl()"><i class="pi pi-download" aria-hidden="true"></i> Plantilla</a>
+        <button
+          class="icono-accion icono-accion--peligro"
+          type="button"
+          aria-label="Quitar archivo seleccionado"
+          [disabled]="importing()"
+          (click)="removeImportFile($event, importInput)"
         >
-          <input
-            #importInput
-            class="file-input"
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            (change)="onImportFile($event)"
-            [disabled]="importing()"
-          />
-          <span class="dropzone-icon"
-            ><i [class]="importFile ? 'pi pi-file-check' : 'pi pi-cloud-upload'"></i
-          ></span>
-          @if (importFile) {
-            <span class="dropzone-file"
-              ><strong>{{ importFile.name }}</strong><small>Archivo listo para importar</small></span
-            >
-            <button
-              class="remove-file-button"
-              type="button"
-              aria-label="Quitar archivo seleccionado"
-              [disabled]="importing()"
-              (click)="removeImportFile($event, importInput)"
-              (keydown)="$event.stopPropagation()"
-            >
-              <i class="pi pi-times" aria-hidden="true"></i>
-            </button>
-          } @else {
-            <strong>Arrastra tu archivo aquí</strong><span>o haz clic para seleccionarlo</span
-            ><small>Solo archivos XLSX, máximo 5 MB</small>
-          }
-        </div>
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
       </div>
-      <section class="import-output" aria-live="polite">
-        @if (importError(); as message) {
-          <p class="form-error">{{ message }}</p>
-        } @else if (importResult(); as result) {
-          <header class="import-output-head">
-            <h2>Resultado de la importación</h2>
-            <p>
-              {{ result.productos_base_creados }} productos base nuevos ·
-              {{ result.productos_base_reutilizados }} reutilizados ·
-              {{ result.variantes_creadas }} variantes registradas ·
-              {{ result.agregadas_sucursal ?? 0 }} agregadas a la sucursal · {{ result.actualizadas ?? 0 }} actualizadas · {{ result.omitidas }} omitidas
-              · {{ result.invalidas }} inválidas · {{ result.skus_generados }} SKU generados
-            </p>
-          </header>
-          <app-import-report [errores]="result.errores" [advertencias]="result.advertencias" />
-        } @else if (importPreview(); as preview) {
-          <header class="import-output-head">
-            <h2>Vista previa</h2>
-            <p>
-              {{ preview.insertables }} se importarían{{ preview.omitidas ? ' · ' + preview.omitidas + ' omitidas (repetidas o sin cambios)' : '' }}
-            </p>
-          </header>
-          <app-import-report
-            [errores]="preview.errores"
-            [advertencias]="preview.advertencias"
-            [catalogos]="preview.catalogos_nuevos"
-            [correctos]="preview.filas_correctas"
-            [agregarSucursal]="preview.filas_agregar_sucursal ?? []"
-            [actualizar]="preview.filas_actualizar ?? []"
-            [costosFaltantes]="preview.costos_faltantes"
-            [sucursal]="importSucursal()?.nombre ?? ''"
-            [puedeDescargar]="true"
-            [descargando]="downloadingImportErrors()"
-            (descargarErrores)="downloadImportErrors()"
-          />
-        } @else {
-          <p class="import-output-placeholder">El resultado de la importación aparecerá aquí.</p>
-        }
-      </section>
+    } @else {
+      <div class="cm-intro">
+        <span>Descarga la plantilla, llénala y sube el archivo XLSX.</span>
+        <a class="template-link" [href]="productImportTemplateUrl()"><i class="pi pi-download" aria-hidden="true"></i> Descargar plantilla</a>
+      </div>
+    }
+
+    <div
+      class="file-dropzone cm-zona"
+      [class.cm-oculto]="importFile"
+      [class.is-dragging]="importDropActive"
+      [class.is-disabled]="importing()"
+      role="button"
+      tabindex="0"
+      aria-label="Elegir archivo XLSX"
+      (click)="openImportFilePicker($event, importInput)"
+      (keydown.enter)="importInput.click()"
+      (dragover)="onImportDragOver($event)"
+      (dragleave)="onImportDragLeave($event)"
+      (drop)="onImportDrop($event)"
+    >
+      <input
+        #importInput
+        class="file-input"
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        (change)="onImportFile($event)"
+        [disabled]="importing()"
+      />
+      <span class="dropzone-icon"><i class="pi pi-cloud-upload" aria-hidden="true"></i></span>
+      <strong>Arrastra tu archivo aquí</strong>
+      <span>o haz clic para seleccionarlo</span>
+      <small>Solo archivos XLSX, máximo 5 MB</small>
+    </div>
+
+    <section class="cm-resultado" aria-live="polite">
+      @if (importError(); as message) {
+        <p class="aviso aviso--error m-0 form-error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+      } @else if (importResult(); as result) {
+        <p class="cm-resumen">
+          <strong>Resultado de la importación:</strong>
+          {{ result.productos_base_creados }} productos base nuevos ·
+          {{ result.productos_base_reutilizados }} reutilizados ·
+          {{ result.variantes_creadas }} variantes registradas ·
+          {{ result.agregadas_sucursal ?? 0 }} agregadas a la sucursal · {{ result.actualizadas ?? 0 }} actualizadas · {{ result.omitidas }} omitidas
+          · {{ result.invalidas }} inválidas · {{ result.skus_generados }} SKU generados
+        </p>
+        <app-import-report [errores]="result.errores" [advertencias]="result.advertencias" />
+      } @else if (importPreview(); as preview) {
+        <app-import-report
+          [errores]="preview.errores"
+          [advertencias]="preview.advertencias"
+          [catalogos]="preview.catalogos_nuevos"
+          [correctos]="preview.filas_correctas"
+          [agregarSucursal]="preview.filas_agregar_sucursal ?? []"
+          [actualizar]="preview.filas_actualizar ?? []"
+          [costosFaltantes]="preview.costos_faltantes"
+          [sucursal]="importSucursal()?.nombre ?? ''"
+          [puedeDescargar]="true"
+          [descargando]="downloadingImportErrors()"
+          (descargarErrores)="downloadImportErrors()"
+        />
+      } @else if (importFile) {
+        <p class="cm-placeholder">Valida el archivo para ver aquí los productos listos, los errores y las advertencias.</p>
+      }
     </section>
-  </section>
+
+    <ng-container modal-pie>
+      <p class="modal-pie__nota">{{ notaPieImportacion() }}</p>
+      <button class="boton boton--secundario" type="button" [disabled]="importing()" (click)="modalImportacion.solicitarCierre()">Cancelar</button>
+      @if (importPreview(); as preview) {
+        <button class="boton" type="button" (click)="importExistingProducts()" [disabled]="preview.insertables === 0 || importing()" [attr.aria-busy]="importing()">
+          <i class="pi" [class.pi-check]="!importing()" [class.pi-spinner]="importing()" [class.pi-spin]="importing()" aria-hidden="true"></i>
+          {{ importing() ? 'Importando...' : ((preview.catalogos_nuevos ?? []).length ? 'Autorizar e importar ' : 'Importar ') + preview.insertables }}
+        </button>
+      } @else {
+        <button class="boton" type="button" (click)="validateProductImport()" [disabled]="!importFile || !importBranchId || importing()" [attr.aria-busy]="importing()">
+          <i class="pi" [class.pi-check-circle]="!importing()" [class.pi-spinner]="importing()" [class.pi-spin]="importing()" aria-hidden="true"></i>
+          {{ importing() ? 'Validando...' : 'Validar archivo' }}
+        </button>
+      }
+    </ng-container>
+  </app-modal>
 }

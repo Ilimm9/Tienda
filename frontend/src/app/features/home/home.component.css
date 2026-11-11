@@ -5,33 +5,29 @@
 .home-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: min(100%, var(--section-max-width));
-  padding: 32px clamp(16px, 3vw, 44px) 48px;
+  padding: 36px clamp(16px, 3vw, 44px) 150px;
   margin: 0 auto;
 }
 
-/* Bienvenida: saludo ligero, etiquetas y la tiendita de la marca. */
-.bienvenida {
+/* Saludo: ligero, sin tarjeta. Los pasos son lo principal. */
+.saludo {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 24px;
-  padding: 32px 36px;
-  overflow: hidden;
-  border-color: var(--border-soft);
-  border-radius: 22px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.bienvenida__texto {
+.saludo__texto {
   display: flex;
   min-width: 0;
-  flex: 999 1 380px;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
-.bienvenida__fecha {
+.saludo__fecha {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -41,38 +37,36 @@
   font-weight: 500;
 }
 
-.bienvenida__fecha::first-letter {
+.saludo__fecha::first-letter {
   text-transform: uppercase;
 }
 
-.bienvenida__fecha .pi {
+.saludo__fecha .pi {
   color: #b7892a;
   font-size: 14px;
 }
 
-.bienvenida h1 {
+.saludo h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(28px, 3.4vw, 38px);
+  font-size: clamp(26px, 3vw, 32px);
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
-.bienvenida__acento {
+.saludo__acento {
   color: var(--primary);
 }
 
-.description {
-  max-width: 520px;
+.saludo__nota {
   margin: 0;
   color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1.55;
+  font-size: 15px;
 }
 
-.description strong {
+.saludo__nota strong {
   color: var(--text);
   font-weight: 600;
 }
@@ -81,14 +75,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .etiqueta {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 500;
@@ -100,7 +94,8 @@
 
 .etiqueta--lavanda {
   color: var(--primary-hover);
-  background: var(--primary-tint);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-raised);
 }
 
 .etiqueta--mantequilla {
@@ -108,49 +103,22 @@
   background: color-mix(in srgb, var(--tone-butter) 60%, var(--surface-raised));
 }
 
-/* Ilustración: colores por token para seguir el tema. */
-.tiendita {
-  --trazo: var(--brand-ink);
-  width: 100%;
-  max-width: 290px;
-  height: auto;
-  flex: 1 1 220px;
-  fill: none;
-  stroke: none;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-:host-context([data-theme='dark']) .tiendita {
-  --trazo: #0b0e14;
-}
-
-.tiendita .t-linea { stroke: var(--trazo); stroke-width: 2.5; }
-.tiendita .t-fina { stroke: var(--trazo); stroke-width: 1.8; }
-.tiendita .t-brillo { stroke: var(--primary); stroke-width: 2; }
-.tiendita .t-halo { fill: var(--primary-tint); }
-.tiendita .t-sol,
-.tiendita .t-mantequilla { fill: var(--tone-butter); }
-.tiendita .t-piso { fill: var(--border-soft); }
-.tiendita .t-blanco { fill: #fff; }
-.tiendita .t-tinta { fill: var(--trazo); }
-.tiendita .t-violeta { fill: var(--tone-violet); }
-.tiendita .t-lavanda { fill: var(--tone-lavender); }
-.tiendita .t-lavanda-2 { fill: var(--tone-lavender-strong); }
-.tiendita .t-salvia { fill: var(--tone-sage); }
-.tiendita .t-verde { fill: #3f5147; }
-
-:host-context([data-theme='dark']) .tiendita .t-halo { fill: var(--primary-soft); }
-
 /* Pasos: línea de tiempo dentro de una tarjeta; abajo, el detalle del paso elegido. */
 .guia {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px 24px 20px;
+  overflow: hidden;
+  padding: 0;
   border-color: var(--border-soft);
   border-radius: 22px;
+}
+
+.guia__arriba {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px 28px 22px;
 }
 
 .guia__cabecera {
@@ -168,22 +136,26 @@
 }
 
 .guia__titulo > span {
-  color: var(--text-subtle);
-  font-size: 13.5px;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
-.guia h2,
-.accesos h2 {
+.guia__titulo strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.guia h2 {
   margin: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
 .guia__conteo {
   display: inline-flex;
-  min-width: 200px;
+  min-width: 220px;
   align-items: center;
   gap: 10px;
   color: var(--text-muted);
@@ -198,7 +170,7 @@
 }
 
 .guia__barra {
-  height: 6px;
+  height: 8px;
   flex: 1;
   overflow: hidden;
   border-radius: 999px;
@@ -336,316 +308,172 @@
   font-weight: 600;
 }
 
+/* Detalle del paso elegido: explicación a la izquierda, lista a la derecha. */
 .guia__detalle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 12px 12px 18px;
-  border-radius: 14px;
-  background: var(--background);
-}
-
-.guia__detalle-icono {
   display: grid;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  place-items: center;
-  color: var(--primary);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  background: var(--surface-raised);
-  font-size: 16px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px;
+  border-top: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--background) 45%, var(--surface-raised));
 }
 
-.guia__detalle-texto {
+.guia__explica {
   display: flex;
   min-width: 0;
-  flex: 1 1 240px;
   flex-direction: column;
+  gap: 14px;
 }
 
-.guia__detalle-texto strong {
-  color: var(--text);
-  font-size: 14.5px;
-  font-weight: 600;
-}
-
-.guia__detalle-texto span {
+.guia__rotulo {
+  align-self: flex-start;
+  padding: 4px 10px;
   color: var(--text-muted);
-  font-size: 14px;
-}
-
-.guia__detalle .boton {
+  border-radius: 999px;
+  background: var(--surface-hover);
+  font-size: 12px;
   font-weight: 500;
 }
 
-/* Accesos y tip comparten fila en pantallas anchas. */
-.fila {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 20px;
-}
-
-.accesos {
-  display: flex;
-  min-width: 0;
-  flex: 999 1 520px;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.resumen-tarjeta {
-  display: flex;
-  min-width: 0;
-  min-height: 68px;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  color: var(--text);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  text-decoration: none;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-}
-
-.resumen-tarjeta:hover {
-  color: var(--text);
-  border-color: var(--primary-border);
-  box-shadow: 0 10px 24px -12px rgb(44 46 106 / 28%);
-  transform: translateY(-2px);
-}
-
-.resumen-tarjeta:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.resumen-tarjeta__texto {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
-.resumen-tarjeta__texto strong {
-  font-size: 14.5px;
-  font-weight: 600;
-}
-
-.resumen-tarjeta__texto span {
-  overflow: hidden;
-  color: var(--text-subtle);
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.resumen-tarjeta__ir {
-  color: var(--border-strong);
-  font-size: 12px;
-  transition: transform 180ms ease, color 180ms ease;
-}
-
-.resumen-tarjeta:hover .resumen-tarjeta__ir {
-  color: var(--primary);
-  transform: translateX(2px);
-}
-
-.summary-icon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  place-items: center;
-  border-radius: 12px;
-  font-size: 18px;
-}
-
-.violeta {
-  color: #fff;
-  background: var(--primary);
-}
-
-.lavanda {
-  color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.salvia {
+.guia__rotulo--hecho {
   color: var(--success);
   background: var(--success-soft);
 }
 
-.mantequilla {
-  color: var(--tone-butter-text);
-  background: var(--tone-butter);
+.guia__rotulo--siguiente {
+  color: var(--primary-hover);
+  background: var(--primary-tint);
 }
 
-/* Tip rápido: tarjeta tinta con carrusel. */
-.consejo {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 300px;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px;
-  color: #fff;
-  border-radius: 22px;
-  background: var(--brand-ink);
-}
-
-.consejo__cabecera,
-.consejo__pie {
+.guia__encabezado {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.consejo__pie {
-  padding-top: 12px;
-  border-top: 1px solid var(--brand-ink-line);
-}
-
-.consejo__rotulo {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--tone-butter);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.consejo__cuerpo {
-  display: flex;
-  flex: 1;
-  align-items: flex-start;
   gap: 14px;
 }
 
-.consejo__icono {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
-  place-items: center;
-  color: var(--brand-ink);
-  border-radius: 14px;
-  background: var(--tone-butter);
-  font-size: 20px;
-}
-
-.consejo h2 {
-  margin: 0 0 4px;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-}
-
-.consejo p {
+.guia__encabezado h3 {
   margin: 0;
-  color: #c9cae6;
-  font-size: 14px;
-  line-height: 1.5;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
-.consejo__accion {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 6px;
-  color: var(--tone-butter);
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.consejo__accion:hover {
-  color: var(--tone-butter);
-  text-decoration: underline;
-}
-
-.consejo__puntos {
-  display: flex;
-  gap: 5px;
-}
-
-.consejo__puntos > span {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--brand-ink-line);
-  transition: width 200ms ease;
-}
-
-.consejo__puntos > span.activo {
-  width: 18px;
-  background: var(--tone-butter);
-}
-
-.consejo__flechas {
-  display: flex;
-  gap: 6px;
-}
-
-.consejo__boton {
+.guia__detalle-icono {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   place-items: center;
-  color: #fff;
-  border: 1px solid var(--brand-ink-line);
-  border-radius: 12px;
-  background: transparent;
-  cursor: pointer;
+  color: var(--primary);
+  border-radius: 14px;
+  background: var(--primary-tint);
+  font-size: 19px;
 }
 
-.consejo__boton:hover {
-  background: var(--brand-ink-hover);
+.guia__explica > p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-.consejo__boton--principal,
-.consejo__boton--principal:hover {
-  color: var(--brand-ink);
-  border-color: var(--tone-butter);
-  background: var(--tone-butter);
+.guia__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
 }
 
-.consejo__boton:focus-visible,
-.consejo__accion:focus-visible {
-  outline: 2px solid var(--tone-butter);
-  outline-offset: 2px;
+.guia__acciones .boton {
+  font-weight: 500;
+}
+
+.guia__puntos {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 20px 22px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: var(--surface-raised);
+}
+
+.guia__puntos-titulo {
+  padding-bottom: 6px;
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.guia__puntos ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guia__puntos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.guia__puntos li > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.guia__puntos strong {
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.guia__puntos li > span:last-child > span {
+  color: var(--text-subtle);
+  font-size: 13.5px;
+}
+
+.guia__check {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  margin-top: 1px;
+  place-items: center;
+  color: var(--primary);
+  border-radius: 50%;
+  background: var(--primary-tint);
+  font-size: 10px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .etapa,
-  .resumen-tarjeta,
-  .resumen-tarjeta__ir,
   .guia__barra > span,
   .guia__linea > span {
     transition: none;
-  }
-
-  .resumen-tarjeta:hover,
-  .resumen-tarjeta:hover .resumen-tarjeta__ir {
-    transform: none;
   }
 }
 
 /* Modo oscuro: los tonos pastel se cambian por superficies del tema. */
 :host-context([data-theme='dark']) .etiqueta--lavanda {
   color: var(--primary-hover);
+  background: var(--primary-soft);
+}
+
+:host-context([data-theme='dark']) .guia__rotulo--siguiente,
+:host-context([data-theme='dark']) .guia__detalle-icono,
+:host-context([data-theme='dark']) .guia__check {
   background: var(--primary-soft);
 }
 
@@ -669,8 +497,14 @@
 
 /* Tableta: los cinco pasos siguen en fila, más compactos. */
 @media (max-width: 1023px) {
-  .guia {
-    padding: 20px 16px 16px;
+  .guia__arriba,
+  .guia__detalle {
+    padding: 22px 18px;
+  }
+
+  .guia__detalle {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .etapa__texto strong {
@@ -678,26 +512,11 @@
   }
 }
 
-/* Teléfono: pasos en carrusel horizontal, ilustración más chica. */
+/* Teléfono: pasos en carrusel horizontal; espacio abajo para la mascota. */
 @media (max-width: 599px) {
   .home-page {
     gap: 16px;
     padding-top: 20px;
-  }
-
-  .bienvenida {
-    gap: 8px;
-    padding: 24px 20px;
-    border-radius: 20px;
-  }
-
-  .tiendita {
-    max-width: 200px;
-    margin: 0 auto;
-  }
-
-  .description {
-    font-size: 15px;
   }
 
   .guia {
@@ -709,8 +528,8 @@
   }
 
   .guia__ruta {
-    margin: 0 -16px;
-    padding: 0 16px;
+    margin: 0 -18px;
+    padding: 0 18px;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -727,29 +546,11 @@
     grid-template-columns: repeat(5, 104px);
   }
 
-  .guia__detalle {
-    padding: 14px;
+  .guia__encabezado h3 {
+    font-size: 19px;
   }
 
-  .guia__detalle .boton {
+  .guia__acciones .boton {
     width: 100%;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .consejo {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 359px) {
-  .bienvenida {
-    padding: 20px 16px;
-  }
-
-  .consejo__cuerpo {
-    flex-direction: column;
   }
 }

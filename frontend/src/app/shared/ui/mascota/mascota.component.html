@@ -1,0 +1,48 @@
+@if (abierto() && consejo(); as c) {
+  <section class="mascota__globo" role="dialog" aria-modal="false" [attr.aria-labelledby]="idTitulo">
+    <header class="mascota__cabecera">
+      <span class="mascota__presentacion">
+        <strong>Hola, soy {{ nombre() }}</strong>
+        <span>{{ subtitulo() }}</span>
+      </span>
+      <button type="button" class="mascota__cerrar" [attr.aria-label]="'Cerrar tips de ' + nombre()" (click)="cerrar()">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </header>
+    <div class="mascota__cuerpo" aria-live="polite">
+      <span class="mascota__numero">Tip {{ indice() + 1 }} de {{ consejos().length }}</span>
+      <h2 [id]="idTitulo">{{ c.titulo }}</h2>
+      <p>{{ c.texto }}</p>
+      @if (c.accion && c.ruta) {
+        <a class="mascota__accion" [routerLink]="c.ruta" (click)="abierto.set(false)">{{ c.accion }}<i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+      }
+    </div>
+    @if (consejos().length > 1) {
+      <footer class="mascota__pie">
+        <span class="mascota__puntos" aria-hidden="true">
+          @for (x of consejos(); track $index; let i = $index) {
+            <span [class.activo]="i === indice()"></span>
+          }
+        </span>
+        <span class="mascota__flechas">
+          <button type="button" class="mascota__flecha" aria-label="Tip anterior" (click)="mover(-1)"><i class="pi pi-chevron-left" aria-hidden="true"></i></button>
+          <button type="button" class="mascota__flecha mascota__flecha--principal" aria-label="Siguiente tip" (click)="mover(1)"><i class="pi pi-chevron-right" aria-hidden="true"></i></button>
+        </span>
+      </footer>
+    }
+  </section>
+}
+
+<button
+  #boton
+  type="button"
+  class="mascota__boton"
+  [attr.aria-label]="(abierto() ? 'Cerrar tips de ' : 'Abrir tips de ') + nombre()"
+  [attr.aria-expanded]="abierto()"
+  (click)="alternar()"
+>
+  @if (!abierto() && invitacion()) {
+    <span class="mascota__invitacion" aria-hidden="true">{{ invitacion() }}</span>
+  }
+  <app-mascota-figura class="mascota__figura mascota-figura--saluda" [tamano]="88" />
+</button>

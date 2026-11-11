@@ -32,9 +32,9 @@ export const PRODUCTOS_ROUTES: Routes = [
   },
   {
     path: 'agregar-del-catalogo',
-    data: { breadcrumb: 'Agregar del catálogo', title: 'Agregar del catálogo', permiso: PERMISOS.catalogoGestionar },
+    data: { breadcrumb: 'Agregar del catálogo', title: 'Agregar del catálogo', mode: 'agregar', permiso: PERMISOS.catalogoGestionar },
     canActivate: [permisoGuard, soloPropietarioGuard],
-    loadComponent: () => import('./agregar-catalogo.component').then((module) => module.AgregarCatalogoComponent),
+    loadComponent: () => import('./productos.component').then((module) => module.ProductosComponent),
   },
   {
     path: ':productoId/editar',

@@ -57,13 +57,29 @@ describe('AgregarCatalogoComponent', () => {
     expect(component.visibles().map((item) => item.id)).toEqual(['p-1']);
   });
 
-  it('agrega los elegidos y vuelve a la lista', () => {
+  it('agrega los elegidos y avisa a la ventana sin navegar', () => {
+    const agregado = vi.fn();
+    component.agregado.subscribe(agregado);
     component.alternar('p-1');
     component.alternar('p-2');
     component.agregarElegidos();
 
     expect(service.addToBranch).toHaveBeenCalledWith('negocio-1', 'sucursal-2', ['p-1', 'p-2']);
-    expect(router.navigate).toHaveBeenCalledWith(['/catalogo/productos']);
+    expect(agregado).toHaveBeenCalledWith(2);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('se muestra sin encabezado de página y pide cerrar con «volver»', () => {
+    const cerrar = vi.fn();
+    component.cerrar.subscribe(cerrar);
+    expect(fixture.nativeElement.querySelector('h1')).toBeNull();
+    component.volver();
+    expect(cerrar).toHaveBeenCalled();
+  });
+
+  it('en móvil resume presentación, categoría y código', () => {
+    expect(component.detalle(productos[2])).toBe('1 L · Limpieza');
+    expect(component.detalle(productos[0])).toBe('Limpieza · 750');
   });
 
   it('agrega todo el catálogo tras confirmar', async () => {

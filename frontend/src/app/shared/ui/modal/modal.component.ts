@@ -13,15 +13,16 @@ import {
 
 import { FeedbackService } from '../../feedback/feedback.service';
 
-export type ModalTamano = 'chico' | 'mediano' | 'grande';
+export type ModalTamano = 'chico' | 'mediano' | 'grande' | 'amplio';
 
-const ANCHOS: Record<ModalTamano, number> = { chico: 580, mediano: 680, grande: 940 };
+const ANCHOS: Record<ModalTamano, number> = { chico: 580, mediano: 680, grande: 940, amplio: 1180 };
 let siguienteId = 0;
 
 /**
  * Ventana modal de la app: título con subtítulo, cuerpo con scroll y pie con acciones.
- * En pantallas chicas se vuelve hoja inferior. Cierra con Esc, con la X o al tocar el fondo;
- * si `sucio` está activo, pregunta antes de descartar lo escrito.
+ * En pantallas chicas se vuelve hoja inferior; con `completoEnMovil` ocupa toda la pantalla.
+ * Cierra con Esc, con la X o al tocar el fondo; si `sucio` está activo, pregunta antes de
+ * descartar lo escrito.
  *
  * El pie se proyecta con el atributo `modal-pie`. Los estilos viven en `styles/componentes.css`
  * (bloque «Ventana modal») porque el contenido proyectado también los usa.
@@ -30,7 +31,7 @@ let siguienteId = 0;
   selector: 'app-modal',
   imports: [A11yModule],
   template: `
-    <div class="modal" role="presentation">
+    <div class="modal" [class.modal--completo]="completoEnMovil()" role="presentation">
       <div class="modal__fondo" aria-hidden="true" (click)="solicitarCierre()"></div>
       <section
         #panel
@@ -68,6 +69,8 @@ export class ModalComponent implements OnDestroy {
   readonly titulo = input.required<string>();
   readonly subtitulo = input<string | null>(null);
   readonly tamano = input<ModalTamano>('chico');
+  /** Ventanas grandes (productos): en tablet casi toda la pantalla y en móvil, pantalla completa. */
+  readonly completoEnMovil = input(false);
   /** Hay datos sin guardar: se confirma antes de cerrar. */
   readonly sucio = input(false);
   /** Mientras guarda no se puede cerrar. */
@@ -92,7 +95,8 @@ export class ModalComponent implements OnDestroy {
 
   @HostListener('document:keydown.escape', ['$event'])
   alPresionarEscape(event: Event): void {
-    if (this.confirmando) return;
+    // Un diálogo de SweetAlert abierto encima atiende su propio Esc.
+    if (this.confirmando || document.body.classList.contains('swal2-shown')) return;
     event.preventDefault();
     void this.solicitarCierre();
   }

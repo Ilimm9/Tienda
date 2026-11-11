@@ -22,7 +22,19 @@ interface Paginado<T> {
 
 const TAMANO_PAGINA = 10;
 
-/** Resultado de una importación en secciones compactables y paginadas. */
+interface Pestana {
+  seccion: Seccion;
+  titulo: string;
+  total: number;
+  /** Tono del punto y del número: listo, sucursal, error, aviso o catálogo. */
+  tono: 'listo' | 'sucursal' | 'error' | 'aviso' | 'catalogo';
+}
+
+/**
+ * Resultado de una importación (tablero 12 «Carga masiva de productos»): los contadores son
+ * pestañas y debajo hay un solo panel con la tabla elegida, filtros y paginación de 10 en 10.
+ * La pestaña inicial es «Filas con error» si hay alguna; si no, «Listos».
+ */
 @Component({
   selector: 'app-import-report',
   imports: [CurrencyPipe, NgTemplateOutlet],
@@ -43,14 +55,6 @@ export class ImportReportComponent {
   readonly descargando = input(false);
   readonly descargarErrores = output<void>();
 
-  readonly abiertas = signal<Record<Seccion, boolean>>({
-    errores: true,
-    advertencias: false,
-    catalogos: false,
-    correctos: false,
-    agregar: false,
-    actualizar: false,
-  });
   private readonly paginas = signal<Record<Seccion, number>>({
     errores: 1,
     advertencias: 1,
@@ -65,6 +69,30 @@ export class ImportReportComponent {
   readonly hayAdvertencias = computed(
     () => this.advertencias().length > 0 || this.costosFaltantes() > 0,
   );
+  readonly totalAdvertencias = computed(
+    () => this.advertencias().length + (this.costosFaltantes() ? 1 : 0),
+  );
+  readonly pestanas = computed<Pestana[]>(() => {
+    const todas: Pestana[] = [
+      { seccion: 'correctos', titulo: 'Listos', total: this.correctos().length, tono: 'listo' },
+      { seccion: 'agregar', titulo: 'Se agregan a la sucursal', total: this.agregarSucursal().length, tono: 'sucursal' },
+      { seccion: 'actualizar', titulo: 'Se actualizan', total: this.actualizar().length, tono: 'sucursal' },
+      { seccion: 'errores', titulo: 'Filas con error', total: this.filasConError(), tono: 'error' },
+      { seccion: 'advertencias', titulo: 'Advertencias', total: this.totalAdvertencias(), tono: 'aviso' },
+      { seccion: 'catalogos', titulo: 'Catálogos nuevos', total: this.catalogos().length, tono: 'catalogo' },
+    ];
+    return todas.filter((pestana) => pestana.total > 0);
+  });
+  private readonly elegida = signal<Seccion | null>(null);
+  /** Pestaña visible: la elegida si sigue disponible; si no, errores, luego listos, luego la primera. */
+  readonly activa = computed<Seccion | null>(() => {
+    const disponibles = this.pestanas().map((pestana) => pestana.seccion);
+    const elegida = this.elegida();
+    if (elegida && disponibles.includes(elegida)) return elegida;
+    if (disponibles.includes('errores')) return 'errores';
+    if (disponibles.includes('correctos')) return 'correctos';
+    return disponibles[0] ?? null;
+  });
   readonly campos = computed(() => {
     const conteo = new Map<string, number>();
     for (const issue of this.errores()) {
@@ -93,13 +121,20 @@ export class ImportReportComponent {
   readonly agregarPagina = computed(() => this.paginar('agregar', this.agregarSucursal()));
   readonly actualizarPagina = computed(() => this.paginar('actualizar', this.actualizar()));
 
-  alternar(seccion: Seccion): void {
-    this.abiertas.update((actual) => ({ ...actual, [seccion]: !actual[seccion] }));
+  elegir(seccion: Seccion): void {
+    this.elegida.set(seccion);
   }
 
-  abrir(seccion: Seccion): void {
-    this.abiertas.update((actual) => ({ ...actual, [seccion]: true }));
-    document.getElementById(`reporte-${seccion}`)?.scrollIntoView({ block: 'start' });
+  /** Flechas izquierda/derecha entre pestañas, como un tablist. */
+  moverPestana(event: KeyboardEvent, seccion: Seccion): void {
+    const secciones = this.pestanas().map((pestana) => pestana.seccion);
+    const actual = secciones.indexOf(seccion);
+    const paso = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!paso || actual < 0) return;
+    event.preventDefault();
+    const siguiente = secciones[(actual + paso + secciones.length) % secciones.length];
+    this.elegir(siguiente);
+    document.getElementById(`reporte-tab-${siguiente}`)?.focus();
   }
 
   irA(seccion: Seccion, pagina: number): void {

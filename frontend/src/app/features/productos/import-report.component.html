@@ -1,62 +1,45 @@
-<div class="reporte-resumen">
-  @if (correctos().length) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--correctos" (click)="abrir('correctos')">
-      <span>Listos para importar</span><strong>{{ correctos().length }}</strong>
-    </button>
-  }
-  @if (agregarSucursal().length) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--sucursal" (click)="abrir('agregar')">
-      <span>Se agregarán a esta sucursal</span><strong>{{ agregarSucursal().length }}</strong>
-    </button>
-  }
-  @if (actualizar().length) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--sucursal" (click)="abrir('actualizar')">
-      <span>Se actualizarán</span><strong>{{ actualizar().length }}</strong>
-    </button>
-  }
-  @if (errores().length) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--errores" (click)="abrir('errores')">
-      <span>Filas con error · no se importan</span><strong>{{ filasConError() }}</strong>
-    </button>
-  }
-  @if (hayAdvertencias()) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--advertencias" (click)="abrir('advertencias')">
-      <span>Advertencias · sí se importan</span><strong>{{ advertencias().length + (costosFaltantes() ? 1 : 0) }}</strong>
-    </button>
-  }
-  @if (catalogos().length) {
-    <button type="button" class="reporte-tarjeta reporte-tarjeta--catalogos" (click)="abrir('catalogos')">
-      <span>Catálogos nuevos</span><strong>{{ catalogos().length }}</strong>
-    </button>
-  }
-</div>
-
-@if (errores().length) {
-  <section id="reporte-errores" class="reporte-seccion" aria-label="Errores">
-    <div class="reporte-encabezado">
+@if (pestanas().length) {
+  <div class="reporte-pestanas" role="tablist" aria-label="Resultado de la revisión">
+    @for (pestana of pestanas(); track pestana.seccion) {
       <button
         type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().errores"
-        aria-controls="reporte-errores-cuerpo"
-        (click)="alternar('errores')"
+        role="tab"
+        class="reporte-pestana"
+        [class]="'reporte-pestana--' + pestana.tono"
+        [id]="'reporte-tab-' + pestana.seccion"
+        [attr.aria-selected]="activa() === pestana.seccion"
+        [attr.tabindex]="activa() === pestana.seccion ? 0 : -1"
+        aria-controls="reporte-panel"
+        (click)="elegir(pestana.seccion)"
+        (keydown)="moverPestana($event, pestana.seccion)"
       >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().errores" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--errores"><i class="pi pi-times-circle" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Errores <span class="reporte-contador">{{ errores().length }}</span></span>
-          <small>{{ filasConError() }} filas no se importarán hasta que las corrijas.</small>
-        </span>
+        <span class="reporte-pestana__titulo"><span class="reporte-punto" aria-hidden="true"></span>{{ pestana.titulo }}</span>
+        <strong class="reporte-pestana__numero">{{ pestana.total }}</strong>
       </button>
-      @if (puedeDescargar()) {
-        <button type="button" class="reporte-descargar" [disabled]="descargando()" (click)="descargarErrores.emit()">
-          <i class="pi pi-download" aria-hidden="true"></i>
-          {{ descargando() ? 'Descargando...' : 'Descargar errores (.xlsx)' }}
-        </button>
-      }
-    </div>
-    @if (abiertas().errores) {
-      <div id="reporte-errores-cuerpo" class="reporte-cuerpo">
+    }
+  </div>
+
+  <section
+    id="reporte-panel"
+    class="reporte-panel"
+    role="tabpanel"
+    [attr.aria-labelledby]="'reporte-tab-' + activa()"
+    [attr.data-seccion]="activa()"
+  >
+    @switch (activa()) {
+      @case ('errores') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Filas con error · no se importan</strong>
+            <small>{{ filasConError() }} filas no se importarán hasta que las corrijas ({{ errores().length }} errores).</small>
+          </span>
+          @if (puedeDescargar()) {
+            <button type="button" class="reporte-descargar" [disabled]="descargando()" (click)="descargarErrores.emit()">
+              <i class="pi pi-download" aria-hidden="true"></i>
+              {{ descargando() ? 'Descargando...' : 'Descargar errores (.xlsx)' }}
+            </button>
+          }
+        </header>
         @if (campos().length > 2) {
           <div class="reporte-filtros" role="group" aria-label="Filtrar errores por columna">
             @for (item of campos(); track item.campo) {
@@ -74,10 +57,10 @@
             <tbody>
               @for (issue of erroresPagina().filas; track $index) {
                 <tr>
-                  <td class="reporte-num">{{ issue.fila }}</td>
-                  <td>{{ issue.nombre || '—' }}</td>
-                  <td>{{ issue.campo || 'General' }}</td>
-                  <td>{{ issue.motivo }}</td>
+                  <td class="reporte-num" data-etiqueta="Fila">{{ issue.fila }}</td>
+                  <td class="reporte-principal" data-etiqueta="Producto">{{ issue.nombre || '—' }}</td>
+                  <td data-etiqueta="Columna">{{ issue.campo || 'General' }}</td>
+                  <td class="reporte-motivo reporte-motivo--error" data-etiqueta="Qué corregir">{{ issue.motivo }}</td>
                 </tr>
               }
             </tbody>
@@ -90,31 +73,15 @@
             El Excel trae solo las filas con error, en el formato de la plantilla y con una columna Errores al final. Corrígelas y sube ese mismo archivo.
           </p>
         }
-      </div>
-    }
-  </section>
-}
+      }
 
-@if (hayAdvertencias()) {
-  <section id="reporte-advertencias" class="reporte-seccion" aria-label="Advertencias">
-    <div class="reporte-encabezado">
-      <button
-        type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().advertencias"
-        aria-controls="reporte-advertencias-cuerpo"
-        (click)="alternar('advertencias')"
-      >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().advertencias" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--advertencias"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Advertencias <span class="reporte-contador">{{ advertencias().length + (costosFaltantes() ? 1 : 0) }}</span></span>
-          <small>Se importan igual; revisa si quieres ajustarlas.</small>
-        </span>
-      </button>
-    </div>
-    @if (abiertas().advertencias) {
-      <div id="reporte-advertencias-cuerpo" class="reporte-cuerpo">
+      @case ('advertencias') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Advertencias · sí se importan</strong>
+            <small>Se importan igual; revisa si quieres ajustarlas.</small>
+          </span>
+        </header>
         @if (costosFaltantes()) {
           <p class="reporte-nota reporte-nota--advertencia">
             <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
@@ -130,10 +97,10 @@
               <tbody>
                 @for (issue of advertenciasPagina().filas; track $index) {
                   <tr>
-                    <td class="reporte-num">{{ issue.fila }}</td>
-                    <td>{{ issue.nombre || '—' }}</td>
-                    <td>{{ issue.campo || 'General' }}</td>
-                    <td>{{ issue.motivo }}</td>
+                    <td class="reporte-num" data-etiqueta="Fila">{{ issue.fila }}</td>
+                    <td class="reporte-principal" data-etiqueta="Producto">{{ issue.nombre || '—' }}</td>
+                    <td data-etiqueta="Columna">{{ issue.campo || 'General' }}</td>
+                    <td class="reporte-motivo reporte-motivo--aviso" data-etiqueta="Aviso">{{ issue.motivo }}</td>
                   </tr>
                 }
               </tbody>
@@ -141,31 +108,15 @@
           </div>
           <ng-container *ngTemplateOutlet="paginador; context: { $implicit: advertenciasPagina(), seccion: 'advertencias', nombre: 'advertencias' }" />
         }
-      </div>
-    }
-  </section>
-}
+      }
 
-@if (catalogos().length) {
-  <section id="reporte-catalogos" class="reporte-seccion" aria-label="Catálogos nuevos">
-    <div class="reporte-encabezado">
-      <button
-        type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().catalogos"
-        aria-controls="reporte-catalogos-cuerpo"
-        (click)="alternar('catalogos')"
-      >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().catalogos" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--catalogos"><i class="pi pi-tags" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Catálogos nuevos <span class="reporte-contador">{{ catalogos().length }}</span></span>
-          <small>Al autorizar se crean con sus datos mínimos; podrás editarlos después.</small>
-        </span>
-      </button>
-    </div>
-    @if (abiertas().catalogos) {
-      <div id="reporte-catalogos-cuerpo" class="reporte-cuerpo">
+      @case ('catalogos') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Catálogos nuevos</strong>
+            <small>Al autorizar se crean con sus datos mínimos; podrás editarlos después.</small>
+          </span>
+        </header>
         <div class="reporte-tabla">
           <table>
             <thead>
@@ -174,97 +125,49 @@
             <tbody>
               @for (catalogo of catalogosPagina().filas; track catalogo.tipo + catalogo.nombre) {
                 <tr>
-                  <td>{{ catalogo.tipo }}</td>
-                  <td>{{ catalogo.nombre }}</td>
-                  <td class="reporte-num">{{ catalogo.productos }}</td>
+                  <td data-etiqueta="Tipo">{{ catalogo.tipo }}</td>
+                  <td class="reporte-principal" data-etiqueta="Nombre">{{ catalogo.nombre }}</td>
+                  <td class="reporte-num" data-etiqueta="Productos">{{ catalogo.productos }}</td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
         <ng-container *ngTemplateOutlet="paginador; context: { $implicit: catalogosPagina(), seccion: 'catalogos', nombre: 'catálogos' }" />
-      </div>
-    }
-  </section>
-}
+      }
 
-@if (correctos().length) {
-  <section id="reporte-correctos" class="reporte-seccion" aria-label="Correctos">
-    <div class="reporte-encabezado">
-      <button
-        type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().correctos"
-        aria-controls="reporte-correctos-cuerpo"
-        (click)="alternar('correctos')"
-      >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().correctos" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--correctos"><i class="pi pi-check" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Correctos <span class="reporte-contador">{{ correctos().length }}</span></span>
-          <small>Filas listas para importar{{ sucursal() ? ' en ' + sucursal() : '' }}.</small>
-        </span>
-      </button>
-    </div>
-    @if (abiertas().correctos) {
-      <div id="reporte-correctos-cuerpo" class="reporte-cuerpo">
+      @case ('correctos') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Listos para importar</strong>
+            <small>Filas listas para importar{{ sucursal() ? ' en ' + sucursal() : '' }}.</small>
+          </span>
+        </header>
         <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: correctosPagina().filas }" />
         <ng-container *ngTemplateOutlet="paginador; context: { $implicit: correctosPagina(), seccion: 'correctos', nombre: 'correctos' }" />
-      </div>
-    }
-  </section>
-}
+      }
 
-@if (agregarSucursal().length) {
-  <section id="reporte-agregar" class="reporte-seccion" aria-label="Se agregarán a esta sucursal">
-    <div class="reporte-encabezado">
-      <button
-        type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().agregar"
-        aria-controls="reporte-agregar-cuerpo"
-        (click)="alternar('agregar')"
-      >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().agregar" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--sucursal"><i class="pi pi-plus-circle" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Se agregarán a esta sucursal <span class="reporte-contador">{{ agregarSucursal().length }}</span></span>
-          <small>Ya existen en el catálogo del negocio; se agregan{{ sucursal() ? ' a ' + sucursal() : '' }} con su precio, costo y stock, sin duplicarlos.</small>
-        </span>
-      </button>
-    </div>
-    @if (abiertas().agregar) {
-      <div id="reporte-agregar-cuerpo" class="reporte-cuerpo">
+      @case ('agregar') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Se agregarán a esta sucursal</strong>
+            <small>Ya existen en el catálogo del negocio; se agregan{{ sucursal() ? ' a ' + sucursal() : '' }} con su precio, costo y stock, sin duplicarlos.</small>
+          </span>
+        </header>
         <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: agregarPagina().filas }" />
         <ng-container *ngTemplateOutlet="paginador; context: { $implicit: agregarPagina(), seccion: 'agregar', nombre: 'productos por agregar' }" />
-      </div>
-    }
-  </section>
-}
+      }
 
-@if (actualizar().length) {
-  <section id="reporte-actualizar" class="reporte-seccion" aria-label="Se actualizarán">
-    <div class="reporte-encabezado">
-      <button
-        type="button"
-        class="reporte-toggle"
-        [attr.aria-expanded]="abiertas().actualizar"
-        aria-controls="reporte-actualizar-cuerpo"
-        (click)="alternar('actualizar')"
-      >
-        <i class="pi pi-chevron-down reporte-chevron" [class.is-collapsed]="!abiertas().actualizar" aria-hidden="true"></i>
-        <span class="reporte-icono reporte-icono--sucursal"><i class="pi pi-sync" aria-hidden="true"></i></span>
-        <span>
-          <span class="reporte-titulo">Se actualizarán <span class="reporte-contador">{{ actualizar().length }}</span></span>
-          <small>Ya están en esta sucursal: el stock se reemplaza y se actualizan precio y costo. Revisa los cambios en Advertencias.</small>
-        </span>
-      </button>
-    </div>
-    @if (abiertas().actualizar) {
-      <div id="reporte-actualizar-cuerpo" class="reporte-cuerpo">
+      @case ('actualizar') {
+        <header class="reporte-panel__encabezado">
+          <span class="reporte-panel__titulos">
+            <strong>Se actualizarán</strong>
+            <small>Ya están en esta sucursal: el stock se reemplaza y se actualizan precio y costo. Revisa los cambios en Advertencias.</small>
+          </span>
+        </header>
         <ng-container *ngTemplateOutlet="tablaFilas; context: { $implicit: actualizarPagina().filas }" />
         <ng-container *ngTemplateOutlet="paginador; context: { $implicit: actualizarPagina(), seccion: 'actualizar', nombre: 'productos por actualizar' }" />
-      </div>
+      }
     }
   </section>
 }
@@ -281,12 +184,12 @@
       <tbody>
         @for (fila of filas; track fila.fila) {
           <tr>
-            <td class="reporte-num">{{ fila.fila }}</td>
-            <td>{{ fila.nombre }}</td>
-            <td>{{ fila.categoria || '—' }}</td>
-            <td class="reporte-num">{{ fila.precio_venta | currency: 'MXN' }}</td>
-            <td class="reporte-num">{{ fila.costo | currency: 'MXN' }}</td>
-            <td class="reporte-num">{{ fila.stock_inicial }}</td>
+            <td class="reporte-num" data-etiqueta="Fila">{{ fila.fila }}</td>
+            <td class="reporte-principal" data-etiqueta="Producto">{{ fila.nombre }}</td>
+            <td data-etiqueta="Categoría">{{ fila.categoria || '—' }}</td>
+            <td class="reporte-num" data-etiqueta="Precio">{{ fila.precio_venta | currency: 'MXN' }}</td>
+            <td class="reporte-num" data-etiqueta="Costo">{{ fila.costo | currency: 'MXN' }}</td>
+            <td class="reporte-num" data-etiqueta="Stock">{{ fila.stock_inicial }}</td>
           </tr>
         }
       </tbody>

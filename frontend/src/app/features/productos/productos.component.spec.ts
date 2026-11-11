@@ -614,6 +614,192 @@ describe('ProductosComponent', () => {
     expect(component.productBrandFilter()).toBeNull();
     expect(component.productStatusFilter()).toBeNull();
   });
+  describe('variantes', () => {
+    const filas = () => component.variantControls.controls.map((control) => control.controls.atributos.value);
+    const precios = () => component.variantControls.controls.map((control) => control.controls.precio_venta.value);
+    const agregarCaracteristica = (nombre: string) => {
+      component.newDimensionName.set(nombre);
+      component.addDimension();
+    };
+    const agregarValor = (dimension: number, valor: string) => {
+      component.setDimensionValue(dimension, valor);
+      component.addDimensionValue(dimension);
+    };
+    const conVariantes = () => {
+      component.productForm.controls.tiene_variantes.setValue(true);
+      component.onVariantsChanged();
+    };
+
+    it('agregar un valor agrega sus filas al momento', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      expect(filas()).toEqual([]);
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      expect(filas()).toEqual(['Sabor=enchilado', 'Sabor=fuego']);
+    });
+
+    it('quitar un valor quita sus filas al momento', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      agregarValor(0, 'another');
+
+      component.removeDimensionValue(0, 1);
+
+      expect(filas()).toEqual(['Sabor=enchilado', 'Sabor=another']);
+    });
+
+    it('una característica sin valores no cambia la tabla y su primer valor completa las filas', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      component.variantControls.at(0).controls.codigo_barras.setValue('75010000001');
+
+      agregarCaracteristica('Tamaño');
+      expect(filas()).toEqual(['Sabor=enchilado', 'Sabor=fuego']);
+      expect(component.dimensionesTabla().map((dimension) => dimension.nombre)).toEqual(['Sabor']);
+
+      agregarValor(1, 'Chico');
+      expect(filas()).toEqual(['Sabor=enchilado;Tamaño=Chico', 'Sabor=fuego;Tamaño=Chico']);
+      expect(component.variantControls.at(0).controls.codigo_barras.value).toBe('75010000001');
+
+      agregarValor(1, 'Grande');
+      expect(filas()).toEqual([
+        'Sabor=enchilado;Tamaño=Chico',
+        'Sabor=fuego;Tamaño=Chico',
+        'Sabor=enchilado;Tamaño=Grande',
+        'Sabor=fuego;Tamaño=Grande',
+      ]);
+    });
+
+    it('quitar una característica regenera las combinaciones conservando datos', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      agregarCaracteristica('Tamaño');
+      agregarValor(1, 'Chico');
+      agregarValor(1, 'Grande');
+      const primera = component.variantControls.at(0).controls;
+      primera.codigo_barras.setValue('75010000001');
+      primera.precio_venta.setValue(30);
+      primera.precio_venta.markAsDirty();
+      primera.stock_inicial.setValue(7);
+
+      component.removeDimension(1);
+
+      expect(filas()).toEqual(['Sabor=enchilado', 'Sabor=fuego']);
+      const conservada = component.variantControls.at(0).controls;
+      expect([conservada.codigo_barras.value, conservada.precio_venta.value, conservada.stock_inicial.value]).toEqual(['75010000001', 30, 7]);
+    });
+
+    it('una fila nueva toma el precio base', () => {
+      component.productForm.controls.precio_venta.setValue(25);
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      expect(precios()).toEqual([25, 25]);
+    });
+
+    it('las filas creadas antes del precio base lo toman al capturarlo', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      expect(precios()).toEqual([0]);
+
+      component.productForm.controls.precio_venta.setValue(18);
+
+      expect(precios()).toEqual([18]);
+    });
+
+    it('cambiar el precio base no pisa los precios editados a mano', () => {
+      component.productForm.controls.precio_venta.setValue(20);
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      const editada = component.variantControls.at(1).controls.precio_venta;
+      editada.setValue(35);
+      editada.markAsDirty();
+
+      component.productForm.controls.precio_venta.setValue(22);
+
+      expect(precios()).toEqual([22, 35]);
+    });
+
+    it('la tabla vacía no desmarca «Con variantes»', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+
+      component.removeDimensionValue(0, 0);
+
+      expect(filas()).toEqual([]);
+      expect(component.productForm.controls.tiene_variantes.value).toBe(true);
+      component.removeDimension(0);
+      expect(component.productForm.controls.tiene_variantes.value).toBe(true);
+    });
+
+    it('«Generar combinaciones» vuelve a crear las filas borradas con su ✕', () => {
+      conVariantes();
+      agregarCaracteristica('Sabor');
+      agregarValor(0, 'enchilado');
+      agregarValor(0, 'fuego');
+      component.removeVariant(0);
+      expect(filas()).toEqual(['Sabor=fuego']);
+
+      agregarValor(0, 'another');
+      expect(filas()).toEqual(['Sabor=fuego', 'Sabor=another']);
+
+      component.generateCombinations();
+      expect(filas()).toEqual(['Sabor=fuego', 'Sabor=another', 'Sabor=enchilado']);
+    });
+
+    it('en edición quita las variantes guardadas cuyo valor se borró', () => {
+      abrirEdicion({
+        ...cafe,
+        variantes: [
+          { id: 'variante-m', precio: 50, stock: 1, atributos: [{ nombre: 'Talla', valor: 'M' }] },
+          { id: 'variante-g', precio: 60, stock: 1, atributos: [{ nombre: 'Talla', valor: 'G' }] },
+        ],
+      });
+
+      component.removeDimensionValue(0, 1);
+
+      expect(component.variantControls.controls.map((control) => control.controls.id.value)).toEqual(['variante-m']);
+      expect(precios()).toEqual([50]);
+    });
+
+    it('en edición el precio base no cambia variantes guardadas con precio propio', () => {
+      abrirEdicion({
+        ...cafe,
+        variantes: [{ id: 'variante-m', precio: 50, stock: 1, atributos: [{ nombre: 'Talla', valor: 'M' }] }],
+      });
+      component.productForm.controls.precio_venta.setValue(99);
+      expect(precios()).toEqual([50]);
+    });
+  });
+
+  it('calcula el margen con el costo y el precio base', () => {
+    const controls = component.productForm.controls;
+    expect(component.margen().tono).toBe('falta');
+    controls.costo_proveedor.setValue(10);
+    controls.precio_venta.setValue(12.5);
+    expect(component.margen()).toEqual({ tono: 'gana', porcentaje: '25.0%', texto: 'Ganas $2.50 por pieza.' });
+    controls.precio_venta.setValue(8);
+    expect(component.margen().tono).toBe('pierde');
+  });
+
+  it('cuenta los obligatorios que faltan para la nota del pie', () => {
+    component.productForm.controls.nombre.setValue('');
+    expect(component.notaPieProducto()).toBe('Falta 1 dato obligatorio (*)');
+    component.productForm.controls.nombre.setValue('Galletas');
+    expect(component.notaPieProducto()).toBe('Listo para guardar');
+  });
 });
 
 describe('ProductosComponent carga masiva', () => {
@@ -658,6 +844,10 @@ describe('ProductosComponent carga masiva', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     http = TestBed.inject(HttpTestingController);
+    // La lista queda de fondo bajo la ventana.
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-1`).flush({ items: [], total: 0 });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
+    fixture.detectChanges();
   });
 
   afterEach(() => http.verify());
@@ -673,7 +863,9 @@ describe('ProductosComponent carga masiva', () => {
 
   it('usa la sucursal activa sin mostrar un selector', () => {
     const page: HTMLElement = fixture.nativeElement;
-    expect(page.querySelector('p-select')).toBeNull();
+    expect(page.querySelector('.pagina h1')?.textContent).toContain('Productos');
+    expect(page.querySelector('app-modal [role="dialog"]')?.textContent).toContain('Carga masiva de productos');
+    expect(page.querySelector('app-modal p-select')).toBeNull();
     expect(page.querySelector('.import-branch')?.textContent).toContain('Sucursal Centro');
 
     validar();
@@ -690,6 +882,8 @@ describe('ProductosComponent carga masiva', () => {
 
     sucursal.set({ id: 'sucursal-2', nombre: 'Sucursal Norte' });
     fixture.detectChanges();
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/productos?sucursal_id=sucursal-2`).flush({ items: [], total: 0 });
+    http.expectOne(`${environment.apiUrl}/negocios/${negocioId}/catalogo/proveedores`).flush([]);
 
     expect(component.importPreview()).toBeNull();
   });
@@ -788,5 +982,75 @@ describe('ProductosComponent · crear solo propietario', () => {
     const page = montar('miembro', []);
     expect(page.textContent).toContain('Pide al propietario que agregue productos.');
     expect(page.textContent).not.toContain('Agregar nuevo producto');
+  });
+});
+
+describe('ProductosComponent · ventanas sobre la lista', () => {
+  const negocioId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const producto = { id: 'producto-1', nombre: 'Agua', precio: 10, stock: 1, estado: 'En stock', variantes: [], inventario: [] };
+
+  function montar(data: Record<string, unknown>, params: Record<string, string> = {}) {
+    const router = { navigate: vi.fn().mockResolvedValue(true) };
+    TestBed.configureTestingModule({
+      imports: [ProductosComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: VistasService, useValue: vistasStub },
+        {
+          provide: ContextoService,
+          useValue: { negocio: signal({ id: negocioId, tipo_miembro: 'propietario' }), sucursal: signal({ id: 'sucursal-1', nombre: 'Centro' }), puede: () => true },
+        },
+        { provide: ActivatedRoute, useValue: { snapshot: { data, paramMap: new Map(Object.entries(params)) } } },
+        { provide: Router, useValue: router },
+      ],
+    });
+    const fixture = TestBed.createComponent(ProductosComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const responder = () => {
+      for (const request of http.match(() => true)) {
+        request.flush(request.request.urlWithParams.includes('/catalogo/productos?') ? { items: [producto], total: 1 } : []);
+      }
+      fixture.detectChanges();
+    };
+    responder();
+    responder();
+    return { fixture, http, router, page: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  const casos: [string, Record<string, unknown>, Record<string, string>, string][] = [
+    ['nuevo', { mode: 'create' }, {}, 'Producto nuevo'],
+    ['importar', { mode: 'import' }, {}, 'Carga masiva de productos'],
+    ['agregar-del-catalogo', { mode: 'agregar' }, {}, 'Agregar del catálogo del negocio'],
+    [':productoId/editar', { mode: 'edit' }, { productoId: 'producto-1' }, 'Editar producto'],
+  ];
+
+  for (const [ruta, data, params, titulo] of casos) {
+    it(`la ruta ${ruta} abre su ventana sobre la lista y al cerrar regresa a /catalogo/productos`, () => {
+      const { page, router, http } = montar(data, params);
+
+      expect(page.querySelector('.pagina h1')?.textContent).toContain('Productos');
+      expect(page.querySelector('.pagina tbody')?.textContent).toContain('Agua');
+      const dialogo = page.querySelector<HTMLElement>('app-modal [role="dialog"]');
+      expect(dialogo?.querySelector('h2')?.textContent).toContain(titulo);
+
+      dialogo!.querySelector<HTMLButtonElement>('.modal__cerrar')!.click();
+      expect(router.navigate).toHaveBeenCalledWith(['/catalogo/productos']);
+      http.verify();
+    });
+  }
+
+  it('la lista sola no abre ninguna ventana', () => {
+    const { page } = montar({});
+    expect(page.querySelector('app-modal')).toBeNull();
+  });
+
+  it('editar carga el producto de la misma lista sin pedirla dos veces', () => {
+    const { fixture } = montar({ mode: 'edit' }, { productoId: 'producto-1' });
+    expect(fixture.componentInstance.editingProduct()?.id).toBe('producto-1');
+    expect(fixture.componentInstance.productForm.controls.nombre.value).toBe('Agua');
   });
 });

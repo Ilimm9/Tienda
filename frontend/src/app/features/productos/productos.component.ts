@@ -10,14 +10,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TextareaModule } from 'primeng/textarea';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { VistasService } from '../../contexto/vistas.service';
+import { AgregarCatalogoComponent } from './agregar-catalogo.component';
 import { ImportReportComponent } from './import-report.component';
+import { ModalComponent } from '../../shared/ui/modal/modal.component';
 import { FeedbackService } from '../../shared/feedback/feedback.service';
 import {
   CatalogOption,
@@ -51,19 +50,22 @@ interface VariantDimension {
   nuevoValor: string;
 }
 
+type VariantAttribute = { nombre: string; valor: string };
+
+type PageMode = 'list' | 'create' | 'edit' | 'import' | 'agregar';
+
 @Component({
   selector: 'app-productos',
   standalone: true,
   imports: [
     PuedeDirective,
     ImportReportComponent,
+    AgregarCatalogoComponent,
+    ModalComponent,
     CommonModule,
-    CheckboxModule,
     FormsModule,
     ReactiveFormsModule,
-    InputTextModule,
     SelectModule,
-    TextareaModule,
   ],
   templateUrl: './productos.component.html',
   styleUrl: './productos.component.css',
@@ -88,9 +90,8 @@ export class ProductosComponent {
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly router = inject(Router, { optional: true });
 
-  readonly pageMode =
-    (this.route?.snapshot.data['mode'] as 'list' | 'create' | 'edit' | 'import' | undefined) ??
-    'list';
+  /** La lista siempre se ve; el modo de la ruta decide qué ventana se abre encima. */
+  readonly pageMode = (this.route?.snapshot.data['mode'] as PageMode | undefined) ?? 'list';
 
   readonly products = signal<ProductRow[]>([]);
   readonly productSearch = signal('');
@@ -139,6 +140,9 @@ export class ProductosComponent {
   });
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  /** Carga del producto que se edita (independiente de la lista de fondo). */
+  readonly editLoading = signal(false);
+  readonly editError = signal<string | null>(null);
   readonly categories = signal<CatalogOption[]>([]);
   readonly brands = signal<CatalogOption[]>([]);
   readonly categoryOptions = computed(() => [...this.categories(), { id: '__new_category__', nombre: 'Crear nueva…' }]);
@@ -177,10 +181,14 @@ export class ProductosComponent {
   readonly importPreview = signal<ProductImportPreview | null>(null);
   readonly editingProduct = signal<ProductRow | null>(null);
   readonly variantDimensions = signal<VariantDimension[]>([]);
+  /** Columnas de la tabla de variantes: solo las características que ya tienen valores. */
+  readonly dimensionesTabla = computed(() => this.variantDimensions().filter((dimension) => dimension.valores.length > 0));
   readonly newDimensionName = signal('');
   readonly deletingProductId = signal<string | null>(null);
   readonly stockEditing = signal(false);
   private lastLookup: ProductLookup | null = null;
+  /** Precio base antes del último cambio: las variantes con ese precio lo siguen. */
+  private precioBaseAnterior = 0;
   private categoriesLoaded = false;
   private brandsLoaded = false;
   formError: string | null = null;
@@ -228,18 +236,15 @@ export class ProductosComponent {
   });
 
   constructor() {
-    this.productForm.controls.precio_venta.valueChanges.subscribe(() => {
-      if (this.productForm.controls.tiene_variantes.value) this.applyBasePrice();
+    this.productForm.controls.precio_venta.valueChanges.subscribe((precio) => this.onBasePriceChanged(precio));
+    // La lista queda de fondo en todos los modos. Solo un cambio real de negocio o sucursal
+    // recarga; la revalidación del contexto al recuperar el foco reemplaza los objetos con los mismos IDs.
+    const contextoLista = computed(() => `${this.contexto.negocio()?.id ?? ''}:${this.contexto.sucursal()?.id ?? ''}`);
+    effect(() => {
+      contextoLista();
+      untracked(() => this.loadProducts());
     });
-    if (this.pageMode === 'list') {
-      // Solo un cambio real de negocio o sucursal recarga; la revalidación del contexto al
-      // recuperar el foco reemplaza los objetos con los mismos IDs.
-      const contextoLista = computed(() => `${this.contexto.negocio()?.id ?? ''}:${this.contexto.sucursal()?.id ?? ''}`);
-      effect(() => {
-        contextoLista();
-        untracked(() => this.loadProducts());
-      });
-    } else if (this.pageMode === 'create') {
+    if (this.pageMode === 'create') {
       this.openCreateDialog();
     } else if (this.pageMode === 'import') {
       this.openImportDialog();
@@ -252,7 +257,7 @@ export class ProductosComponent {
           this.importResult.set(null);
         });
       });
-    } else {
+    } else if (this.pageMode === 'edit') {
       this.loadProductForEdit();
     }
   }
@@ -281,12 +286,17 @@ export class ProductosComponent {
         if (!vigente()) return;
         this.products.set(items ?? []);
         this.loading.set(false);
+        this.openPendingEdit(items ?? []);
       },
       error: () => {
         if (!vigente()) return;
         if (guardada) this.feedback.error('No fue posible actualizar los productos.', 'Se muestra la última lista cargada.');
         else this.error.set('No fue posible cargar los productos.');
         this.loading.set(false);
+        if (this.pendingEditId) {
+          this.editLoading.set(false);
+          this.editError.set('No fue posible cargar el producto.');
+        }
       },
     });
     this.productosService.listProviders(this.negocioID).subscribe({
@@ -296,7 +306,7 @@ export class ProductosComponent {
   }
 
   isListPage(): boolean {
-    return this.pageMode === 'list';
+    return true;
   }
 
   isFormPage(): boolean {
@@ -307,32 +317,43 @@ export class ProductosComponent {
     return this.pageMode === 'import';
   }
 
+  isAddFromCatalogPage(): boolean {
+    return this.pageMode === 'agregar';
+  }
+
+  /** ID del producto que se abrirá en cuanto llegue la lista fresca de la sucursal. */
+  private pendingEditId: string | null = null;
+
   private loadProductForEdit(): void {
     const productId = this.route?.snapshot.paramMap.get('productoId');
     if (!productId) {
       this.navigate(['/catalogo/productos']);
       return;
     }
-    this.loading.set(true);
-    this.productosService.listByBusiness(this.negocioID, this.sucursalID).subscribe({
-      next: ({ items }) => {
-        const product = (items ?? []).find((item) => item.id === productId);
-        this.loading.set(false);
-        if (!product) {
-          this.error.set('No fue posible encontrar el producto solicitado.');
-          return;
-        }
-        this.openEditDialog(product);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('No fue posible cargar el producto.');
-      },
-    });
+    this.pendingEditId = productId;
+    this.editLoading.set(true);
+    this.editError.set(null);
+    if (!this.negocioID || !this.sucursalID) {
+      this.editLoading.set(false);
+      this.editError.set('Selecciona un negocio y una sucursal activa.');
+    }
+  }
+
+  /** La edición usa la misma respuesta fresca de la lista de fondo (sin pedirla dos veces). */
+  private openPendingEdit(items: ProductRow[]): void {
+    const productId = this.pendingEditId;
+    if (!productId) return;
+    this.pendingEditId = null;
+    this.editLoading.set(false);
+    const product = items.find((item) => item.id === productId);
+    if (!product) {
+      this.editError.set('No fue posible encontrar el producto solicitado.');
+      return;
+    }
+    this.openEditDialog(product);
   }
 
   openCreateDialog(): void {
-    this.loading.set(false);
     const branchControl = this.productForm.controls.sucursal_id;
     this.productForm.reset({
       nombre: '',
@@ -362,6 +383,7 @@ export class ProductosComponent {
     this.productForm.controls.stock_inicial.enable();
     this.productForm.controls.variantes.clear();
     this.variantDimensions.set([]);
+    this.precioBaseAnterior = 0;
     this.editingProduct.set(null);
     this.stockEditing.set(false);
     this.categories.set([]);
@@ -459,6 +481,7 @@ export class ProductosComponent {
       stock_inicial: currentStock,
       motivo_precio: '',
     });
+    this.precioBaseAnterior = Number(product.precio) || 0;
     this.preciosOriginales = new Map([['', product.precio], ...product.variantes.map((variant) => [variant.id, variant.precio] as [string, number])]);
     this.productForm.controls.sucursal_id.disable();
     this.productForm.controls.stock_inicial.disable();
@@ -567,7 +590,6 @@ export class ProductosComponent {
   }
 
   openImportDialog(): void {
-    this.loading.set(false);
     this.importFile = null;
     this.importDropActive = false;
     this.importError.set(null);
@@ -865,13 +887,16 @@ export class ProductosComponent {
 
   addDimension(): void {
     const nombre = this.newDimensionName().trim();
-    if (!nombre || this.variantDimensions().some((dimension) => dimension.nombre.toLocaleLowerCase() === nombre.toLocaleLowerCase())) return;
+    if (!nombre || this.variantDimensions().some((dimension) => this.normalizeCatalogText(dimension.nombre) === this.normalizeCatalogText(nombre))) return;
     this.variantDimensions.update((items) => [...items, { nombre, valores: [], nuevoValor: '' }]);
     this.newDimensionName.set('');
+    // Sin valores la tabla no cambia todavía.
+    this.sincronizarCombinaciones();
   }
 
   removeDimension(index: number): void {
     this.variantDimensions.update((items) => items.filter((_, itemIndex) => itemIndex !== index));
+    this.sincronizarCombinaciones();
   }
 
   setDimensionValue(index: number, value: string): void {
@@ -879,48 +904,136 @@ export class ProductosComponent {
   }
 
   addDimensionValue(index: number): void {
-    this.variantDimensions.update((items) => items.map((item, itemIndex) => {
-      if (itemIndex !== index) return item;
-      const value = item.nuevoValor.trim();
-      return !value || item.valores.some((current) => current.toLocaleLowerCase() === value.toLocaleLowerCase())
-        ? item
-        : { ...item, valores: [...item.valores, value], nuevoValor: '' };
-    }));
+    const dimension = this.variantDimensions()[index];
+    if (!dimension) return;
+    const value = dimension.nuevoValor.trim();
+    if (!value || dimension.valores.some((current) => this.normalizeCatalogText(current) === this.normalizeCatalogText(value))) return;
+    const estabaVacia = dimension.valores.length === 0;
+    this.variantDimensions.update((items) => items.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, valores: [...item.valores, value], nuevoValor: '' } : item,
+    ));
+    this.sincronizarCombinaciones({ nombre: dimension.nombre, valor: value, estabaVacia });
   }
 
   removeDimensionValue(dimensionIndex: number, valueIndex: number): void {
     this.variantDimensions.update((items) => items.map((item, itemIndex) => itemIndex === dimensionIndex ? { ...item, valores: item.valores.filter((_, index) => index !== valueIndex) } : item));
+    this.sincronizarCombinaciones();
   }
 
   canGenerateCombinations(): boolean {
     return this.variantDimensions().length > 0 && this.variantDimensions().every((dimension) => dimension.valores.length > 0);
   }
 
+  /** Vuelve a crear todas las combinaciones que falten (por ejemplo, filas borradas con su ✕). */
   generateCombinations(): void {
     if (!this.canGenerateCombinations()) return;
-    const dimensions = this.variantDimensions();
-    const combinations = dimensions.reduce<{ nombre: string; valor: string }[][]>((rows, dimension) => rows.flatMap((row) => dimension.valores.map((valor) => [...row, { nombre: dimension.nombre, valor }])), [[]]);
-    const existing = new Set(this.variantControls.controls.map((control) => control.controls.atributos.value));
-    for (const attributes of combinations) {
-      const serialized = this.serializeVariantAttributes(attributes);
-      if (!existing.has(serialized)) {
-        const control = this.createVariantForm();
-        control.controls.atributos.setValue(serialized);
-        control.controls.precio_venta.setValue(this.productForm.controls.precio_venta.value);
-        if (this.editingProduct()) this.syncVariantControlStockEditing(control);
-        this.syncVariantControlPriceEditing(control);
-        this.variantControls.push(control);
+    const existing = new Set(this.variantControls.controls.map((control) => this.variantKey(this.parseVariantAttributes(control.controls.atributos.value))));
+    for (const attributes of this.combinaciones(this.variantDimensions())) {
+      if (!existing.has(this.variantKey(attributes))) this.variantControls.push(this.crearFilaVariante(attributes));
+    }
+  }
+
+  /**
+   * Deja la tabla de variantes igual a las características y valores actuales, al momento:
+   * - conserva las filas que siguen existiendo, con su código, precio y stock;
+   * - quita las que usan un valor borrado (las de edición, igual que su ✕);
+   * - al quitar una característica, cada fila conserva sus datos con los valores que quedan;
+   * - al agregar un valor, agrega sus combinaciones. Si es el primer valor de una característica
+   *   nueva, completa las filas que ya había en lugar de duplicarlas.
+   * Una característica sin valores todavía no cambia la tabla. Nunca desmarca «Con variantes».
+   */
+  sincronizarCombinaciones(nuevo?: VariantAttribute & { estabaVacia: boolean }): void {
+    const dimensiones = this.dimensionesTabla();
+    const norm = (value: string) => this.normalizeCatalogText(value);
+    const combinaciones = this.combinaciones(dimensiones);
+    const usadas = new Set<string>();
+    const filasPrevias = this.variantControls.length;
+
+    for (let index = 0; index < this.variantControls.length; ) {
+      const control = this.variantControls.at(index);
+      const actuales = new Map(this.parseVariantAttributes(control.controls.atributos.value).map((attribute) => [norm(attribute.nombre), attribute.valor]));
+      let valida = true;
+      const proyectada: (VariantAttribute | null)[] = dimensiones.map((dimension) => {
+        const valor = actuales.get(norm(dimension.nombre));
+        if (valor === undefined) return null;
+        const vigente = dimension.valores.find((item) => norm(item) === norm(valor));
+        if (!vigente) valida = false;
+        return { nombre: dimension.nombre, valor: vigente ?? valor };
+      });
+      const destino = valida
+        ? combinaciones.find((combinacion) =>
+            !usadas.has(this.variantKey(combinacion)) &&
+            combinacion.every((attribute, position) => !proyectada[position] || norm(proyectada[position]!.valor) === norm(attribute.valor)),
+          )
+        : undefined;
+      if (!destino) {
+        this.variantControls.removeAt(index);
+        continue;
+      }
+      usadas.add(this.variantKey(destino));
+      const serializada = this.serializeVariantAttributes(destino);
+      if (control.controls.atributos.value !== serializada) control.controls.atributos.setValue(serializada);
+      index++;
+    }
+
+    if (!nuevo || (nuevo.estabaVacia && filasPrevias > 0)) return;
+    for (const combinacion of combinaciones) {
+      const tieneNuevo = combinacion.some((attribute) => norm(attribute.nombre) === norm(nuevo.nombre) && norm(attribute.valor) === norm(nuevo.valor));
+      if (tieneNuevo && !usadas.has(this.variantKey(combinacion))) {
+        usadas.add(this.variantKey(combinacion));
+        this.variantControls.push(this.crearFilaVariante(combinacion));
       }
     }
   }
 
-  applyBasePrice(): void {
-    const price = this.productForm.controls.precio_venta.value;
-    this.variantControls.controls.forEach((control) => control.controls.precio_venta.setValue(price));
+  private combinaciones(dimensiones: VariantDimension[]): VariantAttribute[][] {
+    if (!dimensiones.length) return [];
+    return dimensiones.reduce<VariantAttribute[][]>(
+      (rows, dimension) => rows.flatMap((row) => dimension.valores.map((valor) => [...row, { nombre: dimension.nombre, valor }])),
+      [[]],
+    );
+  }
+
+  /** Fila nueva: toma el precio base actual (sin permiso de precios en edición queda en 0). */
+  private crearFilaVariante(attributes: VariantAttribute[]): VariantFormGroup {
+    const control = this.createVariantForm();
+    control.controls.atributos.setValue(this.serializeVariantAttributes(attributes));
+    control.controls.precio_venta.setValue(this.precioBase());
+    if (this.editingProduct()) this.syncVariantControlStockEditing(control);
+    this.syncVariantControlPriceEditing(control);
+    return control;
+  }
+
+  private precioBase(): number {
+    const precio = Number(this.productForm.controls.precio_venta.value);
+    return Number.isFinite(precio) && precio > 0 ? precio : 0;
+  }
+
+  /**
+   * Al cambiar el precio base, lo siguen las variantes que no se editaron a mano: las nuevas
+   * sin tocar o las que tienen el precio base anterior. Las editadas a mano se respetan.
+   */
+  private onBasePriceChanged(value: number | null): void {
+    const anterior = this.precioBaseAnterior;
+    const precio = Number(value);
+    this.precioBaseAnterior = Number.isFinite(precio) ? precio : 0;
+    if (!this.productForm.controls.tiene_variantes.value) return;
+    this.variantControls.controls.forEach((control) => {
+      const precioVariante = control.controls.precio_venta;
+      if (precioVariante.disabled) return;
+      const sigueBase = Number(precioVariante.value) === anterior || (precioVariante.pristine && !control.controls.id.value);
+      if (sigueBase) precioVariante.setValue(this.precioBaseAnterior);
+    });
   }
 
   variantAttributeValues(index: number): { nombre: string; valor: string }[] {
     return this.parseVariantAttributes(this.variantControls.at(index).controls.atributos.value);
+  }
+
+  /** Valor de una característica en una fila (vacío si la fila no la tiene). */
+  variantAttributeValue(index: number, nombre: string): string {
+    const buscado = this.normalizeCatalogText(nombre);
+    return this.variantAttributeValues(index).find((attribute) => this.normalizeCatalogText(attribute.nombre) === buscado)?.valor ?? '';
   }
 
   private serializeVariantAttributes(attributes: { nombre: string; valor: string }[]): string {
@@ -1275,6 +1388,80 @@ export class ProductosComponent {
 
   closeCreateDialog(): void {
     if (!this.saving()) this.navigate(['/catalogo/productos']);
+  }
+
+  /** «Del catálogo del negocio» terminó: se vuelve a la lista, que se recarga. */
+  onAddedFromCatalog(): void {
+    this.navigate(['/catalogo/productos']);
+  }
+
+  /** Tarjetas «Producto simple / Con variantes»: usan el mismo control `tiene_variantes`. */
+  tipoBloqueado(): boolean {
+    return !!this.editingProduct()?.variantes.length;
+  }
+
+  elegirTipo(conVariantes: boolean): void {
+    const control = this.productForm.controls.tiene_variantes;
+    if (this.tipoBloqueado() || control.value === conVariantes) return;
+    control.setValue(conVariantes);
+    control.markAsDirty();
+    this.onVariantsChanged();
+  }
+
+  /** Margen con el precio base y el costo del proveedor (gris si falta un dato). */
+  margen(): { tono: 'gana' | 'pierde' | 'falta'; porcentaje: string; texto: string } {
+    const costo = Number(this.productForm.controls.costo_proveedor.value);
+    const precio = Number(this.productForm.controls.precio_venta.value);
+    if (!(costo > 0) || !(precio > 0)) {
+      return { tono: 'falta', porcentaje: '—', texto: 'Captura costo y precio para calcularlo.' };
+    }
+    const porcentaje = `${(((precio - costo) / costo) * 100).toFixed(1)}%`;
+    const diferencia = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Math.abs(precio - costo));
+    return precio >= costo
+      ? { tono: 'gana', porcentaje, texto: `Ganas ${diferencia} por pieza.` }
+      : { tono: 'pierde', porcentaje, texto: `Vendes ${diferencia} por debajo del costo.` };
+  }
+
+  /** Obligatorios (*) que faltan o no son válidos, para la nota del pie. */
+  datosFaltantes(): number {
+    const controls = this.productForm.controls;
+    const requeridos = [controls.nombre, controls.precio_venta, controls.costo_proveedor, controls.stock_inicial, controls.sucursal_id];
+    const faltan = requeridos.filter((control) => control.enabled && control.invalid).length;
+    const variantesIncompletas = controls.tiene_variantes.value && (!this.hasValidVariants() || this.variantControls.invalid) ? 1 : 0;
+    return faltan + variantesIncompletas;
+  }
+
+  notaPieProducto(): string {
+    const faltan = this.datosFaltantes();
+    if (faltan > 0) return faltan === 1 ? 'Falta 1 dato obligatorio (*)' : `Faltan ${faltan} datos obligatorios (*)`;
+    if (this.editingProduct() && !this.productForm.dirty) return 'Sin cambios por guardar';
+    return 'Listo para guardar';
+  }
+
+  /** «Detalles opcionales» se abre solo cuando uno de sus campos tiene error. */
+  detallesConError(): boolean {
+    return this.hasError('marca_id') || this.hasError('sucursal_id') || this.hasError('descripcion');
+  }
+
+  resumenDetalles(): string {
+    const partes = [this.marcasVisibles() ? 'Marca' : null, this.branches().length > 1 && !this.editingProduct() ? 'sucursal' : null, 'descripción'].filter(Boolean) as string[];
+    const texto = partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}` : partes[0];
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  leyendaVariantes(): string {
+    if (this.editingProduct() && !this.puedeCambiarPrecio()) {
+      return 'Sin permiso para cambiar precios: las variantes existentes conservan su precio y las nuevas quedan sin precio.';
+    }
+    return 'Las variantes nuevas toman el precio base; puedes cambiarlo en cada una.';
+  }
+
+  /** Nombre del archivo de importación y nota del pie de Carga masiva. */
+  notaPieImportacion(): string {
+    const preview = this.importPreview();
+    if (this.importResult()) return 'Importación terminada.';
+    if (preview) return `Se importan ${preview.insertables} productos; las filas con error se omiten.`;
+    return this.importFile ? 'Valida el archivo para revisar errores y advertencias.' : 'Elige un archivo XLSX para empezar.';
   }
 
   private navigate(commands: string[]): void {

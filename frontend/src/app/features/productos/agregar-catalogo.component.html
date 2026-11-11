@@ -1,92 +1,88 @@
-<section class="catalog-page">
-  <header class="catalog-header">
-    <div>
-      <p class="eyebrow">Surtido de {{ sucursal()?.nombre ?? 'la sucursal' }}</p>
-      <h1>Agregar del catálogo</h1>
-      <p>Elige los productos del negocio que maneja esta sucursal. Entran sin precio ni stock; complétalos después con Carga masiva o en Validar costos y precios.</p>
-    </div>
-    <button class="secondary-button" type="button" (click)="volver()">Volver a productos</button>
-  </header>
+<p class="ac-aviso">
+  <i class="pi pi-info-circle" aria-hidden="true"></i>
+  <span>
+    Elige los productos del negocio que maneja {{ sucursal()?.nombre ?? 'esta sucursal' }}. Entran
+    <strong>sin precio ni stock</strong>; complétalos después con Carga masiva o en Validar costos y precios.
+  </span>
+</p>
 
-  @if (error(); as mensaje) {
-    <div class="catalog-state catalog-state--error" role="alert">{{ mensaje }}</div>
-  }
+@if (error(); as mensaje) {
+  <p class="aviso aviso--error m-0" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ mensaje }}</p>
+}
 
-  @if (cargando()) {
-    <div class="catalog-state" role="status">Cargando catálogo del negocio...</div>
-  } @else if (productos().length === 0) {
-    <div class="catalog-state">Esta sucursal ya tiene todos los productos del negocio.</div>
-  } @else {
-    <div class="catalog-toolbar">
-      <label class="catalog-search">
-        <span class="sr-only">Buscar</span>
-        <input
-          type="search"
-          placeholder="Buscar por nombre, código, SKU o categoría"
-          [ngModel]="busqueda()"
-          (ngModelChange)="busqueda.set($event)"
-        />
-      </label>
-      <span class="catalog-count">{{ seleccion().size }} de {{ productos().length }} elegidos</span>
-    </div>
+@if (cargando()) {
+  <p class="ac-estado" role="status"><i class="pi pi-spinner pi-spin" aria-hidden="true"></i> Cargando catálogo del negocio...</p>
+} @else if (productos().length === 0) {
+  <p class="ac-estado">Esta sucursal ya tiene todos los productos del negocio.</p>
+} @else {
+  <div class="ac-barra">
+    <label class="ac-buscador">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <span class="sr-only">Buscar</span>
+      <input
+        type="search"
+        placeholder="Buscar por nombre, código, SKU o categoría"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+    </label>
+    <button class="boton boton--secundario" type="button" [disabled]="guardando()" (click)="agregarTodos()">
+      Agregar todos ({{ productos().length }})
+    </button>
+  </div>
 
-    <div class="catalog-table-wrap">
-      <table class="catalog-table">
-        <thead>
-          <tr>
-            <th class="catalog-check">
+  <div class="ac-tabla">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" class="ac-check">
+            <input
+              type="checkbox"
+              class="casilla"
+              aria-label="Elegir todos los productos visibles"
+              [checked]="todosVisiblesElegidos()"
+              (change)="alternarVisibles()"
+            />
+          </th>
+          <th scope="col">Producto</th>
+          @if (categoriasVisibles()) {
+            <th scope="col">Categoría</th>
+          }
+          <th scope="col">Código</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (producto of visibles(); track producto.id) {
+          <tr [class.is-selected]="seleccion().has(producto.id)" (click)="alternar(producto.id)">
+            <td class="ac-check">
               <input
                 type="checkbox"
-                aria-label="Elegir todos los productos visibles"
-                [checked]="todosVisiblesElegidos()"
-                (change)="alternarVisibles()"
+                class="casilla"
+                [attr.aria-label]="'Elegir ' + producto.nombre"
+                [checked]="seleccion().has(producto.id)"
+                (click)="$event.stopPropagation()"
+                (change)="alternar(producto.id)"
               />
-            </th>
-            <th>Producto</th>
-            @if (categoriasVisibles()) {
-              <th>Categoría</th>
-            }
-            <th>Código</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (producto of visibles(); track producto.id) {
-            <tr [class.is-selected]="seleccion().has(producto.id)" (click)="alternar(producto.id)">
-              <td class="catalog-check">
-                <input
-                  type="checkbox"
-                  [attr.aria-label]="'Elegir ' + producto.nombre"
-                  [checked]="seleccion().has(producto.id)"
-                  (click)="$event.stopPropagation()"
-                  (change)="alternar(producto.id)"
-                />
-              </td>
-              <td>
-                <strong>{{ producto.nombre }}</strong>
-                @if (producto.presentacion) { <small>{{ producto.presentacion }}</small> }
-                @if (producto.variantes_faltantes > 0) {
-                  <small>{{ producto.variantes_faltantes }} variantes</small>
-                }
-              </td>
-              @if (categoriasVisibles()) {
-                <td>{{ producto.categoria ?? '—' }}</td>
+            </td>
+            <td class="ac-producto">
+              <strong>{{ producto.nombre }}</strong>
+              @if (producto.presentacion) { <small>{{ producto.presentacion }}</small> }
+              @if (producto.variantes_faltantes > 0) {
+                <span class="ac-etiqueta">{{ producto.variantes_faltantes }} variantes</span>
               }
-              <td>{{ producto.codigo_barras ?? producto.sku ?? '—' }}</td>
-            </tr>
-          } @empty {
-            <tr><td [attr.colspan]="categoriasVisibles() ? 4 : 3" class="catalog-empty">Sin coincidencias.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <footer class="catalog-actions">
-      <button class="secondary-button" type="button" [disabled]="guardando()" (click)="agregarTodos()">
-        Agregar todos ({{ productos().length }})
-      </button>
-      <button class="primary-button" type="button" [disabled]="guardando() || seleccion().size === 0" (click)="agregarElegidos()">
-        {{ guardando() ? 'Agregando...' : 'Agregar ' + seleccion().size + ' productos' }}
-      </button>
-    </footer>
-  }
-</section>
+              <small class="ac-movil">
+                {{ detalle(producto) }}
+              </small>
+            </td>
+            @if (categoriasVisibles()) {
+              <td class="ac-escritorio">{{ producto.categoria ?? '—' }}</td>
+            }
+            <td class="ac-escritorio ac-codigo">{{ producto.codigo_barras ?? producto.sku ?? '—' }}</td>
+          </tr>
+        } @empty {
+          <tr><td [attr.colspan]="categoriasVisibles() ? 4 : 3" class="ac-vacio">Sin coincidencias.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

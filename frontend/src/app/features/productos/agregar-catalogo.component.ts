@@ -1,6 +1,5 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
 
 import { ContextoService } from '../../contexto/contexto.service';
@@ -11,6 +10,9 @@ import { ProductosService } from './productos.service';
 /**
  * Surtido por sucursal (capability 28): el propietario elige qué productos del
  * catálogo del negocio entran a la sucursal activa. Entran sin precio ni stock.
+ *
+ * Se muestra dentro de la ventana de Productos: el pie de esa ventana usa `seleccion`,
+ * `alternarVisibles` y `agregarElegidos`; al terminar emite `agregado` y no navega.
  */
 @Component({
   selector: 'app-agregar-catalogo',
@@ -24,7 +26,10 @@ export class AgregarCatalogoComponent {
   /** Configuración > Vistas puede ocultar Categorías. */
   private readonly vistas = inject(VistasService);
   readonly categoriasVisibles = computed(() => this.vistas.visible('categorias'));
-  private readonly router = inject(Router);
+  /** Se agregaron productos a la sucursal. */
+  readonly agregado = output<number>();
+  /** Pide cerrar la ventana sin agregar. */
+  readonly cerrar = output<void>();
 
   readonly sucursal = this.contexto.sucursal;
   readonly productos = signal<BranchCatalogProduct[]>([]);
@@ -130,7 +135,7 @@ export class AgregarCatalogoComponent {
           title: 'Productos agregados',
           text: `Se agregaron ${agregados} productos sin precio. Complétalos con Carga masiva o en Validar costos y precios.`,
         });
-        void this.router.navigate(['/catalogo/productos']);
+        this.agregado.emit(agregados);
       },
       error: (response) => {
         this.guardando.set(false);
@@ -139,8 +144,14 @@ export class AgregarCatalogoComponent {
     });
   }
 
+  /** Resumen de una fila en móvil: presentación · categoría · código. */
+  detalle(producto: BranchCatalogProduct): string {
+    const categoria = this.categoriasVisibles() ? producto.categoria : null;
+    return [producto.presentacion, categoria, producto.codigo_barras ?? producto.sku].filter(Boolean).join(' · ') || 'Sin datos extra';
+  }
+
   volver(): void {
-    void this.router.navigate(['/catalogo/productos']);
+    this.cerrar.emit();
   }
 }
 

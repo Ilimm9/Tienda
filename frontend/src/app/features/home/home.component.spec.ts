@@ -50,22 +50,25 @@ describe('HomeComponent', () => {
     expect(saludoPorHora(19)).toBe('Buenas noches');
   });
 
-  it('da la bienvenida con la sucursal activa y los accesos permitidos', async () => {
-    const fixture = await crear(['catalogo.ver', 'compras.ver', 'sucursales.ver', 'equipo.empleados.ver'], true, 'listo', 'miembro');
+  it('da la bienvenida con la sucursal activa, sin accesos ni tarjeta de tips', async () => {
+    const fixture = await crear([], true, 'listo', 'miembro');
     const texto = fixture.nativeElement.textContent as string;
 
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Empresa THRS');
     expect(texto).toContain('Hoy estás en Sucursal Reforma.');
     expect(texto).toContain('Miembro');
-    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
-    expect(rutas).toEqual(['/ventas', '/productos', '/compras', '/equipo/empleados', '/sucursales', '/negocios']);
+    expect(fixture.nativeElement.querySelector('.resumen-tarjeta')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.consejo')).toBeNull();
   });
 
-  it('muestra solo las secciones que el rol permite', async () => {
-    const fixture = await crear([]);
+  it('muestra a la mascota con los tips de la app', async () => {
+    const fixture = await crear([], true, 'listo', 'miembro');
+    const boton: HTMLButtonElement = fixture.nativeElement.querySelector('app-mascota .mascota__boton');
 
-    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
-    expect(rutas).toEqual(['/ventas', '/negocios']);
+    expect(boton.getAttribute('aria-label')).toBe('Abrir tips de Stocki');
+    boton.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-mascota h2').textContent).toContain('Sube tu Excel tal cual');
   });
 
   it('a un miembro no le muestra pasos ni consulta las listas', async () => {
@@ -93,12 +96,18 @@ describe('HomeComponent', () => {
     expect(tarjetas[2].getAttribute('aria-pressed')).toBe('true');
     expect(detalle()).toBe('/productos/importar');
 
+    expect(guia.querySelector('.guia__rotulo').textContent).toContain('Paso 3 de 5 · Sigue este');
+    expect(guia.querySelectorAll('.guia__puntos li')).toHaveLength(3);
+
     tarjetas[3].click();
     fixture.detectChanges();
     expect(detalle()).toBe('/equipo/empleados');
-    tarjetas[4].click();
+    expect(guia.querySelector('.guia__puntos-titulo').textContent).toContain('Para tener en cuenta');
+    // «Ver siguiente paso» avanza al de la derecha.
+    guia.querySelector('.guia__acciones button').click();
     fixture.detectChanges();
     expect(detalle()).toBe('/compras/nueva');
+    expect(guia.querySelector('.guia__acciones button')).toBeNull();
   });
 
   it('oculta los pasos si todo está hecho o si una consulta falla', async () => {
@@ -114,28 +123,6 @@ describe('HomeComponent', () => {
     fixture = await crear([], true, 'listo', 'propietario');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.guia')).toBeNull();
-  });
-
-  it('recorre los consejos en ciclo', async () => {
-    const fixture = await crear([]);
-    const titulo = () => fixture.nativeElement.querySelector('.consejo h2').textContent;
-    const [anterior, siguiente] = fixture.nativeElement.querySelectorAll('.consejo__boton');
-
-    expect(titulo()).toContain('Sube tu Excel tal cual');
-    anterior.click();
-    fixture.detectChanges();
-    expect(titulo()).toContain('Un precio por sucursal');
-    siguiente.click();
-    siguiente.click();
-    fixture.detectChanges();
-    expect(titulo()).toContain('¿Sin código de barras?');
-  });
-
-  it('oculta Negocios a quien solo fue invitado', async () => {
-    const fixture = await crear([], false);
-
-    const rutas = [...fixture.nativeElement.querySelectorAll('a.resumen-tarjeta')].map((a: Element) => a.getAttribute('href'));
-    expect(rutas).toEqual(['/ventas']);
   });
 
   it('ofrece el asistente cuando falta la empresa', async () => {
