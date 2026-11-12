@@ -1,160 +1,300 @@
-.prices-page {
-  width: min(100%, var(--section-max-width));
-  margin: 0 auto;
-  padding: 36px var(--section-padding-inline) 56px;
-}
-.page-heading {
-  margin-bottom: 24px;
-}
-.eyebrow {
-  margin: 0 0 6px;
-  color: var(--primary);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.page-heading h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(1.5rem, 3vw, 2rem);
-}
-.page-heading p:last-child {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-}
-.state-card,
-.proposal-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-card);
-}
-.state-card {
-  padding: 24px;
-  color: var(--text-muted);
-}
-.error {
-  color: var(--danger);
-}
-.proposal-list {
-  display: grid;
-  gap: 16px;
-}
-.proposal-card {
-  padding: 24px;
-}
-.proposal-header h2 {
-  margin: 0;
-  color: var(--text);
-  font-size: 1.125rem;
-}
-.proposal-header p {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 24px;
-}
-.metric {
-  display: grid;
+/* Validar costos y precios (tablero 08). Base en el kit global de componentes. */
+.validar-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  min-width: 0;
+  padding: 32px 24px;
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  text-align: center;
 }
-.metric > strong,
-.metric-value {
-  color: var(--text);
-  font-size: 1.25rem;
-  font-weight: 700;
+
+.validar-aviso .icono-accion {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  color: inherit;
 }
-.price-input {
-  width: 100%;
-  min-height: 40px;
-  color: var(--text);
-  border-color: var(--border-strong);
-  background: var(--surface-raised);
-  font: inherit;
+
+.validar-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
 }
-.input-prefix,
-.input-suffix {
+
+.validar-vacio h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.validar-vacio p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.validar-vacio__icono {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--tone-sage-text);
+  background: var(--tone-sage);
+  font-size: 1.4rem;
+}
+
+.validar-filtros {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 14px 16px;
+}
+
+.validar-filtros__buscar {
+  flex: 1 1 240px;
+  max-width: 340px;
+}
+
+.validar-filtros__campo {
+  display: flex;
+  flex: 0 1 180px;
+  flex-direction: column;
+}
+
+.validar-filtros__resumen {
+  padding-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.validar-tarjeta {
+  padding: 14px 16px;
+}
+
+.validar-tarjeta > span {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.validar-tarjeta strong {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-tarjeta small {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.validar-tarjeta--sube {
+  color: #9a3a12;
+}
+
+.validar-tarjeta--gana {
+  color: var(--tone-sage-text);
+}
+
+.validar-seleccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13.5px;
+}
+
+.validar-seleccion strong {
+  font-weight: 600;
+}
+
+.validar-seleccion--activa {
+  border-color: var(--primary-border);
+  background: var(--primary-tint);
+}
+
+.validar-seleccion__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--text-body);
+  font-size: 13px;
+}
+
+.validar-numero {
+  width: 104px;
+  height: 40px;
+}
+
+.validar-numero--precio {
+  width: 120px;
+}
+
+.validar-numero input {
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-ticket {
+  overflow: hidden;
+}
+
+.validar-ticket__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 14px 20px;
+  background: var(--background);
+}
+
+.validar-ticket input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.validar-ticket__titulo {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.validar-ticket__linea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.validar-ticket__documento {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.validar-pastilla--neutra {
+  color: var(--text-body);
+  background: var(--tone-neutral);
+}
+
+.validar-pastilla--neutra::before {
+  display: none;
+}
+
+.validar-ticket__meta,
+.validar-ticket__ganancia > span,
+.validar-nota {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-ticket__ganancia {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-ticket__ganancia strong {
+  color: var(--tone-sage-text);
+  font-weight: 600;
+}
+
+.validar-tabla {
+  min-width: 1000px;
+}
+
+.validar-tabla td {
+  vertical-align: middle;
+}
+
+.validar-tabla__elegido {
+  background: var(--primary-tint);
+}
+
+.validar-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.validar-producto {
+  display: block;
+  font-weight: 600;
+}
+
+.validar-nuevo {
+  margin-top: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.validar-costo {
   display: flex;
   align-items: center;
-  min-height: 40px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface-raised);
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
-.input-prefix > span,
-.input-suffix > span {
-  padding: 0 0.65rem;
-  color: var(--text-muted);
-  font-weight: 700;
+
+.validar-costo .pi {
+  color: var(--text-subtle);
+  font-size: 12px;
 }
-.input-prefix .price-input,
-.input-suffix .price-input {
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
+
+.validar-costo__anterior {
+  color: var(--text-subtle);
+  text-decoration: line-through;
 }
-.input-prefix:focus-within,
-.input-suffix:focus-within {
-  outline: 2px solid var(--primary-border);
-  outline-offset: 1px;
+
+.validar-costo strong {
+  font-weight: 600;
 }
-.profit-summary {
-  margin: 20px 0 0;
-  color: var(--text-muted);
-  font-size: 0.875rem;
+
+.validar-cambio {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: var(--text-body);
+  background: var(--tone-neutral);
+  font-size: 11px;
+  font-weight: 600;
 }
-.profit-summary strong {
-  color: var(--text);
+
+.validar-cambio[data-tipo='sube'] {
+  color: #9a3a12;
+  background: #fbe6dc;
 }
-.public-price {
-  color: var(--primary);
+
+.validar-cambio[data-tipo='baja'] {
+  color: var(--tone-sage-text);
+  background: var(--tone-sage);
 }
-.proposal-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+
+.validar-cambio[data-tipo='nuevo'] {
+  color: var(--primary-hover);
+  background: var(--primary-soft);
 }
-.primary-button {
-  min-height: 40px;
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--primary);
-  border-radius: 8px;
-  color: #fff;
-  background: var(--primary);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+
+.validar-ganas {
+  display: block;
+  color: var(--tone-sage-text);
+  font-weight: 600;
 }
-.primary-button:hover {
-  background: var(--primary-hover);
-}
-.primary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-@media (max-width: 700px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .proposal-card {
-    padding: 18px;
-  }
-}
-@media (max-width: 480px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-  .proposal-actions .primary-button {
-    width: 100%;
-  }
+
+.validar-ganas--pierde {
+  color: var(--danger);
 }

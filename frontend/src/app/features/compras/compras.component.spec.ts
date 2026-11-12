@@ -2,9 +2,9 @@ import '@angular/common/locales/global/es-MX';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { Select } from 'primeng/select';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { ContextoService } from '../../contexto/contexto.service';
 import { ComprasComponent } from './compras.component';
@@ -63,8 +63,27 @@ describe('ComprasComponent', () => {
     const fixture = TestBed.createComponent(ComprasComponent);
     fixture.detectChanges();
 
-    const celda = fixture.nativeElement.querySelector('.data-table-card td') as HTMLElement;
+    const celda = fixture.nativeElement.querySelector('.compras-tabla td.compras-num') as HTMLElement;
     expect(celda.textContent?.trim()).toBe('21 oct 2026');
+  });
+
+  it('abre el detalle de la compra que llega en ?compra=', async () => {
+    service.list.mockReturnValueOnce(of({
+      items: [{ id: 'compra-9', fecha_recepcion: '2026-10-21T00:00:00Z', tipo_documento: 'TICKET', folio_documento: 'A9', forma_pago: 'EFECTIVO', total: 100, importe_pagado: 100 }],
+      total: 1,
+    }) as never);
+    await TestBed.configureTestingModule({
+      imports: [ComprasComponent],
+      providers: [
+        { provide: ComprasService, useValue: { ...service, view: vi.fn(() => new Subject()) } },
+        { provide: ContextoService, useValue: { puede: () => true, negocio: signal({ id: 'negocio-1' }), sucursal: signal({ id: 'sucursal-1' }) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: {}, queryParamMap: convertToParamMap({ compra: 'compra-9' }) } } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ComprasComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.accion()).toMatchObject({ tipo: 'ver', compra: { id: 'compra-9' } });
   });
 
   it('lista las compras de la sucursal activa y recarga al cambiarla', async () => {
@@ -93,21 +112,60 @@ describe('ComprasComponent', () => {
     const component = (await createFixture()).componentInstance;
     expect(component.total()).toBe(0);
 
-    component.details.at(0).patchValue({ cantidad_empaques: 2, costo_empaque: 100, descuento: 10 });
+    component.details.at(0).patchValue({ unidad_medida_id: 'caja-1', cantidad_empaques: 2, costo_empaque: 100, descuento: 10, tasa_iva: 0 });
     component.addDetail();
-    component.details.at(1).patchValue({ cantidad_empaques: 3, costo_empaque: 50, descuento: 0 });
-    component.form.controls.incluye_iva.setValue(true);
+    component.details.at(1).patchValue({ unidad_medida_id: 'caja-1', cantidad_empaques: 3, costo_empaque: 50, descuento: 0, tasa_iva: 0 });
 
     expect(component.subtotal()).toBe(340);
-    expect(component.iva()).toBe(54.4);
-    expect(component.total()).toBe(394.4);
+    expect(component.iva()).toBe(0);
+    expect(component.total()).toBe(340);
+  });
 
-    component.form.controls.incluye_ieps.setValue(true);
-    expect(component.ieps()).toBe(27.2);
+  it('calcula IEPS e IVA por producto con su desglose por tasa', async () => {
+    const component = (await createFixture()).componentInstance;
+    component.details.at(0).patchValue({ unidad_medida_id: 'caja-1', cantidad_empaques: 1, costo_empaque: 240, aplica_ieps: true, tasa_ieps: 8, tasa_iva: 16 });
+    component.addDetail();
+    component.details.at(1).patchValue({ unidad_medida_id: 'caja-1', cantidad_empaques: 1, costo_empaque: 264, aplica_ieps: false, tasa_iva: 0 });
 
-    component.form.controls.ieps.setValue(18);
-    expect(component.iva()).toBe(57.28);
-    expect(component.total()).toBe(415.28);
+    expect(component.ieps()).toBe(19.2);
+    expect(component.iva()).toBe(41.47);
+    expect(component.total()).toBe(564.67);
+    expect(component.costoPieza(0)).toBe(25.0558);
+    expect(component.costoPieza(1)).toBe(22);
+    expect(component.desgloseIeps()).toEqual([{ tasa: 8, base: 240, productos: 1, monto: 19.2 }]);
+    expect(component.desgloseIva().map((tasa) => tasa.tasa)).toEqual([16, 0]);
+  });
+
+  it('ajusta el IEPS del ticket repartiendo la diferencia y lo manda al guardar', async () => {
+    service.create.mockReturnValueOnce(of({}) as never);
+    const component = (await createFixture()).componentInstance;
+    component.form.patchValue({ proveedor_id: 'proveedor-1', folio_documento: 'A-1' });
+    component.details.at(0).patchValue({ producto_negocio_id: 'producto-1', unidad_medida_id: 'caja-1', cantidad_empaques: 1, costo_empaque: 240, aplica_ieps: true, tasa_ieps: 8, tasa_iva: 16 });
+    component.alternarAjusteIeps();
+    expect(component.form.controls.ieps_ajustado.value).toBe(19.2);
+    component.form.controls.ieps_ajustado.setValue(20);
+
+    expect(component.ieps()).toBe(20);
+    expect(component.diferenciaIeps()).toBe(0.8);
+
+    component.submit();
+    const request = service.create.mock.calls.at(-1)?.[1] as unknown as { ieps_ajustado: number; incluye_iva: boolean; detalles: { tasa_ieps: number; tasa_iva: number }[] };
+    expect(request.ieps_ajustado).toBe(20);
+    expect(request.incluye_iva).toBe(false);
+    expect(request.detalles[0]).toMatchObject({ tasa_ieps: 0.08, tasa_iva: 0.16 });
+    service.create.mockClear();
+  });
+
+  it('llena IEPS e IVA con lo guardado en el producto', async () => {
+    const component = (await createFixture()).componentInstance;
+    component.products.set([
+      { id: 'con', nombre: 'Gomilocas', sku: null, codigo_barras: null, del_proveedor: true, tasa_ieps: 0.265, tasa_iva: 0 },
+      { id: 'sin', nombre: 'Arroz', sku: null, codigo_barras: null, del_proveedor: true, tasa_ieps: null, tasa_iva: null },
+    ]);
+    component.selectProduct(0, 'con');
+    expect(component.details.at(0).value).toMatchObject({ aplica_ieps: true, tasa_ieps: 26.5, tasa_iva: 0 });
+    component.selectProduct(0, 'sin');
+    expect(component.details.at(0).value).toMatchObject({ aplica_ieps: false, tasa_iva: 16 });
   });
 
   it('contrae los productos anteriores al agregar uno y permite alternarlos', async () => {

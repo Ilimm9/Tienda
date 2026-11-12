@@ -21,9 +21,17 @@ type Repository struct{ db *gorm.DB }
 
 func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 
-func (r *Repository) List(businessID, branchID uuid.UUID) ([]compradomain.CompraProveedor, error) {
-	items := make([]compradomain.CompraProveedor, 0)
-	err := r.db.Where("negocio_id = ? AND sucursal_id = ?", businessID, branchID).Order("fecha_recepcion DESC, creado_en DESC").Find(&items).Error
+func (r *Repository) List(businessID, branchID uuid.UUID) ([]compraapp.CompraResumen, error) {
+	items := make([]compraapp.CompraResumen, 0)
+	err := r.db.Table("compras_proveedor c").Select(`c.*, COALESCE(pro.nombre, '') AS proveedor,
+		(SELECT COUNT(*) FROM compras_proveedor_detalles d WHERE d.compra_id = c.id AND NOT d.cancelado) AS productos,
+		(SELECT COALESCE(SUM(d.piezas_buenas), 0) FROM compras_proveedor_detalles d WHERE d.compra_id = c.id AND NOT d.cancelado) AS piezas,
+		(SELECT COUNT(*) FROM propuestas_costo_precio p JOIN compras_proveedor_detalles d ON d.id = p.compra_detalle_id WHERE d.compra_id = c.id AND p.estado = ?) AS costos_pendientes,
+		(SELECT COUNT(*) FROM propuestas_costo_precio p JOIN compras_proveedor_detalles d ON d.id = p.compra_detalle_id WHERE d.compra_id = c.id AND p.estado = ?) AS costos_validados,
+		(SELECT COUNT(*) FROM propuestas_costo_precio p JOIN compras_proveedor_detalles d ON d.id = p.compra_detalle_id WHERE d.compra_id = c.id AND p.estado = ?) AS costos_cancelados`,
+		preciodomain.EstadoPendiente, preciodomain.EstadoAutorizada, preciodomain.EstadoCancelada).
+		Joins("LEFT JOIN proveedores pro ON pro.id = c.proveedor_id").
+		Where("c.negocio_id = ? AND c.sucursal_id = ?", businessID, branchID).Order("c.fecha_recepcion DESC, c.creado_en DESC").Scan(&items).Error
 	return items, err
 }
 func (r *Repository) Get(businessID, id uuid.UUID) (compradomain.CompraProveedor, error) {
@@ -35,7 +43,9 @@ func (r *Repository) ListProductos(businessID, providerID uuid.UUID) ([]compraap
 	items := make([]compraapp.ProductoComprable, 0)
 	err := r.db.Table("producto_negocio pn").Select(`pn.id, COALESCE(p.nombre, vp.nombre) || COALESCE(' · ' || pv.clave, '') AS nombre, pn.sku_interno AS sku,
  (SELECT pc.codigo FROM producto_codigos pc WHERE pc.producto_id = p.id OR pc.producto_variante_id = pv.id ORDER BY pc.es_principal DESC LIMIT 1) AS codigo_barras,
- EXISTS (SELECT 1 FROM producto_proveedor pp WHERE pp.producto_negocio_id = pn.id AND pp.proveedor_id = ?) AS del_proveedor`, providerID).
+ EXISTS (SELECT 1 FROM producto_proveedor pp WHERE pp.producto_negocio_id = pn.id AND pp.proveedor_id = ?) AS del_proveedor,
+ (SELECT i.tasa FROM producto_impuestos pi JOIN impuestos i ON i.id = pi.impuesto_id WHERE pi.producto_negocio_id = pn.id AND i.tipo = 'IEPS' ORDER BY pi.creado_en DESC LIMIT 1) AS tasa_ieps,
+ (SELECT i.tasa FROM producto_impuestos pi JOIN impuestos i ON i.id = pi.impuesto_id WHERE pi.producto_negocio_id = pn.id AND i.tipo = 'IVA' ORDER BY pi.creado_en DESC LIMIT 1) AS tasa_iva`, providerID).
 		Joins("LEFT JOIN productos p ON p.id = pn.producto_id").Joins("LEFT JOIN producto_variantes pv ON pv.id = pn.producto_variante_id").
 		Joins("LEFT JOIN productos vp ON vp.id = pv.producto_id").
 		Where("pn.negocio_id = ? AND pn.activo = TRUE", businessID).
@@ -86,25 +96,42 @@ func (r *Repository) Create(businessID, userID uuid.UUID, input compraapp.CrearC
 		}
 		details := make([]compradomain.CompraProveedorDetalle, 0, len(input.Detalles))
 		subtotal := 0.0
+		perRow := input.PorRenglon()
 		for _, row := range input.Detalles {
 			detail, err := r.buildDetail(tx, businessID, providerID, row)
 			if err != nil {
 				return err
 			}
+			if perRow {
+				if err := applyRates(&detail, row); err != nil {
+					return err
+				}
+			}
 			subtotal += detail.Subtotal
 			details = append(details, detail)
 		}
 		subtotal = money(subtotal)
-		if input.IEPS < 0 || math.IsNaN(input.IEPS) || math.IsInf(input.IEPS, 0) {
-			return errors.New("el importe de IEPS no es válido")
-		}
-		ieps := 0.0
-		if input.IncluyeIEPS {
-			ieps = money(input.IEPS)
-		}
-		iva := 0.0
-		if input.IncluyeIVA {
-			iva = money((subtotal + ieps) * 0.16)
+		ieps, iva := 0.0, 0.0
+		if perRow {
+			if err := compradomain.CalcularImpuestosRenglon(details, input.IEPSAjustado); err != nil {
+				return err
+			}
+			for _, detail := range details {
+				ieps += detail.IEPS
+				iva += detail.IVA
+			}
+			ieps, iva = money(ieps), money(iva)
+		} else {
+			// Cliente anterior: un IEPS capturado y un IVA de la compra que se prorratean.
+			if input.IEPS < 0 || math.IsNaN(input.IEPS) || math.IsInf(input.IEPS, 0) {
+				return errors.New("el importe de IEPS no es válido")
+			}
+			if input.IncluyeIEPS {
+				ieps = money(input.IEPS)
+			}
+			if input.IncluyeIVA {
+				iva = money((subtotal + ieps) * 0.16)
+			}
 		}
 		taxes := money(ieps + iva)
 		total := money(subtotal + taxes)
@@ -112,12 +139,18 @@ func (r *Repository) Create(businessID, userID uuid.UUID, input compraapp.CrearC
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
-		for _, detail := range details {
-			if err := r.receiveDetail(tx, created, detail); err != nil {
+		for i := range created.Detalles {
+			detail := &created.Detalles[i]
+			if err := r.receiveDetail(tx, created, detail, compradomain.MovimientoCompraEntrada); err != nil {
 				return err
 			}
-			if err := r.createPriceProposal(tx, created, detail, subtotal, taxes); err != nil {
+			if err := r.createPriceProposal(tx, created, *detail); err != nil {
 				return err
+			}
+			if detail.ImpuestosPorRenglon {
+				if err := rememberRates(tx, *detail); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -189,12 +222,8 @@ func (r *Repository) buildDetail(tx *gorm.DB, businessID, providerID uuid.UUID, 
 }
 
 // createPriceProposal guarda el costo final de la recepción sin hacerlo vigente hasta que la sucursal lo valide.
-func (r *Repository) createPriceProposal(tx *gorm.DB, purchase compradomain.CompraProveedor, detail compradomain.CompraProveedorDetalle, subtotal, taxes float64) error {
-	allocatedTaxes := 0.0
-	if subtotal > 0 {
-		allocatedTaxes = taxes * detail.Subtotal / subtotal
-	}
-	finalCost := money4((detail.Subtotal + allocatedTaxes) / float64(detail.PiezasBuenas))
+func (r *Repository) createPriceProposal(tx *gorm.DB, purchase compradomain.CompraProveedor, detail compradomain.CompraProveedorDetalle) error {
+	finalCost := compradomain.CostoFinal(purchase, detail)
 	var current preciodomain.PrecioSucursal
 	err := tx.Where("sucursal_id = ? AND producto_negocio_id = ?", purchase.SucursalID, detail.ProductoNegocioID).First(&current).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -221,15 +250,13 @@ func (r *Repository) createPriceProposal(tx *gorm.DB, purchase compradomain.Comp
 			return configErr
 		}
 	}
-	suggested := math.Ceil(finalCost * (1 + margin))
+	suggested := preciodomain.PrecioSugerido(finalCost, margin)
 	return tx.Create(&preciodomain.Propuesta{NegocioID: purchase.NegocioID, SucursalID: purchase.SucursalID, CompraDetalleID: detail.ID, ProductoNegocioID: detail.ProductoNegocioID, PiezasBuenas: detail.PiezasBuenas, CostoCapturado: finalCost, CostoAnterior: previousCost, PrecioAnterior: price, MargenSugerido: margin, PrecioSugerido: suggested, Estado: preciodomain.EstadoPendiente}).Error
 }
 
-func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProveedor, detail compradomain.CompraProveedorDetalle) error {
-	finalCost := detail.CostoPieza
-	if purchase.Subtotal > 0 {
-		finalCost = money4((detail.Subtotal + purchase.Impuestos*detail.Subtotal/purchase.Subtotal) / float64(detail.PiezasBuenas))
-	}
+// receiveDetail suma las piezas buenas, crea el lote si hay datos de lote y agrega el movimiento del tipo dado.
+func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProveedor, detail *compradomain.CompraProveedorDetalle, tipo string) error {
+	finalCost := compradomain.CostoFinal(purchase, *detail)
 	var inventory domain.InventarioSucursal
 	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("sucursal_id = ? AND producto_negocio_id = ?", purchase.SucursalID, detail.ProductoNegocioID).First(&inventory).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -252,8 +279,12 @@ func (r *Repository) receiveDetail(tx *gorm.DB, purchase compradomain.CompraProv
 			return err
 		}
 		lotID = &lot.ID
+		detail.LoteID = lotID
+		if err := tx.Model(&compradomain.CompraProveedorDetalle{}).Where("id = ?", detail.ID).Update("lote_id", lot.ID).Error; err != nil {
+			return err
+		}
 	}
-	return tx.Create(&domain.MovimientoInventario{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, LoteID: lotID, Tipo: "COMPRA_ENTRADA", Cantidad: float64(detail.PiezasBuenas), StockAnterior: old, StockNuevo: next, CostoUnitario: &finalCost, Referencia: &purchase.FolioDocumento, UsuarioID: &purchase.RecibidoPorUsuarioID}).Error
+	return tx.Create(&domain.MovimientoInventario{SucursalID: purchase.SucursalID, ProductoNegocioID: detail.ProductoNegocioID, LoteID: lotID, Tipo: tipo, Cantidad: float64(detail.PiezasBuenas), StockAnterior: old, StockNuevo: next, CostoUnitario: &finalCost, Referencia: &purchase.FolioDocumento, UsuarioID: &purchase.RecibidoPorUsuarioID}).Error
 }
 
 func (r *Repository) createNewProduct(tx *gorm.DB, businessID, providerID uuid.UUID, name, barcode string) (uuid.UUID, error) {
@@ -307,6 +338,57 @@ func linkProvider(tx *gorm.DB, productID, providerID uuid.UUID) error {
 		return err
 	}
 	return tx.Create(&domain.ProductoProveedor{ProductoNegocioID: productID, ProveedorID: providerID, EsPrincipal: principal == 0}).Error
+}
+
+// applyRates valida y copia las tasas del renglón; lo que falte vale 0.
+func applyRates(detail *compradomain.CompraProveedorDetalle, row compraapp.CrearDetalleInput) error {
+	ieps, iva := 0.0, 0.0
+	if row.TasaIEPS != nil {
+		ieps = *row.TasaIEPS
+	}
+	if row.TasaIVA != nil {
+		iva = *row.TasaIVA
+	}
+	if !compradomain.TasaValida(compradomain.ImpuestoIEPS, ieps) {
+		return errors.New("la tasa de IEPS no es válida")
+	}
+	if !compradomain.TasaValida(compradomain.ImpuestoIVA, iva) {
+		return errors.New("la tasa de IVA no es válida")
+	}
+	detail.ImpuestosPorRenglon, detail.TasaIEPS, detail.TasaIVA = true, ieps, iva
+	return nil
+}
+
+// rememberRates guarda en `producto_impuestos` las tasas usadas: un renglón de IVA y uno de IEPS por producto.
+// Si ya existe el del tipo se actualiza su impuesto; nunca se borran renglones.
+func rememberRates(tx *gorm.DB, detail compradomain.CompraProveedorDetalle) error {
+	for _, item := range []struct {
+		tipo string
+		tasa float64
+	}{{compradomain.ImpuestoIEPS, detail.TasaIEPS}, {compradomain.ImpuestoIVA, detail.TasaIVA}} {
+		var tax domain.Impuesto
+		if err := tx.Where("tipo = ? AND tasa = ? AND activo = TRUE", item.tipo, item.tasa).Order("creado_en ASC").First(&tax).Error; err != nil {
+			return fmt.Errorf("no se encontró la tasa %s en el catálogo: %w", item.tipo, err)
+		}
+		var existing []domain.ProductoImpuesto
+		if err := tx.Table("producto_impuestos pi").Select("pi.*").Joins("JOIN impuestos i ON i.id = pi.impuesto_id").
+			Where("pi.producto_negocio_id = ? AND i.tipo = ?", detail.ProductoNegocioID, item.tipo).Order("pi.creado_en DESC").Scan(&existing).Error; err != nil {
+			return err
+		}
+		if len(existing) == 0 {
+			if err := tx.Create(&domain.ProductoImpuesto{ProductoNegocioID: detail.ProductoNegocioID, ImpuestoID: tax.ID}).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if existing[0].ImpuestoID == tax.ID {
+			continue
+		}
+		if err := tx.Model(&domain.ProductoImpuesto{}).Where("id = ?", existing[0].ID).Update("impuesto_id", tax.ID).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validPayment(value string) bool {

@@ -10,6 +10,7 @@ import (
 	plataformadomain "tienda/backend/internal/domain/plataforma"
 	preciodomain "tienda/backend/internal/domain/precio"
 	"tienda/backend/internal/infrastructure"
+	comprainfra "tienda/backend/internal/infrastructure/compra"
 	cuentainfra "tienda/backend/internal/infrastructure/cuenta"
 	negocioinfra "tienda/backend/internal/infrastructure/negocio"
 	plataformainfra "tienda/backend/internal/infrastructure/plataforma"
@@ -56,7 +57,7 @@ func Init(db *gorm.DB) error {
 		&domain.ProductoUnidad{}, &domain.ProductoNegocio{}, &domain.ProductoSKUConsecutivo{}, &domain.Impuesto{},
 		&domain.ProductoImpuesto{}, &domain.InventarioSucursal{}, &domain.Proveedor{},
 		&domain.ProductoProveedor{}, &domain.Lote{}, &domain.MovimientoInventario{},
-		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{},
+		&compradomain.CompraProveedor{}, &compradomain.CompraProveedorDetalle{}, &compradomain.CompraProveedorEvento{},
 		&preciodomain.Propuesta{}, &preciodomain.PrecioSucursal{}, &preciodomain.HistorialCostoPrecioSucursal{}, &preciodomain.ConfiguracionSucursal{},
 		&plataformadomain.RolPlataforma{}, &plataformadomain.RolUsuarioPlataforma{},
 		&plataformadomain.AuditoriaPlataforma{}, &plataformadomain.ActividadUsuarioDiaria{},
@@ -109,6 +110,9 @@ func Init(db *gorm.DB) error {
 		return err
 	}
 	if err := negocioinfra.MigratePuestosNegocio(db); err != nil {
+		return err
+	}
+	if err := comprainfra.Migrate(db); err != nil {
 		return err
 	}
 

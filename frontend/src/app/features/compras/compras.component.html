@@ -8,6 +8,9 @@
       </div>
       @if (purchases().length > 0) {
         <div class="purchase-actions">
+          <button *appPuede="P.precioVer" class="secondary-button" type="button" (click)="lista()?.abrirExcel()">
+            <i class="pi pi-download" aria-hidden="true"></i> Descargar Excel
+          </button>
           <button *appPuede="P.compraRegistrar" class="primary-button" type="button" routerLink="/compras/nueva">
             <i class="pi pi-plus" aria-hidden="true"></i> Registrar compra
           </button>
@@ -21,70 +24,44 @@
     } @else if (!purchases().length) {
       <div class="compras-vacio">
         <section class="purchase-card compras-guia" aria-labelledby="titulo-guia">
-          <span class="empty-icon"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
-          <div>
-            <h2 id="titulo-guia">Tu primera compra toma un minuto</h2>
-            <p>No necesitas tener todo dado de alta: puedes crear el proveedor o el producto ahí mismo, sin salir de la compra.</p>
+          <div class="compras-guia__intro">
+            <span class="compras-guia__icono"><i class="pi pi-shopping-bag" aria-hidden="true"></i></span>
+            <h2 id="titulo-guia">Aún no registras compras</h2>
+            <p>Tu primera compra toma un minuto. Si falta el proveedor o el producto, lo creas ahí mismo.</p>
           </div>
           <ol class="compras-guia__pasos">
-            <li><span>1</span><div><strong>Elige a quién le compraste</strong><small>Si no tiene un proveedor fijo, usa «Proveedor general».</small></div></li>
-            <li><span>2</span><div><strong>Agrega lo que recibiste</strong><small>Por pieza o por caja: 8 piezas sueltas o 2 cajas de 12.</small></div></li>
-            <li><span>3</span><div><strong>Revisa el total y guarda</strong><small>Las existencias suben en tu sucursal y el costo queda registrado.</small></div></li>
+            <li><span>1</span><strong>Elige el proveedor</strong><small>¿Sin proveedor fijo? Usa «Proveedor general».</small></li>
+            <li><span>2</span><strong>Agrega lo que recibiste</strong><small>Por pieza o por caja.</small></li>
+            <li><span>3</span><strong>Guarda</strong><small>Suben existencias y queda el costo.</small></li>
           </ol>
-          <button *appPuede="P.compraRegistrar" class="primary-button compras-guia__accion" type="button" routerLink="/compras/nueva">
+          <button *appPuede="P.compraRegistrar" class="primary-button" type="button" routerLink="/compras/nueva">
             Registrar primera compra <i class="pi pi-arrow-right" aria-hidden="true"></i>
           </button>
         </section>
         @if (packagingUnits().length || providers().length) {
-          <aside class="compras-listo" aria-labelledby="titulo-listo">
-            <span class="compras-listo__rotulo"><i class="pi pi-check" aria-hidden="true"></i>Ya viene listo</span>
-            <h2 id="titulo-listo">Preparamos lo básico para que no empieces de cero</h2>
-            @if (packagingUnits().length) {
-              <div class="compras-listo__grupo">
-                <span class="compras-listo__titulo">Unidades de empaque</span>
-                <div class="compras-listo__chips">
-                  @for (unit of packagingUnits(); track unit.id) {
-                    <span>{{ unit.nombre }} · {{ unit.factor_a_base }}</span>
-                  }
-                </div>
-              </div>
-            }
-            @if (providers().length) {
-              <div class="compras-listo__grupo">
-                <span class="compras-listo__titulo">Proveedores</span>
-                <div class="compras-listo__chips">
-                  @for (provider of providers(); track provider.id) {
-                    <span>{{ provider.nombre }}</span>
-                  }
-                </div>
-              </div>
-            }
-            <p>Son tuyos: puedes renombrarlos, desactivarlos o crear otros en Catálogo y Proveedores.</p>
-          </aside>
+          <section class="compras-listo" aria-labelledby="titulo-listo">
+            <span class="compras-listo__icono"><i class="pi pi-check" aria-hidden="true"></i></span>
+            <span class="compras-listo__texto">
+              <strong id="titulo-listo">Ya tienes lo básico para empezar</strong>
+              <small>Formas de compra y proveedores precargados. Puedes renombrarlos o desactivarlos.</small>
+            </span>
+            <span class="compras-listo__enlaces">
+              @if (packagingUnits().length) {
+                <a routerLink="/catalogo/unidades-medida"><b>{{ packagingUnits().length }}</b> {{ packagingUnits().length === 1 ? 'forma de compra' : 'formas de compra' }}</a>
+              }
+              @if (providers().length) {
+                <a routerLink="/proveedores"><b>{{ providers().length }}</b> {{ providers().length === 1 ? 'proveedor' : 'proveedores' }}</a>
+              }
+            </span>
+          </section>
         }
       </div>
     } @else {
-      <section class="purchase-card data-table-card">
-        <p-table [value]="purchases()" class="app-table" responsiveLayout="scroll"
-          ><ng-template #header
-            ><tr>
-              <th>Recepción</th>
-              <th>Documento</th>
-              <th>Pago</th>
-              <th>Total</th>
-              <th>Pagado</th>
-            </tr></ng-template
-          ><ng-template #body let-item
-            ><tr>
-              <td>{{ item.fecha_recepcion | date: 'dd MMM yyyy' : 'UTC' : 'es-MX' }}</td>
-              <td>{{ item.tipo_documento }} {{ item.folio_documento }}</td>
-              <td>{{ item.forma_pago }}</td>
-              <td>{{ item.total | currency: 'MXN' }}</td>
-              <td>{{ item.importe_pagado | currency: 'MXN' }}</td>
-            </tr></ng-template
-          ></p-table
-        >
-      </section>
+      @if (aviso()) {
+        <p class="aviso aviso--salvia" role="status"><i class="pi pi-check-circle" aria-hidden="true"></i>{{ aviso() }}</p>
+      }
+      <app-compras-lista [compras]="purchases()" (accion)="abrirAccion($event)" (cambio)="recargar()" />
+      <app-compra-ventanas [accion]="accion()" (cerrar)="accion.set(null)" (cambio)="recargar($event)" />
     }
   } @else {
     <header class="purchase-header">
@@ -172,7 +149,7 @@
             <div class="purchase-section-heading">
               <div>
                 <h2 class="purchase-step-title">2 · ¿Qué recibiste?</h2>
-                <p>Indica los empaques recibidos y el costo de cada producto.</p>
+                <p>IEPS e IVA van por producto. Se llenan con lo guardado en el catálogo; cámbialos si el ticket dice otra cosa.</p>
               </div>
               <button class="secondary-button" type="button" (click)="addDetail()">
                 <i class="pi pi-plus" aria-hidden="true"></i> Agregar producto
@@ -290,11 +267,40 @@
                           formControlName="descuento"
                       /></label>
                     </div>
+                    <div class="franja-impuesto" [class.franja-impuesto--activa]="detail.get('aplica_ieps')?.value">
+                      <label class="purchase-checkbox"><input type="checkbox" formControlName="aplica_ieps" /> Aplica IEPS</label>
+                      @if (detail.get('aplica_ieps')?.value) {
+                        <label class="franja-impuesto__tasa"
+                          >Tasa<select formControlName="tasa_ieps" [attr.aria-label]="'Tasa de IEPS del producto ' + ($index + 1)">
+                            @for (tasa of tasasIeps; track tasa) {
+                              <option [ngValue]="tasa">{{ tasa }} %</option>
+                            }
+                          </select></label
+                        >
+                        <span class="franja-impuesto__monto">IEPS de este producto <strong>{{ iepsRenglon($index) | currency: 'MXN' }}</strong></span>
+                      } @else {
+                        <span class="franja-impuesto__monto franja-impuesto__monto--nota">Sin IEPS: no se le suma al costo.</span>
+                      }
+                    </div>
+                    <div class="franja-impuesto">
+                      <label class="franja-impuesto__tasa franja-impuesto__tasa--fuerte"
+                        >IVA<select formControlName="tasa_iva" [attr.aria-label]="'IVA del producto ' + ($index + 1)">
+                          @for (tasa of tasasIva; track tasa) {
+                            <option [ngValue]="tasa">{{ tasa }} %</option>
+                          }
+                        </select></label
+                      >
+                      @if (Number(detail.get('tasa_iva')?.value) > 0) {
+                        <span class="franja-impuesto__monto">IVA de este producto <strong>{{ ivaRenglon($index) | currency: 'MXN' }}</strong></span>
+                      } @else {
+                        <span class="franja-impuesto__monto franja-impuesto__monto--nota">IVA 0 %: no se le suma al costo.</span>
+                      }
+                    </div>
                     @if (selectedUnit($index)) {
                       <p class="purchase-pieces">
                         <i class="pi pi-info-circle" aria-hidden="true"></i>
-                        Entran <strong>{{ pieces($index) }} {{ pieces($index) === 1 ? 'pieza' : 'piezas' }}</strong> a {{ sucursalNombre() }} · subtotal
-                        {{ detailSubtotal($index) | currency: 'MXN' }}
+                        Entran <strong>{{ pieces($index) }} {{ pieces($index) === 1 ? 'pieza' : 'piezas' }}</strong> a {{ sucursalNombre() }} · costo por pieza con impuestos
+                        <strong>{{ costoPieza($index) | currency: 'MXN' : 'symbol' : '1.2-4' }}</strong>
                       </p>
                     }
                     <details
@@ -338,40 +344,43 @@
           </section>
           <section class="purchase-card purchase-form-card purchase-totals-card">
             <h2 class="purchase-step-title">3 · Revisa y guarda</h2>
-            <div class="tax-options">
-              <label class="purchase-checkbox"
-                ><input type="checkbox" formControlName="incluye_ieps" /> Incluir IEPS</label
-              >
-              @if (form.controls.incluye_ieps.value) {
-                <label
-                  >Importe IEPS<input
-                    pInputText
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    formControlName="ieps"
-                /></label>
-              }
-              <label class="purchase-checkbox"
-                ><input type="checkbox" formControlName="incluye_iva" /> Incluir IVA (16 %)</label
-              >
-            </div>
-            <div class="purchase-summary">
-              <span
-                >Subtotal <strong>{{ subtotal() | currency: 'MXN' }}</strong></span
-              ><span
-                >IEPS <strong>{{ ieps() | currency: 'MXN' }}</strong></span
-              ><span
-                >IVA <strong>{{ iva() | currency: 'MXN' }}</strong></span
-              ><span
-                >Impuestos <strong>{{ taxes() | currency: 'MXN' }}</strong></span
-              ><span class="purchase-total"
-                >Total <strong>{{ total() | currency: 'MXN' }}</strong></span
-              >
-            </div>
-            <p>
-              Revisa el total calculado antes de confirmar.
-            </p>
+            <dl class="resumen-compra">
+              <div class="resumen-compra__fila"><dt>Productos</dt><dd>{{ details.length }}</dd></div>
+              <div class="resumen-compra__fila"><dt>Subtotal</dt><dd>{{ subtotal() | currency: 'MXN' }}</dd></div>
+              <div class="resumen-compra__bloque">
+                <div class="resumen-compra__fila resumen-compra__fila--titulo"><dt>IEPS</dt><dd>{{ ieps() | currency: 'MXN' }}</dd></div>
+                @for (tasa of desgloseIeps(); track tasa.tasa) {
+                  <div class="resumen-compra__tasa">
+                    <span>{{ tasa.tasa }} % sobre {{ tasa.base | currency: 'MXN' }} · {{ tasa.productos }} {{ tasa.productos === 1 ? 'producto' : 'productos' }}</span>
+                    <span>{{ tasa.monto | currency: 'MXN' }}</span>
+                  </div>
+                } @empty {
+                  <span class="resumen-compra__nota">Ningún producto lleva IEPS.</span>
+                }
+                @if (form.controls.ajustar_ieps.value) {
+                  <label class="resumen-compra__ajuste"
+                    >Importe IEPS del ticket<input pInputText type="number" min="0" step="0.01" formControlName="ieps_ajustado" />
+                    <small>Si el ticket redondea distinto. La diferencia ({{ diferenciaIeps() | currency: 'MXN' }}) se reparte entre los productos con IEPS.</small>
+                  </label>
+                }
+                @if (desgloseIeps().length) {
+                  <button type="button" class="enlace-boton" (click)="alternarAjusteIeps()">
+                    {{ form.controls.ajustar_ieps.value ? 'Usar el IEPS calculado' : 'Ajustar importe del ticket' }}
+                  </button>
+                }
+              </div>
+              <div class="resumen-compra__bloque">
+                <div class="resumen-compra__fila resumen-compra__fila--titulo"><dt>IVA</dt><dd>{{ iva() | currency: 'MXN' }}</dd></div>
+                @for (tasa of desgloseIva(); track tasa.tasa) {
+                  <div class="resumen-compra__tasa">
+                    <span>{{ tasa.tasa }} % sobre {{ tasa.base | currency: 'MXN' }} · {{ tasa.productos }} {{ tasa.productos === 1 ? 'producto' : 'productos' }}</span>
+                    <span>{{ tasa.monto | currency: 'MXN' }}</span>
+                  </div>
+                }
+              </div>
+              <div class="resumen-compra__fila resumen-compra__total"><dt>Total</dt><dd>{{ total() | currency: 'MXN' }}</dd></div>
+            </dl>
+            <p class="resumen-compra__nota">IEPS e IVA se calculan por producto: cada impuesto suma solo al costo de su propio producto. El precio sugerido se redondea hacia arriba al peso.</p>
             @if (error()) {
               <p class="form-error" role="alert">{{ error() }}</p>
             }

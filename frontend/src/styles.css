@@ -7,6 +7,7 @@
 @import './styles/tables.css';
 @import './styles/uploads.css';
 @import './styles/componentes.css';
+@import './styles/compras.css';
 
 :root {
   /* Opción G: base crema de A, topbar índigo y violeta para las acciones.

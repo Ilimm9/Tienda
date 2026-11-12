@@ -1,0 +1,226 @@
+<app-ventana-compra
+  [abierta]="tipo() !== null"
+  [titulo]="titulo()"
+  [subtitulo]="subtitulo()"
+  [icono]="tipo() === 'suspender' ? 'pi-pause-circle' : tipo() === 'reactivar' ? 'pi-sync' : tipo() === 'editar' ? 'pi-pencil' : 'pi-receipt'"
+  [ancho]="tipo() === 'ver' || tipo() === 'editar' ? 920 : 600"
+  (cerrar)="cerrarVentana()"
+>
+  @if (cargando()) {
+    <p class="ventana-cargando">Cargando compra…</p>
+  } @else if (compra(); as c) {
+    @switch (tipo()) {
+      @case ('ver') {
+        @if (suspendida()) {
+          <p class="aviso aviso--error">
+            <i class="pi pi-pause-circle" aria-hidden="true"></i>
+            <span><b>Suspendida</b> {{ c.suspendido_en ? 'el ' + (c.suspendido_en | date: 'dd/MM/yyyy') : '' }}{{ c.motivo_suspension ? ' · ' + c.motivo_suspension : '' }}</span>
+          </p>
+        }
+        <div class="tabla-desplazable">
+          <table class="tabla ventana-tabla">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                <th scope="col">Empaques</th>
+                <th scope="col" class="ventana-num">Piezas buenas</th>
+                <th scope="col" class="ventana-num">Subtotal</th>
+                <th scope="col" class="ventana-num">IEPS</th>
+                <th scope="col" class="ventana-num">IVA</th>
+                <th scope="col" class="ventana-num">Costo por pieza</th>
+                <th scope="col">Costo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of c.renglones; track r.id) {
+                <tr>
+                  <td>
+                    <strong class="ventana-producto">{{ r.producto }}</strong>
+                    @if (r.piezas_danadas || r.piezas_faltantes) {
+                      <span class="ventana-nota">{{ r.piezas_danadas }} dañadas · {{ r.piezas_faltantes }} faltantes</span>
+                    }
+                  </td>
+                  <td>{{ r.cantidad_empaques }} × {{ r.unidad }}</td>
+                  <td class="ventana-num">{{ r.piezas_buenas }}</td>
+                  <td class="ventana-num">{{ r.subtotal | currency: 'MXN' }}</td>
+                  <td class="ventana-num">{{ r.ieps | currency: 'MXN' }}</td>
+                  <td class="ventana-num">{{ r.iva | currency: 'MXN' }}</td>
+                  <td class="ventana-num">{{ r.costo_final | currency: 'MXN' : 'symbol' : '1.2-4' }}</td>
+                  <td><span class="pastilla ventana-costo" [attr.data-costo]="r.estado_costo">{{ etiquetaCosto(r.estado_costo) }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <dl class="resumen-compra ventana-resumen">
+          <div class="resumen-compra__fila"><dt>Subtotal</dt><dd>{{ c.subtotal | currency: 'MXN' }}</dd></div>
+          <div class="resumen-compra__fila"><dt>IEPS</dt><dd>{{ c.ieps | currency: 'MXN' }}</dd></div>
+          <div class="resumen-compra__fila"><dt>IVA</dt><dd>{{ c.iva | currency: 'MXN' }}</dd></div>
+          <div class="resumen-compra__fila"><dt>Pagado</dt><dd>{{ c.importe_pagado | currency: 'MXN' }}</dd></div>
+          <div class="resumen-compra__fila resumen-compra__total"><dt>Total</dt><dd>{{ c.total | currency: 'MXN' }}</dd></div>
+        </dl>
+      }
+      @case ('editar') {
+        <div class="ventana-seccion">
+          <span class="ventana-caja__titulo">Documento</span>
+          <div class="ventana-rejilla">
+            <label class="campo-bloque">
+              <span class="etiqueta">Tipo de documento</span>
+              <span class="campo-grupo campo-grupo--select">
+                <select [ngModel]="encabezado().tipo_documento" (ngModelChange)="cambiarEncabezado('tipo_documento', $event)">
+                  @for (tipoDocumento of documentTypes; track tipoDocumento) {
+                    <option [value]="tipoDocumento">{{ tipoDocumento === 'FACTURA' ? 'Factura' : 'Ticket' }}</option>
+                  }
+                </select>
+              </span>
+            </label>
+            <label class="campo-bloque"><span class="etiqueta">Folio</span><input class="campo" [ngModel]="encabezado().folio_documento" (ngModelChange)="cambiarEncabezado('folio_documento', $event)" /></label>
+            <label class="campo-bloque"><span class="etiqueta">Fecha del documento</span><input class="campo" type="date" [ngModel]="encabezado().fecha_documento" (ngModelChange)="cambiarEncabezado('fecha_documento', $event)" /></label>
+            <label class="campo-bloque"><span class="etiqueta">Fecha de recepción</span><input class="campo" type="date" [ngModel]="encabezado().fecha_recepcion" (ngModelChange)="cambiarEncabezado('fecha_recepcion', $event)" /></label>
+            <label class="campo-bloque">
+              <span class="etiqueta">Forma de pago</span>
+              <span class="campo-grupo campo-grupo--select">
+                <select [ngModel]="encabezado().forma_pago" (ngModelChange)="cambiarEncabezado('forma_pago', $event)">
+                  @for (forma of paymentMethods; track forma) {
+                    <option [value]="forma">{{ forma }}</option>
+                  }
+                </select>
+              </span>
+            </label>
+            @if (encabezado().forma_pago === 'TRANSFERENCIA' || encabezado().forma_pago === 'TARJETA') {
+              <label class="campo-bloque"><span class="etiqueta">Número de cuenta</span><input class="campo" [ngModel]="encabezado().numero_cuenta" (ngModelChange)="cambiarEncabezado('numero_cuenta', $event)" /></label>
+            }
+            <label class="campo-bloque">
+              <span class="etiqueta">Proveedor</span>
+              <span class="campo-grupo campo-grupo--lectura"><i class="pi pi-lock candado" aria-hidden="true"></i><input [value]="c.proveedor" readonly /></span>
+            </label>
+          </div>
+          <label class="campo-bloque"><span class="etiqueta">Observaciones</span><input class="campo" [ngModel]="encabezado().observaciones" (ngModelChange)="cambiarEncabezado('observaciones', $event)" /></label>
+          <span class="ayuda">El proveedor no se cambia. Si el folio ya existe para este proveedor y tipo, no se podrá guardar.</span>
+        </div>
+        <div class="ventana-seccion">
+          <span class="ventana-caja__titulo">Productos</span>
+          @if (bloqueada()) {
+            <p class="aviso aviso--atencion">
+              <i class="pi pi-lock" aria-hidden="true"></i>
+              <span>{{ validados() }} {{ validados() === 1 ? 'costo ya está validado' : 'costos ya están validados' }}: los productos no se pueden cambiar. Puedes corregir el documento.</span>
+            </p>
+          }
+          @for (r of renglones(); track r.fila.id; let i = $index) {
+            <div class="ventana-renglon">
+              <span class="ventana-renglon__nombre"><strong>{{ r.fila.producto }}</strong><span class="ventana-nota">{{ r.fila.unidad }} · {{ r.fila.piezas_buenas }} piezas buenas</span></span>
+              <label class="campo-bloque"><span class="etiqueta">Empaques</span><input class="campo" type="number" min="1" [disabled]="bloqueada()" [ngModel]="r.empaques" (ngModelChange)="cambiarRenglon(i, { empaques: $event })" /></label>
+              <label class="campo-bloque"><span class="etiqueta">Costo empaque</span><input class="campo" type="number" min="0" step="0.01" [disabled]="bloqueada()" [ngModel]="r.costo" (ngModelChange)="cambiarRenglon(i, { costo: $event })" /></label>
+              <label class="campo-bloque">
+                <span class="etiqueta">IEPS</span>
+                <span class="campo-grupo campo-grupo--select">
+                  <select [disabled]="bloqueada()" [ngModel]="r.ieps" (ngModelChange)="cambiarRenglon(i, { ieps: +$event })">
+                    <option [ngValue]="0">Sin IEPS</option>
+                    @for (tasa of tasasIeps; track tasa) {
+                      <option [ngValue]="tasa">{{ tasa }} %</option>
+                    }
+                  </select>
+                </span>
+              </label>
+              <label class="campo-bloque">
+                <span class="etiqueta">IVA</span>
+                <span class="campo-grupo campo-grupo--select">
+                  <select [disabled]="bloqueada()" [ngModel]="r.iva" (ngModelChange)="cambiarRenglon(i, { iva: +$event })">
+                    @for (tasa of tasasIva; track tasa) {
+                      <option [ngValue]="tasa">{{ tasa }} %</option>
+                    }
+                  </select>
+                </span>
+              </label>
+            </div>
+          }
+          @if (!bloqueada()) {
+            <span class="ayuda">Si bajas piezas, salen del stock. Si ya se vendieron, no se podrá guardar. El costo por validar se recalcula.</span>
+          }
+        </div>
+        <label class="campo-bloque">
+          <span class="etiqueta">Motivo del cambio <span class="opcional">(opcional, queda en el historial)</span></span>
+          <textarea class="campo ventana-motivo" placeholder="Ej. El folio se capturó mal" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+        </label>
+      }
+      @case ('suspender') {
+        <div class="ventana-caja ventana-caja--peligro">
+          <p class="ventana-caja__titulo">Qué pasa al suspender</p>
+          <ul>
+            <li>
+              Salen <strong>{{ piezas() }} piezas</strong> de la sucursal:
+              @for (r of c.renglones; track r.id) {
+                <span>{{ r.producto }} · −{{ r.piezas_buenas }}</span>
+              }
+            </li>
+            @if (pendientes()) {
+              <li><strong>{{ pendientes() }} {{ pendientes() === 1 ? 'costo por validar se cancela' : 'costos por validar se cancelan' }}</strong> y sale de Validar costos.</li>
+            }
+            @if (validados()) {
+              <li>{{ validados() }} {{ validados() === 1 ? 'costo ya validado no se toca' : 'costos ya validados no se tocan' }}: su costo y precio de venta siguen vigentes.</li>
+            }
+            <li>La compra queda en la lista como «Suspendida». Se puede reactivar después; el folio sigue ocupado.</li>
+          </ul>
+        </div>
+        <label class="campo-bloque">
+          <span class="etiqueta">Motivo <span class="obligatorio">*</span></span>
+          <textarea class="campo ventana-motivo" placeholder="Ej. El proveedor recogió la mercancía" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+          <span class="ayuda">Queda en el historial con tu nombre y la fecha.</span>
+        </label>
+      }
+      @case ('reactivar') {
+        <div class="ventana-caja ventana-caja--lila">
+          <p class="ventana-caja__titulo">Qué pasa al reactivar</p>
+          <ul>
+            <li>
+              Vuelven a entrar <strong>{{ piezas() }} piezas</strong> a la sucursal:
+              @for (r of c.renglones; track r.id) {
+                <span>{{ r.producto }} · +{{ r.piezas_buenas }}</span>
+              }
+            </li>
+            @if (cancelados()) {
+              <li><strong>{{ cancelados() }} {{ cancelados() === 1 ? 'costo cancelado regresa' : 'costos cancelados regresan' }}</strong> a Validar costos como pendientes.</li>
+            }
+            <li>La compra vuelve a «Activa» con el mismo folio. Queda en el historial quién la reactivó y cuándo.</li>
+          </ul>
+        </div>
+        <label class="campo-bloque">
+          <span class="etiqueta">Motivo <span class="opcional">(opcional, queda en el historial)</span></span>
+          <textarea class="campo ventana-motivo" placeholder="Ej. El proveedor regresó la mercancía" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+        </label>
+      }
+    }
+  }
+  @if (error()) {
+    <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+  }
+  <div pie class="ventana-botones">
+    @switch (tipo()) {
+      @case ('ver') {
+        <button class="boton boton--secundario" type="button" (click)="cerrarVentana()">Cerrar</button>
+        @if (compra(); as c) {
+          @if (!suspendida()) {
+            <button *appPuede="P.precioVer" class="boton boton--secundario" type="button" (click)="descargarExcel()"><i class="pi pi-download" aria-hidden="true"></i> Excel</button>
+            <button *appPuede="P.compraSuspender" class="boton boton--secundario ventana-boton-peligro" type="button" (click)="ir('suspender')">Suspender</button>
+            <button *appPuede="P.compraEditar" class="boton" type="button" (click)="ir('editar')"><i class="pi pi-pencil" aria-hidden="true"></i> Editar</button>
+          } @else {
+            <button *appPuede="P.compraSuspender" class="boton boton--secundario" type="button" (click)="ir('reactivar')"><i class="pi pi-sync" aria-hidden="true"></i> Reactivar</button>
+            <button *appPuede="P.precioVer" class="boton" type="button" (click)="descargarExcel()"><i class="pi pi-download" aria-hidden="true"></i> Descargar Excel</button>
+          }
+        }
+      }
+      @case ('editar') {
+        <button class="boton boton--secundario" type="button" (click)="cerrarVentana()">Cancelar</button>
+        <button class="boton" type="button" [disabled]="guardando() || !compra()" (click)="guardarEdicion()">{{ guardando() ? 'Guardando…' : 'Guardar cambios' }}</button>
+      }
+      @case ('suspender') {
+        <button class="boton boton--secundario" type="button" (click)="cerrarVentana()">Cancelar</button>
+        <button class="boton ventana-boton-rojo" type="button" [disabled]="guardando() || !compra() || !motivo().trim()" (click)="confirmarSuspension()">{{ guardando() ? 'Suspendiendo…' : 'Suspender compra' }}</button>
+      }
+      @case ('reactivar') {
+        <button class="boton boton--secundario" type="button" (click)="cerrarVentana()">Cancelar</button>
+        <button class="boton" type="button" [disabled]="guardando() || !compra()" (click)="confirmarReactivacion()">{{ guardando() ? 'Reactivando…' : 'Reactivar compra' }}</button>
+      }
+    }
+  </div>
+</app-ventana-compra>

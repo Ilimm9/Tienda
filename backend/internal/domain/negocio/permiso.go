@@ -37,8 +37,10 @@ func DependenciasPermiso(codigo string) []string {
 		return []string{PermisoAsignacionVer, PermisoEmpleadoVer, PermisoSucursalVer}
 	case PermisoCatalogoGestionar, PermisoInventarioAjustar:
 		return []string{PermisoCatalogoVer}
-	case PermisoCompraRegistrar:
+	case PermisoCompraRegistrar, PermisoCompraEditar:
 		return []string{PermisoCompraVer, PermisoCatalogoVer}
+	case PermisoCompraSuspender:
+		return []string{PermisoCompraVer}
 	case PermisoPrecioAutorizar:
 		return []string{PermisoPrecioVer}
 	default:
@@ -75,6 +77,8 @@ const (
 	PermisoCatalogoGestionar = "catalogo.gestionar"
 	PermisoCompraVer         = "compras.ver"
 	PermisoCompraRegistrar   = "compras.registrar"
+	PermisoCompraEditar      = "compras.editar"
+	PermisoCompraSuspender   = "compras.suspender"
 	PermisoPrecioVer         = "precios.ver"
 	PermisoPrecioAutorizar   = "precios.autorizar"
 	PermisoInventarioAjustar = "inventario.ajustar"
@@ -102,6 +106,8 @@ var CatalogoPermisos = []Permiso{
 	{Codigo: PermisoCatalogoGestionar, CodigoModulo: "catalogo", Nombre: "Gestionar catálogo"},
 	{Codigo: PermisoCompraVer, CodigoModulo: "compras", Nombre: "Ver compras"},
 	{Codigo: PermisoCompraRegistrar, CodigoModulo: "compras", Nombre: "Registrar compras"},
+	{Codigo: PermisoCompraEditar, CodigoModulo: "compras", Nombre: "Editar compras"},
+	{Codigo: PermisoCompraSuspender, CodigoModulo: "compras", Nombre: "Suspender y reactivar compras"},
 	{Codigo: PermisoPrecioVer, CodigoModulo: "precios", Nombre: "Ver propuestas de costos y precios"},
 	{Codigo: PermisoPrecioAutorizar, CodigoModulo: "precios", Nombre: "Autorizar costos y precios"},
 	{Codigo: PermisoInventarioAjustar, CodigoModulo: "inventario", Nombre: "Ajustar existencias"},

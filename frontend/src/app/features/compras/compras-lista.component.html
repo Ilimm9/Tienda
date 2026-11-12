@@ -1,0 +1,189 @@
+@if (costosPendientes() > 0) {
+  <p class="aviso aviso--atencion compras-aviso">
+    <i class="pi pi-info-circle" aria-hidden="true"></i>
+    <span>Hay <b>{{ costosPendientes() }} {{ costosPendientes() === 1 ? 'costo nuevo' : 'costos nuevos' }}</b> de {{ comprasPendientes() }} {{ comprasPendientes() === 1 ? 'compra' : 'compras' }} por revisar antes de que cambien tus precios de venta.</span>
+    <a *appPuede="P.precioVer" class="boton boton--secundario boton--compacto" routerLink="/precios/validaciones">Validar costos y precios</a>
+  </p>
+}
+
+<section class="tabla-tarjeta compras-lista">
+  <div class="tabla-barra">
+    <label class="campo-grupo compras-lista__buscar">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <span class="sr-only">Buscar compras</span>
+      <input type="search" placeholder="Folio o proveedor" [ngModel]="q()" (ngModelChange)="q.set($event)" />
+    </label>
+    <label class="compras-lista__filtro">
+      <span class="etiqueta">Proveedor</span>
+      <span class="campo-grupo campo-grupo--select">
+        <select [ngModel]="proveedor()" (ngModelChange)="proveedor.set($event)">
+          <option value="">Todos</option>
+          @for (item of proveedores(); track item.id) {
+            <option [value]="item.id">{{ item.nombre }}</option>
+          }
+        </select>
+      </span>
+    </label>
+    <label class="compras-lista__filtro">
+      <span class="etiqueta">Desde</span>
+      <input class="campo" type="date" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+    </label>
+    <label class="compras-lista__filtro">
+      <span class="etiqueta">Hasta</span>
+      <input class="campo" type="date" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+    </label>
+    <span class="tabla-barra__fin compras-lista__resumen">{{ resumen() }}</span>
+  </div>
+
+  @if (seleccion().size) {
+    <div class="compras-seleccion">
+      <strong>{{ seleccion().size }} {{ seleccion().size === 1 ? 'compra seleccionada' : 'compras seleccionadas' }}</strong>
+      <button class="boton-enlace" type="button" (click)="limpiarSeleccion()">Quitar selección</button>
+      <button *appPuede="P.precioVer" class="boton boton--compacto" type="button" (click)="abrirExcel('seleccion')">
+        <i class="pi pi-download" aria-hidden="true"></i> Descargar seleccionadas
+      </button>
+    </div>
+  }
+
+  <div class="tabla-desplazable">
+    <table class="tabla compras-tabla">
+      <thead>
+        <tr>
+          <th scope="col"><input type="checkbox" aria-label="Elegir todas" [checked]="todas()" (change)="alternarTodas($any($event.target).checked)" /></th>
+          <th scope="col">Recepción</th>
+          <th scope="col">Proveedor</th>
+          <th scope="col">Documento</th>
+          <th scope="col">Pago</th>
+          <th scope="col" class="compras-num">Total</th>
+          <th scope="col">Costos</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="compras-acciones">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (compra of filtradas(); track compra.id) {
+          <tr [class.compras-tabla__suspendida]="suspendida(compra)" [class.compras-tabla__elegida]="seleccion().has(compra.id)">
+            <td><input type="checkbox" [attr.aria-label]="'Elegir ' + documento(compra)" [checked]="seleccion().has(compra.id)" (change)="alternar(compra, $any($event.target).checked)" /></td>
+            <td class="compras-num">{{ compra.fecha_recepcion | date: 'dd MMM yyyy' : 'UTC' : 'es-MX' }}</td>
+            <td>
+              <span class="compras-proveedor">{{ compra.proveedor }}</span>
+              <span class="compras-sub">{{ compra.piezas ?? 0 }} pz · {{ compra.productos ?? 0 }} {{ compra.productos === 1 ? 'producto' : 'productos' }}</span>
+            </td>
+            <td class="compras-documento">
+              {{ documento(compra) }}
+              @if (tieneIeps(compra)) {
+                <span class="pastilla compras-pastilla compras-pastilla--neutra">IEPS</span>
+              }
+            </td>
+            <td><span class="pastilla compras-pastilla compras-pastilla--neutra">{{ pago(compra) }}</span></td>
+            <td class="compras-num compras-total">{{ compra.total | currency: 'MXN' }}</td>
+            <td><span class="pastilla compras-pastilla" [attr.data-costos]="costos(compra).tipo">{{ costos(compra).texto }}</span></td>
+            <td>
+              <span class="pastilla compras-pastilla" [class.pastilla--aceptada]="!suspendida(compra)" [attr.data-estado]="suspendida(compra) ? 'suspendida' : 'activa'">
+                {{ suspendida(compra) ? 'Suspendida' : 'Activa' }}
+              </span>
+            </td>
+            <td class="compras-acciones">
+              <span class="compras-acciones__botones">
+                <button class="icono-accion" type="button" [attr.aria-label]="'Ver ' + documento(compra)" title="Ver" (click)="accion.emit({ tipo: 'ver', compra })">
+                  <i class="pi pi-eye" aria-hidden="true"></i>
+                </button>
+                @if (!suspendida(compra)) {
+                  <button *appPuede="P.compraEditar" class="icono-accion" type="button" [attr.aria-label]="'Editar ' + documento(compra)" title="Editar" (click)="accion.emit({ tipo: 'editar', compra })">
+                    <i class="pi pi-pencil" aria-hidden="true"></i>
+                  </button>
+                  <button *appPuede="P.compraSuspender" class="icono-accion icono-accion--peligro" type="button" [attr.aria-label]="'Suspender ' + documento(compra)" title="Suspender" (click)="accion.emit({ tipo: 'suspender', compra })">
+                    <i class="pi pi-pause-circle" aria-hidden="true"></i>
+                  </button>
+                } @else {
+                  <button *appPuede="P.compraSuspender" class="icono-accion" type="button" [attr.aria-label]="'Reactivar ' + documento(compra)" title="Reactivar" (click)="accion.emit({ tipo: 'reactivar', compra })">
+                    <i class="pi pi-sync" aria-hidden="true"></i>
+                  </button>
+                }
+              </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" class="compras-vacia">Ninguna compra coincide con el filtro.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!puedeGestionar()) {
+    <p class="compras-candado">
+      <i class="pi pi-lock" aria-hidden="true"></i>
+      Editar, suspender y reactivar compras: solo el propietario o quien tenga los permisos «Editar compras» y «Suspender y reactivar compras».
+    </p>
+  }
+</section>
+
+<app-ventana-compra
+  [abierta]="ventana() === 'excel'"
+  titulo="Descargar compras en Excel"
+  subtitulo="«hoja 1» con un renglón por producto y «COMPROBACIÓN» por ticket."
+  icono="pi-download"
+  [ancho]="680"
+  (cerrar)="ventana.set(null)"
+>
+  <div class="ventana-seccion">
+    <span class="etiqueta">¿Qué compras descargas?</span>
+    <div class="segmentado" role="group" aria-label="Alcance">
+      <button type="button" class="segmentado__opcion" [attr.aria-pressed]="excel().alcance === 'seleccion'" (click)="cambiarExcel({ alcance: 'seleccion' })">Seleccionadas ({{ seleccion().size }})</button>
+      <button type="button" class="segmentado__opcion" [attr.aria-pressed]="excel().alcance === 'filtro'" (click)="cambiarExcel({ alcance: 'filtro' })">Por proveedor o fechas</button>
+    </div>
+    @if (excel().alcance === 'filtro') {
+      <div class="ventana-rejilla">
+        <label class="campo-bloque">
+          <span class="etiqueta">Proveedor</span>
+          <span class="campo-grupo campo-grupo--select">
+            <select [ngModel]="excel().proveedor" (ngModelChange)="cambiarExcel({ proveedor: $event })">
+              <option value="">Todos</option>
+              @for (item of proveedores(); track item.id) {
+                <option [value]="item.id">{{ item.nombre }}</option>
+              }
+            </select>
+          </span>
+        </label>
+        <label class="campo-bloque"><span class="etiqueta">Desde</span><input class="campo" type="date" [ngModel]="excel().desde" (ngModelChange)="cambiarExcel({ desde: $event })" /></label>
+        <label class="campo-bloque"><span class="etiqueta">Hasta</span><input class="campo" type="date" [ngModel]="excel().hasta" (ngModelChange)="cambiarExcel({ hasta: $event })" /></label>
+      </div>
+    } @else if (!seleccion().size) {
+      <p class="aviso aviso--atencion">No hay compras seleccionadas. Elígelas en la tabla o cambia a «Por proveedor o fechas».</p>
+    }
+  </div>
+  <div class="ventana-seccion">
+    <span class="etiqueta">Hojas del archivo</span>
+    <label class="ventana-casilla"><input type="checkbox" checked disabled /> hoja 1 · un renglón por producto comprado (formato de la clienta)</label>
+    <label class="ventana-casilla"><input type="checkbox" [ngModel]="excel().comprobacion" (ngModelChange)="cambiarExcel({ comprobacion: $event })" /> COMPROBACIÓN · cuadre de cada ticket contra su total</label>
+    <label class="ventana-casilla"><input type="checkbox" [ngModel]="excel().suspendidas" (ngModelChange)="cambiarExcel({ suspendidas: $event })" /> Incluir compras suspendidas</label>
+  </div>
+  <div class="ventana-caja">
+    <p class="ventana-caja__titulo">Se exportan</p>
+    <div class="ventana-cifras">
+      <div><span>Compras</span><strong>{{ resumenExcel().compras }}</strong></div>
+      <div><span>Renglones</span><strong>{{ resumenExcel().renglones }}</strong></div>
+      <div><span>Importe</span><strong>{{ resumenExcel().importe | currency: 'MXN' }}</strong></div>
+    </div>
+    @if (resumenExcel().pendientes) {
+      <p class="aviso aviso--atencion">
+        <span><b>{{ resumenExcel().pendientes }} renglones sin validar.</b> En «NUEVO P.V» saldrá el precio sugerido y la columna «Estado de validación» dirá Pendiente. Costo y P.V en sistema son los de antes de la compra, así que no cambian al validar.</span>
+      </p>
+    }
+    <div class="ventana-columnas">
+      @for (columna of columnas; track columna[0]) {
+        <span><b>{{ columna[0] }}</b>{{ columna[1] }}</span>
+      }
+    </div>
+  </div>
+  @if (error()) {
+    <p class="aviso aviso--error" role="alert">{{ error() }}</p>
+  }
+  <div pie class="ventana-botones">
+    <button class="boton boton--secundario" type="button" (click)="ventana.set(null)">Cancelar</button>
+    <button class="boton" type="button" [disabled]="descargando() || !resumenExcel().compras" (click)="descargarExcel()">
+      <i class="pi pi-download" aria-hidden="true"></i> {{ descargando() ? 'Generando…' : 'Descargar Excel' }}
+    </button>
+  </div>
+</app-ventana-compra>

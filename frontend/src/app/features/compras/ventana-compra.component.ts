@@ -9,7 +9,7 @@ let siguienteId = 0;
 @Component({
   selector: 'app-ventana-compra',
   template: `
-    <dialog #dialogo class="ventana" [attr.aria-labelledby]="tituloId" (close)="cerrar.emit()" (click)="alClic($event)">
+    <dialog #dialogo class="ventana" [style.width]="'min(' + ancho() + 'px, calc(100vw - 32px))'" [attr.aria-labelledby]="tituloId" (close)="cerrar.emit()" (click)="alClic($event)">
       <section class="dialogo ventana__caja">
         <header class="dialogo__encabezado ventana__encabezado">
           <span class="ventana__icono" aria-hidden="true"><i class="pi" [class]="icono()"></i></span>
@@ -47,6 +47,8 @@ export class VentanaCompraComponent {
   readonly titulo = input.required<string>();
   readonly subtitulo = input('');
   readonly icono = input('pi-plus');
+  /** Ancho máximo en px; las ventanas con tabla usan más. */
+  readonly ancho = input(520);
   readonly cerrar = output<void>();
   readonly tituloId = `ventana-compra-${siguienteId++}`;
   private readonly dialogo = viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');

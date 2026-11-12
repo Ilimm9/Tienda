@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -11,7 +11,6 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { forkJoin } from 'rxjs';
 import { ContextoService } from '../../contexto/contexto.service';
@@ -20,18 +19,20 @@ import { ComprasService } from './compras.service';
 import { PERMISOS } from '../../contexto/permisos';
 import { PuedeDirective } from '../../contexto/puede.directive';
 import { VentanaCompraComponent } from './ventana-compra.component';
+import { ComprasListaComponent } from './compras-lista.component';
+import { CompraVentanasComponent } from './compra-ventanas.component';
+import { calcularImpuestos, desglosar, money, TASAS_IEPS, TASAS_IVA } from './impuestos';
 
 @Component({
   selector: 'app-compras',
   standalone: true,
-  imports: [PuedeDirective, VentanaCompraComponent,
+  imports: [PuedeDirective, VentanaCompraComponent, ComprasListaComponent, CompraVentanasComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
     InputTextModule,
     SelectModule,
-    TableModule,
     TextareaModule,
   ],
   templateUrl: './compras.component.html',
@@ -39,6 +40,7 @@ import { VentanaCompraComponent } from './ventana-compra.component';
 })
 export class ComprasComponent {
   readonly P = PERMISOS;
+  readonly Number = Number;
   private readonly service = inject(ComprasService);
   private readonly context = inject(ContextoService);
   private readonly fb = inject(FormBuilder);
@@ -46,6 +48,11 @@ export class ComprasComponent {
   private readonly router = inject(Router);
   readonly createMode = this.route.snapshot.data['mode'] === 'create';
   readonly purchases = signal<PurchaseRow[]>([]);
+  readonly lista = viewChild(ComprasListaComponent);
+  /** Compra abierta en Ver, Editar, Suspender o Reactivar. */
+  readonly accion = signal<{ tipo: 'ver' | 'editar' | 'suspender' | 'reactivar'; compra: PurchaseRow } | null>(null);
+  /** Mensaje tras editar, suspender o reactivar. */
+  readonly aviso = signal<string | null>(null);
   readonly providers = signal<CatalogOption[]>([]);
   readonly branches = signal<CatalogOption[]>([]);
   readonly units = signal<PackagingUnit[]>([]);
@@ -64,6 +71,8 @@ export class ComprasComponent {
   readonly contraidos = signal(new Set<AbstractControl>());
   readonly unitSaving = signal(false);
   readonly documentTypes = ['TICKET', 'FACTURA'];
+  readonly tasasIeps = TASAS_IEPS;
+  readonly tasasIva = TASAS_IVA;
   readonly paymentMethods = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'CREDITO', 'OTRO'];
   private readonly calculationVersion = signal(0);
   readonly form = this.fb.nonNullable.group({
@@ -78,6 +87,8 @@ export class ComprasComponent {
     incluye_ieps: [false],
     ieps: [0, Validators.min(0)],
     incluye_iva: [false],
+    ajustar_ieps: [false],
+    ieps_ajustado: [0, Validators.min(0)],
     observaciones: [''],
     detalles: this.fb.array([this.newDetail()]),
   });
@@ -145,16 +156,36 @@ export class ComprasComponent {
       0,
     );
   });
-  readonly ieps = computed(() => {
+  /** IEPS e IVA por producto, con la misma regla que el backend. */
+  readonly filasImpuestos = computed(() => {
     this.calculationVersion();
-    return this.form.controls.incluye_ieps.value ? this.money(this.form.controls.ieps.value) : 0;
+    const ajuste = this.form.controls.ajustar_ieps.value ? Number(this.form.controls.ieps_ajustado.value) : null;
+    return calcularImpuestos(
+      this.details.controls.map((control, index) => ({
+        subtotal: this.detailSubtotal(index),
+        piezas: this.pieces(index),
+        tasaIeps: control.get('aplica_ieps')?.value ? Number(control.get('tasa_ieps')?.value ?? 0) : 0,
+        tasaIva: Number(control.get('tasa_iva')?.value ?? 0),
+      })),
+      ajuste,
+    );
   });
-  readonly iva = computed(() => {
+  /** IEPS calculado con las tasas, sin el ajuste del ticket. */
+  readonly iepsCalculado = computed(() => {
     this.calculationVersion();
-    return this.form.controls.incluye_iva.value
-      ? this.money((this.subtotal() + this.ieps()) * 0.16)
-      : 0;
+    return money(
+      this.details.controls.reduce(
+        (total, control, index) =>
+          total + (control.get('aplica_ieps')?.value ? money(this.detailSubtotal(index) * Number(control.get('tasa_ieps')?.value ?? 0) / 100) : 0),
+        0,
+      ),
+    );
   });
+  readonly ieps = computed(() => money(this.filasImpuestos().reduce((total, fila) => total + fila.ieps, 0)));
+  readonly iva = computed(() => money(this.filasImpuestos().reduce((total, fila) => total + fila.iva, 0)));
+  readonly desgloseIeps = computed(() => desglosar(this.filasImpuestos(), 'ieps'));
+  readonly desgloseIva = computed(() => desglosar(this.filasImpuestos(), 'iva'));
+  readonly diferenciaIeps = computed(() => money(this.ieps() - this.iepsCalculado()));
   readonly taxes = computed(() => this.money(this.ieps() + this.iva()));
   readonly total = computed(() => this.money(this.subtotal() + this.taxes()));
   get details(): FormArray {
@@ -162,12 +193,6 @@ export class ComprasComponent {
   }
   constructor() {
     this.form.valueChanges.subscribe(() => this.calculationVersion.update((value) => value + 1));
-    this.form.controls.incluye_ieps.valueChanges.subscribe((included) => {
-      this.form.controls.ieps.setValue(included ? this.money(this.subtotal() * 0.08) : 0, {
-        emitEvent: false,
-      });
-      this.form.controls.ieps.markAsPristine();
-    });
     this.form.controls.forma_pago.valueChanges.subscribe((forma) => {
       if (!['TRANSFERENCIA', 'TARJETA'].includes(forma)) this.form.controls.numero_cuenta.setValue('');
     });
@@ -207,7 +232,24 @@ export class ComprasComponent {
       producto_nuevo: [false],
       nombre_producto_nuevo: [''],
       codigo_barras_nuevo: [''],
+      aplica_ieps: [false],
+      tasa_ieps: [8],
+      tasa_iva: [16],
     });
+  }
+  abrirAccion(accion: { tipo: 'ver' | 'editar' | 'suspender' | 'reactivar'; compra: PurchaseRow }): void {
+    this.accion.set(accion);
+  }
+  recargar(mensaje?: string): void {
+    this.aviso.set(mensaje ?? null);
+    this.loadList();
+  }
+  /** «Ver compra» desde Validar costos llega con `?compra=<id>`. */
+  private abrirDesdeEnlace(compras: PurchaseRow[]): void {
+    const id = this.route.snapshot.queryParamMap?.get('compra');
+    if (!id || this.accion()) return;
+    const compra = compras.find((c) => c.id === id);
+    if (compra) this.accion.set({ tipo: 'ver', compra });
   }
   private loadList(): void {
     const branchId = this.context.sucursal()?.id;
@@ -222,6 +264,7 @@ export class ComprasComponent {
       next: (r) => {
         this.purchases.set(r.items);
         this.loading.set(false);
+        this.abrirDesdeEnlace(r.items);
         if (!r.items.length) this.cargarListo();
       },
       error: () => {
@@ -364,9 +407,34 @@ export class ComprasComponent {
     } else {
       product?.setValidators(Validators.required);
       newProductName?.clearValidators();
+      this.llenarTasas(index, this.products().find((item) => item.id === value));
     }
     product?.updateValueAndValidity();
     newProductName?.updateValueAndValidity();
+  }
+  /** Llena IEPS e IVA con lo guardado en el producto; sin dato: sin IEPS e IVA 16 %. */
+  private llenarTasas(index: number, product: PurchaseProduct | undefined): void {
+    const ieps = Number(product?.tasa_ieps ?? 0) * 100;
+    const iva = product?.tasa_iva === null || product?.tasa_iva === undefined ? 16 : Number(product.tasa_iva) * 100;
+    this.details.at(index).patchValue({
+      aplica_ieps: ieps > 0,
+      tasa_ieps: ieps > 0 ? Math.round(ieps * 10) / 10 : 8,
+      tasa_iva: Math.round(iva),
+    });
+  }
+  /** Abre o cierra el importe de IEPS del ticket; al abrir arranca con lo calculado. */
+  alternarAjusteIeps(): void {
+    const abrir = !this.form.controls.ajustar_ieps.value;
+    this.form.patchValue({ ajustar_ieps: abrir, ieps_ajustado: this.iepsCalculado() });
+  }
+  costoPieza(index: number): number {
+    return this.filasImpuestos()[index]?.costoPieza ?? 0;
+  }
+  iepsRenglon(index: number): number {
+    return this.filasImpuestos()[index]?.ieps ?? 0;
+  }
+  ivaRenglon(index: number): number {
+    return this.filasImpuestos()[index]?.iva ?? 0;
   }
   /** Captura el producto nuevo del renglón; se crea al guardar la compra, como antes. */
   abrirProducto(index: number): void {
@@ -510,15 +578,23 @@ export class ComprasComponent {
       }
     }
     const value = this.form.getRawValue();
+    const { ajustar_ieps, ieps_ajustado, ...rest } = value;
     this.saving.set(true);
     this.error.set(null);
     this.service
       .create(this.businessId, {
-        ...value,
+        ...rest,
+        // Las casillas globales quedan en el modelo por compatibilidad; los impuestos van por renglón.
+        incluye_ieps: false,
+        ieps: 0,
+        incluye_iva: false,
+        ieps_ajustado: ajustar_ieps ? money(Number(ieps_ajustado)) : null,
         numero_cuenta: value.numero_cuenta || null,
         observaciones: value.observaciones || null,
-        detalles: value.detalles.map(({ tiene_anomalias, ...d }) => ({
+        detalles: value.detalles.map(({ tiene_anomalias, aplica_ieps, tasa_ieps, tasa_iva, ...d }) => ({
           ...d,
+          tasa_ieps: aplica_ieps ? Number(tasa_ieps) / 100 : 0,
+          tasa_iva: Number(tasa_iva) / 100,
           numero_lote: d.numero_lote || null,
           fecha_caducidad: d.fecha_caducidad || null,
         })),

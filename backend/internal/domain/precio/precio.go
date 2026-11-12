@@ -10,6 +10,9 @@ import (
 const EstadoPendiente = "PENDIENTE"
 const EstadoAutorizada = "AUTORIZADA"
 
+// EstadoCancelada: la compra se suspendió o el renglón se quitó al editar.
+const EstadoCancelada = "CANCELADA"
+
 const (
 	OrigenAltaInicial        = "ALTA_INICIAL"
 	OrigenCompraAutorizada   = "COMPRA_AUTORIZADA"

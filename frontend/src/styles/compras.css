@@ -1,0 +1,367 @@
+/* Compras y Validar costos (tableros 07 y 08): franjas de impuestos, resumen y piezas compartidas
+   por el formulario, la lista y sus ventanas. Global para no superar el presupuesto por componente. */
+
+/* IEPS e IVA por producto (tablero 07). */
+.franja-impuesto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+  margin-top: .75rem;
+  padding: .6rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-raised, #fff);
+}
+
+.franja-impuesto--activa {
+  border-color: var(--primary-soft);
+  background: var(--primary-tint);
+}
+
+.franja-impuesto .purchase-checkbox {
+  font-weight: 500;
+}
+
+.franja-impuesto__tasa {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 500;
+}
+
+.franja-impuesto__tasa--fuerte {
+  font-weight: 600;
+}
+
+.franja-impuesto__tasa select {
+  width: 104px;
+  min-height: 38px;
+  padding: 0 .6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+}
+
+.franja-impuesto__tasa select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.franja-impuesto__monto {
+  margin-left: auto;
+  color: var(--text-body);
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.franja-impuesto__monto strong {
+  font-weight: 600;
+}
+
+.franja-impuesto__monto--nota {
+  color: var(--text-muted);
+}
+
+.resumen-compra {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen-compra__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.resumen-compra__fila dt {
+  color: var(--text-muted);
+}
+
+.resumen-compra__fila dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.resumen-compra__fila--titulo dt {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.resumen-compra__bloque {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: .75rem;
+  border-radius: 12px;
+  background: var(--primary-tint);
+}
+
+.resumen-compra__tasa {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  color: var(--text-body);
+  font-size: .8rem;
+}
+
+.resumen-compra__ajuste {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  font-size: .8rem;
+  font-weight: 500;
+}
+
+.resumen-compra__ajuste small,
+.resumen-compra__nota {
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 400;
+}
+
+.resumen-compra__total {
+  padding-top: .6rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 1.2rem;
+}
+
+.resumen-compra__total dt {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.enlace-boton {
+  align-self: flex-start;
+  min-height: 28px;
+  padding: 0 .25rem;
+  border: 0;
+  border-radius: 6px;
+  color: var(--primary);
+  background: transparent;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.enlace-boton:hover {
+  background: var(--primary-soft);
+}
+
+.enlace-boton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Ventanas de compras (formato del tablero 12): secciones, casillas, caja de resumen. */
+.ventana-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ventana-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.ventana-casilla {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ventana-casilla input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.ventana-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ventana-caja--peligro {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.ventana-caja--lila {
+  border-color: var(--primary-border);
+  background: var(--primary-tint);
+}
+
+.ventana-caja__titulo {
+  margin: 0;
+  color: var(--primary-hover);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ventana-caja--peligro .ventana-caja__titulo {
+  color: var(--danger);
+}
+
+.ventana-caja ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+}
+
+.ventana-caja li span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.ventana-cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ventana-cifras span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.ventana-cifras strong {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.ventana-columnas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ventana-columnas span {
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--text-body);
+  background: var(--tone-neutral);
+  font-size: 11.5px;
+}
+
+.ventana-columnas b {
+  margin-right: 4px;
+  color: var(--primary-hover);
+  font-weight: 600;
+}
+
+.ventana-botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ventana-cargando {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ventana-tabla {
+  min-width: 780px;
+}
+
+.ventana-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ventana-producto {
+  display: block;
+  font-weight: 600;
+}
+
+.ventana-nota {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ventana-costo[data-costo='PENDIENTE'] {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.ventana-costo[data-costo='AUTORIZADA'] {
+  color: var(--tone-sage-text);
+  background: var(--tone-sage);
+}
+
+.ventana-costo[data-costo='CANCELADA'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.ventana-resumen {
+  align-self: flex-end;
+  width: min(320px, 100%);
+}
+
+.ventana-renglon {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(110px, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+}
+
+.ventana-renglon__nombre {
+  align-self: center;
+}
+
+.ventana-motivo {
+  min-height: 72px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.ventana-boton-peligro {
+  color: var(--danger);
+}
+
+.ventana-boton-rojo {
+  border-color: #b42318;
+  background: #b42318;
+}
+
+.ventana-boton-rojo:hover:not(:disabled) {
+  background: #912018;
+}
+
+@media (max-width: 720px) {
+  .ventana-renglon {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ventana-renglon__nombre {
+    grid-column: 1 / -1;
+  }
+}

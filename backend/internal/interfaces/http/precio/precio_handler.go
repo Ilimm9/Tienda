@@ -5,8 +5,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"net/http"
+	"strings"
 	precioapp "tienda/backend/internal/application/precio"
 	transport "tienda/backend/internal/interfaces/http"
+	"time"
 )
 
 // AccesoSucursal es el contrato hacia `negocio`: si el usuario puede operar la sucursal.
@@ -46,7 +48,11 @@ func (h *Handler) ListPending(c *gin.Context) {
 	if !h.sucursalPermitida(c, businessID, branchID) {
 		return
 	}
-	items, err := h.service.ListPending(businessID, branchID)
+	filtro, ok := filtroPendientes(c)
+	if !ok {
+		return
+	}
+	items, err := h.service.ListPending(businessID, branchID, filtro)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"mensaje": "No fue posible cargar las propuestas"})
 		return
@@ -131,4 +137,62 @@ func (h *Handler) AdjustPrice(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, item)
+}
+
+// filtroPendientes lee proveedor_id, desde, hasta (fecha de recepción) y q.
+func filtroPendientes(c *gin.Context) (precioapp.FiltroPendientes, bool) {
+	filtro := precioapp.FiltroPendientes{Texto: strings.TrimSpace(c.Query("q"))}
+	if value := c.Query("proveedor_id"); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El proveedor no es válido"})
+			return filtro, false
+		}
+		filtro.ProveedorID = &id
+	}
+	for key, target := range map[string]**time.Time{"desde": &filtro.Desde, "hasta": &filtro.Hasta} {
+		if value := c.Query(key); value != "" {
+			date, err := time.Parse("2006-01-02", value)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"mensaje": "La fecha no es válida"})
+				return filtro, false
+			}
+			*target = &date
+		}
+	}
+	return filtro, true
+}
+
+// AuthorizePurchase valida el ticket entero en una transacción, con el precio de cada renglón.
+func (h *Handler) AuthorizePurchase(c *gin.Context) {
+	businessID, err := uuid.Parse(c.Param("negocioId"))
+	purchaseID, purchaseErr := uuid.Parse(c.Param("compraId"))
+	userID, ok := transport.AuthenticatedUserID(c)
+	if err != nil || purchaseErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "El identificador no es válido"})
+		return
+	}
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"mensaje": "Sesión requerida"})
+		return
+	}
+	branchID, err := h.service.BranchOfPurchase(businessID, purchaseID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"mensaje": "Compra no encontrada"})
+		return
+	}
+	if !h.sucursalPermitida(c, businessID, branchID) {
+		return
+	}
+	var input precioapp.AutorizarCompraInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": "Revisa los importes"})
+		return
+	}
+	items, err := h.service.AuthorizePurchase(businessID, userID, purchaseID, input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"mensaje": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "total": len(items)})
 }

@@ -1,112 +1,233 @@
-<section class="prices-page">
-  <header class="page-heading">
+<section class="pagina">
+  <header class="encabezado-pagina">
     <div>
-      <p class="eyebrow">Control de sucursal</p>
+      <span class="antetitulo">Control de sucursal</span>
       <h1>Validar costos y precios</h1>
-      <p>La mercancía ya está disponible; valida los importes por pieza.</p>
+      <p class="descripcion">
+        La mercancía ya está en tu inventario. Revisa cada ticket: costo por pieza con impuestos y precio al público.
+        El precio sugerido se redondea hacia arriba al peso; puedes escribir otro.
+      </p>
     </div>
+    <button class="boton boton--secundario" type="button" (click)="abrirExcel()">
+      <i class="pi pi-download" aria-hidden="true"></i> Descargar Excel
+    </button>
   </header>
+
+  @if (aviso()) {
+    <p class="aviso aviso--salvia validar-aviso" role="status">
+      <i class="pi pi-check" aria-hidden="true"></i>{{ aviso() }}
+      <button class="icono-accion" type="button" aria-label="Cerrar aviso" (click)="aviso.set(null)"><i class="pi pi-times" aria-hidden="true"></i></button>
+    </p>
+  }
+
   @if (loading()) {
-    <section class="state-card">Cargando propuestas…</section>
-  } @else if (error()) {
-    <section class="state-card error">{{ error() }}</section>
-  } @else if (!items().length) {
-    <section class="state-card">No hay costos ni precios pendientes de validación.</section>
+    <section class="tarjeta validar-estado">Cargando propuestas…</section>
+  } @else if (error() && !renglones().length) {
+    <section class="tarjeta validar-estado aviso--error">{{ error() }}</section>
+  } @else if (!renglones().length && !hayFiltro()) {
+    <section class="tarjeta validar-vacio">
+      <span class="validar-vacio__icono"><i class="pi pi-check" aria-hidden="true"></i></span>
+      <h2>Todo validado</h2>
+      <p>Cuando registres una compra, sus costos aparecerán aquí.</p>
+      <a class="boton boton--secundario" routerLink="/compras">Ir a compras</a>
+    </section>
   } @else {
-    <section class="proposal-list">
-      @for (item of items(); track item.id) {
-        <article class="proposal-card">
-          <header class="proposal-header">
-            <div>
-              <h2>{{ item.producto }}</h2>
-              <p>
-                @if (item.costo_anterior !== null) {
-                  Costo actual: <strong>{{ item.costo_anterior | currency: 'MXN' }}</strong> ·
-                }
-                Precio de venta actual:
-                <strong>{{ item.precio_anterior | currency: 'MXN' }}</strong>
-              </p>
-            </div>
-          </header>
-          <div class="metrics-grid">
-            <div class="metric">
-              <span>Piezas recibidas</span><strong>{{ item.piezas_buenas }}</strong>
-            </div>
-            <div class="metric">
-              <span>Costo por pieza</span
-              ><strong class="metric-value">{{ item.costo_capturado | currency: 'MXN' }}</strong>
-            </div>
-            <label class="metric"
-              ><span>Ganancia porcentual</span>
-              <div class="input-suffix">
-                <input
-                  pInputText
-                  class="price-input"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  [(ngModel)]="item.margen_sugerido"
-                  (ngModelChange)="syncProfitFromPercent(item)"
-                /><span>%</span>
-              </div></label
-            ><label class="metric"
-              ><span>Ganancia</span>
-              <div class="input-prefix">
-                <span>$</span
-                ><input
-                  pInputText
-                  class="price-input"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  [(ngModel)]="item.ganancia"
-                  (ngModelChange)="syncPercentFromProfit(item)"
-                /></div
-            ></label>
-            <div class="metric">
-              <span>Costo al público</span><strong>{{ finalPrice(item) | currency: 'MXN' }}</strong>
-            </div>
-          </div>
-          <p class="profit-summary">
-            Por esta compra ganas por pieza <strong>{{ item.ganancia | currency: 'MXN' }}</strong
-            >, sumando una ganancia total de
-            <strong>{{ totalProfit(item) | currency: 'MXN' }}</strong
-            >.
-          </p>
-          <footer class="proposal-actions">
-            <button *appPuede="P.precioAutorizar"
-              class="primary-button"
-              type="button"
-              (click)="authorize(item)"
-              [disabled]="saving() === item.id"
-            >
-              {{ saving() === item.id ? 'Actualizando…' : 'Actualizar costos' }}
-            </button>
-            <!-- Oculto temporalmente  (2026-10-21).
-            <button class="secondary-button" type="button" (click)="showHistory(item)">Historial</button>
-            -->
-          </footer>
-        </article>
-      }
-    </section>
-  }
-  <!-- Oculto temporalmente(2026-10-21).
-  @if (historyProduct()) {
-    <section class="proposal-card" aria-label="Historial de precios">
-      <h2>Historial de precio de sucursal</h2>
-      <div class="metrics-grid">
-        <label class="metric"><span>Nuevo precio</span><input pInputText type="number" min="0" step="0.01" [ngModel]="manualPrice()" (ngModelChange)="manualPrice.set($event)" /></label>
-        <label class="metric"><span>Motivo</span><input pInputText [ngModel]="manualReason()" (ngModelChange)="manualReason.set($event)" /></label>
+    <div class="tarjeta tabla-barra validar-filtros">
+      <label class="campo-grupo validar-filtros__buscar">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <span class="sr-only">Buscar</span>
+        <input type="search" placeholder="Folio, proveedor o producto" [ngModel]="filtro().q ?? ''" (ngModelChange)="filtrar({ q: $event }, true)" />
+      </label>
+      <label class="validar-filtros__campo">
+        <span class="etiqueta">Proveedor</span>
+        <span class="campo-grupo campo-grupo--select">
+          <select [ngModel]="filtro().proveedor_id ?? ''" (ngModelChange)="filtrar({ proveedor_id: $event })">
+            <option value="">Todos</option>
+            @for (proveedor of proveedores(); track proveedor.id) {
+              <option [value]="proveedor.id">{{ proveedor.nombre }}</option>
+            }
+          </select>
+        </span>
+      </label>
+      <label class="validar-filtros__campo">
+        <span class="etiqueta">Desde</span>
+        <input class="campo" type="date" [ngModel]="filtro().desde ?? ''" (ngModelChange)="filtrar({ desde: $event })" />
+      </label>
+      <label class="validar-filtros__campo">
+        <span class="etiqueta">Hasta</span>
+        <input class="campo" type="date" [ngModel]="filtro().hasta ?? ''" (ngModelChange)="filtrar({ hasta: $event })" />
+      </label>
+      <span class="tabla-barra__fin validar-filtros__resumen">{{ resumenFiltro() }}</span>
+    </div>
+
+    @if (error()) {
+      <p class="aviso aviso--error" role="alert"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ error() }}</p>
+    }
+
+    <div class="validar-tarjetas">
+      <div class="tarjeta validar-tarjeta">
+        <span>Por validar</span>
+        <strong>{{ renglones().length }} <small>en {{ gruposVisibles().length }} {{ gruposVisibles().length === 1 ? 'ticket' : 'tickets' }}</small></strong>
       </div>
-      <button *appPuede="P.precioAutorizar" class="primary-button" type="button" (click)="adjustPrice()" [disabled]="!manualReason().trim() || saving() === historyProduct()">Guardar precio</button>
-      @if (history().length) {
-        <ul class="history-list">
-          @for (entry of history(); track entry.id) {
-            <li><strong>{{ etiquetaOrigen(entry.origen) }}</strong> · {{ entry.precio_anterior | currency: 'MXN' }} → {{ entry.precio_nuevo | currency: 'MXN' }} · {{ entry.creado_en | date: 'short' }} @if (entry.motivo) { · {{ entry.motivo }} }</li>
-          }
-        </ul>
-      } @else { <p>Aún no hay cambios registrados.</p> }
-    </section>
+      <div class="tarjeta validar-tarjeta">
+        <span>Con costo más alto</span>
+        <strong class="validar-tarjeta--sube">{{ conCostoMasAlto() }}</strong>
+      </div>
+      <div class="tarjeta validar-tarjeta">
+        <span>Ganancia estimada de lo recibido</span>
+        <strong class="validar-tarjeta--gana">{{ gananciaTotal() | currency: 'MXN' }}</strong>
+      </div>
+    </div>
+
+    <div class="tarjeta validar-seleccion" [class.validar-seleccion--activa]="seleccionados().length">
+      <strong>{{ seleccionados().length ? seleccionados().length + (seleccionados().length === 1 ? ' producto seleccionado' : ' productos seleccionados') : 'Marca productos o tickets para validarlos juntos' }}</strong>
+      <span class="validar-seleccion__acciones">
+        <label for="margen-masivo">Margen para seleccionados</label>
+        <span class="campo-grupo validar-numero">
+          <input id="margen-masivo" type="number" step="0.1" min="0" [ngModel]="margenMasivo()" (ngModelChange)="margenMasivo.set($event)" />
+          <span aria-hidden="true">%</span>
+        </span>
+        <button class="boton boton--secundario boton--compacto" type="button" [disabled]="!seleccionados().length" (click)="aplicarMargen()">Aplicar</button>
+        <button *appPuede="P.precioAutorizar" class="boton boton--compacto" type="button" [disabled]="!seleccionados().length" (click)="validarSeleccionados()">
+          <i class="pi pi-check" aria-hidden="true"></i> Validar seleccionados
+        </button>
+      </span>
+    </div>
+
+    @for (ticket of gruposVisibles(); track ticket.compraId) {
+      <section class="tarjeta validar-ticket" [attr.aria-label]="ticket.documento">
+        <header class="validar-ticket__cabecera">
+          <input type="checkbox" [attr.aria-label]="'Elegir todo ' + ticket.documento" [checked]="ticketCompleto(ticket)" (change)="alternarTicket(ticket, $any($event.target).checked)" />
+          <button class="icono-accion" type="button" [attr.aria-expanded]="!estaPlegado(ticket)" [attr.aria-label]="(estaPlegado(ticket) ? 'Mostrar ' : 'Ocultar ') + ticket.documento" (click)="alternarPlegado(ticket)">
+            <i class="pi" [class.pi-chevron-right]="estaPlegado(ticket)" [class.pi-chevron-down]="!estaPlegado(ticket)" aria-hidden="true"></i>
+          </button>
+          <span class="validar-ticket__titulo">
+            <span class="validar-ticket__linea">
+              <strong class="validar-ticket__documento">{{ ticket.documento }}</strong>
+              <span class="pastilla">{{ ticket.proveedor }}</span>
+              @if (ticket.impuestos) {
+                <span class="pastilla validar-pastilla--neutra">{{ ticket.impuestos }}</span>
+              }
+            </span>
+            <span class="validar-ticket__meta">
+              Recibido {{ ticket.fechaRecepcion | date: 'dd MMM yyyy' : 'UTC' : 'es-MX' }} · {{ ticket.renglones.length }} {{ ticket.renglones.length === 1 ? 'producto' : 'productos' }} por validar · total {{ ticket.total | currency: 'MXN' }}
+            </span>
+          </span>
+          <span class="validar-ticket__ganancia">
+            <span>Ganancia estimada</span>
+            <strong>{{ gananciaTicket(ticket) | currency: 'MXN' }}</strong>
+          </span>
+          <a class="boton-enlace" routerLink="/compras" [queryParams]="{ compra: ticket.compraId }">Ver compra</a>
+          <button *appPuede="P.precioAutorizar" class="boton boton--compacto" type="button" [disabled]="saving() === ticket.compraId" (click)="validarTicket(ticket)">
+            <i class="pi pi-check" aria-hidden="true"></i> Validar ticket ({{ ticket.renglones.length }})
+          </button>
+        </header>
+        @if (!estaPlegado(ticket)) {
+          <div class="tabla-desplazable">
+            <table class="tabla validar-tabla">
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only">Elegir</span></th>
+                  <th scope="col">Producto</th>
+                  <th scope="col" class="validar-num">Piezas</th>
+                  <th scope="col">Costo por pieza</th>
+                  <th scope="col">Margen</th>
+                  <th scope="col">Precio al público</th>
+                  <th scope="col" class="validar-num">Ganas por pieza</th>
+                  <th scope="col"><span class="sr-only">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of ticket.renglones; track r.id) {
+                  <tr [class.validar-tabla__elegido]="seleccion().has(r.id)">
+                    <td><input type="checkbox" [attr.aria-label]="'Elegir ' + r.producto" [checked]="seleccion().has(r.id)" (change)="alternarRenglon(r, $any($event.target).checked)" /></td>
+                    <td>
+                      <strong class="validar-producto">{{ r.producto }}</strong>
+                      @if (r.nota) {
+                        <span class="validar-nota">{{ r.nota }}</span>
+                      }
+                      @if (r.nuevo) {
+                        <span class="pastilla pastilla--aceptada validar-nuevo">Producto nuevo</span>
+                      }
+                    </td>
+                    <td class="validar-num">{{ r.piezas }}</td>
+                    <td>
+                      <span class="validar-costo">
+                        @if (r.costoAnterior !== null) {
+                          <span class="validar-costo__anterior">{{ r.costoAnterior | currency: 'MXN' }}</span>
+                          <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                        }
+                        <strong>{{ r.costo | currency: 'MXN' : 'symbol' : '1.2-4' }}</strong>
+                      </span>
+                      <span class="validar-cambio" [attr.data-tipo]="cambioCosto(r).tipo">{{ cambioCosto(r).texto }}</span>
+                    </td>
+                    <td>
+                      <span class="campo-grupo validar-numero">
+                        <input type="number" step="0.1" min="0" [attr.aria-label]="'Margen de ' + r.producto" [ngModel]="r.margen" (ngModelChange)="cambiarMargen(r, $event)" />
+                        <span aria-hidden="true">%</span>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="campo-grupo validar-numero validar-numero--precio">
+                        <span aria-hidden="true">$</span>
+                        <input type="number" step="1" min="0" [attr.aria-label]="'Precio de ' + r.producto" [ngModel]="r.precio" (ngModelChange)="cambiarPrecio(r, $event)" />
+                      </span>
+                      <span class="validar-nota">Sugerido {{ r.sugerido | currency: 'MXN' }} (al peso) · hoy {{ r.precioAnterior | currency: 'MXN' }}</span>
+                    </td>
+                    <td class="validar-num">
+                      <strong class="validar-ganas" [class.validar-ganas--pierde]="ganancia(r) < 0">{{ ganancia(r) | currency: 'MXN' }}</strong>
+                      <span class="validar-nota">{{ gananciaTotalRenglon(r) | currency: 'MXN' }} en total</span>
+                    </td>
+                    <td>
+                      <button *appPuede="P.precioAutorizar" class="boton boton--secundario boton--compacto" type="button" [disabled]="saving() === r.id" (click)="validar(r)">Validar</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    } @empty {
+      <section class="tarjeta validar-estado">
+        Ningún ticket coincide con el filtro.
+        <button class="boton-enlace" type="button" (click)="limpiarFiltros()">Quitar filtros</button>
+      </section>
+    }
   }
-  -->
+  <app-ventana-compra
+    [abierta]="excelAbierto()"
+    titulo="Descargar compras en Excel"
+    subtitulo="«hoja 1» con un renglón por producto y «COMPROBACIÓN» por ticket."
+    icono="pi-download"
+    [ancho]="680"
+    (cerrar)="excelAbierto.set(false)"
+  >
+    <div class="ventana-seccion">
+      <span class="etiqueta">¿Qué tickets descargas?</span>
+      <div class="segmentado" role="group" aria-label="Alcance">
+        <button type="button" class="segmentado__opcion" [attr.aria-pressed]="excelAlcance() === 'filtro'" (click)="excelAlcance.set('filtro')">Tickets del filtro</button>
+        <button type="button" class="segmentado__opcion" [attr.aria-pressed]="excelAlcance() === 'seleccion'" (click)="excelAlcance.set('seleccion')">Tickets seleccionados</button>
+      </div>
+      <span class="ayuda">{{ excelAlcance() === 'filtro' ? 'Los tickets que ves con el filtro actual.' : 'Los tickets con algún producto marcado.' }}</span>
+    </div>
+    <label class="ventana-casilla"><input type="checkbox" [ngModel]="excelComprobacion()" (ngModelChange)="excelComprobacion.set($event)" /> Incluir hoja COMPROBACIÓN (cuadre de cada ticket)</label>
+    <div class="ventana-caja">
+      <div class="ventana-cifras">
+        <div><span>Tickets</span><strong>{{ ticketsExcel().length }}</strong></div>
+        <div><span>Renglones por validar</span><strong>{{ pendientesExcel() }}</strong></div>
+        <div><span>Sin validar</span><strong class="validar-tarjeta--sube">{{ pendientesExcel() }}</strong></div>
+      </div>
+      <p class="aviso aviso--atencion">
+        Puedes descargar antes o después de validar. Costo y P.V en sistema son los de antes de la compra y no cambian. «NUEVO P.V» lleva el precio sugerido si aún no validas, o el autorizado si ya validaste; la columna «Estado de validación» lo indica.
+      </p>
+    </div>
+    <div pie class="ventana-botones">
+      <button class="boton boton--secundario" type="button" (click)="excelAbierto.set(false)">Cancelar</button>
+      <button class="boton" type="button" [disabled]="descargando() || !ticketsExcel().length" (click)="descargarExcel()">
+        <i class="pi pi-download" aria-hidden="true"></i> {{ descargando() ? 'Generando…' : 'Descargar Excel' }}
+      </button>
+    </div>
+  </app-ventana-compra>
+  <!-- Historial oculto temporalmente (2026-10-21); la lógica sigue en el componente. -->
 </section>

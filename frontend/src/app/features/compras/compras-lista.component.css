@@ -1,0 +1,165 @@
+/* Lista de compras (tablero 07). Base en el kit global: tabla-tarjeta, tabla-barra, pastilla. */
+.compras-aviso {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.compras-aviso > span {
+  flex: 1 1 auto;
+}
+
+.compras-aviso .boton {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.compras-lista .tabla-barra {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.compras-lista__buscar {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.compras-lista__filtro {
+  display: flex;
+  flex: 0 1 170px;
+  flex-direction: column;
+}
+
+.compras-lista__resumen {
+  padding-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.compras-seleccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--primary-border);
+  border-bottom: 1px solid var(--primary-border);
+  background: var(--primary-tint);
+  font-size: 13.5px;
+}
+
+.compras-seleccion strong {
+  font-weight: 600;
+}
+
+.compras-seleccion .boton {
+  margin-left: auto;
+}
+
+.compras-tabla {
+  min-width: 960px;
+}
+
+.compras-tabla input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.compras-tabla__elegida {
+  background: var(--primary-tint);
+}
+
+.compras-tabla__suspendida td {
+  color: var(--text-subtle);
+}
+
+.compras-tabla__suspendida .compras-total {
+  text-decoration: line-through;
+}
+
+.compras-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+th.compras-num,
+.compras-total {
+  text-align: right;
+}
+
+.compras-total {
+  font-weight: 600;
+}
+
+.compras-proveedor {
+  display: block;
+  font-weight: 600;
+}
+
+.compras-sub {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.compras-documento {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.compras-pastilla {
+  font-family: inherit;
+}
+
+.compras-pastilla--neutra,
+.compras-pastilla[data-costos='ninguno'],
+.compras-pastilla[data-estado='suspendida'] {
+  color: var(--text-body);
+  background: var(--tone-neutral);
+}
+
+.compras-pastilla--neutra::before {
+  display: none;
+}
+
+.compras-pastilla[data-costos='pendiente'] {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.compras-pastilla[data-costos='validado'] {
+  color: var(--tone-sage-text);
+  background: var(--tone-sage);
+}
+
+.compras-pastilla[data-costos='cancelado'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.compras-acciones {
+  text-align: right;
+}
+
+.compras-acciones__botones {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.compras-vacia {
+  padding: 32px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.compras-candado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 12.5px;
+}

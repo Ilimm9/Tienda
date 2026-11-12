@@ -23,6 +23,8 @@ export const PERMISOS = {
   catalogoGestionar: 'catalogo.gestionar',
   compraVer: 'compras.ver',
   compraRegistrar: 'compras.registrar',
+  compraEditar: 'compras.editar',
+  compraSuspender: 'compras.suspender',
   precioVer: 'precios.ver',
   precioAutorizar: 'precios.autorizar',
   inventarioAjustar: 'inventario.ajustar',
