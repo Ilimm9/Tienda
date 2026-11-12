@@ -2,6 +2,7 @@
   class="auth-shell"
   [class.is-intro-active]="introActive()"
   [class.is-register]="mode() === 'registro'"
+  [class.is-secundaria]="mode() === 'login' && titulo() !== 'Iniciar sesión'"
 >
   <section class="auth-shell__content" aria-label="Acceso a Stockion">
     <a class="brand" routerLink="/login" aria-label="Stockion, ir a iniciar sesión">
@@ -12,11 +13,7 @@
     </a>
 
     <div class="auth-shell__copy">
-      @if (mode() === 'login') {
-        <h1>Iniciar sesión</h1>
-      } @else {
-        <h1>Crear cuenta<br /></h1>
-      }
+      <h1>{{ titulo() }}</h1>
     </div>
 
     <div class="auth-shell__form"><router-outlet /></div>

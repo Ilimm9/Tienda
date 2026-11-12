@@ -2,55 +2,25 @@
   --auth-action: #2c2e6a;
   --auth-action-hover: #20224e;
   --auth-background: #faf8f3;
-  --auth-card: #fffdf8;
+  --auth-card: #ffffff;
   --auth-ink: #172554;
-  --auth-muted: #5f677c;
-  --auth-border: #d9d8df;
+  --auth-muted: #5b6478;
+  --auth-border: #d5d7e0;
   display: block;
-  min-height: 100vh;
 }
 
 .verification-page {
-  display: grid;
-  min-height: 100vh;
-  padding: 24px;
-  background: var(--auth-background);
-  place-items: center;
+  width: 100%;
 }
 
 .verification-card {
-  width: min(100%, 440px);
-  padding: 38px 36px;
-  text-align: center;
-  background: var(--auth-card);
-  border: 1px solid var(--auth-border);
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(23, 37, 84, 0.09);
-}
-
-.mail-icon {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  margin: 0 auto 18px;
-  color: var(--auth-action);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--auth-action) 12%, transparent);
-  font-size: 22px;
-  place-items: center;
-}
-
-h1 {
-  margin: 0 0 10px;
-  color: var(--auth-ink);
-  font-size: 30px;
-  letter-spacing: -0.03em;
+  width: min(100%, 410px);
 }
 
 p {
-  margin: 0 0 26px;
+  margin: 0 0 clamp(24px, 4vh, 32px);
   color: var(--auth-muted);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
@@ -58,9 +28,8 @@ label {
   display: block;
   margin-bottom: 8px;
   color: var(--auth-ink);
-  text-align: left;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 input {
@@ -69,7 +38,7 @@ input {
   padding: 0 16px;
   color: var(--auth-ink);
   border: 1px solid var(--auth-border);
-  border-radius: 10px;
+  border-radius: 12px;
   outline: none;
   background: var(--auth-card);
   font: inherit;
@@ -80,8 +49,8 @@ input {
 }
 
 input:focus {
-  border-color: var(--auth-action);
-  box-shadow: 0 0 0 2px rgba(44, 46, 106, 0.18);
+  border-color: #4f46c8;
+  box-shadow: 0 0 0 3px #f1effd;
 }
 
 small,
@@ -89,7 +58,6 @@ small,
   display: block;
   margin: 8px 0 0;
   color: #bd2525;
-  text-align: left;
   font-size: 12px;
 }
 
@@ -101,15 +69,16 @@ small,
 
 button {
   width: 100%;
-  min-height: 46px;
-  border-radius: 10px;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 15px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
 .primary {
-  margin-top: 20px;
+  margin-top: 36px;
   color: #fff;
   border: 0;
   background: var(--auth-action);
@@ -143,14 +112,8 @@ button:disabled {
 
 a {
   display: inline-block;
-  margin-top: 20px;
-  color: var(--auth-action);
-  font-size: 13px;
+  margin-top: 28px;
+  color: #4f46c8;
+  font-size: 14px;
   font-weight: 600;
-}
-
-@media (max-width: 520px) {
-  .verification-card {
-    padding: 30px 22px;
-  }
 }

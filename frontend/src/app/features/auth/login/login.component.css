@@ -11,12 +11,19 @@
   width: min(100%, 410px);
 }
 
+.login-subtitle {
+  margin: 0 0 clamp(24px, 4vh, 36px);
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
 label {
   display: block;
   margin-bottom: 8px;
   color: var(--text);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .field-wrap {
@@ -27,18 +34,18 @@ label {
 }
 
 .password-field {
-  height: 48px;
+  height: 50px;
 }
 
 .login-input {
   width: 100%;
-  height: 48px;
+  height: 50px;
   padding: 0 44px;
   color: var(--text);
   font: inherit;
-  font-size: 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  font-size: 15px;
+  border: 1px solid #d5d7e0;
+  border-radius: 12px;
   outline: none;
   background: var(--surface-raised);
   transition:
@@ -55,8 +62,8 @@ label {
 }
 
 .login-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
+  border-color: #4f46c8;
+  box-shadow: 0 0 0 3px #f1effd;
 }
 
 .field-wrap > .pi {
@@ -75,7 +82,8 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 24px;
+  margin-bottom: 8px;
 }
 
 .password-heading label {
@@ -83,8 +91,8 @@ label {
 }
 
 .password-heading a {
-  color: var(--auth-action, var(--primary));
-  font-size: 12px;
+  color: #4f46c8;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -120,7 +128,7 @@ label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 16px;
+  margin: 20px 0 0;
   padding: 11px 13px;
   border-radius: 8px;
   font-size: 13px;
@@ -153,14 +161,15 @@ label {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
+  margin-top: 36px;
   padding: 0 16px;
   color: #fff;
   border: 1px solid var(--auth-action, var(--primary));
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--auth-action, var(--primary));
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   transition:
     background-color 0.2s,
@@ -176,7 +185,7 @@ label {
 
 .submit-button:enabled:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 0 0 3px #f1effd;
 }
 
 .submit-button:disabled {
@@ -185,10 +194,12 @@ label {
 }
 
 .create-account {
-  margin: 26px 0 0;
+  margin: 32px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid #e6e7ec;
   color: var(--text-muted);
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .create-account a {
@@ -198,11 +209,11 @@ label {
 
 .create-account button {
   padding: 0;
-  color: var(--auth-action, var(--primary));
+  color: #4f46c8;
   border: 0;
   background: transparent;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -210,7 +221,7 @@ label {
   text-decoration: underline;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 360px) {
   .password-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -225,14 +236,16 @@ label {
 
   .password-field,
   .login-input {
-    height: 42px;
+    height: 44px;
   }
 
   .submit-button {
-    min-height: 42px;
+    min-height: 46px;
+    margin-top: 24px;
   }
 
   .create-account {
-    margin-top: 16px;
+    margin-top: 20px;
+    padding-top: 16px;
   }
 }

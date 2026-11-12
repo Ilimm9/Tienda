@@ -11,49 +11,61 @@ import { fueraDePlataformaGuard, plataformaGuard } from './features/plataforma/p
 export const routes: Routes = [
   { path: '', redirectTo: 'inicio', pathMatch: 'full' },
   {
+    // Todas las pantallas de acceso comparten el shell con mosaico.
     path: '',
-    // Con sesión activa (en esta u otra pestaña) login y registro regresan a la app.
-    canActivate: [invitadoGuard],
     loadComponent: () =>
       import('./features/auth/auth-shell/auth-shell.component').then(
         (module) => module.AuthShellComponent,
       ),
     children: [
       {
-        path: 'login',
-        loadComponent: () =>
-          import('./features/auth/login/login.component').then((module) => module.LoginComponent),
+        path: '',
+        // Con sesión activa (en esta u otra pestaña) login, registro y recuperar regresan a la app.
+        canActivate: [invitadoGuard],
+        children: [
+          {
+            path: 'login',
+            data: { titulo: 'Iniciar sesión' },
+            loadComponent: () =>
+              import('./features/auth/login/login.component').then(
+                (module) => module.LoginComponent,
+              ),
+          },
+          {
+            path: 'registro',
+            data: { titulo: 'Crear cuenta' },
+            loadComponent: () =>
+              import('./features/auth/register/register.component').then(
+                (module) => module.RegisterComponent,
+              ),
+          },
+          {
+            path: 'recuperar-contrasena',
+            data: { titulo: 'Recupera tu contraseña' },
+            loadComponent: () =>
+              import('./features/auth/recover-password/recover-password.component').then(
+                (module) => module.RecoverPasswordComponent,
+              ),
+          },
+        ],
       },
       {
-        path: 'registro',
+        path: 'verificar-correo',
+        data: { titulo: 'Verifica tu correo' },
         loadComponent: () =>
-          import('./features/auth/register/register.component').then(
-            (module) => module.RegisterComponent,
+          import('./features/auth/verification/verification.component').then(
+            (module) => module.VerificationComponent,
+          ),
+      },
+      {
+        path: 'restablecer-contrasena',
+        data: { titulo: 'Crea una nueva contraseña' },
+        loadComponent: () =>
+          import('./features/auth/reset-password/reset-password.component').then(
+            (module) => module.ResetPasswordComponent,
           ),
       },
     ],
-  },
-  {
-    path: 'verificar-correo',
-    loadComponent: () =>
-      import('./features/auth/verification/verification.component').then(
-        (module) => module.VerificationComponent,
-      ),
-  },
-  {
-    path: 'recuperar-contrasena',
-    canActivate: [invitadoGuard],
-    loadComponent: () =>
-      import('./features/auth/recover-password/recover-password.component').then(
-        (module) => module.RecoverPasswordComponent,
-      ),
-  },
-  {
-    path: 'restablecer-contrasena',
-    loadComponent: () =>
-      import('./features/auth/reset-password/reset-password.component').then(
-        (module) => module.ResetPasswordComponent,
-      ),
   },
   {
     // La aceptación de invitación vive fuera del shell autenticado: el invitado puede no tener cuenta.
@@ -65,7 +77,8 @@ export const routes: Routes = [
     // El asistente de alta inicial es una pantalla enfocada: sin menú lateral ni selector de contexto.
     path: 'configuracion-inicial',
     canActivate: [authGuard, fueraDePlataformaGuard, asistenteGuard],
-    loadComponent: () => import('./features/alta-inicial/alta-inicial').then((module) => module.AltaInicial),
+    loadComponent: () =>
+      import('./features/alta-inicial/alta-inicial').then((module) => module.AltaInicial),
   },
   {
     path: 'administracion-plataforma',
@@ -134,7 +147,12 @@ export const routes: Routes = [
       {
         path: 'proveedores/nuevo',
         canActivate: [contextoGuard, permisoGuard],
-        data: { breadcrumb: 'Agregar proveedor', section: 'proveedores', mode: 'create', permiso: PERMISOS.catalogoGestionar },
+        data: {
+          breadcrumb: 'Agregar proveedor',
+          section: 'proveedores',
+          mode: 'create',
+          permiso: PERMISOS.catalogoGestionar,
+        },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -143,7 +161,12 @@ export const routes: Routes = [
       {
         path: 'proveedores/importar',
         canActivate: [contextoGuard, permisoGuard],
-        data: { breadcrumb: 'Importar proveedores', section: 'proveedores', mode: 'import', permiso: PERMISOS.catalogoGestionar },
+        data: {
+          breadcrumb: 'Importar proveedores',
+          section: 'proveedores',
+          mode: 'import',
+          permiso: PERMISOS.catalogoGestionar,
+        },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -152,7 +175,12 @@ export const routes: Routes = [
       {
         path: 'proveedores/:id/editar',
         canActivate: [contextoGuard, permisoGuard],
-        data: { breadcrumb: 'Editar proveedor', section: 'proveedores', mode: 'edit', permiso: PERMISOS.catalogoGestionar },
+        data: {
+          breadcrumb: 'Editar proveedor',
+          section: 'proveedores',
+          mode: 'edit',
+          permiso: PERMISOS.catalogoGestionar,
+        },
         loadComponent: () =>
           import('./features/proveedores/proveedores.component').then(
             (module) => module.ProveedoresComponent,
@@ -162,19 +190,22 @@ export const routes: Routes = [
         path: 'compras',
         canActivate: [contextoGuard, permisoGuard],
         data: { breadcrumb: 'Compras', permiso: PERMISOS.compraVer },
-        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+        loadComponent: () =>
+          import('./features/compras/compras.component').then((module) => module.ComprasComponent),
       },
       {
         path: 'compras/nueva',
         canActivate: [contextoGuard, permisoGuard],
         data: { breadcrumb: 'Registrar compra', mode: 'create', permiso: PERMISOS.compraRegistrar },
-        loadComponent: () => import('./features/compras/compras.component').then((module) => module.ComprasComponent),
+        loadComponent: () =>
+          import('./features/compras/compras.component').then((module) => module.ComprasComponent),
       },
       {
         path: 'precios/validaciones',
         canActivate: [contextoGuard, permisoGuard],
         data: { breadcrumb: 'Validar costos y precios', permiso: PERMISOS.precioVer },
-        loadComponent: () => import('./features/precios/precios.component').then((module) => module.PreciosComponent),
+        loadComponent: () =>
+          import('./features/precios/precios.component').then((module) => module.PreciosComponent),
       },
       {
         path: 'sin-acceso',
@@ -190,7 +221,9 @@ export const routes: Routes = [
         path: 'configuracion',
         data: { breadcrumb: 'Configuración' },
         loadChildren: () =>
-          import('./features/configuracion/configuracion.routes').then((module) => module.CONFIGURACION_ROUTES),
+          import('./features/configuracion/configuracion.routes').then(
+            (module) => module.CONFIGURACION_ROUTES,
+          ),
       },
       {
         path: 'roles-permisos',

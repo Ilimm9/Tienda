@@ -8,27 +8,38 @@ import { invitadoGuard } from './features/auth/invitado.guard';
 import { plataformaGuard } from './features/plataforma/plataforma.guard';
 
 describe('rutas principales', () => {
-  it('agrupa login y registro bajo el shell de acceso persistente', () => {
-    const authShell = routes.find(
-      (route) => route.path === '' && route.children?.some((child) => child.path === 'login'),
+  const authShell = () =>
+    routes.find(
+      (route) =>
+        route.path === '' &&
+        route.children?.some((child) => child.children?.some((nieto) => nieto.path === 'login')),
     );
+  const visitantes = () => authShell()?.children?.find((route) => route.path === '');
 
-    expect(authShell?.loadComponent).toBeDefined();
-    expect(authShell?.children?.map((route) => route.path)).toEqual(['login', 'registro']);
-    expect(authShell?.children?.every((route) => route.loadComponent !== undefined)).toBe(true);
+  it('agrupa todas las pantallas de acceso bajo el shell persistente', () => {
+    expect(authShell()?.loadComponent).toBeDefined();
+    expect(visitantes()?.children?.map((route) => route.path)).toEqual([
+      'login',
+      'registro',
+      'recuperar-contrasena',
+    ]);
+    expect(authShell()?.children?.map((route) => route.path)).toEqual([
+      '',
+      'verificar-correo',
+      'restablecer-contrasena',
+    ]);
+    expect(visitantes()?.children?.every((route) => route.loadComponent !== undefined)).toBe(true);
   });
 
   it('protege las pantallas de visitante para que una sesión activa vuelva a la app', () => {
-    const authShell = routes.find(
-      (route) => route.path === '' && route.children?.some((child) => child.path === 'login'),
-    );
-    const recuperar = routes.find((route) => route.path === 'recuperar-contrasena');
-
-    expect(authShell?.canActivate).toEqual([invitadoGuard]);
-    expect(recuperar?.canActivate).toEqual([invitadoGuard]);
-    for (const publica of ['restablecer-contrasena', 'verificar-correo', 'invitacion/:token']) {
-      expect(routes.find((route) => route.path === publica)?.canActivate).toBeUndefined();
+    expect(authShell()?.canActivate).toBeUndefined();
+    expect(visitantes()?.canActivate).toEqual([invitadoGuard]);
+    for (const publica of ['restablecer-contrasena', 'verificar-correo']) {
+      expect(
+        authShell()?.children?.find((route) => route.path === publica)?.canActivate,
+      ).toBeUndefined();
     }
+    expect(routes.find((route) => route.path === 'invitacion/:token')?.canActivate).toBeUndefined();
   });
 
   it('declara Proveedores como sección independiente protegida por contexto', () => {
@@ -63,7 +74,10 @@ describe('rutas principales', () => {
 
   it('declara el backoffice fuera del shell tenant y con guard global', () => {
     const plataforma = routes.find((route) => route.path === 'administracion-plataforma');
-    expect(plataforma).toMatchObject({ path: 'administracion-plataforma', canActivate: [authGuard, plataformaGuard] });
+    expect(plataforma).toMatchObject({
+      path: 'administracion-plataforma',
+      canActivate: [authGuard, plataformaGuard],
+    });
     expect(plataforma?.loadChildren).toBeDefined();
   });
 });

@@ -11,7 +11,13 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterOutlet,
+} from '@angular/router';
 import { filter } from 'rxjs';
 import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
@@ -43,6 +49,7 @@ export class AuthShellComponent implements AfterViewInit {
   private readonly mosaic!: ElementRef<HTMLElement>;
 
   readonly mode = signal<AuthMode>(this.modeFromUrl(this.router.url));
+  readonly titulo = signal(this.tituloActual());
   readonly introActive = signal(true);
   private ready = false;
   private transitioning = false;
@@ -56,6 +63,7 @@ export class AuthShellComponent implements AfterViewInit {
       .subscribe((event) => {
         const nextMode = this.modeFromUrl(event.urlAfterRedirects);
         if (!this.transitioning && nextMode !== this.mode()) this.mode.set(nextMode);
+        this.titulo.set(this.tituloActual());
       });
 
     this.destroyRef.onDestroy(() => {
@@ -120,6 +128,17 @@ export class AuthShellComponent implements AfterViewInit {
         { injector: this.injector },
       );
     });
+  }
+
+  /** Título de la pantalla activa, declarado en `data.titulo` de su ruta. */
+  private tituloActual(): string {
+    let ruta: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
+    let titulo = '';
+    while (ruta) {
+      titulo = (ruta.data['titulo'] as string | undefined) ?? titulo;
+      ruta = ruta.firstChild;
+    }
+    return titulo || 'Iniciar sesión';
   }
 
   private modeFromUrl(url: string): AuthMode {

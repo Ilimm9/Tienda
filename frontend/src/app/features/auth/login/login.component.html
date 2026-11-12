@@ -1,7 +1,9 @@
 <main class="login-page">
   <section class="login-card" aria-label="Iniciar sesión">
+    <p class="login-subtitle">Entra con tu correo para seguir con tu tienda.</p>
+
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="correo">Identificación</label>
+      <label for="correo">Correo electrónico</label>
       <span class="field-wrap">
         <i class="pi pi-envelope" aria-hidden="true"></i>
         <input
@@ -71,7 +73,7 @@
     </form>
 
     <p class="create-account">
-      ¿Nuevo aqui? <button type="button" (click)="switchToRegister()">Crea tu cuenta</button>
+      ¿Nuevo aquí? <button type="button" (click)="switchToRegister()">Crea tu cuenta</button>
     </p>
   </section>
 </main>
